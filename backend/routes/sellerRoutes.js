@@ -3,6 +3,7 @@ const router = express.Router();
 const authMiddleware = require('../middlewares/authMiddleware');
 const roleMiddleware = require('../middlewares/roleMiddleware');
 const {
+  getSellerProfile,
   getMyProducts,
   addProduct,
   updateProduct,
@@ -16,6 +17,9 @@ const {
 
 // All routes require seller authentication
 router.use(authMiddleware, roleMiddleware('seller'));
+
+// Profile
+router.get('/profile', getSellerProfile);
 
 // Products
 router.get('/products', getMyProducts);

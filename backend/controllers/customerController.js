@@ -1,6 +1,8 @@
 const Product = require('../models/Product');
 const Cart = require('../models/Cart');
 const Order = require('../models/Order');
+const Inventory = require('../models/Inventory');
+const Address = require('../models/Address');
 
 // ==================== PRODUCTS ====================
 
@@ -40,7 +42,7 @@ exports.getProducts = async (req, res) => {
       products,
       totalPages: Math.ceil(total / limit),
       currentPage: Number(page),
-      total
+      total,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -75,7 +77,6 @@ exports.getCart = async (req, res) => {
       .populate('items.productId', 'name price images stock');
 
     if (!cart) {
-      // Create empty cart if doesn't exist
       cart = await Cart.create({ userId: req.user._id, items: [] });
     }
 
@@ -113,38 +114,32 @@ exports.addToCart = async (req, res) => {
 
     // Check if product already in cart
     const existingItemIndex = cart.items.findIndex(
-      item => item.productId.toString() === productId
+      (item) => item.productId.toString() === productId
     );
 
     if (existingItemIndex > -1) {
-      // Update quantity
       cart.items[existingItemIndex].quantity += quantity;
-      
-      // Check stock again
+
       if (cart.items[existingItemIndex].quantity > product.stock) {
-        return res.status(400).json({ 
-          message: `Only ${product.stock} items available` 
+        return res.status(400).json({
+          message: `Only ${product.stock} items available`,
         });
       }
     } else {
-      // Add new item
       cart.items.push({
         productId,
         quantity,
-        price: product.price
+        price: product.price,
       });
     }
 
-    // Calculate total
     cart.calculateTotal();
     await cart.save();
-
-    // Populate and return
     await cart.populate('items.productId', 'name price images stock');
 
     res.status(201).json({
       message: 'Item added to cart',
-      cart
+      cart,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -167,30 +162,28 @@ exports.updateCartItem = async (req, res) => {
     }
 
     const itemIndex = cart.items.findIndex(
-      item => item.productId.toString() === productId
+      (item) => item.productId.toString() === productId
     );
 
     if (itemIndex === -1) {
       return res.status(404).json({ message: 'Item not in cart' });
     }
 
-    // Check stock
     const product = await Product.findById(productId);
     if (quantity > product.stock) {
-      return res.status(400).json({ 
-        message: `Only ${product.stock} items available` 
+      return res.status(400).json({
+        message: `Only ${product.stock} items available`,
       });
     }
 
     cart.items[itemIndex].quantity = quantity;
     cart.calculateTotal();
     await cart.save();
-
     await cart.populate('items.productId', 'name price images stock');
 
     res.json({
       message: 'Cart updated',
-      cart
+      cart,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -209,17 +202,16 @@ exports.removeFromCart = async (req, res) => {
     }
 
     cart.items = cart.items.filter(
-      item => item.productId.toString() !== productId
+      (item) => item.productId.toString() !== productId
     );
 
     cart.calculateTotal();
     await cart.save();
-
     await cart.populate('items.productId', 'name price images stock');
 
     res.json({
       message: 'Item removed from cart',
-      cart
+      cart,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -241,7 +233,7 @@ exports.clearCart = async (req, res) => {
 
     res.json({
       message: 'Cart cleared',
-      cart
+      cart,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -250,20 +242,33 @@ exports.clearCart = async (req, res) => {
 
 // ==================== CHECKOUT & ORDERS ====================
 
-// Checkout (Create order from cart)
+// Checkout / create order (using shippingAddressId)
 exports.checkout = async (req, res) => {
   try {
-    const { shippingAddress } = req.body;
+    const { shippingAddressId } = req.body;
 
-    // Validate shipping address
-    if (!shippingAddress || !shippingAddress.street || !shippingAddress.city || 
-        !shippingAddress.state || !shippingAddress.zipCode) {
-      return res.status(400).json({ message: 'Complete shipping address required' });
+    if (!shippingAddressId) {
+      return res
+        .status(400)
+        .json({ message: 'Shipping address ID is required' });
+    }
+
+    // Verify address belongs to this user
+    const address = await Address.findOne({
+      _id: shippingAddressId,
+      userId: req.user._id,
+    });
+
+    if (!address) {
+      return res
+        .status(404)
+        .json({ message: 'Address not found or access denied' });
     }
 
     // Get cart
-    const cart = await Cart.findOne({ userId: req.user._id })
-      .populate('items.productId');
+    const cart = await Cart.findOne({ userId: req.user._id }).populate(
+      'items.productId'
+    );
 
     if (!cart || cart.items.length === 0) {
       return res.status(400).json({ message: 'Cart is empty' });
@@ -276,30 +281,26 @@ exports.checkout = async (req, res) => {
     for (const item of cart.items) {
       const product = item.productId;
 
-      // Check if product still exists and is active
       if (!product || !product.isActive) {
-        return res.status(400).json({ 
-          message: `Product ${product?.name || 'unknown'} is no longer available` 
+        return res.status(400).json({
+          message: `Product ${product?.name || 'unknown'} is no longer available`,
         });
       }
 
-      // Check stock
       if (product.stock < item.quantity) {
-        return res.status(400).json({ 
-          message: `Insufficient stock for ${product.name}. Only ${product.stock} available.` 
+        return res.status(400).json({
+          message: `Insufficient stock for ${product.name}. Only ${product.stock} available.`,
         });
       }
 
-      // Calculate total
       totalAmount += item.price * item.quantity;
 
-      // Prepare order item
       orderItems.push({
         productId: product._id,
         sellerId: product.sellerId,
         name: product.name,
         quantity: item.quantity,
-        price: item.price
+        price: item.price,
       });
     }
 
@@ -308,15 +309,30 @@ exports.checkout = async (req, res) => {
       customerId: req.user._id,
       items: orderItems,
       totalAmount,
-      shippingAddress,
+      shippingAddressId,
       status: 'pending',
-      paymentStatus: 'pending'
+      paymentStatus: 'pending',
     });
 
-    // Update product stock
+    // Update product stock + inventory log
     for (const item of cart.items) {
+      const product = await Product.findById(item.productId._id);
+      const stockBefore = product.stock;
+
       await Product.findByIdAndUpdate(item.productId._id, {
-        $inc: { stock: -item.quantity }
+        $inc: { stock: -item.quantity },
+      });
+
+      const stockAfter = stockBefore - item.quantity;
+
+      await Inventory.create({
+        productId: item.productId._id,
+        type: 'sale',
+        quantity: -item.quantity,
+        orderId: order._id,
+        performedBy: req.user._id,
+        stockBefore,
+        stockAfter,
       });
     }
 
@@ -325,12 +341,13 @@ exports.checkout = async (req, res) => {
     cart.totalAmount = 0;
     await cart.save();
 
-    // Populate order
-    await order.populate('items.productId', 'name images');
+    await order
+      .populate('items.productId', 'name images')
+      .populate('shippingAddressId');
 
     res.status(201).json({
       message: 'Order placed successfully',
-      order
+      order,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -347,6 +364,7 @@ exports.getMyOrders = async (req, res) => {
 
     const orders = await Order.find(filter)
       .populate('items.productId', 'name images')
+      .populate('shippingAddressId')
       .sort({ createdAt: -1 })
       .limit(limit * 1)
       .skip((page - 1) * limit);
@@ -357,7 +375,7 @@ exports.getMyOrders = async (req, res) => {
       orders,
       totalPages: Math.ceil(total / limit),
       currentPage: Number(page),
-      total
+      total,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -371,8 +389,10 @@ exports.getOrderDetails = async (req, res) => {
 
     const order = await Order.findOne({
       _id: orderId,
-      customerId: req.user._id
-    }).populate('items.productId', 'name images');
+      customerId: req.user._id,
+    })
+      .populate('items.productId', 'name images')
+      .populate('shippingAddressId');
 
     if (!order) {
       return res.status(404).json({ message: 'Order not found' });
@@ -391,33 +411,48 @@ exports.cancelOrder = async (req, res) => {
 
     const order = await Order.findOne({
       _id: orderId,
-      customerId: req.user._id
+      customerId: req.user._id,
     });
 
     if (!order) {
       return res.status(404).json({ message: 'Order not found' });
     }
 
-    // Can only cancel if status is pending or processing
     if (!['pending', 'processing'].includes(order.status)) {
-      return res.status(400).json({ 
-        message: 'Order cannot be cancelled at this stage' 
-      });
+      return res
+        .status(400)
+        .json({ message: 'Order cannot be cancelled at this stage' });
     }
 
     order.status = 'cancelled';
     await order.save();
 
-    // Restore stock
+    // Restore stock + inventory log
     for (const item of order.items) {
+      const product = await Product.findById(item.productId);
+      const stockBefore = product.stock;
+
       await Product.findByIdAndUpdate(item.productId, {
-        $inc: { stock: item.quantity }
+        $inc: { stock: item.quantity },
+      });
+
+      const stockAfter = stockBefore + item.quantity;
+
+      await Inventory.create({
+        productId: item.productId,
+        type: 'return',
+        quantity: item.quantity,
+        orderId: order._id,
+        reason: 'Order cancelled by customer',
+        performedBy: req.user._id,
+        stockBefore,
+        stockAfter,
       });
     }
 
     res.json({
       message: 'Order cancelled successfully',
-      order
+      order,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });

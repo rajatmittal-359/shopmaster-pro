@@ -43,13 +43,11 @@ const orderSchema = new mongoose.Schema(
       enum: ['pending', 'processing', 'shipped', 'delivered', 'cancelled'],
       default: 'pending'
     },
-    shippingAddress: {
-      street: { type: String, required: true },
-      city: { type: String, required: true },
-      state: { type: String, required: true },
-      zipCode: { type: String, required: true },
-      country: { type: String, default: 'India' }
-    },
+    shippingAddressId: {
+  type: mongoose.Schema.Types.ObjectId,
+  ref: 'Address',
+  required: true,
+},
     paymentStatus: {
       type: String,
       enum: ['pending', 'completed', 'failed', 'refunded'],

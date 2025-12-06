@@ -1,7 +1,9 @@
 const express = require('express');
 const router = express.Router();
+
 const authMiddleware = require('../middlewares/authMiddleware');
 const roleMiddleware = require('../middlewares/roleMiddleware');
+
 const {
   getProducts,
   getProductDetails,
@@ -13,10 +15,20 @@ const {
   checkout,
   getMyOrders,
   getOrderDetails,
-  cancelOrder
+  cancelOrder,
 } = require('../controllers/customerController');
 
-// Public routes (anyone can browse products)
+const {
+  getAddresses,
+  addAddress,
+  updateAddress,
+  deleteAddress,
+} = require('../controllers/addressController');
+
+// Test route (public)
+router.get('/test', (req, res) => res.json({ ok: true }));
+
+// Public product routes
 router.get('/products', getProducts);
 router.get('/products/:productId', getProductDetails);
 
@@ -29,6 +41,12 @@ router.post('/cart', addToCart);
 router.patch('/cart', updateCartItem);
 router.delete('/cart/:productId', removeFromCart);
 router.delete('/cart', clearCart);
+
+// Addresses
+router.get('/addresses', getAddresses);
+router.post('/addresses', addAddress);
+router.patch('/addresses/:id', updateAddress);
+router.delete('/addresses/:id', deleteAddress);
 
 // Orders
 router.post('/checkout', checkout);

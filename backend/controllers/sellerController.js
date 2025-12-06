@@ -22,38 +22,40 @@ exports.getMyProducts = async (req, res) => {
 // Add new product
 exports.addProduct = async (req, res) => {
   try {
-    const { name, description, category, price, stock, lowStockThreshold } = req.body;
+    const {
+      name,
+      description,
+      category,
+      price,
+      stock,
+      lowStockThreshold,
+      image, // base64 string from frontend
+    } = req.body;
 
-    // Check if seller is approved
-    const seller = await Seller.findOne({ userId: req.user._id });
-    if (!seller || !seller.isApproved) {
-      return res.status(403).json({ 
-        message: 'Your seller account is not approved yet' 
-      });
+    let imageUrl = null;
+    if (image) {
+      const imageData = await uploadImage(image);
+      imageUrl = imageData.url; // ← Extract only URL
     }
 
-    // Create product (images will be added later when we integrate upload)
     const product = await Product.create({
-      sellerId: req.user._id,
       name,
       description,
       category,
       price,
       stock,
       lowStockThreshold: lowStockThreshold || 10,
-      images: [] // For now, empty array
+      sellerId: req.user._id,
+      isActive: true,
+      images: imageUrl ? [imageUrl] : [], // ← Store only URL string
     });
 
-    await product.populate('category', 'name');
-
-    res.status(201).json({
-      message: 'Product added successfully',
-      product
-    });
+    res.status(201).json({ message: 'Product created', product });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
+
 
 // Update product
 exports.updateProduct = async (req, res) => {
@@ -295,5 +297,19 @@ exports.getSellerAnalytics = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
+  }
+};
+exports.getSellerProfile = async (req, res) => {
+  try {
+    const seller = await Seller.findOne({ userId: req.user.id });
+
+    if (!seller) {
+      return res.status(404).json({ message: 'Seller profile not found' });
+    }
+
+    res.json(seller);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 };

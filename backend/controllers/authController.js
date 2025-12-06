@@ -4,6 +4,7 @@ const { generateToken } = require('../utils/tokenUtils');
 const sendEmail = require('../utils/sendEmail');
 
 // Register
+// Register
 exports.register = async (req, res) => {
   try {
     const { name, email, password, role, businessName } = req.body;
@@ -21,7 +22,7 @@ exports.register = async (req, res) => {
       name,
       email,
       password,
-      role: role === 'seller' ? 'seller' : 'customer'
+      role: role === 'seller' ? 'seller' : 'customer',
     });
 
     const otp = user.generateOTP();
@@ -35,20 +36,22 @@ exports.register = async (req, res) => {
     }
 
     await sendEmail({
-      to: user.email,
-      subject: 'Verify Email - ShopMaster Pro',
-      text: `Your OTP is: ${otp}`
+      to: email,
+      subject: 'ShopMaster Pro - Verify your email',
+      text: `Your OTP is ${otp}`,
+      html: `<p>Your OTP is <strong>${otp}</strong></p>`,
     });
 
     res.status(201).json({
-      message: 'Registration successful. Check console for OTP.',
-      userId: user._id
+      message: 'Registration successful. Please check your email for the OTP.',
+      userId: user._id,
     });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
+
 
 // Verify OTP
 exports.verifyOtp = async (req, res) => {
@@ -93,6 +96,7 @@ exports.verifyOtp = async (req, res) => {
 };
 
 // Login
+// Login
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -121,15 +125,17 @@ exports.login = async (req, res) => {
     res.json({
       message: 'Login successful',
       token,
+      role: user.role,                 // ← IMPORTANT
       user: {
         id: user._id,
         name: user.name,
         email: user.email,
-        role: user.role
-      }
+        role: user.role,
+      },
     });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
+

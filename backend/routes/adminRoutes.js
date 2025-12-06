@@ -12,7 +12,7 @@ const {
   deleteCategory,
   getAnalytics
 } = require('../controllers/adminController');
-
+const Category = require('../models/Category');
 // All routes require admin role
 router.use(authMiddleware, roleMiddleware('admin'));
 
