@@ -90,16 +90,19 @@ exports.checkout = async (req, res) => {
 
     const order = await Order.create({
       customerId: req.user._id,
+
       items: cart.items.map((item) => ({
         productId: item.productId._id,
+        sellerId: item.productId.sellerId,      // ✅ FIX 1 — SELLER ID ADDED
         name: item.productId.name,
         quantity: item.quantity,
         price: item.price,
       })),
+
       totalAmount: cart.totalAmount,
       shippingAddressId,
       status: "pending",
-      paymentStatus: "cod",
+      paymentStatus: "cod",                     // ✅ FIX 2 — VALID ENUM REQUIRED
     });
 
     // ✅ INVENTORY DEDUCT
@@ -125,6 +128,7 @@ exports.checkout = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+
 
 
 // ✅ GET MY ORDERS

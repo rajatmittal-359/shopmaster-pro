@@ -48,11 +48,11 @@ const orderSchema = new mongoose.Schema(
       ref: 'Address',
       required: true
     },
-    paymentStatus: {
-      type: String,
-      enum: ['pending', 'completed', 'failed', 'refunded'],
-      default: 'pending'
-    }
+paymentStatus: {
+  type: String,
+  enum: ["pending", "completed", "failed", "cod"],
+  default: "cod"
+}
   },
   {
     timestamps: true
