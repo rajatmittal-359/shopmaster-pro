@@ -6,9 +6,10 @@ const { uploadImage, deleteImage } = require('../utils/cloudinary');
 // Get seller's products
 exports.getMyProducts = async (req, res) => {
   try {
-    const products = await Product.find({ sellerId: req.user._id })
-      .populate('category', 'name')
-      .sort({ createdAt: -1 });
+const products = await Product.find({
+  sellerId: req.user._id,
+  isActive: true, 
+}).populate('category','name').sort({ createdAt: -1 });
 
     res.json({
       count: products.length,
@@ -29,13 +30,16 @@ exports.addProduct = async (req, res) => {
       price,
       stock,
       lowStockThreshold,
-      image, // base64 string from frontend
+      images, // ✅ MULTIPLE BASE64 IMAGES
     } = req.body;
 
-    let imageUrl = null;
-    if (image) {
-      const imageData = await uploadImage(image);
-      imageUrl = imageData.url; // ← Extract only URL
+    let imageUrls = [];
+
+    if (images && images.length > 0) {
+      for (const img of images) {
+        const uploaded = await uploadImage(img);
+        imageUrls.push(uploaded.url);
+      }
     }
 
     const product = await Product.create({
@@ -47,7 +51,7 @@ exports.addProduct = async (req, res) => {
       lowStockThreshold: lowStockThreshold || 10,
       sellerId: req.user._id,
       isActive: true,
-      images: imageUrl ? [imageUrl] : [], // ← Store only URL string
+      images: imageUrls, // ✅ MULTIPLE SAVED
     });
 
     res.status(201).json({ message: 'Product created', product });
@@ -99,26 +103,24 @@ exports.updateProduct = async (req, res) => {
 // Delete product
 exports.deleteProduct = async (req, res) => {
   try {
-    const { productId } = req.params;
-
-    const product = await Product.findOneAndDelete({ 
-      _id: productId, 
-      sellerId: req.user._id 
+    const product = await Product.findOne({
+      _id: req.params.id,
+      sellerId: req.user._id,
     });
 
     if (!product) {
-      return res.status(404).json({ 
-        message: 'Product not found or you do not have permission' 
-      });
+      return res.status(404).json({ message: 'Product not found' });
     }
 
-    res.json({
-      message: 'Product deleted successfully'
-    });
+    product.isActive = false; // ✅ SOFT DELETE
+    await product.save();
+
+    res.json({ message: 'Product soft deleted successfully' });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
+
 
 // Update stock/inventory
 exports.updateStock = async (req, res) => {

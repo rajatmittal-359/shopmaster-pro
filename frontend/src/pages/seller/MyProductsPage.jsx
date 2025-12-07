@@ -1,282 +1,353 @@
 import { useEffect, useState } from 'react';
 import Layout from '../../components/common/Layout';
 import {
-getMyProducts,
-addProduct,
-updateProduct,
-deleteProduct,
+  getMyProducts,
+  addProduct,
+  updateProduct,
+  deleteProduct,
 } from '../../services/sellerService';
 import { getCategories } from '../../services/productService';
-
+import { Swiper, SwiperSlide } from 'swiper/react';
+import { Navigation, Pagination } from 'swiper/modules';
+import 'swiper/css';
+import 'swiper/css/navigation';
+import 'swiper/css/pagination';
 export default function MyProductsPage() {
-const [products, setProducts] = useState([]);
-const [categories, setCategories] = useState([]);
-const [loading, setLoading] = useState(true);
-const [showForm, setShowForm] = useState(false);
-const [editingId, setEditingId] = useState(null);
-const [form, setForm] = useState({
-  name: '',
-  description: '',
-  category: '',
-  price: '',
-  stock: '',
-  lowStockThreshold: '10',
-  image: '',
-});
+  const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState(null);
 
+  const [form, setForm] = useState({
+    name: '',
+    description: '',
+    category: '',
+    price: '',
+    stock: '',
+    lowStockThreshold: '10',
+    images: [],
+  });
 
-useEffect(() => {
-loadData();
-}, []);
-const handleImageChange = (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
+  useEffect(() => {
+    loadData();
+  }, []);
 
-  const reader = new FileReader();
-  reader.onloadend = () => {
-    setForm((prev) => ({ ...prev, image: reader.result }));
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      const [prodRes, catRes] = await Promise.all([
+        getMyProducts(),
+        getCategories(),
+      ]);
+      setProducts(prodRes.data.products || []);
+      setCategories(catRes.data.categories || []);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
   };
-  reader.readAsDataURL(file);
-};
 
-const loadData = async () => {
-try {
-setLoading(true);
-const [prodRes, catRes] = await Promise.all([
-getMyProducts(),
-getCategories(),
-]);
-setProducts(prodRes.data.products || []);
-setCategories(catRes.data.categories || []);
-} catch (err) {
-console.error(err);
-} finally {
-setLoading(false);
-}
-};
+  const handleChange = (e) => {
+    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+  };
 
-const handleChange = (e) => {
-setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
-};
+  const handleImageChange = (e) => {
+    const files = Array.from(e.target.files);
 
-const handleSubmit = async (e) => {
-e.preventDefault();
-try {
-if (editingId) {
-await updateProduct(editingId, form);
-} else {
-await addProduct(form);
-}
-resetForm();
-loadData();
-} catch (err) {
-alert(err.response?.data?.message || 'Error saving product');
-}
-};
+    files.forEach((file) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setForm((prev) => ({
+          ...prev,
+          images: [...prev.images, reader.result],
+        }));
+      };
+      reader.readAsDataURL(file);
+    });
+  };
 
-const handleEdit = (prod) => {
-setEditingId(prod._id);
-setForm({
-name: prod.name,
-description: prod.description,
-category: prod.category?._id || '',
-price: prod.price,
-stock: prod.stock,
-lowStockThreshold: prod.lowStockThreshold || '10',
-});
-setShowForm(true);
-};
+  const removeImage = (index) => {
+    setForm((prev) => ({
+      ...prev,
+      images: prev.images.filter((_, i) => i !== index),
+    }));
+  };
 
-const handleDelete = async (id) => {
-if (!window.confirm('Delete this product?')) return;
-try {
-await deleteProduct(id);
-loadData();
-} catch (err) {
-alert(err.response?.data?.message || 'Error deleting product');
-}
-};
+  const handleSubmit = async (e) => {
+    e.preventDefault();
 
-const resetForm = () => {
-setForm({
-name: '',
-description: '',
-category: '',
-price: '',
-stock: '',
-lowStockThreshold: '10',
-});
-setEditingId(null);
-setShowForm(false);
-};
+    try {
+      if (editingId) {
+        await updateProduct(editingId, form);
+      } else {
+        await addProduct(form);
+      }
 
-return (
-<Layout title="My Products">
-<div className="flex justify-between items-center mb-4">
-<h2 className="text-2xl font-bold">My Products</h2>
-<button
-onClick={() => setShowForm((p) => !p)}
-className="px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600 text-sm"
->
-{showForm ? 'Cancel' : '+ Add Product'}
-</button>
-</div>
-  {showForm && (
-    <div className="bg-white p-4 rounded shadow mb-6">
-      <h3 className="text-lg font-semibold mb-3">
-        {editingId ? 'Edit Product' : 'Add New Product'}
-      </h3>
-      <form onSubmit={handleSubmit} className="space-y-3">
-        <div>
-          <label className="block text-sm mb-1">Product Name</label>
-          <input
-            type="text"
-            name="name"
-            value={form.name}
-            onChange={handleChange}
-            required
-            className="w-full border rounded px-3 py-2 text-sm"
-          />
-        </div>
+      resetForm();
+      await loadData();
+      window.location.reload();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Error saving product');
+    }
+  };
 
-        <div>
-          <label className="block text-sm mb-1">Description</label>
-          <textarea
-            name="description"
-            value={form.description}
-            onChange={handleChange}
-            required
-            rows={3}
-            className="w-full border rounded px-3 py-2 text-sm"
-          />
-        </div>
+  const handleEdit = (prod) => {
+    setEditingId(prod._id);
+    setForm({
+      name: prod.name,
+      description: prod.description,
+      category: prod.category?._id || '',
+      price: prod.price,
+      stock: prod.stock,
+      lowStockThreshold: prod.lowStockThreshold || '10',
+      images: prod.images || [],
+    });
+    setShowForm(true);
+  };
 
-        <div>
-          <label className="block text-sm mb-1">Category</label>
-          <select
-            name="category"
-            value={form.category}
-            onChange={handleChange}
-            required
-            className="w-full border rounded px-3 py-2 text-sm"
-          >
-            <option value="">Select category</option>
-            {categories.map((cat) => (
-              <option key={cat._id} value={cat._id}>
-                {cat.name}
-              </option>
-            ))}
-          </select>
-        </div>
+  const handleDelete = async (id) => {
+    if (!window.confirm('Delete this product?')) return;
+    try {
+      await deleteProduct(id);
+      loadData();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Error deleting product');
+    }
+  };
 
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-sm mb-1">Price (₹)</label>
-            <input
-              type="number"
-              name="price"
-              value={form.price}
-              onChange={handleChange}
-              required
-              min="0"
-              className="w-full border rounded px-3 py-2 text-sm"
-            />
-          </div>
-          <div>
-            <label className="block text-sm mb-1">Stock</label>
-            <input
-              type="number"
-              name="stock"
-              value={form.stock}
-              onChange={handleChange}
-              required
-              min="0"
-              className="w-full border rounded px-3 py-2 text-sm"
-            />
-          </div>
-        </div>
+  const resetForm = () => {
+    setForm({
+      name: '',
+      description: '',
+      category: '',
+      price: '',
+      stock: '',
+      lowStockThreshold: '10',
+      images: [],
+    });
+    setEditingId(null);
+    setShowForm(false);
+  };
 
-        <div>
-          <label className="block text-sm mb-1">Low Stock Threshold</label>
-          <input
-            type="number"
-            name="lowStockThreshold"
-            value={form.lowStockThreshold}
-            onChange={handleChange}
-            min="0"
-            className="w-full border rounded px-3 py-2 text-sm"
-          />
-        </div>
-        <div>
-  <label className="block text-sm mb-1">Product Image</label>
-  <input
-    type="file"
-    accept="image/*"
-    onChange={handleImageChange}
-    className="w-full text-sm"
-  />
-  {form.image && (
-    <p className="text-xs text-green-600 mt-1">Image selected</p>
-  )}
-</div>
+  return (
+    <Layout title="My Products">
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-bold">My Products</h2>
         <button
-          type="submit"
-          className="w-full bg-orange-500 text-white py-2 rounded text-sm hover:bg-orange-600"
+          onClick={() => setShowForm((p) => !p)}
+          className="px-5 py-2 bg-orange-500 text-white rounded hover:bg-orange-600 text-sm"
         >
-          {editingId ? 'Update Product' : 'Add Product'}
+          {showForm ? 'Cancel' : '+ Add Product'}
         </button>
-      </form>
-    </div>
+      </div>
+
+      {/* ------------ PRODUCT FORM ------------- */}
+      {showForm && (
+        <div className="bg-white p-5 rounded shadow mb-8">
+          <h3 className="text-lg font-semibold mb-4">
+            {editingId ? 'Edit Product' : 'Add New Product'}
+          </h3>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <input
+              type="text"
+              name="name"
+              value={form.name}
+              onChange={handleChange}
+              placeholder="Product Name"
+              required
+              className="w-full border rounded px-3 py-2 text-sm"
+            />
+
+            <textarea
+              name="description"
+              value={form.description}
+              onChange={handleChange}
+              rows={4}
+              placeholder="Product Description"
+              required
+              className="w-full border rounded px-3 py-2 text-sm"
+            />
+
+            <select
+              name="category"
+              value={form.category}
+              onChange={handleChange}
+              required
+              className="w-full border rounded px-3 py-2 text-sm"
+            >
+              <option value="">Select category</option>
+              {categories.map((cat) => (
+                <option key={cat._id} value={cat._id}>
+                  {cat.name}
+                </option>
+              ))}
+            </select>
+
+            <div className="grid grid-cols-2 gap-3">
+              <input
+                type="number"
+                name="price"
+                value={form.price}
+                onChange={handleChange}
+                placeholder="Price"
+                required
+                className="w-full border rounded px-3 py-2 text-sm"
+              />
+              <input
+                type="number"
+                name="stock"
+                value={form.stock}
+                onChange={handleChange}
+                placeholder="Stock"
+                required
+                className="w-full border rounded px-3 py-2 text-sm"
+              />
+            </div>
+
+            <input
+              type="number"
+              name="lowStockThreshold"
+              value={form.lowStockThreshold}
+              onChange={handleChange}
+              placeholder="Low Stock Alert"
+              className="w-full border rounded px-3 py-2 text-sm"
+            />
+
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={handleImageChange}
+              className="w-full text-sm"
+            />
+
+            {form.images.length > 0 && (
+              <div className="grid grid-cols-4 gap-2 mt-2">
+                {form.images.map((img, index) => (
+                  <div key={index} className="relative">
+                    <img
+                      src={img}
+                      className="w-full h-20 object-cover rounded border"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeImage(index)}
+                      className="absolute top-1 right-1 bg-red-600 text-white text-xs px-1 rounded"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              className="w-full bg-orange-500 text-white py-2 rounded text-sm hover:bg-orange-600"
+            >
+              {editingId ? 'Update Product' : 'Add Product'}
+            </button>
+          </form>
+        </div>
+      )}
+
+      {/* ------------ PRODUCT GRID ------------- */}
+      {loading && <p>Loading...</p>}
+
+      {!loading && products.length === 0 && (
+        <p className="text-sm text-gray-600">No products yet.</p>
+      )}
+
+      {!loading && products.length > 0 && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          {products.map((prod) => (
+<div
+  key={prod._id}
+  className="bg-white rounded-xl shadow hover:shadow-xl transition overflow-hidden border"
+>
+  {/* IMAGE SLIDER */}
+  {prod.images?.length > 0 && (
+    <Swiper
+      modules={[Navigation, Pagination]}
+      navigation
+      pagination={{ clickable: true }}
+      slidesPerView={1}
+      className="w-full h-48"
+    >
+      {prod.images.map((img, i) => (
+        <SwiperSlide key={i}>
+          <img
+            src={img}
+            alt={prod.name}
+            className="w-full h-48 object-cover"
+          />
+        </SwiperSlide>
+      ))}
+    </Swiper>
   )}
 
-  {loading && <p>Loading...</p>}
-  {!loading && products.length === 0 && (
-    <p className="text-sm text-gray-600">No products yet.</p>
-  )}
-  {!loading && products.length > 0 && (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      {products.map((prod) => (
-        <div
-          key={prod._id}
-          className="bg-white p-4 rounded shadow border"
-        >
-          <h3 className="font-semibold text-sm">{prod.name}</h3>
-          <p className="text-xs text-gray-600 mt-1">
-            {prod.description.slice(0, 80)}...
-          </p>
-          <p className="text-xs text-gray-500 mt-1">
-            Category: {prod.category?.name}
-          </p>
-          <div className="flex justify-between items-center mt-2 text-sm">
-            <span className="font-semibold">₹{prod.price}</span>
-            <span
-              className={`text-xs ${
-                prod.stock <= prod.lowStockThreshold
-                  ? 'text-red-600'
-                  : 'text-gray-600'
-              }`}
-            >
-              Stock: {prod.stock}
-            </span>
-          </div>
-          <div className="flex gap-2 mt-3">
-            <button
-              onClick={() => handleEdit(prod)}
-              className="flex-1 text-xs text-blue-600 hover:underline"
-            >
-              Edit
-            </button>
-            <button
-              onClick={() => handleDelete(prod._id)}
-              className="flex-1 text-xs text-red-600 hover:underline"
-            >
-              Delete
-            </button>
-          </div>
-        </div>
-      ))}
+  {/* CONTENT */}
+  <div className="p-4 space-y-2">
+
+    {/* PRODUCT NAME */}
+    <h3 className="font-semibold text-base line-clamp-1">
+      {prod.name}
+    </h3>
+
+    {/* CATEGORY */}
+    <p className="text-xs text-gray-500">
+      Category: {prod.category?.name}
+    </p>
+
+    {/* DESCRIPTION */}
+    <div
+      className="text-sm text-gray-600 line-clamp-2"
+      dangerouslySetInnerHTML={{
+        __html: prod.description,
+      }}
+    />
+
+    {/* PRICE + STOCK ROW */}
+    <div className="flex justify-between items-center pt-2">
+      <span className="text-lg font-bold text-orange-600">
+        ₹{prod.price}
+      </span>
+
+      <span className={`text-xs font-medium ${
+        prod.stock <= prod.lowStockThreshold
+          ? 'text-red-600'
+          : 'text-green-600'
+      }`}>
+        Stock: {prod.stock}
+      </span>
     </div>
-  )}
-</Layout>
-);
+
+    {/* ACTION BUTTONS */}
+    <div className="flex gap-2 pt-3">
+      <button
+        onClick={() => handleEdit(prod)}
+        className="flex-1 border border-blue-500 text-blue-600 py-1.5 rounded hover:bg-blue-50 text-sm"
+      >
+        Edit
+      </button>
+
+      <button
+        onClick={() => handleDelete(prod._id)}
+        className="flex-1 border border-red-500 text-red-600 py-1.5 rounded hover:bg-red-50 text-sm"
+      >
+        Delete
+      </button>
+    </div>
+
+  </div>
+</div>
+
+          ))}
+        </div>
+      )}
+    </Layout>
+  );
 }

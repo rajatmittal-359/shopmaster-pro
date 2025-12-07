@@ -40,14 +40,14 @@ const orderSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['pending', 'processing', 'shipped', 'delivered', 'cancelled'],
+      enum: ['pending', 'processing', 'shipped', 'delivered', 'cancelled', 'returned'],
       default: 'pending'
     },
     shippingAddressId: {
-  type: mongoose.Schema.Types.ObjectId,
-  ref: 'Address',
-  required: true,
-},
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Address',
+      required: true
+    },
     paymentStatus: {
       type: String,
       enum: ['pending', 'completed', 'failed', 'refunded'],

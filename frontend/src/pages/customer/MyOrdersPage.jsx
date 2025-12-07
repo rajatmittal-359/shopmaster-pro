@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import Layout from '../../components/common/Layout';
-import { getMyOrders, cancelOrder } from '../../services/orderService';
+import { getMyOrders, cancelOrder, returnOrder } from '../../services/orderService';
 
 export default function MyOrdersPage() {
   const [orders, setOrders] = useState([]);
@@ -29,6 +29,16 @@ export default function MyOrdersPage() {
       loadOrders();
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to cancel order');
+    }
+  };
+
+  const handleReturn = async (orderId) => {
+    if (!window.confirm('Return this order?')) return;
+    try {
+      await returnOrder(orderId);
+      loadOrders();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to return order');
     }
   };
 
@@ -72,14 +82,36 @@ export default function MyOrdersPage() {
                 </span>
               </div>
 
-              {['pending', 'processing'].includes(order.status) && (
-                <button
-                  onClick={() => handleCancel(order._id)}
-                  className="self-end mt-1 text-xs text-red-600 hover:underline"
-                >
-                  Cancel order
-                </button>
-              )}
+              <div className="flex justify-end gap-3 mt-1">
+                {/* Cancel allowed only in pending/processing */}
+                {['pending', 'processing'].includes(order.status) && (
+                  <button
+                    onClick={() => handleCancel(order._id)}
+                    className="text-xs text-red-600 hover:underline"
+                  >
+                    Cancel order
+                  </button>
+                )}
+
+                {/* Return allowed only when delivered */}
+                {order.status === 'delivered' && (
+                  <button
+                    onClick={() => handleReturn(order._id)}
+                    className="text-xs text-blue-600 hover:underline"
+                  >
+                    Return order
+                  </button>
+                )}
+
+                {/* For returned / cancelled just show info - no button */}
+                {['returned', 'cancelled'].includes(order.status) && (
+                  <span className="text-xs text-gray-500">
+                    {order.status === 'returned'
+                      ? 'Order returned'
+                      : 'Order cancelled'}
+                  </span>
+                )}
+              </div>
             </div>
           ))}
         </div>

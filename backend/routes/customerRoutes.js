@@ -16,13 +16,14 @@ const {
   getMyOrders,
   getOrderDetails,
   cancelOrder,
+  returnOrder
 } = require('../controllers/customerController');
 
 const {
   getAddresses,
   addAddress,
   updateAddress,
-  deleteAddress,
+  deleteAddress
 } = require('../controllers/addressController');
 
 // Test route (public)
@@ -53,5 +54,6 @@ router.post('/checkout', checkout);
 router.get('/orders', getMyOrders);
 router.get('/orders/:orderId', getOrderDetails);
 router.patch('/orders/:orderId/cancel', cancelOrder);
+router.post('/orders/:orderId/return', returnOrder);
 
 module.exports = router;

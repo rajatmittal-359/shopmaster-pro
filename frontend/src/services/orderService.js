@@ -11,3 +11,6 @@ export const getOrderDetails = (orderId) =>
 
 export const cancelOrder = (orderId) =>
   api.patch(`/customer/orders/${orderId}/cancel`);
+
+export const returnOrder = (orderId) =>
+  api.post(`/customer/orders/${orderId}/return`);

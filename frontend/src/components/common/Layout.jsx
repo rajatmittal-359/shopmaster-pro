@@ -20,120 +20,99 @@ export default function Layout({ children, title = 'Dashboard' }) {
 
   return (
     <div className="h-screen flex bg-gray-100">
+      {/* ✅ SIDEBAR */}
       <aside
         className={`
           fixed inset-y-0 left-0 z-30 w-64 bg-white shadow-lg
           transform transition-transform duration-200
           ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-          md:translate-x-0
         `}
       >
-        <div className="h-16 flex items-center px-4 border-b">
+        <div className="h-16 flex items-center justify-between px-4 border-b">
           <span className="font-bold text-xl text-orange-600">
             ShopMaster Pro
           </span>
+<button
+  onClick={() => setIsSidebarOpen(false)}
+  className="text-xl text-gray-600 md:hidden flex items-center justify-center w-8 h-8 rounded hover:bg-gray-100"
+>
+  <FiX />
+</button>
         </div>
 
+        {/* ✅ LINKS */}
         <nav className="mt-4 px-2 space-y-1 text-sm">
-{role === 'customer' && (
-  <>
-    <Link
-      to="/customer/dashboard"
-      className="block px-3 py-2 rounded-md text-gray-700 hover:bg-orange-100"
-    >
-      Customer Dashboard
-    </Link>
-    <Link
-      to="/customer/shop"
-      className="block px-3 py-2 rounded-md text-gray-700 hover:bg-orange-100"
-    >
-      Shop
-    </Link>
-    <Link to="/customer/cart" className="block px-3 py-2 rounded-md text-gray-700 hover:bg-orange-100">
-      My Cart
-    </Link> 
-    <Link
-      to="/customer/addresses"
-      className="block px-3 py-2 rounded-md text-gray-700 hover:bg-orange-100"
-    >
-      My Addresses
-    </Link>
-    <Link
-      to="/customer/orders"
-      className="block px-3 py-2 rounded-md text-gray-700 hover:bg-orange-100"
-    >
-      My Orders
-    </Link>
-    <Link
-      to="/customer/checkout"
-      className="block px-3 py-2 rounded-md text-gray-700 hover:bg-orange-100"
-    >
-      Checkout
-    </Link>
-  </>
-)}
+          {role === 'customer' && (
+            <>
+              <Link to="/customer/dashboard" className="block px-3 py-2 rounded-md hover:bg-orange-100">
+                Customer Dashboard
+              </Link>
+              <Link to="/customer/shop" className="block px-3 py-2 rounded-md hover:bg-orange-100">
+                Shop
+              </Link>
+              <Link to="/customer/cart" className="block px-3 py-2 rounded-md hover:bg-orange-100">
+                My Cart
+              </Link>
+              <Link to="/customer/addresses" className="block px-3 py-2 rounded-md hover:bg-orange-100">
+                My Addresses
+              </Link>
+              <Link to="/customer/orders" className="block px-3 py-2 rounded-md hover:bg-orange-100">
+                My Orders
+              </Link>
+              <Link to="/customer/checkout" className="block px-3 py-2 rounded-md hover:bg-orange-100">
+                Checkout
+              </Link>
+            </>
+          )}
 
-{role === 'seller' && (
-  <>
-    <Link
-      to="/seller/dashboard"
-      className="block px-3 py-2 rounded-md text-gray-700 hover:bg-orange-100"
-    >
-      Seller Dashboard
-    </Link>
-    <Link
-      to="/seller/products"
-      className="block px-3 py-2 rounded-md text-gray-700 hover:bg-orange-100"
-    >
-      My Products
-    </Link>
-    <Link
-      to="/seller/orders"
-      className="block px-3 py-2 rounded-md text-gray-700 hover:bg-orange-100"
-    >
-      My Orders
-    </Link>
-  </>
-)}
+          {role === 'seller' && (
+            <>
+              <Link to="/seller/dashboard" className="block px-3 py-2 rounded-md hover:bg-orange-100">
+                Seller Dashboard
+              </Link>
+              <Link to="/seller/products" className="block px-3 py-2 rounded-md hover:bg-orange-100">
+                My Products
+              </Link>
+              <Link to="/seller/orders" className="block px-3 py-2 rounded-md hover:bg-orange-100">
+                My Orders
+              </Link>
+            </>
+          )}
 
-{role === 'admin' && (
-  <>
-    <Link
-      to="/admin/dashboard"
-      className="block px-3 py-2 rounded-md text-gray-700 hover:bg-orange-100"
-    >
-      Admin Dashboard
-    </Link>
-    <Link
-      to="/admin/manage-sellers"
-      className="block px-3 py-2 rounded-md text-gray-700 hover:bg-orange-100"
-    >
-      Manage Sellers
-    </Link>
-    <Link
-      to="/admin/categories"
-      className="block px-3 py-2 rounded-md text-gray-700 hover:bg-orange-100"
-    >
-      Manage Categories
-    </Link>
-  </>
-)}
-
+          {role === 'admin' && (
+            <>
+              <Link to="/admin/dashboard" className="block px-3 py-2 rounded-md hover:bg-orange-100">
+                Admin Dashboard
+              </Link>
+              <Link to="/admin/manage-sellers" className="block px-3 py-2 rounded-md hover:bg-orange-100">
+                Manage Sellers
+              </Link>
+              <Link to="/admin/categories" className="block px-3 py-2 rounded-md hover:bg-orange-100">
+                Manage Categories
+              </Link>
+            </>
+          )}
         </nav>
       </aside>
 
-      <div
-        className={`
-          fixed inset-0 bg-black/40 z-20 md:hidden
-          ${isSidebarOpen ? 'block' : 'hidden'}
-        `}
-        onClick={() => setIsSidebarOpen(false)}
-      />
+      {/* ✅ OVERLAY FOR MOBILE */}
+      {isSidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/40 z-20 md:hidden"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
 
-      <div className="flex-1 flex flex-col md:ml-64">
+      {/* ✅ MAIN AREA */}
+      <div
+        className={`flex-1 flex flex-col transition-all duration-200 ${
+          isSidebarOpen ? 'md:ml-64' : 'md:ml-0'
+        }`}
+      >
+        {/* ✅ HEADER */}
         <header className="h-16 flex items-center justify-between px-4 bg-white shadow-sm">
           <button
-            className="md:hidden text-2xl text-gray-700"
+            className="text-2xl text-gray-700"
             onClick={() => setIsSidebarOpen((prev) => !prev)}
           >
             {isSidebarOpen ? <FiX /> : <FiMenu />}

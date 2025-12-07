@@ -1,12 +1,50 @@
+// backend/routes/productRoutes.js
 const express = require('express');
 const router = express.Router();
 const Product = require('../models/Product');
 const Category = require('../models/Category');
 
-// Get all products (with filters) - PUBLIC
+/**
+ * ✅ GET all active categories (PUBLIC)
+ *  URL: /api/public/products/categories/all
+ *  Note: Isko sabse upar rakha hai, taaki /:productId se clash na ho.
+ */
+router.get('/categories/all', async (req, res) => {
+  try {
+    const categories = await Category.find({ isActive: true })
+      .select('name description')
+      .sort({ name: 1 });
+
+    res.json({
+      count: categories.length,
+      categories,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+/**
+ * ✅ GET products list (PUBLIC)
+ *  URL: /api/public/products
+ *  Query:
+ *    - category
+ *    - search
+ *    - minPrice
+ *    - maxPrice
+ *    - page (default 1)
+ *    - limit (default 20)
+ */
 router.get('/', async (req, res) => {
   try {
-    const { category, search, minPrice, maxPrice, page = 1, limit = 20 } = req.query;
+    const {
+      category,
+      search,
+      minPrice,
+      maxPrice,
+      page = 1,
+      limit = 20,
+    } = req.query;
 
     const filter = { isActive: true, stock: { $gt: 0 } };
 
@@ -14,10 +52,11 @@ router.get('/', async (req, res) => {
       filter.category = category;
     }
 
+    // Text/regex search
     if (search) {
       filter.$or = [
         { name: { $regex: search, $options: 'i' } },
-        { description: { $regex: search, $options: 'i' } }
+        { description: { $regex: search, $options: 'i' } },
       ];
     }
 
@@ -27,27 +66,33 @@ router.get('/', async (req, res) => {
       if (maxPrice) filter.price.$lte = Number(maxPrice);
     }
 
+    const numericLimit = Number(limit) || 20;
+    const numericPage = Number(page) || 1;
+
     const products = await Product.find(filter)
       .populate('category', 'name')
       .populate('sellerId', 'name')
       .sort({ createdAt: -1 })
-      .limit(limit * 1)
-      .skip((page - 1) * limit);
+      .limit(numericLimit)
+      .skip((numericPage - 1) * numericLimit);
 
     const total = await Product.countDocuments(filter);
 
     res.json({
       products,
-      totalPages: Math.ceil(total / limit),
-      currentPage: Number(page),
-      total
+      totalPages: Math.ceil(total / numericLimit),
+      currentPage: numericPage,
+      total,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 });
 
-// Get single product details - PUBLIC
+/**
+ * ✅ GET single product details (PUBLIC)
+ *  URL: /api/public/products/:productId
+ */
 router.get('/:productId', async (req, res) => {
   try {
     const { productId } = req.params;
@@ -61,22 +106,6 @@ router.get('/:productId', async (req, res) => {
     }
 
     res.json({ product });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
-
-// Get all categories - PUBLIC
-router.get('/categories/all', async (req, res) => {
-  try {
-    const categories = await Category.find({ isActive: true })
-      .select('name description')
-      .sort({ name: 1 });
-
-    res.json({
-      count: categories.length,
-      categories
-    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

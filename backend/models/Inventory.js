@@ -12,10 +12,10 @@ const inventorySchema = new mongoose.Schema(
       enum: ['sale', 'return', 'restock', 'adjustment'],
       required: true,
     },
-    quantity: {
-      type: Number,
-      required: true, // negative for sale, positive for return/restock
-    },
+quantity: {
+  type: Number,
+  required: true, // negative for sale, positive for return/restock
+},
     orderId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Order',
