@@ -110,7 +110,7 @@ exports.checkout = async (req, res) => {
 await applyInventoryChange({
   productId: item.productId._id,
   quantity: item.quantity,
-  type: "sale",           // ✅ FIXED
+  type: "sale",              // ✅ FINAL FIX
   orderId: order._id,
   performedBy: req.user._id,
 });

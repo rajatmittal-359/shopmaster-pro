@@ -1,14 +1,21 @@
 const InventoryLog = require("../models/Inventory");
 const Product = require("../models/Product");
 
-// ✅ CENTRAL INVENTORY HANDLER (SINGLE SOURCE OF TRUTH)
+// ✅ FINAL UNIVERSAL INVENTORY HANDLER
 exports.applyInventoryChange = async ({
   productId,
   quantity,
-  type,
+  type,                // ✅ NOW ONLY: sale | return | restock | adjustment
   orderId = null,
   performedBy = null,
+  reason = "",
 }) => {
+  const allowedTypes = ["sale", "return", "restock", "adjustment"];
+
+  if (!allowedTypes.includes(type)) {
+    throw new Error("Invalid inventory operation type");
+  }
+
   const product = await Product.findById(productId);
   if (!product) {
     throw new Error("Product not found for inventory update");
@@ -17,41 +24,33 @@ exports.applyInventoryChange = async ({
   const stockBefore = product.stock;
   let stockAfter = stockBefore;
 
-  // ✅ STRICT FLOW CONTROL
-  if (type === "order_placed") {
+  // ✅ BUSINESS LOGIC MATCHING MODEL
+  if (type === "sale") {
     if (product.stock < quantity) {
       throw new Error("Insufficient stock");
     }
     stockAfter = stockBefore - quantity;
   } 
-  else if (type === "order_cancelled" || type === "order_returned") {
+  else if (type === "return" || type === "restock") {
     stockAfter = stockBefore + quantity;
   } 
-  else if (type === "manual_add") {
-    stockAfter = stockBefore + quantity;
-  } 
-  else if (type === "manual_remove") {
-    if (product.stock < quantity) {
-      throw new Error("Insufficient stock for manual removal");
-    }
-    stockAfter = stockBefore - quantity;
-  } 
-  else {
-    throw new Error("Invalid inventory operation type");
+  else if (type === "adjustment") {
+    stockAfter = quantity; // direct override
   }
 
-  // ✅ UPDATE PRODUCT STOCK (ONLY HERE)
+  // ✅ UPDATE PRODUCT STOCK
   product.stock = stockAfter;
   await product.save();
 
-  // ✅ SAVE INVENTORY LOG
+  // ✅ SAVE INVENTORY LOG (100% MODEL COMPATIBLE)
   await InventoryLog.create({
     productId,
     type,
-    quantity,
+    quantity: type === "sale" ? -quantity : quantity,
     stockBefore,
     stockAfter,
     orderId,
+    reason,
     performedBy,
   });
 
@@ -62,19 +61,4 @@ exports.applyInventoryChange = async ({
     quantity,
     type,
   };
-};
-
-// ✅ ADMIN + SELLER INVENTORY LOGS API
-exports.getInventoryLogs = async (req, res) => {
-  try {
-    const logs = await InventoryLog.find()
-      .populate("productId", "name")
-      .populate("orderId", "_id")
-      .populate("performedBy", "name email")
-      .sort({ createdAt: -1 });
-
-    res.json({ success: true, logs });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
 };
