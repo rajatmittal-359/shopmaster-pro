@@ -107,13 +107,13 @@ exports.checkout = async (req, res) => {
 
     // ✅ INVENTORY DEDUCT
     for (const item of cart.items) {
-      await applyInventoryChange({
-        productId: item.productId._id,
-        quantity: item.quantity,
-        type: "order_placed",
-        orderId: order._id,
-        performedBy: req.user._id,
-      });
+await applyInventoryChange({
+  productId: item.productId._id,
+  quantity: item.quantity,
+  type: "sale",           // ✅ FIXED
+  orderId: order._id,
+  performedBy: req.user._id,
+});
     }
 
     // ✅ CLEAR CART
