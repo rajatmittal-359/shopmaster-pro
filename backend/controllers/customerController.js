@@ -76,7 +76,7 @@ exports.getCart = async (req, res) => {
 };
 
 
-// ✅ CHECKOUT (INVENTORY SAFE)
+// ✅ CHECKOUT (FULLY FIXED ✅)
 exports.checkout = async (req, res) => {
   try {
     const { shippingAddressId } = req.body;
@@ -90,30 +90,49 @@ exports.checkout = async (req, res) => {
 
     const order = await Order.create({
       customerId: req.user._id,
-
       items: cart.items.map((item) => ({
         productId: item.productId._id,
-        sellerId: item.productId.sellerId,      // ✅ FIX 1 — SELLER ID ADDED
         name: item.productId.name,
         quantity: item.quantity,
         price: item.price,
+        sellerId: item.productId.sellerId, // ✅ REQUIRED
       })),
-
       totalAmount: cart.totalAmount,
       shippingAddressId,
       status: "pending",
-      paymentStatus: "cod",                     // ✅ FIX 2 — VALID ENUM REQUIRED
+      paymentStatus: "cod", // ✅ VALID ENUM
     });
 
-    // ✅ INVENTORY DEDUCT
+    // ✅ INVENTORY DEDUCT (ONLY VALID TYPE)
     for (const item of cart.items) {
-await applyInventoryChange({
-  productId: item.productId._id,
-  quantity: item.quantity,
-  type: "sale",              // ✅ FINAL FIX
-  orderId: order._id,
-  performedBy: req.user._id,
-});
+      // ✅ Validate item data before inventory change
+      if (!item.productId || !item.productId._id) {
+        throw new Error(`Invalid product in cart item: ${JSON.stringify(item)}`);
+      }
+      
+      if (!item.quantity || item.quantity <= 0) {
+        throw new Error(`Invalid quantity in cart item: ${item.quantity}`);
+      }
+
+      // ✅ Ensure type is explicitly set as a string literal
+      const inventoryType = "sale";
+      
+      // ✅ DEBUG: Log before calling applyInventoryChange
+      console.log("=== CHECKOUT: Calling applyInventoryChange ===");
+      console.log("Item:", {
+        productId: item.productId._id?.toString(),
+        quantity: item.quantity,
+        type: inventoryType,
+        typeOf: typeof inventoryType,
+      });
+      
+      await applyInventoryChange({
+        productId: item.productId._id,
+        quantity: item.quantity,
+        type: inventoryType, // ✅ ONLY VALID VALUE - explicitly set
+        orderId: order._id,
+        performedBy: req.user._id,
+      });
     }
 
     // ✅ CLEAR CART
@@ -128,7 +147,6 @@ await applyInventoryChange({
     res.status(500).json({ message: err.message });
   }
 };
-
 
 
 // ✅ GET MY ORDERS
@@ -147,7 +165,7 @@ exports.getMyOrders = async (req, res) => {
 };
 
 
-// ✅ GET ORDER DETAILS (FIXED PARAM)
+// ✅ GET ORDER DETAILS
 exports.getOrderDetails = async (req, res) => {
   try {
     const order = await Order.findOne({
@@ -168,7 +186,7 @@ exports.getOrderDetails = async (req, res) => {
 };
 
 
-// ✅ CANCEL ORDER (INVENTORY RESTORE)
+// ✅ CANCEL ORDER (FIXED INVENTORY TYPE ✅)
 exports.cancelOrder = async (req, res) => {
   try {
     const order = await Order.findOne({
@@ -191,7 +209,7 @@ exports.cancelOrder = async (req, res) => {
       await applyInventoryChange({
         productId: item.productId,
         quantity: item.quantity,
-        type: "order_cancelled",
+        type: "return", // ✅ FIXED
         orderId: order._id,
         performedBy: req.user._id,
       });
@@ -206,7 +224,7 @@ exports.cancelOrder = async (req, res) => {
 };
 
 
-// ✅ RETURN ORDER (INVENTORY RESTORE)
+// ✅ RETURN ORDER (FIXED INVENTORY TYPE ✅)
 exports.returnOrder = async (req, res) => {
   try {
     const order = await Order.findOne({
@@ -231,7 +249,7 @@ exports.returnOrder = async (req, res) => {
       await applyInventoryChange({
         productId: item.productId,
         quantity: item.quantity,
-        type: "order_returned",
+        type: "return", // ✅ FIXED
         orderId: order._id,
         performedBy: req.user._id,
       });
@@ -244,7 +262,9 @@ exports.returnOrder = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
-// ✅ UPDATE CART ITEM (+ / -)
+
+
+// ✅ UPDATE CART ITEM
 exports.updateCartItem = async (req, res) => {
   try {
     const { productId, quantity } = req.body;
@@ -319,4 +339,3 @@ exports.clearCart = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
-

@@ -5,10 +5,15 @@ const roleMiddleware = (...allowedRoles) => {
       return res.status(401).json({ message: 'Authentication required' });
     }
 
-    if (!allowedRoles.includes(req.user.role)) {
+    // ✅ Flatten array if passed as single array argument
+    const roles = allowedRoles.length === 1 && Array.isArray(allowedRoles[0])
+      ? allowedRoles[0]
+      : allowedRoles;
+
+    if (!roles.includes(req.user.role)) {
       return res.status(403).json({
         message: 'Access denied. Insufficient permissions.',
-        requiredRoles: allowedRoles,
+        requiredRoles: roles,
         yourRole: req.user.role,
       });
     }

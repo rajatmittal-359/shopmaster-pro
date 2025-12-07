@@ -6,8 +6,10 @@ const roleMiddleware = require("../middlewares/roleMiddleware");
 const { getInventoryLogs } = require("../controllers/inventoryController");
 
 // ✅ ADMIN + SELLER ONLY
-router.use(authMiddleware, roleMiddleware(["admin", "seller"]));
+router.use(authMiddleware);
+router.use(roleMiddleware(["admin", "seller"]));
 
-router.get("/logs", getInventoryLogs);
+// ✅ GET INVENTORY LOGS → /api/inventory
+router.get("/", getInventoryLogs);
 
 module.exports = router;

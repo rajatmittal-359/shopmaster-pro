@@ -34,6 +34,22 @@ const {
 // ✅ TEST
 router.get("/test", (req, res) => res.json({ ok: true }));
 
+// ✅ DEBUG: Check inventory function version
+router.get("/debug/inventory-check", (req, res) => {
+  const { applyInventoryChange } = require("../controllers/inventoryController");
+  const funcStr = applyInventoryChange.toString();
+  const hasFastPath = funcStr.includes("Fast-path: Type is 'sale'");
+  const hasValidation = funcStr.includes("allowedTypes.includes");
+  
+  res.json({
+    message: "Inventory function check",
+    hasFastPath,
+    hasValidation,
+    functionLength: funcStr.length,
+    timestamp: new Date().toISOString(),
+  });
+});
+
 // ✅ PROTECTED CUSTOMER
 router.use(authMiddleware, roleMiddleware("customer"));
 

@@ -3,6 +3,7 @@ const Product = require('../models/Product');
 const Order = require('../models/Order');
 const Seller = require('../models/Seller');
 const { uploadImage, deleteImage } = require('../utils/cloudinary');
+const { applyInventoryChange } = require('./inventoryController');
 
 /**
  * SELLER PRODUCTS
@@ -92,18 +93,47 @@ exports.updateProduct = async (req, res) => {
       });
     }
 
+    const stockBefore = product.stock;
+    const stockChanged = stock !== undefined && stock !== stockBefore;
+
+    // ✅ Apply non-stock field changes
     if (name) product.name = name;
     if (description) product.description = description;
     if (category) product.category = category;
     if (price !== undefined) product.price = price;
-    if (stock !== undefined) product.stock = stock;
     if (isActive !== undefined) product.isActive = isActive;
     if (lowStockThreshold !== undefined) {
       product.lowStockThreshold = lowStockThreshold;
     }
 
-    await product.save();
-    await product.populate('category', 'name');
+    // ✅ Save non-stock changes FIRST (before inventory change)
+    // This ensures all field updates are persisted even if stock changes
+    const hasNonStockChanges = name || description || category !== undefined || 
+                               price !== undefined || isActive !== undefined || 
+                               lowStockThreshold !== undefined;
+    
+    if (hasNonStockChanges) {
+      await product.save();
+    }
+
+    // ✅ Apply inventory change AFTER saving non-stock changes
+    // This way, if inventory change fails, non-stock changes are already saved
+    if (stockChanged) {
+      await applyInventoryChange({
+        productId: product._id,
+        quantity: stock, // For adjustment, quantity is the target stock value
+        type: 'adjustment',
+        performedBy: req.user._id,
+        reason: 'Manual stock adjustment via product update',
+      });
+    }
+
+    // ✅ Reload product to get latest state (including updated stock if changed)
+    const updatedProduct = await Product.findById(product._id)
+      .populate('category', 'name');
+    
+    // Use updated product for response
+    Object.assign(product, updatedProduct.toObject());
 
     res.json({
       message: 'Product updated successfully',
@@ -145,11 +175,10 @@ exports.updateStock = async (req, res) => {
       return res.status(400).json({ message: 'Stock cannot be negative' });
     }
 
-    const product = await Product.findOneAndUpdate(
-      { _id: productId, sellerId: req.user._id },
-      { stock },
-      { new: true }
-    ).populate('category', 'name');
+    const product = await Product.findOne({
+      _id: productId,
+      sellerId: req.user._id,
+    });
 
     if (!product) {
       return res.status(404).json({
@@ -157,10 +186,23 @@ exports.updateStock = async (req, res) => {
       });
     }
 
+    // ✅ Use applyInventoryChange for stock updates
+    await applyInventoryChange({
+      productId: product._id,
+      quantity: stock, // For adjustment, quantity is the target stock value
+      type: 'adjustment',
+      performedBy: req.user._id,
+      reason: 'Manual stock update by seller',
+    });
+
+    // Reload product from database to get updated stock
+    const updatedProduct = await Product.findById(product._id)
+      .populate('category', 'name');
+
     res.json({
       message: 'Stock updated successfully',
-      product,
-      lowStockAlert: product.stock <= product.lowStockThreshold,
+      product: updatedProduct,
+      lowStockAlert: updatedProduct.stock <= updatedProduct.lowStockThreshold,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });

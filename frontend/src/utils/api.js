@@ -1,10 +1,14 @@
 import axios from 'axios';
 
+// ✅ Use localhost for local development, production URL for production
+// Vite: import.meta.env.DEV is true in development, false in production
+const baseURL = import.meta.env.DEV
+  ? "http://localhost:5000/api"
+  : "https://shopmaster-api.onrender.com/api";
 
 const api = axios.create({
-  baseURL: "https://shopmaster-api.onrender.com/api",
-  withCredentials: false,
-
+  baseURL: baseURL,
+  withCredentials: false,
 });
 api.interceptors.request.use(
   (config) => {

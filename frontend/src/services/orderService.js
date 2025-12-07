@@ -1,16 +1,25 @@
-import api from '../utils/api';
+import api from "../utils/api";
 
-export const checkoutOrder = (shippingAddressId) =>
-  api.post('/customer/checkout', { shippingAddressId });
+// ✅ CHECKOUT (SIRF shippingAddressId BHEJNA HAI)
+export const checkoutOrder = async (shippingAddressId) => {
+  return api.post("/customer/checkout", {
+    shippingAddressId: shippingAddressId,
+  });
+};
 
+// ✅ GET MY ORDERS
 export const getMyOrders = (params = {}) =>
-  api.get('/customer/orders', { params });
+  api.get("/customer/orders", { params });
 
+// ✅ GET ORDER DETAILS
 export const getOrderDetails = (orderId) =>
   api.get(`/customer/orders/${orderId}`);
 
+// ✅ CANCEL ORDER
 export const cancelOrder = (orderId) =>
   api.patch(`/customer/orders/${orderId}/cancel`);
 
+// ✅ RETURN ORDER
 export const returnOrder = (orderId) =>
   api.post(`/customer/orders/${orderId}/return`);
+  
