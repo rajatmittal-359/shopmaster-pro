@@ -32,70 +32,63 @@ export default function Layout({ children, title = 'Dashboard' }) {
           <span className="font-bold text-xl text-orange-600">
             ShopMaster Pro
           </span>
-<button
-  onClick={() => setIsSidebarOpen(false)}
-  className="text-xl text-gray-600 md:hidden flex items-center justify-center w-8 h-8 rounded hover:bg-gray-100"
->
-  <FiX />
-</button>
+          <button
+            onClick={() => setIsSidebarOpen(false)}
+            className="text-xl text-gray-600 md:hidden flex items-center justify-center w-8 h-8 rounded hover:bg-gray-100"
+          >
+            <FiX />
+          </button>
         </div>
 
         {/* ✅ LINKS */}
         <nav className="mt-4 px-2 space-y-1 text-sm">
           {role === 'customer' && (
             <>
-              <Link to="/customer/dashboard" className="block px-3 py-2 rounded-md hover:bg-orange-100">
-                Customer Dashboard
-              </Link>
-              <Link to="/customer/shop" className="block px-3 py-2 rounded-md hover:bg-orange-100">
-                Shop
-              </Link>
-              <Link to="/customer/cart" className="block px-3 py-2 rounded-md hover:bg-orange-100">
-                My Cart
-              </Link>
-              <Link to="/customer/addresses" className="block px-3 py-2 rounded-md hover:bg-orange-100">
-                My Addresses
-              </Link>
-              <Link to="/customer/orders" className="block px-3 py-2 rounded-md hover:bg-orange-100">
-                My Orders
-              </Link>
-              <Link to="/customer/checkout" className="block px-3 py-2 rounded-md hover:bg-orange-100">
-                Checkout
-              </Link>
+              <Link to="/customer/dashboard" className="block px-3 py-2 rounded-md hover:bg-orange-100">Customer Dashboard</Link>
+              <Link to="/customer/shop" className="block px-3 py-2 rounded-md hover:bg-orange-100">Shop</Link>
+              <Link to="/customer/cart" className="block px-3 py-2 rounded-md hover:bg-orange-100">My Cart</Link>
+              <Link to="/customer/wishlist" className="block px-3 py-2 rounded-md hover:bg-orange-100">My Wishlist</Link>
+              <Link to="/customer/addresses" className="block px-3 py-2 rounded-md hover:bg-orange-100">My Addresses</Link>
+              <Link to="/customer/orders" className="block px-3 py-2 rounded-md hover:bg-orange-100">My Orders</Link>
+              <Link to="/customer/checkout" className="block px-3 py-2 rounded-md hover:bg-orange-100">Checkout</Link>
             </>
           )}
 
           {role === 'seller' && (
             <>
-              <Link to="/seller/dashboard" className="block px-3 py-2 rounded-md hover:bg-orange-100">
-                Seller Dashboard
-              </Link>
-              <Link to="/seller/products" className="block px-3 py-2 rounded-md hover:bg-orange-100">
-                My Products
-              </Link>
-              <Link to="/seller/orders" className="block px-3 py-2 rounded-md hover:bg-orange-100">
-                My Orders
+              <Link to="/seller/dashboard" className="block px-3 py-2 rounded-md hover:bg-orange-100">Seller Dashboard</Link>
+              <Link to="/seller/products" className="block px-3 py-2 rounded-md hover:bg-orange-100">My Products</Link>
+              <Link to="/seller/orders" className="block px-3 py-2 rounded-md hover:bg-orange-100">My Orders</Link>
+
+              {/* ✅ NEW INVENTORY LOGS LINK */}
+              <Link
+                to="/seller/inventory-logs"
+                className="block px-3 py-2 rounded-md hover:bg-orange-100"
+              >
+                Inventory Logs
               </Link>
             </>
           )}
 
           {role === 'admin' && (
             <>
-              <Link to="/admin/dashboard" className="block px-3 py-2 rounded-md hover:bg-orange-100">
-                Admin Dashboard
-              </Link>
-              <Link to="/admin/manage-sellers" className="block px-3 py-2 rounded-md hover:bg-orange-100">
-                Manage Sellers
-              </Link>
-              <Link to="/admin/categories" className="block px-3 py-2 rounded-md hover:bg-orange-100">
-                Manage Categories
+              <Link to="/admin/dashboard" className="block px-3 py-2 rounded-md hover:bg-orange-100">Admin Dashboard</Link>
+              <Link to="/admin/manage-sellers" className="block px-3 py-2 rounded-md hover:bg-orange-100">Manage Sellers</Link>
+              <Link to="/admin/categories" className="block px-3 py-2 rounded-md hover:bg-orange-100">Manage Categories</Link>
+
+              {/* ✅ NEW INVENTORY LOGS LINK */}
+              <Link
+                to="/admin/inventory-logs"
+                className="block px-3 py-2 rounded-md hover:bg-orange-100"
+              >
+                Inventory Logs
               </Link>
             </>
           )}
         </nav>
       </aside>
 
-      {/* ✅ OVERLAY FOR MOBILE */}
+      {/* ✅ OVERLAY */}
       {isSidebarOpen && (
         <div
           className="fixed inset-0 bg-black/40 z-20 md:hidden"

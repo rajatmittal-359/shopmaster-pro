@@ -1,26 +1,33 @@
+// backend/controllers/sellerController.js
 const Product = require('../models/Product');
 const Order = require('../models/Order');
 const Seller = require('../models/Seller');
 const { uploadImage, deleteImage } = require('../utils/cloudinary');
 
+/**
+ * SELLER PRODUCTS
+ */
+
 // Get seller's products
 exports.getMyProducts = async (req, res) => {
   try {
-const products = await Product.find({
-  sellerId: req.user._id,
-  isActive: true, 
-}).populate('category','name').sort({ createdAt: -1 });
+    const products = await Product.find({
+      sellerId: req.user._id,
+      isActive: true,
+    })
+      .populate('category', 'name')
+      .sort({ createdAt: -1 });
 
     res.json({
       count: products.length,
-      products
+      products,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
-// Add new product
+// Add new product (with multiple images)
 exports.addProduct = async (req, res) => {
   try {
     const {
@@ -30,7 +37,7 @@ exports.addProduct = async (req, res) => {
       price,
       stock,
       lowStockThreshold,
-      images, // ✅ MULTIPLE BASE64 IMAGES
+      images, // base64 array
     } = req.body;
 
     let imageUrls = [];
@@ -51,7 +58,7 @@ exports.addProduct = async (req, res) => {
       lowStockThreshold: lowStockThreshold || 10,
       sellerId: req.user._id,
       isActive: true,
-      images: imageUrls, // ✅ MULTIPLE SAVED
+      images: imageUrls,
     });
 
     res.status(201).json({ message: 'Product created', product });
@@ -60,51 +67,58 @@ exports.addProduct = async (req, res) => {
   }
 };
 
-
 // Update product
 exports.updateProduct = async (req, res) => {
   try {
     const { productId } = req.params;
-    const { name, description, category, price, stock, isActive, lowStockThreshold } = req.body;
+    const {
+      name,
+      description,
+      category,
+      price,
+      stock,
+      isActive,
+      lowStockThreshold,
+    } = req.body;
 
-    // Find product and verify ownership
-    const product = await Product.findOne({ 
-      _id: productId, 
-      sellerId: req.user._id 
+    const product = await Product.findOne({
+      _id: productId,
+      sellerId: req.user._id,
     });
 
     if (!product) {
-      return res.status(404).json({ 
-        message: 'Product not found or you do not have permission' 
+      return res.status(404).json({
+        message: 'Product not found or you do not have permission',
       });
     }
 
-    // Update fields
     if (name) product.name = name;
     if (description) product.description = description;
     if (category) product.category = category;
     if (price !== undefined) product.price = price;
     if (stock !== undefined) product.stock = stock;
     if (isActive !== undefined) product.isActive = isActive;
-    if (lowStockThreshold !== undefined) product.lowStockThreshold = lowStockThreshold;
+    if (lowStockThreshold !== undefined) {
+      product.lowStockThreshold = lowStockThreshold;
+    }
 
     await product.save();
     await product.populate('category', 'name');
 
     res.json({
       message: 'Product updated successfully',
-      product
+      product,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
-// Delete product
+// Soft delete product
 exports.deleteProduct = async (req, res) => {
   try {
     const product = await Product.findOne({
-      _id: req.params.id,
+      _id: req.params.productId,
       sellerId: req.user._id,
     });
 
@@ -112,7 +126,7 @@ exports.deleteProduct = async (req, res) => {
       return res.status(404).json({ message: 'Product not found' });
     }
 
-    product.isActive = false; // ✅ SOFT DELETE
+    product.isActive = false;
     await product.save();
 
     res.json({ message: 'Product soft deleted successfully' });
@@ -121,8 +135,7 @@ exports.deleteProduct = async (req, res) => {
   }
 };
 
-
-// Update stock/inventory
+// Update stock manually
 exports.updateStock = async (req, res) => {
   try {
     const { productId } = req.params;
@@ -139,15 +152,15 @@ exports.updateStock = async (req, res) => {
     ).populate('category', 'name');
 
     if (!product) {
-      return res.status(404).json({ 
-        message: 'Product not found or you do not have permission' 
+      return res.status(404).json({
+        message: 'Product not found or you do not have permission',
       });
     }
 
     res.json({
       message: 'Stock updated successfully',
       product,
-      lowStockAlert: product.stock <= product.lowStockThreshold
+      lowStockAlert: product.stock <= product.lowStockThreshold,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -157,38 +170,39 @@ exports.updateStock = async (req, res) => {
 // Get low stock products
 exports.getLowStockProducts = async (req, res) => {
   try {
-    const products = await Product.find({ 
-      sellerId: req.user._id 
+    const products = await Product.find({
+      sellerId: req.user._id,
     }).populate('category', 'name');
 
-    // Filter products with low stock
-    const lowStockProducts = products.filter(product => 
-      product.stock <= product.lowStockThreshold
+    const lowStockProducts = products.filter(
+      (product) => product.stock <= product.lowStockThreshold
     );
 
     res.json({
       count: lowStockProducts.length,
-      products: lowStockProducts
+      products: lowStockProducts,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
-// Get seller's orders
+/**
+ * SELLER ORDERS – STEP-5A CORE
+ */
+
+// Get orders that contain this seller's products
 exports.getMyOrders = async (req, res) => {
   try {
-    // Find orders that contain this seller's products
     const orders = await Order.find({
-      'items.sellerId': req.user._id
+      'items.sellerId': req.user._id,
     })
-    .populate('customerId', 'name email')
-    .sort({ createdAt: -1 });
+      .populate('customerId', 'name email')
+      .sort({ createdAt: -1 });
 
-    // Filter items to show only this seller's products
-    const sellerOrders = orders.map(order => {
+    const sellerOrders = orders.map((order) => {
       const sellerItems = order.items.filter(
-        item => item.sellerId.toString() === req.user._id.toString()
+        (item) => item.sellerId.toString() === req.user._id.toString()
       );
 
       return {
@@ -197,20 +211,23 @@ exports.getMyOrders = async (req, res) => {
         items: sellerItems,
         status: order.status,
         paymentStatus: order.paymentStatus,
-        createdAt: order.createdAt
+        createdAt: order.createdAt,
       };
     });
 
     res.json({
       count: sellerOrders.length,
-      orders: sellerOrders
+      orders: sellerOrders,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
-// Update order status (seller perspective)
+// Update order status from seller side
+// Allowed forward-only transitions:
+// pending -> processing -> shipped -> delivered
+// delivered/cancelled/returned cannot be changed
 exports.updateOrderStatus = async (req, res) => {
   try {
     const { orderId } = req.params;
@@ -218,89 +235,128 @@ exports.updateOrderStatus = async (req, res) => {
 
     const validStatuses = ['processing', 'shipped', 'delivered'];
     if (!validStatuses.includes(status)) {
-      return res.status(400).json({ 
-        message: 'Invalid status. Valid: processing, shipped, delivered' 
+      return res.status(400).json({
+        message:
+          'Invalid status. Valid values: processing, shipped, delivered',
       });
     }
 
     const order = await Order.findById(orderId);
-    
+
     if (!order) {
       return res.status(404).json({ message: 'Order not found' });
     }
 
-    // Check if seller has items in this order
-    const hasSellerItems = order.items.some(
-      item => item.sellerId.toString() === req.user._id.toString()
-    );
-
-    if (!hasSellerItems) {
-      return res.status(403).json({ 
-        message: 'You do not have permission to update this order' 
+    // Check order already cancelled/returned
+    if (['cancelled', 'returned'].includes(order.status)) {
+      return res.status(400).json({
+        message: `Order is already ${order.status} and cannot be updated`,
       });
     }
 
+    // Ensure this seller is part of this order
+    const hasSellerItems = order.items.some(
+      (item) => item.sellerId.toString() === req.user._id.toString()
+    );
+
+    if (!hasSellerItems) {
+      return res.status(403).json({
+        message: 'You do not have permission to update this order',
+      });
+    }
+
+    // Enforce forward-only transitions
+    const allowedNext = {
+      pending: ['processing'],
+      processing: ['shipped'],
+      shipped: ['delivered'],
+      delivered: [],
+      cancelled: [],
+      returned: [],
+    };
+
+    const currentStatus = order.status;
+    const allowedForCurrent = allowedNext[currentStatus] || [];
+
+    if (!allowedForCurrent.includes(status)) {
+      return res.status(400).json({
+        message: `Invalid status transition: ${currentStatus} -> ${status}`,
+      });
+    }
+
+    // Apply new status
     order.status = status;
+
+    // When delivered, mark payment as completed
+    if (status === 'delivered') {
+      order.paymentStatus = 'completed';
+    }
+
     await order.save();
 
     res.json({
       message: 'Order status updated successfully',
-      order
+      order,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
-// Get seller analytics
+/**
+ * SELLER ANALYTICS & PROFILE
+ */
+
+// Get seller analytics (products + revenue)
 exports.getSellerAnalytics = async (req, res) => {
   try {
-    const totalProducts = await Product.countDocuments({ 
-      sellerId: req.user._id 
+    const totalProducts = await Product.countDocuments({
+      sellerId: req.user._id,
     });
 
-    const activeProducts = await Product.countDocuments({ 
-      sellerId: req.user._id, 
-      isActive: true 
+    const activeProducts = await Product.countDocuments({
+      sellerId: req.user._id,
+      isActive: true,
     });
 
-    // Get all products to calculate low stock
     const allProducts = await Product.find({ sellerId: req.user._id });
-    const lowStockCount = allProducts.filter(p => 
-      p.stock <= p.lowStockThreshold
+    const lowStockCount = allProducts.filter(
+      (p) => p.stock <= p.lowStockThreshold
     ).length;
 
-    // Calculate revenue from completed orders
+    // Revenue from completed orders
     const revenue = await Order.aggregate([
       { $unwind: '$items' },
-      { 
-        $match: { 
+      {
+        $match: {
           'items.sellerId': req.user._id,
-          paymentStatus: 'completed'
-        } 
+          paymentStatus: 'completed',
+        },
       },
-      { 
-        $group: { 
-          _id: null, 
-          total: { 
-            $sum: { $multiply: ['$items.price', '$items.quantity'] } 
-          } 
-        } 
-      }
+      {
+        $group: {
+          _id: null,
+          total: {
+            $sum: { $multiply: ['$items.price', '$items.quantity'] },
+          },
+        },
+      },
     ]);
 
     res.json({
       products: {
         total: totalProducts,
         active: activeProducts,
-        lowStock: lowStockCount
+        lowStock: lowStockCount,
       },
-      revenue: revenue[0]?.total || 0
+      revenue: revenue[0]?.total || 0,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
+
+// Get seller profile
 exports.getSellerProfile = async (req, res) => {
   try {
     const seller = await Seller.findOne({ userId: req.user.id });
@@ -312,6 +368,8 @@ exports.getSellerProfile = async (req, res) => {
     res.json(seller);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'Server error', error: error.message });
+    res
+      .status(500)
+      .json({ message: 'Server error', error: error.message });
   }
 };

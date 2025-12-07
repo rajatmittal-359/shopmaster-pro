@@ -1,3 +1,4 @@
+// backend/models/Inventory.js
 const mongoose = require('mongoose');
 
 const inventorySchema = new mongoose.Schema(
@@ -7,31 +8,39 @@ const inventorySchema = new mongoose.Schema(
       ref: 'Product',
       required: true,
     },
+
     type: {
       type: String,
       enum: ['sale', 'return', 'restock', 'adjustment'],
       required: true,
     },
-quantity: {
-  type: Number,
-  required: true, // negative for sale, positive for return/restock
-},
+
+    // NOTE: sale ke liye negative, return/restock ke liye positive
+    quantity: {
+      type: Number,
+      required: true,
+    },
+
     orderId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Order',
     },
+
     reason: {
       type: String,
       trim: true,
     },
+
     performedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
     },
+
     stockBefore: {
       type: Number,
       required: true,
     },
+
     stockAfter: {
       type: Number,
       required: true,

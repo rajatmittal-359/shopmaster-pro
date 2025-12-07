@@ -1,109 +1,59 @@
-const Address = require('../models/Address');
+const Address = require("../models/Address");
 
-// GET /api/customer/addresses
-exports.getAddresses = async (req, res) => {
-  try {
-    const addresses = await Address.find({ userId: req.user._id })
-      .sort({ isDefault: -1, createdAt: -1 });
-    
-    res.json({ count: addresses.length, addresses });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-// POST /api/customer/addresses
+// ✅ ADD ADDRESS
 exports.addAddress = async (req, res) => {
   try {
-    const { label, street, city, state, zipCode, country, isDefault } = req.body;
-
-    if (!street || !city || !state || !zipCode) {
-      return res.status(400).json({ 
-        message: 'Street, city, state, and zipCode are required' 
-      });
-    }
-
-    // If setting as default, unset all other defaults
-    if (isDefault) {
-      await Address.updateMany(
-        { userId: req.user._id },
-        { isDefault: false }
-      );
-    }
-
     const address = await Address.create({
       userId: req.user._id,
-      label: label || 'Home',
-      street,
-      city,
-      state,
-      zipCode,
-      country: country || 'India',
-      isDefault: isDefault || false,
+      ...req.body,
     });
 
-    res.status(201).json({ message: 'Address added successfully', address });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(201).json({ success: true, address });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 };
 
-// PATCH /api/customer/addresses/:id
+// ✅ GET MY ADDRESSES  ✅✅✅  (NAME FIXED)
+exports.getMyAddresses = async (req, res) => {
+  try {
+    const addresses = await Address.find({ userId: req.user._id });
+    res.json({ success: true, addresses });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// ✅ UPDATE ADDRESS
 exports.updateAddress = async (req, res) => {
   try {
-    const { id } = req.params;
-    const { label, street, city, state, zipCode, country, isDefault } = req.body;
+    const address = await Address.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true }
+    );
 
-    const address = await Address.findOne({ _id: id, userId: req.user._id });
-    
     if (!address) {
-      return res.status(404).json({ 
-        message: 'Address not found or access denied' 
-      });
+      return res.status(404).json({ message: "Address not found" });
     }
 
-    // If setting as default, unset others
-    if (isDefault && !address.isDefault) {
-      await Address.updateMany(
-        { userId: req.user._id, _id: { $ne: id } },
-        { isDefault: false }
-      );
-    }
-
-    if (label !== undefined) address.label = label;
-    if (street !== undefined) address.street = street;
-    if (city !== undefined) address.city = city;
-    if (state !== undefined) address.state = state;
-    if (zipCode !== undefined) address.zipCode = zipCode;
-    if (country !== undefined) address.country = country;
-    if (isDefault !== undefined) address.isDefault = isDefault;
-
-    await address.save();
-    
-    res.json({ message: 'Address updated successfully', address });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.json({ success: true, address });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 };
 
-// DELETE /api/customer/addresses/:id
+// ✅ DELETE ADDRESS
 exports.deleteAddress = async (req, res) => {
   try {
-    const { id } = req.params;
+    const address = await Address.findByIdAndDelete(req.params.id);
 
-    const address = await Address.findOneAndDelete({ 
-      _id: id, 
-      userId: req.user._id 
-    });
-    
     if (!address) {
-      return res.status(404).json({ 
-        message: 'Address not found or access denied' 
-      });
+      return res.status(404).json({ message: "Address not found" });
     }
 
-    res.json({ message: 'Address deleted successfully' });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.json({ success: true, message: "Address deleted" });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 };

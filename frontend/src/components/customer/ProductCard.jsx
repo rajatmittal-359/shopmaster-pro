@@ -1,39 +1,93 @@
-// frontend/src/components/customer/ProductCard.jsx
-import { Link } from 'react-router-dom';
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { addToCart } from "../../services/cartService";
+import {
+  addToWishlist,
+  removeFromWishlist,
+  getWishlist,
+} from "../../services/wishlistService";
 
-function stripHtml(html = '') {
-  return html.replace(/<[^>]+>/g, '');
+function stripHtml(html = "") {
+  return html.replace(/<[^>]+>/g, "");
 }
 
 export default function ProductCard({ product }) {
+  const [qty, setQty] = useState(1);
+  const [liked, setLiked] = useState(false);
+
   const image = product.images?.[0];
-  const plainDesc = stripHtml(product.description || '');
+  const plainDesc = stripHtml(product.description || "");
   const shortDesc =
-    plainDesc.length > 90 ? plainDesc.slice(0, 90).trim() + '…' : plainDesc;
+    plainDesc.length > 90 ? plainDesc.slice(0, 90).trim() + "…" : plainDesc;
 
   const isLowStock =
-    typeof product.lowStockThreshold === 'number' &&
+    typeof product.lowStockThreshold === "number" &&
     product.stock <= product.lowStockThreshold;
 
-  return (
-    <Link
-      to={`/customer/products/${product._id}`}
-      className="group bg-white rounded-lg shadow-sm hover:shadow-md transition border flex flex-col"
-    >
-      {/* IMAGE */}
-      <div className="relative aspect-[4/3] w-full overflow-hidden rounded-t-lg bg-gray-100">
-        {image ? (
-          <img
-            src={image}
-            alt={product.name}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center text-xs text-gray-400">
-            No image
-          </div>
-        )}
+  // ✅ Check wishlist status on load
+  useEffect(() => {
+    const checkWishlist = async () => {
+      try {
+        const res = await getWishlist();
+        const items = res.data.wishlist?.items || [];
+        const found = items.some(
+          (i) => i.productId?._id === product._id
+        );
+        setLiked(found);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    checkWishlist();
+  }, [product._id]);
 
+  const handleAddToCart = async () => {
+    await addToCart({ productId: product._id, quantity: qty });
+    alert("Added to cart");
+  };
+const toggleWishlist = async (e) => {
+  e.stopPropagation(); // ✅ Link click ko block karega
+  e.preventDefault();  // ✅ Page navigation roke
+
+  try {
+    if (liked) {
+      await removeFromWishlist(product._id);
+      setLiked(false);
+    } else {
+      await addToWishlist(product._id);
+      setLiked(true);
+    }
+  } catch (err) {
+    console.error("Wishlist toggle failed");
+  }
+};
+  return (
+    <div className="group bg-white rounded-lg shadow-sm hover:shadow-md transition border flex flex-col">
+      {/* ✅ IMAGE */}
+      <div className="relative aspect-[4/3] w-full overflow-hidden rounded-t-lg bg-gray-100">
+        <Link to={`/customer/products/${product._id}`}>
+          {image ? (
+            <img
+              src={image}
+              alt={product.name}
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-xs text-gray-400">
+              No image
+            </div>
+          )}
+        </Link>
+
+        {/* ✅ WISHLIST HEART */}
+     <button
+  onClick={(e) => toggleWishlist(e)}
+          className="absolute top-2 right-2 bg-white rounded-full p-1 shadow hover:bg-gray-100"
+        >
+          {liked ? "❤️" : "🤍"}
+        </button>
+
+        {/* ✅ LOW STOCK BADGE */}
         {isLowStock && (
           <span className="absolute top-2 left-2 px-2 py-0.5 text-[11px] rounded-full bg-red-100 text-red-700">
             Low stock
@@ -41,7 +95,7 @@ export default function ProductCard({ product }) {
         )}
       </div>
 
-      {/* BODY */}
+      {/* ✅ BODY */}
       <div className="flex-1 p-3 flex flex-col gap-1">
         <h3 className="font-semibold text-sm line-clamp-2 group-hover:text-orange-600">
           {product.name}
@@ -52,10 +106,10 @@ export default function ProductCard({ product }) {
         )}
 
         <p className="text-[11px] text-gray-500 mt-1">
-          Seller: {product.sellerId?.name || 'Unknown'}
+          Seller: {product.sellerId?.name || "Unknown"}
         </p>
         <p className="text-[11px] text-gray-500">
-          Category: {product.category?.name || 'Uncategorized'}
+          Category: {product.category?.name || "Uncategorized"}
         </p>
 
         <div className="flex items-center justify-between mt-2">
@@ -67,13 +121,40 @@ export default function ProductCard({ product }) {
           </span>
         </div>
 
-        <button
-          type="button"
-          className="mt-3 w-full border border-orange-500 text-orange-600 text-xs font-semibold py-1.5 rounded group-hover:bg-orange-500 group-hover:text-white transition"
+        {/* ✅ QTY + CART */}
+        <div className="flex items-center gap-2 mt-3">
+          <button
+            onClick={() => setQty((q) => Math.max(1, q - 1))}
+            className="px-3 py-1 border rounded text-sm"
+          >
+            −
+          </button>
+
+          <span className="text-sm font-semibold">{qty}</span>
+
+          <button
+            onClick={() => setQty((q) => q + 1)}
+            className="px-3 py-1 border rounded text-sm"
+          >
+            +
+          </button>
+
+          <button
+            onClick={handleAddToCart}
+            className="ml-auto px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white text-xs rounded"
+          >
+            Add to Cart
+          </button>
+        </div>
+
+        {/* ✅ VIEW DETAILS */}
+        <Link
+          to={`/customer/products/${product._id}`}
+          className="mt-3 w-full text-center border border-orange-500 text-orange-600 text-xs font-semibold py-1.5 rounded hover:bg-orange-500 hover:text-white transition"
         >
           View Details
-        </button>
+        </Link>
       </div>
-    </Link>
+    </div>
   );
 }

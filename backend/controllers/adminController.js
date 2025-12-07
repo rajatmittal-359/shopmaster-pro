@@ -1,8 +1,13 @@
+// backend/controllers/adminController.js
 const User = require('../models/User');
 const Seller = require('../models/Seller');
 const Category = require('../models/Category');
 const Product = require('../models/Product');
 const Order = require('../models/Order');
+
+/**
+ * SELLER MANAGEMENT
+ */
 
 // Get all pending sellers (awaiting approval)
 exports.getPendingSellers = async (req, res) => {
@@ -13,7 +18,7 @@ exports.getPendingSellers = async (req, res) => {
 
     res.json({
       count: pendingSellers.length,
-      sellers: pendingSellers
+      sellers: pendingSellers,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -37,7 +42,7 @@ exports.approveSeller = async (req, res) => {
 
     res.json({
       message: 'Seller approved successfully',
-      seller
+      seller,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -61,12 +66,16 @@ exports.rejectSeller = async (req, res) => {
 
     res.json({
       message: 'Seller rejected',
-      seller
+      seller,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
+
+/**
+ * CATEGORY MANAGEMENT
+ */
 
 // Create category
 exports.createCategory = async (req, res) => {
@@ -80,12 +89,12 @@ exports.createCategory = async (req, res) => {
     const category = await Category.create({
       name,
       description,
-      createdBy: req.user._id
+      createdBy: req.user._id,
     });
 
     res.status(201).json({
       message: 'Category created successfully',
-      category
+      category,
     });
   } catch (error) {
     if (error.code === 11000) {
@@ -104,7 +113,7 @@ exports.getCategories = async (req, res) => {
 
     res.json({
       count: categories.length,
-      categories
+      categories,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -129,7 +138,7 @@ exports.updateCategory = async (req, res) => {
 
     res.json({
       message: 'Category updated successfully',
-      category
+      category,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -141,11 +150,10 @@ exports.deleteCategory = async (req, res) => {
   try {
     const { categoryId } = req.params;
 
-    // Check if any products use this category
     const productsCount = await Product.countDocuments({ category: categoryId });
     if (productsCount > 0) {
-      return res.status(400).json({ 
-        message: `Cannot delete category. ${productsCount} products are using it.` 
+      return res.status(400).json({
+        message: `Cannot delete category. ${productsCount} products are using it.`,
       });
     }
 
@@ -156,34 +164,142 @@ exports.deleteCategory = async (req, res) => {
     }
 
     res.json({
-      message: 'Category deleted successfully'
+      message: 'Category deleted successfully',
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
-// Get platform analytics
+/**
+ * PLATFORM ANALYTICS (STEP-6 ENHANCED)
+ */
+
 exports.getAnalytics = async (req, res) => {
   try {
-    const totalSellers = await Seller.countDocuments({ isApproved: true });
-    const pendingSellers = await Seller.countDocuments({ isApproved: false });
-    const totalProducts = await Product.countDocuments();
-    const totalOrders = await Order.countDocuments();
-    
-    const totalRevenue = await Order.aggregate([
+    // ---------- BASIC COUNTS ----------
+    const [totalSellers, pendingSellers, totalProducts, totalOrders] =
+      await Promise.all([
+        Seller.countDocuments({ isApproved: true }),
+        Seller.countDocuments({ isApproved: false }),
+        Product.countDocuments(),
+        Order.countDocuments(),
+      ]);
+
+    const totalRevenueAgg = await Order.aggregate([
       { $match: { paymentStatus: 'completed' } },
-      { $group: { _id: null, total: { $sum: '$totalAmount' } } }
+      {
+        $group: {
+          _id: null,
+          total: { $sum: '$totalAmount' },
+        },
+      },
     ]);
 
+    const totalRevenue = totalRevenueAgg[0]?.total || 0;
+
+    // ---------- REVENUE BY DAY (LAST 7 DAYS) ----------
+    const now = new Date();
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(now.getDate() - 6); // today + last 6 days
+
+    const revenueByDayAgg = await Order.aggregate([
+      {
+        $match: {
+          paymentStatus: 'completed',
+          createdAt: { $gte: sevenDaysAgo },
+        },
+      },
+      {
+        $group: {
+          _id: {
+            $dateToString: { format: '%Y-%m-%d', date: '$createdAt' },
+          },
+          total: { $sum: '$totalAmount' },
+          count: { $sum: 1 },
+        },
+      },
+      { $sort: { _id: 1 } },
+    ]);
+
+    const revenueByDay = revenueByDayAgg.map((d) => ({
+      date: d._id,
+      total: d.total,
+      orders: d.count,
+    }));
+
+    // ---------- TOP SELLERS BY REVENUE ----------
+    const topSellersAgg = await Order.aggregate([
+      { $match: { paymentStatus: 'completed' } },
+      { $unwind: '$items' },
+      {
+        $group: {
+          _id: '$items.sellerId',
+          revenue: {
+            $sum: { $multiply: ['$items.price', '$items.quantity'] },
+          },
+          itemsSold: { $sum: '$items.quantity' },
+        },
+      },
+      { $sort: { revenue: -1 } },
+      { $limit: 5 },
+      {
+        $lookup: {
+          from: 'users',
+          localField: '_id',
+          foreignField: '_id',
+          as: 'seller',
+        },
+      },
+      { $unwind: '$seller' },
+      {
+        $project: {
+          _id: 1,
+          revenue: 1,
+          itemsSold: 1,
+          sellerName: '$seller.name',
+          sellerEmail: '$seller.email',
+        },
+      },
+    ]);
+
+    const topSellers = topSellersAgg;
+
+    // ---------- GLOBAL LOW STOCK LIST ----------
+    const lowStockProducts = await Product.find({
+      isActive: true,
+      $expr: { $lte: ['$stock', '$lowStockThreshold'] },
+    })
+      .populate('sellerId', 'name email')
+      .populate('category', 'name')
+      .sort({ stock: 1 })
+      .limit(10);
+
+    const lowStockGlobal = lowStockProducts.map((p) => ({
+      id: p._id,
+      name: p.name,
+      stock: p.stock,
+      lowStockThreshold: p.lowStockThreshold,
+      sellerName: p.sellerId?.name,
+      sellerEmail: p.sellerId?.email,
+      category: p.category?.name,
+    }));
+
+    // ---------- RESPONSE (BACKWARD COMPATIBLE) ----------
     res.json({
+      // old structure (AdminDashboard.jsx already use karta hai)
       sellers: {
         total: totalSellers,
-        pending: pendingSellers
+        pending: pendingSellers,
       },
       products: totalProducts,
       orders: totalOrders,
-      revenue: totalRevenue[0]?.total || 0
+      revenue: totalRevenue,
+
+      // new advanced analytics (future UI use ke liye ready)
+      revenueByDay,
+      topSellers,
+      lowStockGlobal,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
