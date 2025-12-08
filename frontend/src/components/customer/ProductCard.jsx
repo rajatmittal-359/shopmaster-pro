@@ -6,7 +6,7 @@ import {
   removeFromWishlist,
   getWishlist,
 } from "../../services/wishlistService";
-
+import { toastSuccess ,toastError} from "../../utils/toast";
 function stripHtml(html = "") {
   return html.replace(/<[^>]+>/g, "");
 }
@@ -41,26 +41,35 @@ export default function ProductCard({ product }) {
     checkWishlist();
   }, [product._id]);
 
-  const handleAddToCart = async () => {
+const handleAddToCart = async () => {
+  try {
     await addToCart({ productId: product._id, quantity: qty });
-    alert("Added to cart");
-  };
+    toastSuccess('Added to cart');
+  } catch (err) {
+    toastError(err?.response?.data?.message || 'Failed to add to cart');
+  }
+};
+
 const toggleWishlist = async (e) => {
-  e.stopPropagation(); // ✅ Link click ko block karega
-  e.preventDefault();  // ✅ Page navigation roke
+  e.stopPropagation();
+  e.preventDefault();
 
   try {
     if (liked) {
       await removeFromWishlist(product._id);
       setLiked(false);
+      toastSuccess('Removed from wishlist');
     } else {
       await addToWishlist(product._id);
       setLiked(true);
+      toastSuccess('Added to wishlist');
     }
   } catch (err) {
-    console.error("Wishlist toggle failed");
+    toastError(err?.response?.data?.message || 'Failed to update wishlist');
   }
 };
+
+
   return (
     <div className="group bg-white rounded-lg shadow-sm hover:shadow-md transition border flex flex-col">
       {/* ✅ IMAGE */}

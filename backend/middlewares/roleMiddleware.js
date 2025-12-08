@@ -1,14 +1,12 @@
 // backend/middlewares/roleMiddleware.js
-const roleMiddleware = (...allowedRoles) => {
+const roleMiddleware = (allowedRoles) => {
+  // Handle both array and single role
+  const roles = Array.isArray(allowedRoles) ? allowedRoles : [allowedRoles];
+  
   return (req, res, next) => {
     if (!req.user) {
       return res.status(401).json({ message: 'Authentication required' });
     }
-
-    // ✅ Flatten array if passed as single array argument
-    const roles = allowedRoles.length === 1 && Array.isArray(allowedRoles[0])
-      ? allowedRoles[0]
-      : allowedRoles;
 
     if (!roles.includes(req.user.role)) {
       return res.status(403).json({

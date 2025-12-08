@@ -16,6 +16,7 @@ import {
   createOrUpdateReview,
   deleteReview,
 } from "../../services/reviewService";
+import { toastSuccess, toastError } from '../../utils/toast';
 
 export default function ProductDetailsPage() {
   const { productId } = useParams();
@@ -94,29 +95,31 @@ export default function ProductDetailsPage() {
   }, [productId]);
 
   // ✅ CART
-  const handleAddToCart = async () => {
-    try {
-      await addToCart({ productId, quantity: qty });
-      alert("Added to cart"); // existing pattern, baad me global toast laga sakte hain
-    } catch (err) {
-      alert(err.response?.data?.message || "Failed to add to cart");
-    }
-  };
+const handleAddToCart = async () => {
+  try {
+    await addToCart({ productId, quantity: qty });
+    toastSuccess('Added to cart');
+  } catch (err) {
+    toastError(err?.response?.data?.message || 'Failed to add to cart');
+  }
+};
 
   // ✅ WISHLIST
-  const toggleWishlist = async () => {
-    try {
-      if (liked) {
-        await removeFromWishlist(productId);
-        setLiked(false);
-      } else {
-        await addToWishlist(productId);
-        setLiked(true);
-      }
-    } catch (err) {
-      alert(err.response?.data?.message || "Failed to update wishlist");
+const toggleWishlist = async () => {
+  try {
+    if (liked) {
+      await removeFromWishlist(productId);
+      setLiked(false);
+      toastSuccess('Removed from wishlist');
+    } else {
+      await addToWishlist(productId);
+      setLiked(true);
+      toastSuccess('Added to wishlist');
     }
-  };
+  } catch (err) {
+    toastError(err?.response?.data?.message || 'Failed to update wishlist');
+  }
+};
 
   // ✅ REVIEW: rating select
   const handleRatingClick = (value) => {

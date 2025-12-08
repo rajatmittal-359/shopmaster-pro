@@ -3,6 +3,7 @@ import Layout from "../../components/common/Layout";
 import { getWishlist, removeFromWishlist } from "../../services/wishlistService";
 import { addToCart } from "../../services/cartService";
 import { useNavigate } from "react-router-dom";
+import { toastSuccess, toastError } from '../../utils/toast';
 
 export default function WishlistPage() {
   const [wishlist, setWishlist] = useState([]);
@@ -32,17 +33,28 @@ export default function WishlistPage() {
   useEffect(() => {
     loadWishlist();
   }, []);
-
-  const handleAddToCart = async (productId) => {
-    const qty = qtyMap[productId] || 1;
+const handleAddToCart = async (productId) => {
+  const qty = qtyMap[productId] || 1;
+  try {
     await addToCart({ productId, quantity: qty });
-    alert("Added to cart");
-  };
+    toastSuccess('Added to cart');
+  } catch (err) {
+    toastError(err?.response?.data?.message || 'Failed to add to cart');
+  }
+};
 
-  const handleRemove = async (productId) => {
+
+const handleRemove = async (productId) => {
+  try {
     await removeFromWishlist(productId);
     loadWishlist();
-  };
+    toastSuccess('Removed from wishlist');
+  } catch (err) {
+    toastError(err?.response?.data?.message || 'Failed to remove from wishlist');
+  }
+};
+
+
 
   if (loading) {
     return (

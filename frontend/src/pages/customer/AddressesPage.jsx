@@ -6,6 +6,7 @@ import {
   updateAddress,
   deleteAddress,
 } from '../../services/addressService';
+import { toastSuccess, toastError } from '../../utils/toast';
 
 export default function AddressesPage() {
   const [addresses, setAddresses] = useState([]);
@@ -46,20 +47,22 @@ export default function AddressesPage() {
     }));
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      if (editingId) {
-        await updateAddress(editingId, form);
-      } else {
-        await addAddress(form);
-      }
-      resetForm();
-      loadAddresses();
-    } catch (err) {
-      alert(err.response?.data?.message || 'Error saving address');
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  try {
+    if (editingId) {
+      await updateAddress(editingId, form);
+      toastSuccess('Address updated');
+    } else {
+      await addAddress(form);
+      toastSuccess('Address added');
     }
-  };
+    resetForm();
+    loadAddresses();
+  } catch (err) {
+    toastError(err?.response?.data?.message || 'Error saving address');
+  }
+};
 
   const handleEdit = (addr) => {
     setEditingId(addr._id);
@@ -75,15 +78,17 @@ export default function AddressesPage() {
     setShowForm(true);
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('Delete this address?')) return;
-    try {
-      await deleteAddress(id);
-      loadAddresses();
-    } catch (err) {
-      alert(err.response?.data?.message || 'Error deleting address');
-    }
-  };
+const handleDelete = async (id) => {
+  if (!window.confirm('Delete this address?')) return;
+  try {
+    await deleteAddress(id);
+    toastSuccess('Address deleted');
+    loadAddresses();
+  } catch (err) {
+    toastError(err?.response?.data?.message || 'Error deleting address');
+  }
+};
+
 
   const resetForm = () => {
     setForm({

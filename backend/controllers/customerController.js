@@ -105,31 +105,10 @@ exports.checkout = async (req, res) => {
 
     // ✅ INVENTORY DEDUCT (ONLY VALID TYPE)
     for (const item of cart.items) {
-      // ✅ Validate item data before inventory change
-      if (!item.productId || !item.productId._id) {
-        throw new Error(`Invalid product in cart item: ${JSON.stringify(item)}`);
-      }
-      
-      if (!item.quantity || item.quantity <= 0) {
-        throw new Error(`Invalid quantity in cart item: ${item.quantity}`);
-      }
-
-      // ✅ Ensure type is explicitly set as a string literal
-      const inventoryType = "sale";
-      
-      // ✅ DEBUG: Log before calling applyInventoryChange
-      console.log("=== CHECKOUT: Calling applyInventoryChange ===");
-      console.log("Item:", {
-        productId: item.productId._id?.toString(),
-        quantity: item.quantity,
-        type: inventoryType,
-        typeOf: typeof inventoryType,
-      });
-      
       await applyInventoryChange({
         productId: item.productId._id,
         quantity: item.quantity,
-        type: inventoryType, // ✅ ONLY VALID VALUE - explicitly set
+        type: "sale", // ✅ ONLY VALID VALUE
         orderId: order._id,
         performedBy: req.user._id,
       });

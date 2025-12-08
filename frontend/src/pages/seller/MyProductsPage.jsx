@@ -12,6 +12,8 @@ import { Navigation, Pagination } from 'swiper/modules';
 import 'swiper/css';
 import 'swiper/css/navigation';
 import 'swiper/css/pagination';
+import { toastSuccess, toastError } from '../../utils/toast';
+
 export default function MyProductsPage() {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -75,23 +77,23 @@ export default function MyProductsPage() {
     }));
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    try {
-      if (editingId) {
-        await updateProduct(editingId, form);
-      } else {
-        await addProduct(form);
-      }
-
-      resetForm();
-      await loadData();
-      window.location.reload();
-    } catch (err) {
-      alert(err.response?.data?.message || 'Error saving product');
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  try {
+    if (editingId) {
+      await updateProduct(editingId, form);
+      toastSuccess('Product updated');
+    } else {
+      await addProduct(form);
+      toastSuccess('Product created');
     }
-  };
+    resetForm();
+    await loadData();
+  } catch (err) {
+    toastError(err?.response?.data?.message || 'Error saving product');
+  }
+};
+
 
   const handleEdit = (prod) => {
     setEditingId(prod._id);
@@ -107,15 +109,18 @@ export default function MyProductsPage() {
     setShowForm(true);
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('Delete this product?')) return;
-    try {
-      await deleteProduct(id);
-      loadData();
-    } catch (err) {
-      alert(err.response?.data?.message || 'Error deleting product');
-    }
-  };
+const handleDelete = async (id) => {
+  if (!window.confirm('Delete this product?')) return;
+  try {
+    await deleteProduct(id);
+    toastSuccess('Product deleted');
+    loadData();
+  } catch (err) {
+    toastError(err?.response?.data?.message || 'Error deleting product');
+  }
+};
+
+
 
   const resetForm = () => {
     setForm({
