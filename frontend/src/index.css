@@ -1,1 +1,14 @@
 @import "tailwindcss";
+
+/* CKEditor + description HTML lists */
+.ck-content ul,
+.description-html ul {
+  list-style-type: disc;
+  padding-left: 1.25rem;
+}
+
+.ck-content ol,
+.description-html ol {
+  list-style-type: decimal;
+  padding-left: 1.25rem;
+}

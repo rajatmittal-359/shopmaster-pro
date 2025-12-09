@@ -7,14 +7,15 @@ import {
   getWishlist,
 } from "../../services/wishlistService";
 import { toastSuccess ,toastError} from "../../utils/toast";
+import { useNavigate } from "react-router-dom";
 function stripHtml(html = "") {
   return html.replace(/<[^>]+>/g, "");
 }
 
 export default function ProductCard({ product }) {
-  const [qty, setQty] = useState(1);
-  const [liked, setLiked] = useState(false);
 
+  const [liked, setLiked] = useState(false);
+ const navigate = useNavigate();
   const image = product.images?.[0];
   const plainDesc = stripHtml(product.description || "");
   const shortDesc =
@@ -24,7 +25,7 @@ export default function ProductCard({ product }) {
     typeof product.lowStockThreshold === "number" &&
     product.stock <= product.lowStockThreshold;
 
-  // ✅ Check wishlist status on load
+
   useEffect(() => {
     const checkWishlist = async () => {
       try {
@@ -72,7 +73,7 @@ const toggleWishlist = async (e) => {
 
   return (
     <div className="group bg-white rounded-lg shadow-sm hover:shadow-md transition border flex flex-col">
-      {/* ✅ IMAGE */}
+ 
       <div className="relative aspect-[4/3] w-full overflow-hidden rounded-t-lg bg-gray-100">
         <Link to={`/customer/products/${product._id}`}>
           {image ? (
@@ -88,7 +89,6 @@ const toggleWishlist = async (e) => {
           )}
         </Link>
 
-        {/* ✅ WISHLIST HEART */}
      <button
   onClick={(e) => toggleWishlist(e)}
           className="absolute top-2 right-2 bg-white rounded-full p-1 shadow hover:bg-gray-100"
@@ -96,7 +96,6 @@ const toggleWishlist = async (e) => {
           {liked ? "❤️" : "🤍"}
         </button>
 
-        {/* ✅ LOW STOCK BADGE */}
         {isLowStock && (
           <span className="absolute top-2 left-2 px-2 py-0.5 text-[11px] rounded-full bg-red-100 text-red-700">
             Low stock
@@ -104,7 +103,7 @@ const toggleWishlist = async (e) => {
         )}
       </div>
 
-      {/* ✅ BODY */}
+
       <div className="flex-1 p-3 flex flex-col gap-1">
         <h3 className="font-semibold text-sm line-clamp-2 group-hover:text-orange-600">
           {product.name}
@@ -130,33 +129,16 @@ const toggleWishlist = async (e) => {
           </span>
         </div>
 
-        {/* ✅ QTY + CART */}
         <div className="flex items-center gap-2 mt-3">
-          <button
-            onClick={() => setQty((q) => Math.max(1, q - 1))}
-            className="px-3 py-1 border rounded text-sm"
-          >
-            −
-          </button>
+  <button
+    onClick={handleAddToCart}
+    className="w-full px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white text-sm rounded"
+  >
+    Add to Cart
+  </button>
+</div>
 
-          <span className="text-sm font-semibold">{qty}</span>
 
-          <button
-            onClick={() => setQty((q) => q + 1)}
-            className="px-3 py-1 border rounded text-sm"
-          >
-            +
-          </button>
-
-          <button
-            onClick={handleAddToCart}
-            className="ml-auto px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white text-xs rounded"
-          >
-            Add to Cart
-          </button>
-        </div>
-
-        {/* ✅ VIEW DETAILS */}
         <Link
           to={`/customer/products/${product._id}`}
           className="mt-3 w-full text-center border border-orange-500 text-orange-600 text-xs font-semibold py-1.5 rounded hover:bg-orange-500 hover:text-white transition"

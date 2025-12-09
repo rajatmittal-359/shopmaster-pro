@@ -18,7 +18,7 @@ import CartPage from './pages/customer/CartPage';
 import WishlistPage from "./pages/customer/WishlistPage";
 import OrderDetailsPage from "./pages/customer/OrderDetailsPage";
 import MyOrdersPage from './pages/customer/MyOrdersPage';
-
+import SellerProductDetailsPage from './pages/seller/SellerProductDetailsPage'
 // ✅ NEW IMPORTS
 import InventoryLogsPage from './pages/admin/InventoryLogsPage';
 import SellerInventoryLogsPage from './pages/seller/InventoryLogsPage';
@@ -49,7 +49,7 @@ function App() {
         <Route path="/seller/dashboard" element={<SellerDashboard />} />
         <Route path="/seller/products" element={<MyProductsPage />} />
         <Route path="/seller/orders" element={<SellerOrdersPage />} />
-
+        <Route path="/seller/products/:id" element={<SellerProductDetailsPage />} />
         {/* ✅ NEW SELLER INVENTORY LOGS */}
         <Route path="/seller/inventory-logs" element={<SellerInventoryLogsPage />} />
       </Route>

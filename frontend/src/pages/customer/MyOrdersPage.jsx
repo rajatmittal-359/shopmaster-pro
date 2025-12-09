@@ -1,7 +1,9 @@
+// frontend/src/pages/customer/MyOrdersPage.jsx
 import { useEffect, useState } from "react";
 import Layout from "../../components/common/Layout";
-import { getMyOrders } from "../../services/orderService";
+import { getMyOrders, cancelOrderItem } from "../../services/orderService";
 import { Link } from "react-router-dom";
+import { toastSuccess, toastError } from "../../utils/toast";
 
 const statusColors = {
   pending: "bg-yellow-100 text-yellow-700",
@@ -16,20 +18,33 @@ export default function MyOrdersPage() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const fetchOrders = async () => {
+    try {
+      setLoading(true);
+      const res = await getMyOrders();
+      setOrders(res.data.orders || []);
+    } catch (err) {
+      console.error("GET MY ORDERS ERROR:", err);
+      toastError(err?.response?.data?.message || "Failed to load orders");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const load = async () => {
-      try {
-        setLoading(true);
-        const res = await getMyOrders();
-        setOrders(res.data.orders || []);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
+    fetchOrders();
   }, []);
+
+  const handleCancelItem = async (orderId, itemId) => {
+    try {
+      await cancelOrderItem(orderId, itemId);
+      toastSuccess("Item cancelled");
+      await fetchOrders();
+    } catch (err) {
+      const msg = err?.response?.data?.message;
+      toastError(msg || "Failed to cancel item");
+    }
+  };
 
   if (loading) {
     return (
@@ -51,33 +66,74 @@ export default function MyOrdersPage() {
             {orders.map((order) => (
               <div
                 key={order._id}
-                className="bg-white border rounded p-4 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
+                className="bg-white border rounded p-4 shadow-sm space-y-3"
               >
-                <div>
-                  <p className="text-sm font-semibold">
-                    Order ID: {order._id}
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    {new Date(order.createdAt).toLocaleString()}
-                  </p>
-                  <p className="text-sm mt-1">
-                    Total: <strong>₹{order.totalAmount}</strong>
-                  </p>
+                {/* Top summary row */}
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold">
+                      Order ID: {order._id}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {new Date(order.createdAt).toLocaleString()}
+                    </p>
+                    <p className="text-sm mt-1">
+                      Total: <strong>₹{order.totalAmount}</strong>
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <span
+                      className={`text-xs px-2 py-1 rounded ${
+                        statusColors[order.status]
+                      }`}
+                    >
+                      {order.status}
+                    </span>
+
+                    <Link
+                      to={`/customer/orders/${order._id}`}
+                      className="text-sm text-orange-600 hover:underline"
+                    >
+                      View Details →
+                    </Link>
+                  </div>
                 </div>
 
-                <div className="flex items-center gap-3">
-                  <span
-                    className={`text-xs px-2 py-1 rounded ${statusColors[order.status]}`}
-                  >
-                    {order.status}
-                  </span>
+                {/* Items + per-item cancel */}
+                <div className="border-t pt-3 space-y-2">
+                  {order.items.map((item) => (
+                    <div
+                      key={item._id}
+                      className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-sm"
+                    >
+                      <div>
+                        <p className="font-medium">
+                          {item.name}{" "}
+                          {item.status === "cancelled" && (
+                            <span className="text-xs text-red-500">
+                              (cancelled)
+                            </span>
+                          )}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          Qty: {item.quantity} • Price: ₹{item.price}
+                        </p>
+                      </div>
 
-                  <Link
-                    to={`/customer/orders/${order._id}`}
-                    className="text-sm text-orange-600 hover:underline"
-                  >
-                    View Details →
-                  </Link>
+                      {["pending", "processing"].includes(order.status) &&
+                        (item.status === "active" || !item.status) && (
+                          <button
+                            onClick={() =>
+                              handleCancelItem(order._id, item._id)
+                            }
+                            className="self-start sm:self-auto text-xs px-2 py-1 rounded border border-red-400 text-red-500 hover:bg-red-50"
+                          >
+                            Cancel this item
+                          </button>
+                        )}
+                    </div>
+                  ))}
                 </div>
               </div>
             ))}

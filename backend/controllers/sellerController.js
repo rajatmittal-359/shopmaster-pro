@@ -373,3 +373,21 @@ exports.getSellerProfile = async (req, res) => {
       .json({ message: 'Server error', error: error.message });
   }
 };
+
+exports.getProductById = async (req, res) => {
+  try {
+    const product = await Product.findOne({
+      _id: req.params.id,
+      sellerId: req.user._id,
+    }).populate('category', 'name');
+
+    if (!product) {
+      return res.status(404).json({ message: 'Product not found' });
+    }
+
+    res.json({ success: true, product });
+  } catch (err) {
+    console.error('GET PRODUCT BY ID ERROR:', err.message);
+    res.status(500).json({ message: err.message });
+  }
+};

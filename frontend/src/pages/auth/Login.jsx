@@ -25,14 +25,15 @@ const handleSubmit = async (e) => {
   const result = await dispatch(loginThunk(form));
   console.log('login result:', result); // TEMP dekhne ke liye
 
-  if (loginThunk.fulfilled.match(result)) {
-    const userRole = result.payload.role || result.payload.user?.role;
+if (loginThunk.fulfilled.match(result)) {
+  const userRole = result.payload.role || result.payload.user?.role;
 
-    if (userRole === 'customer') navigate('/customer/dashboard');
-    else if (userRole === 'seller') navigate('/seller/dashboard');
-    else if (userRole === 'admin') navigate('/admin/dashboard');
-    else navigate('/');
-  }
+  if (userRole === 'customer') navigate('/customer/shop');
+  else if (userRole === 'seller') navigate('/seller/dashboard');
+  else if (userRole === 'admin') navigate('/admin/dashboard');
+  else navigate('/');
+}
+
   // Yahan koi setForm({ email: '', password: '' }) MAT rakho
 };
 

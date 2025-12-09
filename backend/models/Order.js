@@ -23,7 +23,12 @@ const orderItemSchema = new mongoose.Schema({
   price: {
     type: Number,
     required: true
-  }
+  },
+  status: {
+    type: String,
+    enum: ['active', 'cancelled'],
+    default: 'active',
+  },
 });
 
 const orderSchema = new mongoose.Schema(

@@ -1,171 +1,161 @@
-const Cart = require("../models/Cart");
-const Order = require("../models/Order");
-const Product = require("../models/Product");
-const { applyInventoryChange } = require("./inventoryController");
+  const Cart = require("../models/Cart");
+  const Order = require("../models/Order");
+  const Product = require("../models/Product");
+  const { applyInventoryChange } = require("./inventoryController");
+
+  exports.addToCart = async (req, res) => {
+    try {
+      const { productId, quantity } = req.body;
+
+      let cart = await Cart.findOne({ userId: req.user._id });
+
+      if (!cart) {
+        cart = await Cart.create({
+          userId: req.user._id,
+          items: [],
+          totalAmount: 0,
+        });
+      }
+
+      const product = await Product.findById(productId);
+
+      if (!product || !product.isActive) {
+        return res.status(404).json({ message: "Product not available" });
+      }
+
+      const itemIndex = cart.items.findIndex(
+        (i) => i.productId.toString() === productId
+      );
+
+      if (itemIndex > -1) {
+        cart.items[itemIndex].quantity += quantity;
+      } else {
+        cart.items.push({
+          productId,
+          quantity,
+          price: product.price,
+        });
+      }
+
+      cart.totalAmount = cart.items.reduce(
+        (sum, i) => sum + i.price * i.quantity,
+        0
+      );
+
+      await cart.save();
+      res.json({ success: true, cart });
+
+    } catch (err) {
+      console.error("ADD TO CART ERROR:", err.message);
+      res.status(500).json({ message: err.message });
+    }
+  };
 
 
-// ✅ ADD TO CART
-exports.addToCart = async (req, res) => {
-  try {
-    const { productId, quantity } = req.body;
+  exports.getCart = async (req, res) => {
+    try {
+      const cart = await Cart.findOne({ userId: req.user._id })
+        .populate("items.productId");
 
-    let cart = await Cart.findOne({ userId: req.user._id });
+      if (!cart) {
+        return res.json({
+          success: true,
+          cart: { items: [], totalAmount: 0 },
+        });
+      }
 
-    if (!cart) {
-      cart = await Cart.create({
-        userId: req.user._id,
-        items: [],
-        totalAmount: 0,
+      res.json({ success: true, cart });
+
+    } catch (err) {
+      console.error("GET CART ERROR:", err.message);
+      res.status(500).json({ message: err.message });
+    }
+  };
+
+  exports.checkout = async (req, res) => {
+    try {
+      const { shippingAddressId } = req.body;
+
+      const cart = await Cart.findOne({ userId: req.user._id })
+        .populate("items.productId");
+
+      if (!cart || cart.items.length === 0) {
+        return res.status(400).json({ message: "Cart is empty" });
+      }
+
+      const order = await Order.create({
+        customerId: req.user._id,
+        items: cart.items.map((item) => ({
+          productId: item.productId._id,
+          name: item.productId.name,
+          quantity: item.quantity,
+          price: item.price,
+          sellerId: item.productId.sellerId, 
+        })),
+        totalAmount: cart.totalAmount,
+        shippingAddressId,
+        status: "pending",
+        paymentStatus: "cod", 
       });
+
+    
+      for (const item of cart.items) {
+        await applyInventoryChange({
+          productId: item.productId._id,
+          quantity: item.quantity,
+          type: "sale",
+          orderId: order._id,
+          performedBy: req.user._id,
+        });
+      }
+      cart.items = [];
+      cart.totalAmount = 0;
+      await cart.save();
+
+      res.status(201).json({ success: true, order });
+
+    } catch (err) {
+      console.error("CHECKOUT ERROR:", err.message);
+      res.status(500).json({ message: err.message });
     }
+  };
 
-    const product = await Product.findById(productId);
+  exports.getMyOrders = async (req, res) => {
+    try {
+      const orders = await Order.find({
+        customerId: req.user._id,
+      }).sort({ createdAt: -1 });
 
-    if (!product || !product.isActive) {
-      return res.status(404).json({ message: "Product not available" });
+      res.json({ success: true, orders });
+
+    } catch (err) {
+      console.error("GET MY ORDERS ERROR:", err.message);
+      res.status(500).json({ message: err.message });
     }
+  };
 
-    const itemIndex = cart.items.findIndex(
-      (i) => i.productId.toString() === productId
-    );
 
-    if (itemIndex > -1) {
-      cart.items[itemIndex].quantity += quantity;
-    } else {
-      cart.items.push({
-        productId,
-        quantity,
-        price: product.price,
+  exports.getOrderDetails = async (req, res) => {
+    try {
+      const order = await Order.findOne({
+        _id: req.params.orderId,
+        customerId: req.user._id,
       });
+
+      if (!order) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+
+      res.json({ success: true, order });
+
+    } catch (err) {
+      console.error("GET ORDER DETAILS ERROR:", err.message);
+      res.status(500).json({ message: err.message });
     }
-
-    cart.totalAmount = cart.items.reduce(
-      (sum, i) => sum + i.price * i.quantity,
-      0
-    );
-
-    await cart.save();
-    res.json({ success: true, cart });
-
-  } catch (err) {
-    console.error("ADD TO CART ERROR:", err.message);
-    res.status(500).json({ message: err.message });
-  }
-};
+  };
 
 
-// ✅ GET CART
-exports.getCart = async (req, res) => {
-  try {
-    const cart = await Cart.findOne({ userId: req.user._id })
-      .populate("items.productId");
-
-    if (!cart) {
-      return res.json({
-        success: true,
-        cart: { items: [], totalAmount: 0 },
-      });
-    }
-
-    res.json({ success: true, cart });
-
-  } catch (err) {
-    console.error("GET CART ERROR:", err.message);
-    res.status(500).json({ message: err.message });
-  }
-};
-
-
-// ✅ CHECKOUT (FULLY FIXED ✅)
-exports.checkout = async (req, res) => {
-  try {
-    const { shippingAddressId } = req.body;
-
-    const cart = await Cart.findOne({ userId: req.user._id })
-      .populate("items.productId");
-
-    if (!cart || cart.items.length === 0) {
-      return res.status(400).json({ message: "Cart is empty" });
-    }
-
-    const order = await Order.create({
-      customerId: req.user._id,
-      items: cart.items.map((item) => ({
-        productId: item.productId._id,
-        name: item.productId.name,
-        quantity: item.quantity,
-        price: item.price,
-        sellerId: item.productId.sellerId, // ✅ REQUIRED
-      })),
-      totalAmount: cart.totalAmount,
-      shippingAddressId,
-      status: "pending",
-      paymentStatus: "cod", // ✅ VALID ENUM
-    });
-
-    // ✅ INVENTORY DEDUCT (ONLY VALID TYPE)
-    for (const item of cart.items) {
-      await applyInventoryChange({
-        productId: item.productId._id,
-        quantity: item.quantity,
-        type: "sale", // ✅ ONLY VALID VALUE
-        orderId: order._id,
-        performedBy: req.user._id,
-      });
-    }
-
-    // ✅ CLEAR CART
-    cart.items = [];
-    cart.totalAmount = 0;
-    await cart.save();
-
-    res.status(201).json({ success: true, order });
-
-  } catch (err) {
-    console.error("CHECKOUT ERROR:", err.message);
-    res.status(500).json({ message: err.message });
-  }
-};
-
-
-// ✅ GET MY ORDERS
-exports.getMyOrders = async (req, res) => {
-  try {
-    const orders = await Order.find({
-      customerId: req.user._id,
-    }).sort({ createdAt: -1 });
-
-    res.json({ success: true, orders });
-
-  } catch (err) {
-    console.error("GET MY ORDERS ERROR:", err.message);
-    res.status(500).json({ message: err.message });
-  }
-};
-
-
-// ✅ GET ORDER DETAILS
-exports.getOrderDetails = async (req, res) => {
-  try {
-    const order = await Order.findOne({
-      _id: req.params.orderId,
-      customerId: req.user._id,
-    });
-
-    if (!order) {
-      return res.status(404).json({ message: "Order not found" });
-    }
-
-    res.json({ success: true, order });
-
-  } catch (err) {
-    console.error("GET ORDER DETAILS ERROR:", err.message);
-    res.status(500).json({ message: err.message });
-  }
-};
-
-
-// ✅ CANCEL ORDER (FIXED INVENTORY TYPE ✅)
+ 
 exports.cancelOrder = async (req, res) => {
   try {
     const order = await Order.findOne({
@@ -182,139 +172,194 @@ exports.cancelOrder = async (req, res) => {
     }
 
     order.status = "cancelled";
-    await order.save();
 
     for (const item of order.items) {
-      await applyInventoryChange({
-        productId: item.productId,
-        quantity: item.quantity,
-        type: "return", // ✅ FIXED
-        orderId: order._id,
-        performedBy: req.user._id,
-      });
+      if (item.status === 'active') {
+        await applyInventoryChange({
+          productId: item.productId,
+          quantity: item.quantity,
+          type: "return",
+          orderId: order._id,
+          performedBy: req.user._id,
+        });
+        item.status = 'cancelled';
+      }
     }
 
-    res.json({ success: true, message: "Order cancelled", order });
+    order.totalAmount = 0;
+    await order.save();
 
+    res.json({ success: true, message: "Order cancelled", order });
   } catch (err) {
     console.error("CANCEL ORDER ERROR:", err.message);
     res.status(500).json({ message: err.message });
   }
 };
 
-
-// ✅ RETURN ORDER (FIXED INVENTORY TYPE ✅)
-exports.returnOrder = async (req, res) => {
+exports.cancelOrderItem = async (req, res) => {
   try {
+    const { orderId, itemId } = req.params;
+
     const order = await Order.findOne({
-      _id: req.params.orderId,
+      _id: orderId,
       customerId: req.user._id,
     });
 
     if (!order) {
-      return res.status(404).json({ message: "Order not found" });
+      return res.status(404).json({ message: 'Order not found' });
     }
 
-    if (order.status !== "delivered") {
-      return res.status(400).json({
-        message: "Only delivered orders can be returned",
-      });
+    if (!['pending', 'processing'].includes(order.status)) {
+      return res
+        .status(400)
+        .json({ message: 'Items can be cancelled only for pending/processing orders' });
     }
 
-    order.status = "returned";
+    const item = order.items.id(itemId);
+    if (!item) {
+      return res.status(404).json({ message: 'Order item not found' });
+    }
+
+    if (item.status === 'cancelled') {
+      return res.status(400).json({ message: 'Item already cancelled' });
+    }
+
+  
+    item.status = 'cancelled';
+
+    // adjust order total
+    order.totalAmount -= item.price * item.quantity;
+    if (order.totalAmount < 0) order.totalAmount = 0;
+
+    // if all items cancelled mark whole order cancelled
+    const allCancelled = order.items.every((it) => it.status === 'cancelled');
+    if (allCancelled) {
+      order.status = 'cancelled';
+    }
+
     await order.save();
 
-    for (const item of order.items) {
-      await applyInventoryChange({
-        productId: item.productId,
-        quantity: item.quantity,
-        type: "return", // ✅ FIXED
-        orderId: order._id,
-        performedBy: req.user._id,
+    // inventory return only for this item
+    await applyInventoryChange({
+      productId: item.productId,
+      quantity: item.quantity,
+      type: 'return',
+      orderId: order._id,
+      performedBy: req.user._id,
+    });
+
+    res.json({ success: true, message: 'Order item cancelled', order });
+  } catch (err) {
+    console.error('CANCEL ORDER ITEM ERROR:', err.message);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+  exports.returnOrder = async (req, res) => {
+    try {
+      const order = await Order.findOne({
+        _id: req.params.orderId,
+        customerId: req.user._id,
       });
+
+      if (!order) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+
+      if (order.status !== "delivered") {
+        return res.status(400).json({
+          message: "Only delivered orders can be returned",
+        });
+      }
+
+      order.status = "returned";
+      await order.save();
+
+      for (const item of order.items) {
+        await applyInventoryChange({
+          productId: item.productId,
+          quantity: item.quantity,
+          type: "return", 
+          orderId: order._id,
+          performedBy: req.user._id,
+        });
+      }
+
+      res.json({ success: true, message: "Order returned", order });
+
+    } catch (err) {
+      console.error("RETURN ORDER ERROR:", err.message);
+      res.status(500).json({ message: err.message });
     }
+  };
 
-    res.json({ success: true, message: "Order returned", order });
+  exports.updateCartItem = async (req, res) => {
+    try {
+      const { productId, quantity } = req.body;
 
-  } catch (err) {
-    console.error("RETURN ORDER ERROR:", err.message);
-    res.status(500).json({ message: err.message });
-  }
-};
+      const cart = await Cart.findOne({ userId: req.user._id });
 
+      if (!cart) return res.status(404).json({ message: "Cart not found" });
 
-// ✅ UPDATE CART ITEM
-exports.updateCartItem = async (req, res) => {
-  try {
-    const { productId, quantity } = req.body;
+      const item = cart.items.find(
+        (i) => i.productId.toString() === productId
+      );
 
-    const cart = await Cart.findOne({ userId: req.user._id });
+      if (!item) return res.status(404).json({ message: "Item not found" });
 
-    if (!cart) return res.status(404).json({ message: "Cart not found" });
+      item.quantity = quantity;
 
-    const item = cart.items.find(
-      (i) => i.productId.toString() === productId
-    );
+      cart.totalAmount = cart.items.reduce(
+        (sum, i) => sum + i.price * i.quantity,
+        0
+      );
 
-    if (!item) return res.status(404).json({ message: "Item not found" });
+      await cart.save();
+      res.json({ success: true, cart });
 
-    item.quantity = quantity;
+    } catch (err) {
+      res.status(500).json({ message: err.message });
+    }
+  };
 
-    cart.totalAmount = cart.items.reduce(
-      (sum, i) => sum + i.price * i.quantity,
-      0
-    );
+  exports.removeFromCart = async (req, res) => {
+    try {
+      const { productId } = req.params;
 
-    await cart.save();
-    res.json({ success: true, cart });
+      const cart = await Cart.findOne({ userId: req.user._id });
 
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-};
+      if (!cart) return res.status(404).json({ message: "Cart not found" });
 
+      cart.items = cart.items.filter(
+        (i) => i.productId.toString() !== productId
+      );
 
-// ✅ REMOVE SINGLE ITEM
-exports.removeFromCart = async (req, res) => {
-  try {
-    const { productId } = req.params;
+      cart.totalAmount = cart.items.reduce(
+        (sum, i) => sum + i.price * i.quantity,
+        0
+      );
 
-    const cart = await Cart.findOne({ userId: req.user._id });
+      await cart.save();
+      res.json({ success: true, cart });
 
-    if (!cart) return res.status(404).json({ message: "Cart not found" });
+    } catch (err) {
+      res.status(500).json({ message: err.message });
+    }
+  };
 
-    cart.items = cart.items.filter(
-      (i) => i.productId.toString() !== productId
-    );
+  exports.clearCart = async (req, res) => {
+    try {
+      const cart = await Cart.findOne({ userId: req.user._id });
 
-    cart.totalAmount = cart.items.reduce(
-      (sum, i) => sum + i.price * i.quantity,
-      0
-    );
+      if (!cart) return res.status(404).json({ message: "Cart not found" });
 
-    await cart.save();
-    res.json({ success: true, cart });
+      cart.items = [];
+      cart.totalAmount = 0;
 
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-};
+      await cart.save();
+      res.json({ success: true });
 
-
-// ✅ CLEAR FULL CART
-exports.clearCart = async (req, res) => {
-  try {
-    const cart = await Cart.findOne({ userId: req.user._id });
-
-    if (!cart) return res.status(404).json({ message: "Cart not found" });
-
-    cart.items = [];
-    cart.totalAmount = 0;
-
-    await cart.save();
-    res.json({ success: true });
-
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-};
+    } catch (err) {
+      res.status(500).json({ message: err.message });
+    }
+  };

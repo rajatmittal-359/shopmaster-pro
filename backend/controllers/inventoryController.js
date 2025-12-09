@@ -1,7 +1,7 @@
 const InventoryLog = require("../models/Inventory");
 const Product = require("../models/Product");
 
-// ✅ FINAL UNIVERSAL INVENTORY HANDLER
+
 exports.applyInventoryChange = async ({
   productId,
   quantity,
@@ -34,14 +34,12 @@ exports.applyInventoryChange = async ({
     stockAfter = stockBefore + quantity;
   } 
   else if (type === "adjustment") {
-    stockAfter = quantity; // direct override
+    stockAfter = quantity;
   }
 
-  // ✅ UPDATE PRODUCT STOCK
+ 
   product.stock = stockAfter;
   await product.save();
-
-  // ✅ SAVE INVENTORY LOG
   await InventoryLog.create({
     productId,
     type,
