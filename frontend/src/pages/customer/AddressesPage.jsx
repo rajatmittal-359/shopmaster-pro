@@ -15,6 +15,7 @@ export default function AddressesPage() {
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState({
     label: 'Home',
+    phoneNumber: '',
     street: '',
     city: '',
     state: '',
@@ -68,6 +69,7 @@ const handleSubmit = async (e) => {
     setEditingId(addr._id);
     setForm({
       label: addr.label,
+      phoneNumber: addr.phoneNumber,
       street: addr.street,
       city: addr.city,
       state: addr.state,
@@ -93,6 +95,7 @@ const handleDelete = async (id) => {
   const resetForm = () => {
     setForm({
       label: 'Home',
+      phoneNumber: '',
       street: '',
       city: '',
       state: '',
@@ -136,6 +139,19 @@ const handleDelete = async (id) => {
                   <option value="Other">Other</option>
                 </select>
               </div>
+              <div>
+  <label className="block text-sm mb-1">Phone Number *</label>
+  <input
+    type="tel"
+    name="phoneNumber"
+    value={form.phoneNumber}
+    onChange={handleChange}
+    required
+    maxLength="10"
+    placeholder="9876543210"
+    className="w-full border rounded px-3 py-2 text-sm"
+  />
+</div>
 
               <div>
                 <label className="block text-sm mb-1">Street</label>
@@ -240,6 +256,7 @@ const handleDelete = async (id) => {
                     )}
                   </div>
                   <p className="text-sm text-gray-700">{addr.street}</p>
+                  <p className="text-sm text-gray-600">📞 {addr.phoneNumber}</p>
                   <p className="text-sm text-gray-700">
                     {addr.city}, {addr.state} - {addr.zipCode}
                   </p>

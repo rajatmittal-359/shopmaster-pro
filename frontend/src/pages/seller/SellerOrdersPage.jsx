@@ -13,7 +13,8 @@ export default function SellerOrdersPage() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState(null);
-
+  const [courierName, setCourierName] = useState('');
+const [trackingNumber, setTrackingNumber] = useState('');
 
   const loadOrders = async () => {
     try {
@@ -31,6 +32,18 @@ export default function SellerOrdersPage() {
   useEffect(() => {
     loadOrders();
   }, []);
+
+const handleTrackingUpdate = async (orderId) => {
+  try {
+    await updateTracking(orderId, { courierName, trackingNumber });
+    toastSuccess('Tracking updated');
+    setCourierName('');
+    setTrackingNumber('');
+    loadOrders();
+  } catch (err) {
+    toastError(err.response?.data?.message || 'Failed to update tracking');
+  }
+};
 
 
   const handleStatusUpdate = async (orderId, nextStatus) => {
@@ -171,19 +184,25 @@ const activeCount = order.items.filter(
                     {new Date(order.createdAt).toLocaleString()}
                   </span>
                 </div>
-
-
                 {/* CUSTOMER */}
-                <p className="text-xs text-gray-600 mb-2">
-                  Customer:{" "}
-                  <span className="font-medium">
-                    {order.customerId?.name || "User"}
-                  </span>{" "}
-                  ({order.customerId?.email})
-                </p>
+<p className="text-xs text-gray-600 mb-2">
+  Customer:{" "}
+  <span className="font-medium">
+    {order.customerId?.name || "User"}
+  </span>{" "}
+  ({order.customerId?.email})
+</p>
 
+{/* TRACKING INFO */}
+{order.trackingInfo && (
+  <div className="mt-2 text-xs">
+    <p><strong>Courier:</strong> {order.trackingInfo.courierName}</p>
+    <p><strong>Tracking:</strong> {order.trackingInfo.trackingNumber}</p>
+    <p><strong>Shipped:</strong> {new Date(order.trackingInfo.shippedDate).toLocaleDateString()}</p>
+  </div>
+)}
 
-                {/* ITEMS */}
+{/* ITEMS */}
 <div className="text-xs text-gray-700 space-y-1">
   {order.items.map((item) => (
     <p key={item._id}>
@@ -194,7 +213,6 @@ const activeCount = order.items.filter(
     </p>
   ))}
 </div>
-
 
                 {/* TIMELINE */}
                 {renderTimeline(order.status)}
@@ -236,6 +254,33 @@ const activeCount = order.items.filter(
 )}
 
                 </div>
+                {/* TRACKING UPDATE */}
+<div className="mt-4 border-t pt-3">
+  <h4 className="text-xs font-semibold mb-2">Update Tracking</h4>
+  <div className="flex gap-2">
+    <input
+      type="text"
+      placeholder="Courier"
+      value={courierName}
+      onChange={(e) => setCourierName(e.target.value)}
+      className="flex-1 px-2 py-1 border rounded text-xs"
+    />
+    <input
+      type="text"
+      placeholder="Tracking No."
+      value={trackingNumber}
+      onChange={(e) => setTrackingNumber(e.target.value)}
+      className="flex-1 px-2 py-1 border rounded text-xs"
+    />
+    <button
+      onClick={() => handleTrackingUpdate(order._id)}
+      className="px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700"
+    >
+      Update
+    </button>
+  </div>
+</div>
+
               </div>
             );
           })}

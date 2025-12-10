@@ -20,3 +20,6 @@ export const updateOrderStatus = (orderId, status) =>
 
 // Analytics
 export const getSellerAnalytics = () => api.get('/seller/analytics');
+
+export const updateTracking = (orderId, data) =>
+  api.patch(`/seller/orders/${orderId}/tracking`, data);

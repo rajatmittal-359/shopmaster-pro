@@ -133,6 +133,14 @@ export default function OrderDetailsPage() {
           </p>
           <p className="text-sm">{order.shippingAddressId?.country}</p>
         </div>
+        {/* TRACKING INFO */}
+{order.trackingInfo && (
+  <div className="mt-2 text-sm">
+    <p><strong>Courier:</strong> {order.trackingInfo.courierName}</p>
+    <p><strong>Tracking:</strong> {order.trackingInfo.trackingNumber}</p>
+    <p><strong>Shipped:</strong> {new Date(order.trackingInfo.shippedDate).toLocaleDateString()}</p>
+  </div>
+)}
 
         {/* TOTAL */}
         <div className="bg-white p-4 rounded shadow flex justify-between font-bold">

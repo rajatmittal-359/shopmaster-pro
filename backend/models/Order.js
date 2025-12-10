@@ -57,7 +57,13 @@ paymentStatus: {
   type: String,
   enum: ["pending", "completed", "failed", "cod"],
   default: "cod"
+},
+trackingInfo: {
+  courierName: { type: String, default: null },
+  trackingNumber: { type: String, default: null },
+  shippedDate: { type: Date, default: null }
 }
+
   },
   {
     timestamps: true

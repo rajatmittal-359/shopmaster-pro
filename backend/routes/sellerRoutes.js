@@ -14,8 +14,8 @@ const {
   getLowStockProducts,
   getMyOrders,
   updateOrderStatus,
-  getSellerAnalytics
-
+  getSellerAnalytics,
+  updateTracking
 } = require('../controllers/sellerController');
 
 
@@ -36,6 +36,12 @@ router.get('/products/:id', getProductById);
 router.get('/orders', getMyOrders);
 
 router.patch('/orders/:orderId/status', updateOrderStatus);
+router.patch(
+  '/orders/:orderId/tracking',
+  authMiddleware,
+  roleMiddleware('seller'),
+  updateTracking
+);
 
 router.get('/analytics', getSellerAnalytics);
 

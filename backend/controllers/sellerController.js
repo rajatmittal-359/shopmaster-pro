@@ -391,3 +391,55 @@ exports.getProductById = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+
+// Update tracking info for an order (seller side)
+// Update tracking info for an order (seller side)
+exports.updateTracking = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const { courierName, trackingNumber } = req.body;
+
+    if (!courierName || !trackingNumber) {
+      return res
+        .status(400)
+        .json({ message: 'Courier and tracking number are required' });
+    }
+
+    const order = await Order.findById(orderId);
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+
+    // Ensure this seller belongs to this order
+    const hasSellerItems = order.items.some(
+      (item) => item.sellerId.toString() === req.user.id.toString()
+    );
+    if (!hasSellerItems) {
+      return res
+        .status(403)
+        .json({ message: 'You do not have permission to update this order' });
+    }
+
+    order.trackingInfo = {
+      courierName,
+      trackingNumber,
+      shippedDate: new Date(),
+    };
+
+    // Optionally auto-mark as shipped if still pending/processing
+    if (['pending', 'processing'].includes(order.status)) {
+      order.status = 'shipped';
+    }
+
+    await order.save();
+
+    return res.json({
+      success: true,
+      message: 'Tracking updated',
+      order,
+    });
+  } catch (err) {
+    console.error('TRACKING UPDATE ERROR', err.message);
+    return res.status(500).json({ message: err.message });
+  }
+};
