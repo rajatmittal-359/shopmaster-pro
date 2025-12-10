@@ -164,8 +164,22 @@ exports.checkout = async (req, res) => {
     await cart.save({ session });
 
     await session.commitTransaction();
-    res.status(201).json({ success: true, order: order[0] });
+    const User = require('../models/User');
+const { orderConfirmedEmail } = require('../utils/emailTemplates');
+const sendEmail = require('../utils/sendEmail');
 
+try {
+  const customer = await User.findById(req.user.id);
+  const template = orderConfirmedEmail(order[0], customer);
+  await sendEmail({ to: customer.email, ...template });
+} catch (emailErr) {
+  console.log('Email error:', emailErr.message);
+}
+
+res.status(201).json({
+  success: true,
+  order: order[0],
+});
   } catch (err) {
     await session.abortTransaction();
     console.error("CHECKOUT ERROR:", err.message);

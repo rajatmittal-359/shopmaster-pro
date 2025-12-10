@@ -54,6 +54,7 @@ exports.createRazorpayOrder = async (req, res) => {
         });
       }
       if (product.stock < item.quantity) {
+        console.log(` Stock insufficient: ${product.name} (Available: ${product.stock}, Requested: ${item.quantity})`);
         await session.abortTransaction();
         return res.status(400).json({
           success: false,
@@ -101,7 +102,7 @@ exports.createRazorpayOrder = async (req, res) => {
 
     await session.commitTransaction();
     session.endSession();
-
+    console.log(`✅ Razorpay order created successfully: ${razorpayOrder.id} for user ${req.user.id}`);
     return res.json({
       success: true,
       orderId: razorpayOrder.id,
@@ -111,6 +112,7 @@ exports.createRazorpayOrder = async (req, res) => {
       keyId: process.env.RAZORPAY_KEY_ID,
     });
   } catch (err) {
+    console.log('⚠️ Razorpay order creation failed, rolling back transaction:', err.message);
     await session.abortTransaction();
     session.endSession();
     console.error('RAZORPAY ORDER ERROR:', err.message);
@@ -204,7 +206,10 @@ exports.verifyRazorpayPayment = async (req, res) => {
 
     const customer = await User.findById(order.customerId);
     const template = orderConfirmedEmail(order, customer);
-    await sendEmail({ to: customer.email, ...template }).catch(e => console.log('Email error:', e.message));
+    await sendEmail({ to: customer.email, ...template }).catch((e) => {
+  console.error('Order confirmation email failed:', e.message);
+  // Continue anyway - payment is done
+});
     
    
     session.endSession();
