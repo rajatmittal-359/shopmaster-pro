@@ -1,213 +1,262 @@
-import { useEffect, useState } from 'react';
-import Layout from '../../components/common/Layout';
-import api from '../../utils/api';
+import { useEffect, useState, useMemo } from "react";
+import Layout from "../../components/common/Layout";
+import { getAdminAnalytics } from "../../services/adminService";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from "recharts";
 
 export default function AdminDashboard() {
   const [analytics, setAnalytics] = useState(null);
-  const [pendingSellers, setPendingSellers] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadData();
+    loadAnalytics();
   }, []);
 
-  const loadData = async () => {
+  const loadAnalytics = async () => {
     try {
       setLoading(true);
-      const [analyticsRes, sellersRes] = await Promise.all([
-        api.get('/admin/analytics'),
-        api.get('/admin/sellers/pending'),
-      ]);
-
-      setAnalytics(analyticsRes.data);
-      setPendingSellers(sellersRes.data.sellers || []);
-    } catch (err) {
-      console.error(err);
+      const res = await getAdminAnalytics();
+      setAnalytics(res.data);
+    } catch (error) {
+      console.error("Failed to load admin analytics", error);
     } finally {
       setLoading(false);
     }
   };
 
+  // Calculate net qty change for filtered revenue data
+  const netQtyChange = useMemo(() => {
+    if (!analytics?.last7DaysRevenue) return 0;
+    return analytics.last7DaysRevenue.reduce((sum, d) => sum + (d.total || 0), 0);
+  }, [analytics]);
+
   if (loading) {
     return (
       <Layout title="Admin Dashboard">
-        <p>Loading...</p>
+        <div className="space-y-4 animate-pulse">
+          <div className="h-8 bg-gray-200 rounded w-1/3" />
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="h-24 bg-gray-200 rounded" />
+            ))}
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (!analytics) {
+    return (
+      <Layout title="Admin Dashboard">
+        <p className="text-sm text-gray-600">Failed to load analytics.</p>
       </Layout>
     );
   }
 
   return (
     <Layout title="Admin Dashboard">
-      <h2 className="text-2xl font-bold mb-4">Admin Dashboard</h2>
+      {/* Header */}
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-3xl font-bold">Admin Dashboard</h2>
+        <button
+          onClick={loadAnalytics}
+          className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded text-sm"
+        >
+          Refresh
+        </button>
+      </div>
 
-      {/* ✅ TOP METRIC CARDS */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-white rounded shadow p-4">
-          <p className="text-sm text-gray-600">Total Sellers</p>
-          <p className="text-2xl font-bold text-orange-600">
-            {analytics?.sellers?.total || 0}
+      {/* Stats Cards - Top 4 KPIs */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        {/* Total Sellers */}
+        <div className="bg-white rounded shadow p-4 border-l-4 border-blue-500">
+          <p className="text-sm text-gray-600 font-medium">Total Sellers</p>
+          <p className="text-3xl font-bold text-blue-600 mt-2">
+            {analytics.totalSellers}
           </p>
+          <p className="text-xs text-gray-500 mt-1">Active on platform</p>
         </div>
 
-        <div className="bg-white rounded shadow p-4">
-          <p className="text-sm text-gray-600">Pending Sellers</p>
-          <p className="text-2xl font-bold text-yellow-600">
-            {analytics?.sellers?.pending || 0}
+        {/* Pending Sellers */}
+        <div className="bg-white rounded shadow p-4 border-l-4 border-yellow-500">
+          <p className="text-sm text-gray-600 font-medium">Pending Sellers</p>
+          <p className="text-3xl font-bold text-yellow-600 mt-2">
+            {analytics.pendingSellers}
           </p>
+          <p className="text-xs text-gray-500 mt-1">Awaiting KYC approval</p>
         </div>
 
-        <div className="bg-white rounded shadow p-4">
-          <p className="text-sm text-gray-600">Total Products</p>
-          <p className="text-2xl font-bold text-blue-600">
-            {analytics?.products || 0}
+        {/* Total Products */}
+        <div className="bg-white rounded shadow p-4 border-l-4 border-green-500">
+          <p className="text-sm text-gray-600 font-medium">Total Products</p>
+          <p className="text-3xl font-bold text-green-600 mt-2">
+            {analytics.totalProducts}
           </p>
+          <p className="text-xs text-gray-500 mt-1">Across all sellers</p>
         </div>
 
-        <div className={`bg-white rounded shadow p-4 ${analytics?.orders > 0 ? 'block' : 'hidden'}`}>
-          <p className="text-sm text-gray-600">Total Orders</p>
-          <p className="text-2xl font-bold text-green-600">
-            {analytics?.orders || 0}
+        {/* Orders Today */}
+        <div className="bg-white rounded shadow p-4 border-l-4 border-purple-500">
+          <p className="text-sm text-gray-600 font-medium">Orders Today</p>
+          <p className="text-3xl font-bold text-purple-600 mt-2">
+            {analytics.ordersToday || 0}
           </p>
+          <p className="text-xs text-gray-500 mt-1">Last 24 hours</p>
         </div>
       </div>
 
-      {/* ✅ REVENUE MAIN CARD */}
-      <div className="bg-gradient-to-r from-orange-500 to-red-500 text-white rounded shadow p-6 mb-8">
-        <p className="text-sm opacity-90">Platform Revenue</p>
-        <p className="text-3xl font-bold">
-          ₹{analytics?.revenue?.toLocaleString() || 0}
+      {/* Revenue Card */}
+      <div className="bg-white rounded shadow p-5 mb-6 border-t-4 border-orange-500">
+        <div className="flex justify-between items-start mb-3">
+          <div>
+            <h3 className="text-lg font-semibold">Platform Revenue</h3>
+            <p className="text-xs text-gray-500 mt-0.5">
+              From completed orders (all time)
+            </p>
+          </div>
+          <span className="text-2xl font-bold text-orange-600">
+            ₹{analytics.totalRevenue || 0}
+          </span>
+        </div>
+      </div>
+
+      {/* Last 7 Days Revenue Chart */}
+      <div className="bg-white rounded shadow p-5 mb-6">
+        <div className="flex justify-between items-start mb-4">
+          <div>
+            <h3 className="text-lg font-semibold">Last 7 Days Revenue</h3>
+            <p className="text-xs text-gray-500 mt-0.5">
+              Daily order revenue trend
+            </p>
+          </div>
+          <span
+            className={`text-sm font-semibold ${
+              netQtyChange > 0
+                ? "text-green-600"
+                : netQtyChange < 0
+                ? "text-red-600"
+                : "text-gray-600"
+            }`}
+          >
+            {netQtyChange > 0 ? `+₹${netQtyChange}` : `₹${netQtyChange}`}
+          </span>
+        </div>
+
+        {analytics.last7DaysRevenue && analytics.last7DaysRevenue.length > 0 ? (
+          <ResponsiveContainer width="100%" height={300}>
+            <AreaChart data={analytics.last7DaysRevenue}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+              <XAxis
+                dataKey="date"
+                tick={{ fontSize: 12 }}
+                stroke="#9ca3af"
+              />
+              <YAxis tick={{ fontSize: 12 }} stroke="#9ca3af" />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: "#fff",
+                  border: "1px solid #e5e7eb",
+                  borderRadius: "6px",
+                }}
+                formatter={(value) => [`₹${value}`, "Revenue"]}
+              />
+              <Area
+                type="monotone"
+                dataKey="total"
+                stroke="#f97316"
+                fill="#fed7aa"
+                isAnimationActive={true}
+                dot={{ fill: "#f97316", r: 4 }}
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        ) : (
+          <div className="h-72 flex items-center justify-center text-gray-400 text-sm">
+            No revenue data for last 7 days
+          </div>
+        )}
+      </div>
+
+      {/* Low Stock Alert + Top Sellers */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        {/* Low Stock (Global) */}
+        <div className="bg-white rounded shadow p-5">
+          <h3 className="text-lg font-semibold mb-3">Low Stock (Global)</h3>
+          <p className="text-xs text-gray-500 mb-3">
+            Products below alert threshold across all sellers and categories
+          </p>
+
+          {analytics.lowStockProducts && analytics.lowStockProducts.length > 0 ? (
+            <div className="space-y-2 max-h-64 overflow-y-auto">
+              {analytics.lowStockProducts.map((prod) => (
+                <div
+                  key={prod._id}
+                  className="flex justify-between items-center p-2 border rounded bg-orange-50"
+                >
+                  <div>
+                    <p className="text-sm font-medium">{prod.name}</p>
+                    <p className="text-xs text-gray-600">
+                      Seller: {prod.sellerId?.name || "Unknown"}
+                    </p>
+                  </div>
+                  <span className="text-xs text-red-600 font-semibold">
+                    {prod.stock} left
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-gray-600 py-8 text-center">
+              No low stock products 🎉
+            </p>
+          )}
+        </div>
+
+        {/* Top Sellers */}
+        <div className="bg-white rounded shadow p-5">
+          <h3 className="text-lg font-semibold mb-3">Top Sellers</h3>
+          <p className="text-xs text-gray-500 mb-3">
+            Based on revenue from completed orders (all time)
+          </p>
+
+          {analytics.topSellers && analytics.topSellers.length > 0 ? (
+            <div className="space-y-2">
+              {analytics.topSellers.map((seller, idx) => (
+                <div key={seller._id} className="border rounded p-3 bg-gray-50">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="text-sm font-medium">
+                        #{idx + 1} {seller.name}
+                      </p>
+                      <p className="text-xs text-gray-600">
+                        {seller.email}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex justify-between mt-2 text-xs">
+                    <span className="text-gray-600">
+                      Items Sold: <span className="font-semibold">{seller.totalItemsSold}</span>
+                    </span>
+                    <span className="text-green-600 font-semibold">
+                      ₹{seller.totalRevenue}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-gray-600 py-8 text-center">
+              No seller data yet
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* Footer note */}
+      <div className="bg-blue-50 border border-blue-200 rounded p-4">
+        <p className="text-xs text-blue-800">
+          <strong>Dashboard Notes:</strong> Stats reflect real-time data. Revenue calculations include completed orders only. Low stock alerts are based on product thresholds. Stripe/payment settlement will be calculated separately.
         </p>
       </div>
-
-      {/* ✅ SIMPLE REVENUE GRAPH (LAST 7 DAYS) */}
-      <div className="bg-white rounded shadow p-4 mb-8">
-        <h3 className="text-lg font-semibold mb-3">Last 7 Days Revenue</h3>
-        <div className="flex items-end gap-3 h-40">
-          {analytics?.revenueByDay?.map((d) => (
-            <div key={d.date} className="flex flex-col items-center flex-1">
-              <div
-                className="w-6 bg-orange-500 rounded"
-                style={{ height: `${Math.max(d.total / 50, 10)}%` }}
-                title={`₹${d.total}`}
-              />
-              <span className="text-[10px] mt-1 text-gray-600">
-                {d.date.slice(5)}
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* ✅ LOW STOCK GLOBAL LIST */}
-      <div className="bg-white rounded shadow p-4 mb-8">
-        <h3 className="text-lg font-semibold mb-3">Low Stock (Global)</h3>
-
-        {analytics?.lowStockGlobal?.length === 0 && (
-          <p className="text-sm text-gray-600">No low stock products 🎉</p>
-        )}
-
-        {analytics?.lowStockGlobal?.length > 0 && (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-100">
-                <tr>
-                  <th className="text-left px-3 py-2">Product</th>
-                  <th className="text-left px-3 py-2">Seller</th>
-                  <th className="text-left px-3 py-2">Category</th>
-                  <th className="text-center px-3 py-2">Stock</th>
-                  <th className="text-center px-3 py-2">Alert</th>
-                </tr>
-              </thead>
-              <tbody>
-                {analytics.lowStockGlobal.map((item) => (
-                  <tr key={item.id} className="border-t">
-                    <td className="px-3 py-2">{item.name}</td>
-                    <td className="px-3 py-2">
-                      {item.sellerName}
-                      <p className="text-[10px] text-gray-500">{item.sellerEmail}</p>
-                    </td>
-                    <td className="px-3 py-2">{item.category}</td>
-                    <td className="px-3 py-2 text-center font-semibold text-red-600">
-                      {item.stock}
-                    </td>
-                    <td className="px-3 py-2 text-center">
-                      ≤ {item.lowStockThreshold}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-
-      {/* ✅ TOP SELLERS BY REVENUE */}
-      <div className="bg-white rounded shadow p-4 mb-8">
-        <h3 className="text-lg font-semibold mb-3">Top Sellers</h3>
-
-        {analytics?.topSellers?.length === 0 && (
-          <p className="text-sm text-gray-600">No sales yet</p>
-        )}
-
-        {analytics?.topSellers?.length > 0 && (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-100">
-                <tr>
-                  <th className="text-left px-3 py-2">Seller</th>
-                  <th className="text-center px-3 py-2">Items Sold</th>
-                  <th className="text-center px-3 py-2">Revenue</th>
-                </tr>
-              </thead>
-              <tbody>
-                {analytics.topSellers.map((s) => (
-                  <tr key={s._id} className="border-t">
-                    <td className="px-3 py-2">
-                      {s.sellerName}
-                      <p className="text-[10px] text-gray-500">
-                        {s.sellerEmail}
-                      </p>
-                    </td>
-                    <td className="px-3 py-2 text-center">
-                      {s.itemsSold}
-                    </td>
-                    <td className="px-3 py-2 text-center font-semibold text-green-600">
-                      ₹{s.revenue.toLocaleString()}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-
-      {/* ✅ PENDING SELLERS QUICK VIEW */}
-      {pendingSellers.length > 0 && (
-        <div className="bg-white rounded shadow p-4">
-          <h3 className="text-lg font-semibold mb-3">
-            Pending Seller Approvals ({pendingSellers.length})
-          </h3>
-          <div className="space-y-2">
-            {pendingSellers.map((seller) => (
-              <div
-                key={seller._id}
-                className="flex justify-between items-center border rounded px-3 py-2"
-              >
-                <div>
-                  <p className="font-semibold">{seller.businessName}</p>
-                  <p className="text-xs text-gray-600">
-                    {seller.userId?.email}
-                  </p>
-                </div>
-                <span className="text-xs px-2 py-1 bg-yellow-100 text-yellow-700 rounded">
-                  {seller.kycStatus}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </Layout>
   );
 }

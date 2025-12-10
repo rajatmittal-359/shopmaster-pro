@@ -45,17 +45,23 @@ exports.createOrUpdateReview = async (req, res) => {
     }
 
     // ✅ Verified buyer check (delivered OR returned)
-    const order = await Order.findOne({
-      customerId: req.user._id,
-      'items.productId': productId,
-      status: { $in: ['delivered', 'returned'] },
-    });
+const order = await Order.findOne({
+  customerId: req.user._id,
+  status: { $in: ['delivered', 'returned'] },
+});
 
-    if (!order) {
-      return res.status(400).json({
-        message: 'You can review this product only after purchasing it (delivered/returned)',
-      });
-    }
+// ✅ Verify specific item was delivered & not cancelled
+const purchasedItem = order?.items.find(
+  (item) =>
+    item.productId.toString() === productId &&
+    item.status === 'active' // Only active items (not cancelled)
+);
+
+if (!purchasedItem) {
+  return res.status(400).json({
+    message: 'You can only review products you have successfully received',
+  });
+}
 
     // ✅ Create / Update single review per product
     let review = await Review.findOne({

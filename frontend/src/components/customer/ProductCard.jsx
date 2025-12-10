@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { addToCart } from "../../services/cartService";
 import {
   addToWishlist,
   removeFromWishlist,
@@ -8,13 +7,18 @@ import {
 } from "../../services/wishlistService";
 import { toastSuccess ,toastError} from "../../utils/toast";
 import { useNavigate } from "react-router-dom";
+import { addToCart, removeFromCart } from '../../services/cartService';
+
 function stripHtml(html = "") {
   return html.replace(/<[^>]+>/g, "");
 }
 
 export default function ProductCard({ product }) {
 
+
   const [liked, setLiked] = useState(false);
+  const [inCart, setInCart] = useState(false);
+
  const navigate = useNavigate();
   const image = product.images?.[0];
   const plainDesc = stripHtml(product.description || "");
@@ -42,19 +46,29 @@ export default function ProductCard({ product }) {
     checkWishlist();
   }, [product._id]);
 
-const handleAddToCart = async () => {
+
+const handleCartToggle = async () => {
   try {
-    await addToCart({ productId: product._id, quantity: qty });
-    toastSuccess('Added to cart');
+    if (!inCart) {
+      await addToCart({ productId: product._id, quantity: 1 });
+      setInCart(true);
+      toastSuccess('Added to cart');
+    } else {
+      await removeFromCart(product._id);
+      setInCart(false);
+      toastSuccess('Removed from cart');
+    }
   } catch (err) {
-    toastError(err?.response?.data?.message || 'Failed to add to cart');
+    toastError(err?.response?.data?.message || 'Failed to update cart');
   }
 };
 
+
+
+// 2) Wishlist
 const toggleWishlist = async (e) => {
   e.stopPropagation();
   e.preventDefault();
-
   try {
     if (liked) {
       await removeFromWishlist(product._id);
@@ -128,16 +142,16 @@ const toggleWishlist = async (e) => {
             Stock: {product.stock}
           </span>
         </div>
-
-        <div className="flex items-center gap-2 mt-3">
+<div className="flex items-center gap-2 mt-3">
   <button
-    onClick={handleAddToCart}
-    className="w-full px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white text-sm rounded"
+    type="button"
+    onClick={handleCartToggle}
+    className={`w-full px-3 py-1.5 text-white text-sm rounded transition
+      ${inCart ? 'bg-red-500 hover:bg-red-600' : 'bg-orange-500 hover:bg-orange-600'}`}
   >
-    Add to Cart
+    {inCart ? 'Remove from Cart' : 'Add to Cart'}
   </button>
 </div>
-
 
         <Link
           to={`/customer/products/${product._id}`}

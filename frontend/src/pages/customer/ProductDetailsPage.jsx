@@ -97,8 +97,12 @@ export default function ProductDetailsPage() {
   // ✅ CART
 const handleAddToCart = async () => {
   try {
-    await addToCart({ productId, quantity: qty });
-    toastSuccess('Added to cart');
+    if (product.stock < qty) {
+  toastError(`Only ${product.stock} items available`);
+  return;
+}
+await addToCart({ productId, quantity: qty });
+toastSuccess(`${qty} item(s) added to cart 🛒`);
   } catch (err) {
     toastError(err?.response?.data?.message || 'Failed to add to cart');
   }

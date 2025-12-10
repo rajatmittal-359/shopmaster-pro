@@ -41,51 +41,131 @@ export default function Layout({ children, title = 'Dashboard' }) {
         </div>
 
         {/* ✅ LINKS */}
-        <nav className="mt-4 px-2 space-y-1 text-sm">
-          {role === 'customer' && (
-            <>
-              <Link to="/customer/dashboard" className="block px-3 py-2 rounded-md hover:bg-orange-100">Customer Dashboard</Link>
-              <Link to="/customer/shop" className="block px-3 py-2 rounded-md hover:bg-orange-100">Shop</Link>
-              <Link to="/customer/cart" className="block px-3 py-2 rounded-md hover:bg-orange-100">My Cart</Link>
-              <Link to="/customer/wishlist" className="block px-3 py-2 rounded-md hover:bg-orange-100">My Wishlist</Link>
-              <Link to="/customer/addresses" className="block px-3 py-2 rounded-md hover:bg-orange-100">My Addresses</Link>
-              <Link to="/customer/orders" className="block px-3 py-2 rounded-md hover:bg-orange-100">My Orders</Link>
-              <Link to="/customer/checkout" className="block px-3 py-2 rounded-md hover:bg-orange-100">Checkout</Link>
-            </>
-          )}
+<nav className="mt-4 px-2 space-y-1 text-sm">
+  {/* CUSTOMER LINKS */}
+  {role === 'customer' && (
+    <>
+      <Link 
+        to="/customer/dashboard" 
+        onClick={() => setIsSidebarOpen(false)}
+        className="flex items-center p-3 rounded-md hover:bg-orange-100 text-gray-700 hover:text-orange-600 transition-all duration-200 block"
+      >
+        <span className="w-5 mr-3">📊</span>Customer Dashboard
+      </Link>
+      <Link 
+        to="/customer/shop" 
+        onClick={() => setIsSidebarOpen(false)}
+        className="flex items-center p-3 rounded-md hover:bg-orange-100 text-gray-700 hover:text-orange-600 transition-all duration-200 block"
+      >
+        <span className="w-5 mr-3">🛍️</span>Shop
+      </Link>
+      <Link 
+        to="/customer/cart" 
+        onClick={() => setIsSidebarOpen(false)}
+        className="flex items-center p-3 rounded-md hover:bg-orange-100 text-gray-700 hover:text-orange-600 transition-all duration-200 block"
+      >
+        <span className="w-5 mr-3">🛒</span>My Cart
+      </Link>
+      <Link 
+        to="/customer/wishlist" 
+        onClick={() => setIsSidebarOpen(false)}
+        className="flex items-center p-3 rounded-md hover:bg-orange-100 text-gray-700 hover:text-orange-600 transition-all duration-200 block"
+      >
+        <span className="w-5 mr-3">❤️</span>My Wishlist
+      </Link>
+      <Link 
+        to="/customer/addresses" 
+        onClick={() => setIsSidebarOpen(false)}
+        className="flex items-center p-3 rounded-md hover:bg-orange-100 text-gray-700 hover:text-orange-600 transition-all duration-200 block"
+      >
+        <span className="w-5 mr-3">📍</span>My Addresses
+      </Link>
+      <Link 
+        to="/customer/orders" 
+        onClick={() => setIsSidebarOpen(false)}
+        className="flex items-center p-3 rounded-md hover:bg-orange-100 text-gray-700 hover:text-orange-600 transition-all duration-200 block"
+      >
+        <span className="w-5 mr-3">📦</span>My Orders
+      </Link>
+      <Link 
+        to="/customer/checkout" 
+        onClick={() => setIsSidebarOpen(false)}
+        className="flex items-center p-3 rounded-md hover:bg-orange-100 text-gray-700 hover:text-orange-600 transition-all duration-200 block"
+      >
+        <span className="w-5 mr-3">💳</span>Checkout
+      </Link>
+    </>
+  )}
 
-          {role === 'seller' && (
-            <>
-              <Link to="/seller/dashboard" className="block px-3 py-2 rounded-md hover:bg-orange-100">Seller Dashboard</Link>
-              <Link to="/seller/products" className="block px-3 py-2 rounded-md hover:bg-orange-100">My Products</Link>
-              <Link to="/seller/orders" className="block px-3 py-2 rounded-md hover:bg-orange-100">My Orders</Link>
+  {/* SELLER LINKS */}
+  {role === 'seller' && (
+    <>
+      <Link 
+        to="/seller/dashboard" 
+        onClick={() => setIsSidebarOpen(false)}
+        className="flex items-center p-3 rounded-md hover:bg-orange-100 text-gray-700 hover:text-orange-600 transition-all duration-200 block"
+      >
+        <span className="w-5 mr-3">📊</span>Seller Dashboard
+      </Link>
+      <Link 
+        to="/seller/products" 
+        onClick={() => setIsSidebarOpen(false)}
+        className="flex items-center p-3 rounded-md hover:bg-orange-100 text-gray-700 hover:text-orange-600 transition-all duration-200 block"
+      >
+        <span className="w-5 mr-3">📦</span>My Products
+      </Link>
+      <Link 
+        to="/seller/orders" 
+        onClick={() => setIsSidebarOpen(false)}
+        className="flex items-center p-3 rounded-md hover:bg-orange-100 text-gray-700 hover:text-orange-600 transition-all duration-200 block"
+      >
+        <span className="w-5 mr-3">📋</span>My Orders
+      </Link>
+      <Link 
+        to="/seller/inventory-logs" 
+        onClick={() => setIsSidebarOpen(false)}
+        className="flex items-center p-3 rounded-md hover:bg-orange-100 text-gray-700 hover:text-orange-600 transition-all duration-200 block"
+      >
+        <span className="w-5 mr-3">📊</span>Inventory Logs
+      </Link>
+    </>
+  )}
 
-              {/* ✅ NEW INVENTORY LOGS LINK */}
-              <Link
-                to="/seller/inventory-logs"
-                className="block px-3 py-2 rounded-md hover:bg-orange-100"
-              >
-                Inventory Logs
-              </Link>
-            </>
-          )}
+  {/* ADMIN LINKS */}
+  {role === 'admin' && (
+    <>
+      <Link 
+        to="/admin/dashboard" 
+        onClick={() => setIsSidebarOpen(false)}
+        className="flex items-center p-3 rounded-md hover:bg-orange-100 text-gray-700 hover:text-orange-600 transition-all duration-200 block"
+      >
+        <span className="w-5 mr-3">📊</span>Admin Dashboard
+      </Link>
+      <Link 
+        to="/admin/manage-sellers" 
+        onClick={() => setIsSidebarOpen(false)}
+        className="flex items-center p-3 rounded-md hover:bg-orange-100 text-gray-700 hover:text-orange-600 transition-all duration-200 block"
+      >
+        <span className="w-5 mr-3">👥</span>Manage Sellers
+      </Link>
+      <Link 
+        to="/admin/categories" 
+        onClick={() => setIsSidebarOpen(false)}
+        className="flex items-center p-3 rounded-md hover:bg-orange-100 text-gray-700 hover:text-orange-600 transition-all duration-200 block"
+      >
+        <span className="w-5 mr-3">📂</span>Manage Categories
+      </Link>
+      <Link 
+        to="/admin/inventory-logs" 
+        onClick={() => setIsSidebarOpen(false)}
+        className="flex items-center p-3 rounded-md hover:bg-orange-100 text-gray-700 hover:text-orange-600 transition-all duration-200 block"
+      >
+        <span className="w-5 mr-3">📈</span>Inventory Logs
+      </Link>
+    </>
+  )}
+</nav>
 
-          {role === 'admin' && (
-            <>
-              <Link to="/admin/dashboard" className="block px-3 py-2 rounded-md hover:bg-orange-100">Admin Dashboard</Link>
-              <Link to="/admin/manage-sellers" className="block px-3 py-2 rounded-md hover:bg-orange-100">Manage Sellers</Link>
-              <Link to="/admin/categories" className="block px-3 py-2 rounded-md hover:bg-orange-100">Manage Categories</Link>
-
-              {/* ✅ NEW INVENTORY LOGS LINK */}
-              <Link
-                to="/admin/inventory-logs"
-                className="block px-3 py-2 rounded-md hover:bg-orange-100"
-              >
-                Inventory Logs
-              </Link>
-            </>
-          )}
-        </nav>
       </aside>
 
       {/* ✅ OVERLAY */}

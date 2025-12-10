@@ -22,6 +22,7 @@ import SellerProductDetailsPage from './pages/seller/SellerProductDetailsPage'
 // ✅ NEW IMPORTS
 import InventoryLogsPage from './pages/admin/InventoryLogsPage';
 import SellerInventoryLogsPage from './pages/seller/InventoryLogsPage';
+import ErrorBoundary from './components/common/ErrorBoundary';
 
 function App() {
   return (

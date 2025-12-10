@@ -39,10 +39,12 @@ export default function MyProductsPage() {
     images: [],
   });
 
+  // Load products + categories
   useEffect(() => {
     loadData();
   }, []);
 
+  // Apply filters/sort whenever deps change
   useEffect(() => {
     applySearchAndSort();
   }, [search, sort, products]);
@@ -62,10 +64,11 @@ export default function MyProductsPage() {
       setLoading(false);
     }
   };
+
   const applySearchAndSort = () => {
     let temp = [...products];
 
-    if (search) {
+    if (search.trim()) {
       temp = temp.filter(
         (p) =>
           p.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -75,14 +78,11 @@ export default function MyProductsPage() {
 
     if (sort === "newest") {
       temp.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-    }
-    if (sort === "priceLow") {
+    } else if (sort === "priceLow") {
       temp.sort((a, b) => a.price - b.price);
-    }
-    if (sort === "priceHigh") {
+    } else if (sort === "priceHigh") {
       temp.sort((a, b) => b.price - a.price);
-    }
-    if (sort === "stockLow") {
+    } else if (sort === "stockLow") {
       temp.sort((a, b) => a.stock - b.stock);
     }
 
@@ -95,15 +95,32 @@ export default function MyProductsPage() {
 
   const handleImageChange = (e) => {
     const files = Array.from(e.target.files);
+    const maxSize = 5 * 1024 * 1024; // 5MB
 
     files.forEach((file) => {
+      if (file.size > maxSize) {
+        toastError(`${file.name} is too large (max 5MB)`);
+        return;
+      }
+
+      if (!file.type.startsWith("image/")) {
+        toastError(`${file.name} is not an image`);
+        return;
+      }
+
       const reader = new FileReader();
+
       reader.onloadend = () => {
         setForm((prev) => ({
           ...prev,
           images: [...prev.images, reader.result],
         }));
       };
+
+      reader.onerror = () => {
+        toastError("Failed to read image");
+      };
+
       reader.readAsDataURL(file);
     });
   };
@@ -171,9 +188,9 @@ export default function MyProductsPage() {
     setShowForm(false);
   };
 
-  const renderBullets = (text) => {
+  const renderBullets = (text = "") => {
     return (
-      <ul className="list-disc ml-4 space-y-1">
+      <ul className="list-disc ml-4 space-y-1 text-xs text-gray-600">
         {text.split("\n").map((line, i) => (
           <li key={i}>{line}</li>
         ))}
@@ -181,30 +198,48 @@ export default function MyProductsPage() {
     );
   };
 
+  // 🔹 Loading full-page skeleton
+  if (loading) {
+    return (
+      <Layout title="My Products">
+        <div className="space-y-4 animate-pulse">
+          <div className="h-8 bg-gray-200 rounded w-1/3" />
+          <div className="h-10 bg-gray-200 rounded" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            <div className="h-64 bg-gray-200 rounded" />
+            <div className="h-64 bg-gray-200 rounded" />
+            <div className="h-64 bg-gray-200 rounded" />
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
   return (
     <Layout title="My Products">
-
+      {/* Header */}
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-2xl font-bold">My Products</h2>
 
         <button
           onClick={() => setShowForm((p) => !p)}
-          className="px-5 py-2 bg-orange-500 text-white rounded"
+          className="px-5 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded text-sm font-semibold"
         >
           {showForm ? "Cancel" : "+ Add Product"}
         </button>
       </div>
 
+      {/* Search + Sort */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
         <input
           placeholder="Search by name or category..."
-          className="border px-3 py-2 rounded"
+          className="border px-3 py-2 rounded text-sm"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
 
         <select
-          className="border px-3 py-2 rounded"
+          className="border px-3 py-2 rounded text-sm"
           value={sort}
           onChange={(e) => setSort(e.target.value)}
         >
@@ -215,6 +250,7 @@ export default function MyProductsPage() {
         </select>
       </div>
 
+      {/* Form */}
       {showForm && (
         <div className="bg-white p-5 rounded shadow mb-8">
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -223,7 +259,7 @@ export default function MyProductsPage() {
               value={form.name}
               onChange={handleChange}
               placeholder="Product Name"
-              className="w-full border px-3 py-2 rounded"
+              className="w-full border px-3 py-2 rounded text-sm"
               required
             />
 
@@ -233,7 +269,7 @@ export default function MyProductsPage() {
               onChange={handleChange}
               placeholder="Enter description (one point per line)"
               rows={5}
-              className="w-full border px-3 py-2 rounded"
+              className="w-full border px-3 py-2 rounded text-sm"
               required
             />
 
@@ -241,7 +277,7 @@ export default function MyProductsPage() {
               name="category"
               value={form.category}
               onChange={handleChange}
-              className="w-full border px-3 py-2 rounded"
+              className="w-full border px-3 py-2 rounded text-sm"
               required
             >
               <option value="">Select Category</option>
@@ -259,7 +295,7 @@ export default function MyProductsPage() {
                 onChange={handleChange}
                 placeholder="Price"
                 type="number"
-                className="border px-3 py-2 rounded"
+                className="border px-3 py-2 rounded text-sm"
                 required
               />
               <input
@@ -268,7 +304,7 @@ export default function MyProductsPage() {
                 onChange={handleChange}
                 placeholder="Stock"
                 type="number"
-                className="border px-3 py-2 rounded"
+                className="border px-3 py-2 rounded text-sm"
                 required
               />
             </div>
@@ -279,79 +315,131 @@ export default function MyProductsPage() {
               onChange={handleChange}
               placeholder="Low Stock Alert"
               type="number"
-              className="border px-3 py-2 rounded"
+              className="border px-3 py-2 rounded text-sm"
             />
 
-            <input type="file" multiple onChange={handleImageChange} />
+            <div className="space-y-2">
+              <input
+                type="file"
+                multiple
+                onChange={handleImageChange}
+                className="text-sm"
+              />
 
-            <button className="w-full bg-orange-500 text-white py-2 rounded">
+              {/* Selected images preview */}
+              {form.images.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {form.images.map((img, idx) => (
+                    <div
+                      key={idx}
+                      className="w-16 h-16 rounded overflow-hidden border relative"
+                    >
+                      <img
+                        src={img}
+                        alt="preview"
+                        className="w-full h-full object-cover"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeImage(idx)}
+                        className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <button
+              type="submit"
+              className="w-full bg-orange-500 hover:bg-orange-600 text-white py-2 rounded text-sm font-semibold"
+            >
               {editingId ? "Update Product" : "Add Product"}
             </button>
           </form>
         </div>
       )}
 
- 
-      {loading && <p>Loading...</p>}
+      {/* Empty state */}
+      {!loading && filtered.length === 0 && (
+        <div className="bg-white rounded shadow p-8 text-center text-sm text-gray-600">
+          No products found. Try changing search or filters.
+        </div>
+      )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-        {filtered.map((prod) => (
-          <div key={prod._id} className="border rounded shadow bg-white">
-            {prod.images?.length > 0 && (
-              <Swiper modules={[Navigation, Pagination]} navigation pagination>
-                {prod.images.map((img, i) => (
-                  <SwiperSlide key={i}>
-                    <img src={img} className="w-full h-48 object-cover" />
-                  </SwiperSlide>
-                ))}
-              </Swiper>
-            )}
-
-            <div className="p-4 space-y-2">
-              <h3 className="font-bold">{prod.name}</h3>
-              <p className="text-sm text-gray-500">
-                Category: {prod.category?.name}
-              </p>
-
-              {renderBullets(prod.description)}
-
-              <div className="flex justify-between pt-2">
-                <span className="font-bold text-orange-600">₹{prod.price}</span>
-                <span
-                  className={`text-sm ${
-                    prod.stock <= prod.lowStockThreshold
-                      ? "text-red-600"
-                      : "text-green-600"
-                  }`}
+      {/* Products grid */}
+      {!loading && filtered.length > 0 && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          {filtered.map((prod) => (
+            <div key={prod._id} className="border rounded shadow bg-white">
+              {prod.images?.length > 0 && (
+                <Swiper
+                  modules={[Navigation, Pagination]}
+                  navigation
+                  pagination={{ clickable: true }}
                 >
-                  Stock: {prod.stock}
-                </span>
-              </div>
+                  {prod.images.map((img, i) => (
+                    <SwiperSlide key={i}>
+                      <img
+                        src={img}
+                        className="w-full h-48 object-cover"
+                        alt={prod.name}
+                      />
+                    </SwiperSlide>
+                  ))}
+                </Swiper>
+              )}
 
-              <div className="flex gap-2 pt-3">
-                <button
-                  onClick={() => navigate(`/seller/products/${prod._id}`)}
-                  className="flex-1 border border-orange-500 text-orange-600"
-                >
-                  View
-                </button>
-                <button
-                  onClick={() => handleEdit(prod)}
-                  className="flex-1 border border-blue-500 text-blue-600"
-                >
-                  Edit
-                </button>
-                <button
-                  onClick={() => handleDelete(prod._id)}
-                  className="flex-1 border border-red-500 text-red-600"
-                >
-                  Delete
-                </button>
+              <div className="p-4 space-y-2">
+                <h3 className="font-bold text-sm">{prod.name}</h3>
+                <p className="text-xs text-gray-500">
+                  Category: {prod.category?.name || "Uncategorized"}
+                </p>
+
+                {renderBullets(prod.description)}
+
+                <div className="flex justify-between items-center pt-2">
+                  <span className="font-bold text-orange-600 text-sm">
+                    ₹{prod.price}
+                  </span>
+                  <span
+                    className={`text-xs font-semibold ${
+                      prod.stock <= prod.lowStockThreshold
+                        ? "text-red-600"
+                        : "text-green-600"
+                    }`}
+                  >
+                    Stock: {prod.stock}
+                  </span>
+                </div>
+
+                <div className="flex gap-2 pt-3">
+                  <button
+                    onClick={() => navigate(`/seller/products/${prod._id}`)}
+                    className="flex-1 border border-orange-500 text-orange-600 text-xs py-1.5 rounded hover:bg-orange-50"
+                  >
+                    View
+                  </button>
+                  <button
+                    onClick={() => handleEdit(prod)}
+                    className="flex-1 border border-blue-500 text-blue-600 text-xs py-1.5 rounded hover:bg-blue-50"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => handleDelete(prod._id)}
+                    className="flex-1 border border-red-500 text-red-600 text-xs py-1.5 rounded hover:bg-red-50"
+                  >
+                    Delete
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </Layout>
   );
 }

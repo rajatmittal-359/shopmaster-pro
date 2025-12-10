@@ -6,11 +6,7 @@ const express = require('express');
 
   dotenv.config();
   connectDB();
-
-
   const app = express();
-
-
   // Middleware
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
@@ -23,7 +19,6 @@ app.use(
     credentials: false,
   })
 );
-
   // Routes imports
   const authRoutes = require('./routes/authRoutes');
   const adminRoutes = require('./routes/adminRoutes');

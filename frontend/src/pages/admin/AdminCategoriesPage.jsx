@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import Layout from '../../components/common/Layout';
 import api from '../../utils/api';
-
+import {toastSuccess,toastError} from '../../utils/toast'
 export default function AdminCategoriesPage() {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -35,9 +35,9 @@ export default function AdminCategoriesPage() {
       await api.post('/admin/categories', form);
       setForm({ name: '', description: '' });
       loadCategories();
-      alert('Category created successfully');
+      toastSuccess('Category created successfully');
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed');
+      toastError(err.response?.data?.message || 'Failed');
     } finally {
       setSaving(false);
     }
@@ -52,7 +52,7 @@ export default function AdminCategoriesPage() {
       });
       loadCategories();
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed');
+      toastError(err.response?.data?.message || 'Failed');
     }
   };
 
@@ -61,9 +61,9 @@ export default function AdminCategoriesPage() {
     try {
       await api.delete(`/admin/categories/${cat._id}`);
       loadCategories();
-      alert('Deleted');
+      toastSuccess('Deleted');
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed');
+      toastError(err.response?.data?.message || 'Failed');
     }
   };
 

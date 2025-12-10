@@ -14,7 +14,7 @@ const {
   getMyOrders,
   getOrderDetails,
   cancelOrder,
-  cancelOrderItem, 
+  cancelOrderItem,
   returnOrder,
 } = require("../controllers/customerController");
 
@@ -32,31 +32,47 @@ const {
   clearWishlist,
 } = require("../controllers/wishlistController");
 
+// 🔹 NEW: Razorpay controller imports
+const {
+  createRazorpayOrder,
+  verifyRazorpayPayment,
+} = require("../controllers/razorpayController");
+
+// Test route
 router.get("/test", (req, res) => res.json({ ok: true }));
 
+// All below routes require authenticated customer
 router.use(authMiddleware, roleMiddleware("customer"));
 
+// Cart routes
 router.get("/cart", getCart);
 router.post("/cart", addToCart);
-
-
 router.patch("/cart", updateCartItem);
 router.delete("/cart/:productId", removeFromCart);
 router.delete("/cart", clearCart);
 
-router.post("/checkout", checkout);
+// 🔹 PAYMENT ROUTES
+
+// COD checkout (existing flow)
+router.post("/checkout-cod", checkout);
+
+router.post("/checkout-online", createRazorpayOrder);
+router.post("/verify-payment", verifyRazorpayPayment);
+
+// Orders
 router.get("/orders", getMyOrders);
 router.get("/orders/:orderId", getOrderDetails);
 router.post("/orders/:orderId/return", returnOrder);
 router.patch("/orders/:orderId/cancel", cancelOrder);
-router.patch('/orders/:orderId/items/:itemId/cancel', cancelOrderItem);
+router.patch("/orders/:orderId/items/:itemId/cancel", cancelOrderItem);
 
+// Wishlist
 router.get("/wishlist", getWishlist);
 router.post("/wishlist", addToWishlist);
 router.delete("/wishlist/:productId", removeFromWishlist);
 router.delete("/wishlist", clearWishlist);
 
-
+// Addresses
 router.get("/addresses", getMyAddresses);
 router.post("/addresses", addAddress);
 router.patch("/addresses/:id", updateAddress);

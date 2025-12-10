@@ -8,11 +8,35 @@ cloudinary.config({
 });
 
 // Upload image to Cloudinary
+// Upload image to Cloudinary
 const uploadImage = async (file, folder = 'shopmaster-products') => {
   try {
+    // ✅ Validate format
+    if (!file || typeof file !== 'string') {
+      throw new Error('Invalid image data');
+    }
+
+    if (!file.startsWith('data:image/')) {
+      throw new Error('Invalid image format. Only images allowed (JPEG, PNG, WebP)');
+    }
+
+    // ✅ Validate size (max 5MB)
+    const base64Length = file.split(',')[1]?.length || 0;
+    const sizeInMB = (base64Length * 0.75) / (1024 * 1024);
+    
+    if (sizeInMB > 5) {
+      throw new Error(`Image size ${sizeInMB.toFixed(2)}MB exceeds 5MB limit`);
+    }
+
+    // ✅ Upload with optimization
     const result = await cloudinary.uploader.upload(file, {
       folder: folder,
-      resource_type: 'auto'
+      resource_type: 'image', // Changed from 'auto' to 'image'
+      transformation: [
+        { width: 1200, height: 1200, crop: 'limit' },
+        { quality: 'auto:good' },
+        { fetch_format: 'auto' }
+      ]
     });
     
     return {
@@ -23,6 +47,7 @@ const uploadImage = async (file, folder = 'shopmaster-products') => {
     throw new Error('Image upload failed: ' + error.message);
   }
 };
+
 
 // Delete image from Cloudinary
 const deleteImage = async (publicId) => {

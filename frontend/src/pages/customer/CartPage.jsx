@@ -53,13 +53,15 @@ export default function CartPage() {
     }
   };
 
-  if (loading) {
-    return (
-      <Layout title="My Cart">
-        <p>Loading cart...</p>
-      </Layout>
-    );
-  }
+if (loading) return (
+  <Layout title="...">
+    <div className="animate-pulse space-y-4">
+      <div className="h-8 bg-gray-200 rounded w-1/4" />
+      <div className="h-32 bg-gray-200 rounded" />
+      <div className="h-32 bg-gray-200 rounded" />
+    </div>
+  </Layout>
+);
 
   if (!cart || cart.items.length === 0) {
     return (
