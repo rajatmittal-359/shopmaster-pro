@@ -15,38 +15,37 @@ const razorpay = new Razorpay({
 exports.createRazorpayOrder = async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction();
-
+  
   try {
     const { shippingAddressId } = req.body;
 
     const address = await Address.findOne({
       _id: shippingAddressId,
-      userId: req.user._id,
+      userId: req.user.id,
     }).session(session);
 
     if (!address) {
       await session.abortTransaction();
       return res
         .status(400)
-        .json({ success: false, message: "Invalid shipping address" });
+        .json({ success: false, message: 'Invalid shipping address' });
     }
 
-    const cart = await Cart.findOne({ userId: req.user._id })
-      .populate("items.productId")
+    const cart = await Cart.findOne({ userId: req.user.id })
+      .populate('items.productId')
       .session(session);
 
     if (!cart || cart.items.length === 0) {
       await session.abortTransaction();
       return res
         .status(400)
-        .json({ success: false, message: "Cart is empty" });
+        .json({ success: false, message: 'Cart is empty' });
     }
 
     for (const item of cart.items) {
       const product = await Product.findById(item.productId._id).session(
         session
       );
-
       if (!product || !product.isActive) {
         await session.abortTransaction();
         return res.status(400).json({
@@ -54,7 +53,6 @@ exports.createRazorpayOrder = async (req, res) => {
           message: `Product ${item.productId.name} is no longer available`,
         });
       }
-
       if (product.stock < item.quantity) {
         await session.abortTransaction();
         return res.status(400).json({
@@ -64,10 +62,18 @@ exports.createRazorpayOrder = async (req, res) => {
       }
     }
 
-    const [order] = await Order.create(
+    // Create razorpay order BEFORE saving to DB
+    const razorpayOrder = await razorpay.orders.create({
+      amount: Math.round(cart.totalAmount * 100),
+      currency: 'INR',
+      receipt: `order_temp_${Date.now()}`,
+    });
+
+    // Now create DB order with razorpay order_id
+    const order = await Order.create(
       [
         {
-          customerId: req.user._id,
+          customerId: req.user.id,
           items: cart.items.map((item) => ({
             productId: item.productId._id,
             name: item.productId.name,
@@ -77,8 +83,9 @@ exports.createRazorpayOrder = async (req, res) => {
           })),
           totalAmount: cart.totalAmount,
           shippingAddressId,
-          status: "pending",
-          paymentStatus: "pending",
+          status: 'pending',
+          paymentStatus: 'pending',
+          razorpayOrderId: razorpayOrder.id,
         },
       ],
       { session }
@@ -87,34 +94,25 @@ exports.createRazorpayOrder = async (req, res) => {
     await session.commitTransaction();
     session.endSession();
 
-    const razorpayOrder = await razorpay.orders.create({
-      amount: Math.round(cart.totalAmount * 100),
-      currency: "INR",
-      receipt: `order_${order._id}`,
-      notes: {
-        orderId: order._id.toString(),
-        userId: req.user._id.toString(),
-      },
-    });
-
     return res.json({
       success: true,
       orderId: razorpayOrder.id,
       amount: razorpayOrder.amount,
       currency: razorpayOrder.currency,
-      dbOrderId: order._id,
+      dbOrderId: order[0]._id,
       keyId: process.env.RAZORPAY_KEY_ID,
     });
   } catch (err) {
     await session.abortTransaction();
     session.endSession();
-    console.error("RAZORPAY ORDER ERROR:", err.message);
+    console.error('RAZORPAY ORDER ERROR:', err.message);
     return res.status(500).json({
       success: false,
-      message: err.message || "Failed to create payment order",
+      message: err.message || 'Failed to create payment order',
     });
   }
 };
+
 
 exports.verifyRazorpayPayment = async (req, res) => {
   const session = await mongoose.startSession();
