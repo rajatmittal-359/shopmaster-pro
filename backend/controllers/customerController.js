@@ -4,7 +4,7 @@
   const mongoose = require('mongoose'); // Add at top if not present
 const Address = require('../models/Address'); // Add at top if not present
   const { applyInventoryChange } = require("./inventoryController");
-
+const InventoryLog = require("../models/Inventory");
   exports.addToCart = async (req, res) => {
     try {
       const { productId, quantity } = req.body;
