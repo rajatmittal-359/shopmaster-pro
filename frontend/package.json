@@ -22,7 +22,6 @@
         "react-hook-form": "^7.67.0",
         "react-hot-toast": "^2.6.0",
         "react-icons": "^5.5.0",
-        "react-razorpay": "^1.0.6",
         "react-redux": "^9.2.0",
         "react-router-dom": "^7.9.6",
         "react-toastify": "^11.0.5",

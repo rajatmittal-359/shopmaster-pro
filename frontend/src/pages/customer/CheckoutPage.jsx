@@ -1,4 +1,3 @@
-// frontend/src/pages/customer/CheckoutPage.jsx
 import { useEffect, useState } from "react";
 import Layout from "../../components/common/Layout";
 import { getCart } from "../../services/cartService";
