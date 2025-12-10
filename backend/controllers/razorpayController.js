@@ -61,12 +61,20 @@ exports.createRazorpayOrder = async (req, res) => {
         });
       }
     }
+    if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+  await session.abortTransaction();
+  session.endSession();
+  return res.status(500).json({
+    success: false,
+    message: 'Payment gateway not configured',
+  });
+}
 
     // Create razorpay order BEFORE saving to DB
     const razorpayOrder = await razorpay.orders.create({
       amount: Math.round(cart.totalAmount * 100),
       currency: 'INR',
-      receipt: `order_temp_${Date.now()}`,
+      receipt: `order_${req.user.id}_${Date.now()}`,
     });
 
     // Now create DB order with razorpay order_id
@@ -106,10 +114,11 @@ exports.createRazorpayOrder = async (req, res) => {
     await session.abortTransaction();
     session.endSession();
     console.error('RAZORPAY ORDER ERROR:', err.message);
-    return res.status(500).json({
-      success: false,
-      message: err.message || 'Failed to create payment order',
-    });
+return res.status(500).json({
+  success: false,
+  message: 'Failed to create payment order',
+  error: process.env.NODE_ENV === 'development' ? err.message : undefined,
+});
   }
 };
 
