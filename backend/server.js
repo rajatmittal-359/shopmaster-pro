@@ -19,6 +19,8 @@ app.use(
     credentials: false,
   })
 );
+const { startCronJobs } = require('./jobs/cronJobs');
+startCronJobs();
   // Routes imports
   const authRoutes = require('./routes/authRoutes');
   const adminRoutes = require('./routes/adminRoutes');

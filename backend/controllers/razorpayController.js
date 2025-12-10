@@ -189,6 +189,17 @@ exports.verifyRazorpayPayment = async (req, res) => {
     );
 
     await session.commitTransaction();
+
+    //  Send order confirmation email
+    const User = require('../models/User');
+    const { orderConfirmedEmail } = require('../utils/emailTemplates');
+    const sendEmail = require('../utils/sendEmail');
+
+    const customer = await User.findById(order.customerId);
+    const template = orderConfirmedEmail(order, customer);
+    await sendEmail({ to: customer.email, ...template }).catch(e => console.log('Email error:', e.message));
+    
+   
     session.endSession();
 
     return res.json({

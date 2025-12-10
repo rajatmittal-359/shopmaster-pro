@@ -260,7 +260,7 @@ exports.cancelOrderItem = async (req, res) => {
   
   try {
     const { orderId, itemId } = req.params;
-    
+
     const order = await Order.findOne({
       _id: orderId,
       customerId: req.user._id,
@@ -289,7 +289,23 @@ exports.cancelOrderItem = async (req, res) => {
       return res.status(400).json({ message: 'Item already cancelled' });
     }
 
-    // Mark cancelled
+    // ✅ First restore inventory
+    const product = await Product.findById(item.productId).session(session);
+    const stockBefore = product.stock;
+    product.stock += item.quantity;
+    await product.save({ session });
+
+    await InventoryLog.create([{
+      productId: item.productId,
+      type: 'return',
+      quantity: item.quantity,
+      stockBefore,
+      stockAfter: product.stock,
+      orderId: order._id,
+      performedBy: req.user._id,
+    }], { session });
+
+    // ✅ Then update order
     item.status = 'cancelled';
     order.totalAmount -= item.price * item.quantity;
     if (order.totalAmount < 0) order.totalAmount = 0;
@@ -299,18 +315,9 @@ exports.cancelOrderItem = async (req, res) => {
       order.status = 'cancelled';
     }
 
-    // Return inventory atomically
-    await applyInventoryChange({
-      productId: item.productId,
-      quantity: item.quantity,
-      type: 'return',
-      orderId: order._id,
-      performedBy: req.user._id,
-    });
-
     await order.save({ session });
     await session.commitTransaction();
-    
+
     res.json({ success: true, message: 'Order item cancelled', order });
   } catch (err) {
     await session.abortTransaction();
@@ -320,6 +327,7 @@ exports.cancelOrderItem = async (req, res) => {
     session.endSession();
   }
 };
+
 
 
   exports.returnOrder = async (req, res) => {
