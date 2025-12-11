@@ -433,11 +433,24 @@ exports.updateTracking = async (req, res) => {
 
     await order.save();
 
-    return res.json({
-      success: true,
-      message: 'Tracking updated',
-      order,
-    });
+const User = require('../models/User');
+const { shippingNotificationEmail } = require('../utils/emailTemplates');
+const sendEmail = require('../utils/sendEmail');
+
+try {
+  const customer = await User.findById(order.customerId);
+  const template = shippingNotificationEmail(order, customer, order.trackingInfo);
+  await sendEmail({ to: customer.email, ...template });
+  console.log('📧 Shipping email sent to customer');
+} catch (emailErr) {
+  console.log('Email error:', emailErr.message);
+}
+
+return res.json({
+  success: true,
+  message: 'Tracking updated',
+  order,
+});
   } catch (err) {
     console.error('TRACKING UPDATE ERROR', err.message);
     return res.status(500).json({ message: err.message });

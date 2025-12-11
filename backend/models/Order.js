@@ -58,6 +58,19 @@ paymentStatus: {
   enum: ["pending", "completed", "failed", "cod"],
   default: "cod"
 },
+razorpayOrderId: {
+  type: String,
+  default: null,
+},
+refundId: {
+  type: String,
+  default: null,
+},
+refundStatus: {
+  type: String,
+  enum: ['processing', 'completed', 'failed'],
+  default: null,
+},
 trackingInfo: {
   courierName: { type: String, default: null },
   trackingNumber: { type: String, default: null },

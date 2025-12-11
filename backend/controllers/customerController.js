@@ -243,7 +243,30 @@ exports.cancelOrder = async (req, res) => {
     }
 
     order.status = "cancelled";
+    if (order.paymentStatus === 'completed') {
+  const Razorpay = require('razorpay');
+  const razorpay = new Razorpay({
+    key_id: process.env.RAZORPAY_KEY_ID,
+    key_secret: process.env.RAZORPAY_KEY_SECRET,
+  });
+  
+  try {
+    if (order.razorpayOrderId) {
+      const refund = await razorpay.payments.refund(order.razorpayOrderId, {
+        amount: Math.round(order.totalAmount * 100),
+        speed: 'normal',
+      });
+      order.refundId = refund.id;
+      order.refundStatus = 'processing';
+      console.log('✅ Refund initiated:', refund.id);
+    }
+  } catch (refundErr) {
+    console.error('Refund failed:', refundErr.message);
+    // Continue with cancellation anyway
+  }
+}
 
+await order.save();
     for (const item of order.items) {
       if (item.status === 'active') {
         await applyInventoryChange({
@@ -361,7 +384,32 @@ exports.cancelOrderItem = async (req, res) => {
         });
       }
 
-      order.status = "returned";
+      order.status = 'returned';
+
+// Initiate refund for returned orders
+if (order.paymentStatus === 'completed') {
+  const Razorpay = require('razorpay');
+  const razorpay = new Razorpay({
+    key_id: process.env.RAZORPAY_KEY_ID,
+    key_secret: process.env.RAZORPAY_KEY_SECRET,
+  });
+  
+  try {
+    if (order.razorpayOrderId) {
+      const refund = await razorpay.payments.refund(order.razorpayOrderId, {
+        amount: Math.round(order.totalAmount * 100),
+        speed: 'normal',
+      });
+      order.refundId = refund.id;
+      order.refundStatus = 'processing';
+      console.log('✅ Return refund initiated:', refund.id);
+    }
+  } catch (refundErr) {
+    console.error('Refund failed:', refundErr.message);
+  }
+}
+
+
       await order.save();
 
       for (const item of order.items) {
