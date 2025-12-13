@@ -66,12 +66,13 @@ export default function AdminDashboard() {
       </div>
 
       {/* Stats Cards - Top 4 KPIs */}
+            {/* Stats Cards - Top 4 KPIs */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {/* Total Sellers */}
         <div className="bg-white rounded shadow p-4 border-l-4 border-blue-500">
           <p className="text-sm text-gray-600 font-medium">Total Sellers</p>
           <p className="text-3xl font-bold text-blue-600 mt-2">
-            {analytics.totalSellers}
+            {analytics.sellers?.total || 0}
           </p>
           <p className="text-xs text-gray-500 mt-1">Active on platform</p>
         </div>
@@ -80,7 +81,7 @@ export default function AdminDashboard() {
         <div className="bg-white rounded shadow p-4 border-l-4 border-yellow-500">
           <p className="text-sm text-gray-600 font-medium">Pending Sellers</p>
           <p className="text-3xl font-bold text-yellow-600 mt-2">
-            {analytics.pendingSellers}
+            {analytics.sellers?.pending || 0}
           </p>
           <p className="text-xs text-gray-500 mt-1">Awaiting KYC approval</p>
         </div>
@@ -89,7 +90,7 @@ export default function AdminDashboard() {
         <div className="bg-white rounded shadow p-4 border-l-4 border-green-500">
           <p className="text-sm text-gray-600 font-medium">Total Products</p>
           <p className="text-3xl font-bold text-green-600 mt-2">
-            {analytics.totalProducts}
+            {analytics.products || 0}
           </p>
           <p className="text-xs text-gray-500 mt-1">Across all sellers</p>
         </div>
@@ -98,7 +99,7 @@ export default function AdminDashboard() {
         <div className="bg-white rounded shadow p-4 border-l-4 border-purple-500">
           <p className="text-sm text-gray-600 font-medium">Orders Today</p>
           <p className="text-3xl font-bold text-purple-600 mt-2">
-            {analytics.ordersToday || 0}
+            {analytics.orders || 0}
           </p>
           <p className="text-xs text-gray-500 mt-1">Last 24 hours</p>
         </div>
@@ -114,7 +115,7 @@ export default function AdminDashboard() {
             </p>
           </div>
           <span className="text-2xl font-bold text-orange-600">
-            ₹{analytics.totalRevenue || 0}
+            ₹{analytics.revenue || 0}
           </span>
         </div>
       </div>
@@ -141,9 +142,9 @@ export default function AdminDashboard() {
           </span>
         </div>
 
-        {analytics.last7DaysRevenue && analytics.last7DaysRevenue.length > 0 ? (
+        {analytics.revenueByDay && analytics.revenueByDay.length > 0 ? (
           <ResponsiveContainer width="100%" height={300}>
-            <AreaChart data={analytics.last7DaysRevenue}>
+            <AreaChart data={analytics.revenueByDay}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
               <XAxis
                 dataKey="date"
@@ -185,17 +186,17 @@ export default function AdminDashboard() {
             Products below alert threshold across all sellers and categories
           </p>
 
-          {analytics.lowStockProducts && analytics.lowStockProducts.length > 0 ? (
+          {analytics.lowStockGlobal && analytics.lowStockGlobal.length > 0 ? (
             <div className="space-y-2 max-h-64 overflow-y-auto">
-              {analytics.lowStockProducts.map((prod) => (
+              {analytics.lowStockGlobal.map((prod) => (
                 <div
-                  key={prod._id}
+                  key={prod.id}
                   className="flex justify-between items-center p-2 border rounded bg-orange-50"
                 >
                   <div>
                     <p className="text-sm font-medium">{prod.name}</p>
                     <p className="text-xs text-gray-600">
-                      Seller: {prod.sellerId?.name || "Unknown"}
+                      Seller: {prod.sellerName || "Unknown"} | {prod.category || "N/A"}
                     </p>
                   </div>
                   <span className="text-xs text-red-600 font-semibold">
@@ -225,19 +226,19 @@ export default function AdminDashboard() {
                   <div className="flex justify-between items-start">
                     <div>
                       <p className="text-sm font-medium">
-                        #{idx + 1} {seller.name}
+                        #{idx + 1} {seller.sellerName}
                       </p>
                       <p className="text-xs text-gray-600">
-                        {seller.email}
+                        {seller.sellerEmail}
                       </p>
                     </div>
                   </div>
                   <div className="flex justify-between mt-2 text-xs">
                     <span className="text-gray-600">
-                      Items Sold: <span className="font-semibold">{seller.totalItemsSold}</span>
+                      Items Sold: <span className="font-semibold">{seller.itemsSold}</span>
                     </span>
                     <span className="text-green-600 font-semibold">
-                      ₹{seller.totalRevenue}
+                      ₹{seller.revenue}
                     </span>
                   </div>
                 </div>

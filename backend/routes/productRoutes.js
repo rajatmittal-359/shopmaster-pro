@@ -9,20 +9,65 @@ const Category = require('../models/Category');
  *  URL: /api/public/products/categories/all
  *  Note: Isko sabse upar rakha hai, taaki /:productId se clash na ho.
  */
+// Get all categories - PUBLIC (FLAT LIST - backward compatible)
 router.get('/categories/all', async (req, res) => {
   try {
     const categories = await Category.find({ isActive: true })
-      .select('name description')
+      .populate('parentCategory', 'name')  // ✅ Parent info add
+      .select('name description parentCategory')
+      .sort({ name: 1 });
+    
+    res.json({ categories });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+// Get category hierarchy tree - PUBLIC
+router.get('/categories/tree', async (req, res) => {
+  try {
+    const allCategories = await Category.find({ isActive: true })
+      .populate('parentCategory', 'name')
+      .select('name description parentCategory')
       .sort({ name: 1 });
 
-    res.json({
-      count: categories.length,
-      categories,
+    // Build tree structure
+    const categoryMap = {};
+    const roots = [];
+
+    // First pass: create lookup map
+    allCategories.forEach(cat => {
+      categoryMap[cat._id.toString()] = {
+        _id: cat._id,
+        name: cat.name,
+        description: cat.description,
+        parentCategory: cat.parentCategory?._id || null,
+        children: []
+      };
+    });
+
+    // Second pass: build parent-child relationships
+    allCategories.forEach(cat => {
+      if (cat.parentCategory && cat.parentCategory._id) {
+        const parentId = cat.parentCategory._id.toString();
+        const parent = categoryMap[parentId];
+        if (parent) {
+          parent.children.push(categoryMap[cat._id.toString()]);
+        }
+      } else {
+        // No parent = root category
+        roots.push(categoryMap[cat._id.toString()]);
+      }
+    });
+
+    res.json({ 
+      categories: roots,
+      totalCategories: allCategories.length 
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 });
+
 
 /**
  * ✅ GET products list (PUBLIC)
@@ -54,11 +99,16 @@ router.get('/', async (req, res) => {
 
     // Text/regex search
     if (search) {
+      const searchRegex = { $regex: search, $options: 'i' };
+
       filter.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { description: { $regex: search, $options: 'i' } },
+        { name: searchRegex },
+        { description: searchRegex },
+        { brand: searchRegex },
+        { tags: searchRegex } // tags is array of strings
       ];
     }
+
 
     if (minPrice || maxPrice) {
       filter.price = {};

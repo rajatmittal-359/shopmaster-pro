@@ -118,19 +118,38 @@ exports.activateSeller = async (req, res) => {
  */
 
 // Create category
+// Create category (with optional parent support)
 exports.createCategory = async (req, res) => {
   try {
-    const { name, description } = req.body;
+    const { name, description, parentCategory } = req.body;
 
     if (!name) {
       return res.status(400).json({ message: 'Category name is required' });
     }
 
+    // ✅ Validate parent category if provided
+    if (parentCategory) {
+      const parentExists = await Category.findById(parentCategory);
+      if (!parentExists) {
+        return res.status(400).json({ message: 'Invalid parent category' });
+      }
+      // ✅ Prevent creating subcategory under another subcategory (max 2 levels)
+      if (parentExists.parentCategory) {
+        return res.status(400).json({ 
+          message: 'Cannot create subcategory under another subcategory. Maximum 2 levels allowed.' 
+        });
+      }
+    }
+
     const category = await Category.create({
       name,
       description,
+      parentCategory: parentCategory || null,
       createdBy: req.user._id,
     });
+
+    // ✅ Populate parent in response
+    await category.populate('parentCategory', 'name');
 
     res.status(201).json({
       message: 'Category created successfully',
@@ -144,15 +163,23 @@ exports.createCategory = async (req, res) => {
   }
 };
 
-// Get all categories
+
+// Get all categories (with parent info and hierarchy stats)
 exports.getCategories = async (req, res) => {
   try {
     const categories = await Category.find()
       .populate('createdBy', 'name')
+      .populate('parentCategory', 'name')
       .sort({ name: 1 });
+
+    // ✅ Calculate hierarchy stats
+    const mainCategories = categories.filter(c => !c.parentCategory);
+    const subCategories = categories.filter(c => c.parentCategory);
 
     res.json({
       count: categories.length,
+      mainCategories: mainCategories.length,
+      subCategories: subCategories.length,
       categories,
     });
   } catch (error) {
@@ -160,17 +187,46 @@ exports.getCategories = async (req, res) => {
   }
 };
 
+
+// Update category
 // Update category
 exports.updateCategory = async (req, res) => {
   try {
     const { categoryId } = req.params;
-    const { name, description, isActive } = req.body;
+    const { name, description, isActive, parentCategory } = req.body;
+
+    // ✅ Validate parent if changing
+    if (parentCategory) {
+      if (parentCategory === categoryId) {
+        return res.status(400).json({ message: 'Category cannot be its own parent' });
+      }
+
+      const parentExists = await Category.findById(parentCategory);
+      if (!parentExists) {
+        return res.status(400).json({ message: 'Invalid parent category' });
+      }
+
+      // ✅ Prevent creating 3-level hierarchy
+      if (parentExists.parentCategory) {
+        return res.status(400).json({ 
+          message: 'Cannot set a subcategory as parent. Maximum 2 levels allowed.' 
+        });
+      }
+
+      // ✅ Prevent circular reference (if this category has children)
+      const hasChildren = await Category.findOne({ parentCategory: categoryId });
+      if (hasChildren) {
+        return res.status(400).json({ 
+          message: 'Cannot convert a parent category to subcategory. It has existing subcategories.' 
+        });
+      }
+    }
 
     const category = await Category.findByIdAndUpdate(
       categoryId,
-      { name, description, isActive },
+      { name, description, isActive, parentCategory: parentCategory || null },
       { new: true, runValidators: true }
-    );
+    ).populate('parentCategory', 'name');
 
     if (!category) {
       return res.status(404).json({ message: 'Category not found' });
@@ -186,14 +242,25 @@ exports.updateCategory = async (req, res) => {
 };
 
 // Delete category
+
+// Delete category
 exports.deleteCategory = async (req, res) => {
   try {
     const { categoryId } = req.params;
 
+    // ✅ Check if category has products
     const productsCount = await Product.countDocuments({ category: categoryId });
     if (productsCount > 0) {
       return res.status(400).json({
         message: `Cannot delete category. ${productsCount} products are using it.`,
+      });
+    }
+
+    // ✅ Check if category has subcategories
+    const subCategoriesCount = await Category.countDocuments({ parentCategory: categoryId });
+    if (subCategoriesCount > 0) {
+      return res.status(400).json({
+        message: `Cannot delete category. It has ${subCategoriesCount} subcategories. Delete them first.`,
       });
     }
 
@@ -210,6 +277,7 @@ exports.deleteCategory = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
 
 /**
  * PLATFORM ANALYTICS (STEP-6 ENHANCED)
