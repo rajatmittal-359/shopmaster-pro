@@ -10,7 +10,9 @@ const {
   getCategories,
   updateCategory,
   deleteCategory,
-  getAnalytics
+  getAnalytics,
+  suspendSeller,
+  activateSeller
 } = require('../controllers/adminController');
 const Category = require('../models/Category');
 // All routes require admin role
@@ -20,7 +22,9 @@ router.use(authMiddleware, roleMiddleware('admin'));
 router.get('/sellers/pending', getPendingSellers);
 router.patch('/sellers/:sellerId/approve', approveSeller);
 router.patch('/sellers/:sellerId/reject', rejectSeller);
-
+// nayi routes – same guard already apply hai upar
+router.patch('/sellers/:sellerId/suspend', suspendSeller);
+router.patch('/sellers/:sellerId/activate', activateSeller);
 // Category management
 router.post('/categories', createCategory);
 router.get('/categories', getCategories);

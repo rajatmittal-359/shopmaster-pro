@@ -18,8 +18,8 @@ const {
   updateTracking
 } = require('../controllers/sellerController');
 
-
-router.use(authMiddleware, roleMiddleware('seller'));
+const checkSellerStatus = require('../middlewares/checkSellerStatus');
+router.use(authMiddleware, roleMiddleware('seller'), checkSellerStatus);
 
 
 router.get('/profile', getSellerProfile);

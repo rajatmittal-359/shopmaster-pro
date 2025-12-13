@@ -25,6 +25,7 @@ exports.startCronJobs = () => {
 
       for (const data of Object.values(sellerMap)) {
         const user = await User.findById(data.seller.userId);
+        if (!user) continue;
         const template = lowStockEmail(data.products, user);
         await sendEmail({ to: user.email, ...template });
       }

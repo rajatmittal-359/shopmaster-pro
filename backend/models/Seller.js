@@ -48,7 +48,16 @@ const sellerSchema = new mongoose.Schema(
       type: String,
       enum: ['pending', 'verified', 'rejected'],
       default: 'pending'
-    }
+    },
+    status: {
+    type: String,
+    enum: ['active', 'suspended'],
+    default: 'active',
+  },
+  suspensionReason: {
+    type: String,
+    default: '',
+  },
   },
   {
     timestamps: true

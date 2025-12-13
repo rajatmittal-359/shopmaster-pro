@@ -1,8 +1,6 @@
 import api from '../utils/api';
-
 // Profile
 export const getSellerProfile = () => api.get('/seller/profile');
-
 // Products
 export const getMyProducts = () => api.get('/seller/products');
 export const addProduct = (data) => api.post('/seller/products', data);
@@ -12,7 +10,6 @@ export const deleteProduct = (productId) =>
   api.delete(`/seller/products/${productId}`);
 export const updateStock = (productId, stock) =>
   api.patch(`/seller/products/${productId}/stock`, { stock });
-
 // Orders
 export const getSellerOrders = () => api.get('/seller/orders');
 export const updateOrderStatus = (orderId, status) =>
@@ -20,6 +17,5 @@ export const updateOrderStatus = (orderId, status) =>
 
 // Analytics
 export const getSellerAnalytics = () => api.get('/seller/analytics');
-
 export const updateTracking = (orderId, data) =>
   api.patch(`/seller/orders/${orderId}/tracking`, data);

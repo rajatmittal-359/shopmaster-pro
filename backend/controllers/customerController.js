@@ -1,10 +1,14 @@
-  const Cart = require("../models/Cart");
-  const Order = require("../models/Order");
-  const Product = require("../models/Product");
-  const mongoose = require('mongoose'); // Add at top if not present
-const Address = require('../models/Address'); // Add at top if not present
-  const { applyInventoryChange } = require("./inventoryController");
+const Cart = require("../models/Cart");
+const Order = require("../models/Order");
+const Product = require("../models/Product");
+const mongoose = require('mongoose'); 
+const Address = require('../models/Address'); 
+const { applyInventoryChange } = require("./inventoryController");
 const InventoryLog = require("../models/Inventory");
+
+const sendSafeEmail = require('../utils/sendSafeEmail');
+const { orderConfirmedEmail } = require('../utils/emailTemplates');
+
   exports.addToCart = async (req, res) => {
     try {
       const { productId, quantity } = req.body;
@@ -81,7 +85,7 @@ exports.checkout = async (req, res) => {
   try {
     const { shippingAddressId } = req.body;
 
-    // ✅ Validate address exists & belongs to user
+    //  Validate address exists & belongs to user
     const address = await Address.findOne({
       _id: shippingAddressId,
       userId: req.user._id,
@@ -103,7 +107,7 @@ exports.checkout = async (req, res) => {
       return res.status(400).json({ message: "Cart is empty" });
     }
 
-    // ✅ Atomic stock validation
+    // Atomic stock validation
     for (const item of cart.items) {
       const product = await Product.findById(item.productId._id).session(session);
       
@@ -122,7 +126,7 @@ exports.checkout = async (req, res) => {
       }
     }
 
-    // ✅ Create order
+    //  Create order
     const order = await Order.create([{
       customerId: req.user._id,
       items: cart.items.map((item) => ({
@@ -138,7 +142,7 @@ exports.checkout = async (req, res) => {
       paymentStatus: "cod",
     }], { session });
 
-    // ✅ Update stock atomically
+    //  Update stock atomically
     for (const item of cart.items) {
       await Product.findByIdAndUpdate(
         item.productId._id,
@@ -158,28 +162,33 @@ exports.checkout = async (req, res) => {
       }], { session });
     }
 
-    // ✅ Clear cart
+    //  Clear cart
     cart.items = [];
     cart.totalAmount = 0;
     await cart.save({ session });
 
-    await session.commitTransaction();
-    const User = require('../models/User');
-const { orderConfirmedEmail } = require('../utils/emailTemplates');
-const sendEmail = require('../utils/sendEmail');
+ await session.commitTransaction();
 
-try {
-  const customer = await User.findById(req.user.id);
-  const template = orderConfirmedEmail(order[0], customer);
-  await sendEmail({ to: customer.email, ...template });
-} catch (emailErr) {
-  console.log('Email error:', emailErr.message);
-}
+    // COD order confirmation email (safe)
+    try {
+      const customer = req.user; // login user
 
-res.status(201).json({
-  success: true,
-  order: order[0],
-});
+      const { subject, html } = orderConfirmedEmail(order[0], customer);
+
+      await sendSafeEmail({
+        toUserId: customer._id,
+        toEmail: customer.email, // optional
+        subject,
+        html,
+      });
+    } catch (emailErr) {
+      console.error('COD order email failed:', emailErr.message);
+    }
+
+    res.status(201).json({
+      success: true,
+      order: order[0],
+    });
   } catch (err) {
     await session.abortTransaction();
     console.error("CHECKOUT ERROR:", err.message);

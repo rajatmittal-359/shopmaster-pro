@@ -1,23 +1,26 @@
 // Order emails
+// backend/utils/emailTemplates.js
+
 exports.orderConfirmedEmail = (order, customer) => ({
   subject: `Order Confirmed #${order._id.toString().slice(-6)} - ShopMaster Pro`,
-html: `
-  <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-    <h2>Order Confirmation</h2>
-    <p>Hi ${user.name},</p>
-    <p>Your order has been confirmed!</p>
-    
-    <div style="background: #f5f5f5; padding: 15px; margin: 20px 0;">
-      <strong>Order ID:</strong> ${order._id}<br>
-      <strong>Total:</strong> ₹${order.totalAmount}<br>
-      <strong>Payment:</strong> ${order.paymentStatus === 'completed' ? 'Paid' : 'COD'}
+  html: `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2>Order Confirmation</h2>
+      <p>Hi ${customer.name},</p>
+      <p>Your order has been confirmed!</p>
+
+      <div style="background: #f5f5f5; padding: 15px; margin: 20px 0;">
+        <strong>Order ID:</strong> ${order._id}<br>
+        <strong>Total:</strong> ₹${order.totalAmount}<br>
+        <strong>Payment:</strong> ${order.paymentStatus === 'completed' ? 'Paid' : 'COD'}
+      </div>
+
+      <p>We'll send tracking details once shipped.</p>
+      <p>Thanks for shopping!</p>
     </div>
-    
-    <p>We'll send tracking details once shipped.</p>
-    <p>Thanks for shopping!</p>
-  </div>
-`
+  `,
 });
+
 
 exports.orderStatusEmail = (order, customer, status) => ({
   subject: `Order ${status} - ShopMaster Pro`,

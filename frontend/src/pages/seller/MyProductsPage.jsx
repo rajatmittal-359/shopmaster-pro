@@ -37,7 +37,14 @@ export default function MyProductsPage() {
     stock: "",
     lowStockThreshold: "10",
     images: [],
+    brand: "",
+    sku: "",
+    mrp: "",
+    tags: "",
   });
+
+  const [errors, setErrors] = useState({});
+
 
   // Load products + categories
   useEffect(() => {
@@ -134,12 +141,54 @@ export default function MyProductsPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    const newErrors = {};
+
+    if (!form.name.trim() || form.name.trim().length < 3) {
+      newErrors.name = "Name must be at least 3 characters";
+    }
+
+    if (!form.description.trim() || form.description.trim().length < 10) {
+      newErrors.description = "Description must be at least 10 characters";
+    }
+
+    if (!form.category) {
+      newErrors.category = "Category is required";
+    }
+
+    if (!form.price || Number(form.price) <= 0) {
+      newErrors.price = "Price must be greater than 0";
+    }
+
+    if (form.stock === "" || Number(form.stock) < 0) {
+      newErrors.stock = "Stock cannot be negative";
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+
     try {
+      const payload = {
+        ...form,
+        price: Number(form.price),
+        stock: Number(form.stock),
+        lowStockThreshold: Number(form.lowStockThreshold || 10),
+        mrp: form.mrp ? Number(form.mrp) : undefined,
+        tags: form.tags
+          ? form.tags
+              .split(",")
+              .map((t) => t.trim())
+              .filter(Boolean)
+          : undefined,
+      };
+
       if (editingId) {
-        await updateProduct(editingId, form);
+        await updateProduct(editingId, payload);
         toastSuccess("Product updated");
       } else {
-        await addProduct(form);
+        await addProduct(payload);
         toastSuccess("Product created");
       }
       resetForm();
@@ -148,6 +197,7 @@ export default function MyProductsPage() {
       toastError(err?.response?.data?.message || "Error saving product");
     }
   };
+
 
   const handleEdit = (prod) => {
     setEditingId(prod._id);
@@ -159,9 +209,15 @@ export default function MyProductsPage() {
       stock: prod.stock,
       lowStockThreshold: prod.lowStockThreshold || "10",
       images: prod.images || [],
+      brand: prod.brand || "",
+      sku: prod.sku || "",
+      mrp: prod.mrp || "",
+      tags: (prod.tags || []).join(", "),
     });
+    setErrors({});
     setShowForm(true);
   };
+
 
   const handleDelete = async (id) => {
     if (!window.confirm("Delete this product?")) return;
@@ -183,10 +239,16 @@ export default function MyProductsPage() {
       stock: "",
       lowStockThreshold: "10",
       images: [],
+      brand: "",
+      sku: "",
+      mrp: "",
+      tags: "",
     });
+    setErrors({});
     setEditingId(null);
     setShowForm(false);
   };
+
 
   const renderBullets = (text = "") => {
     return (
@@ -254,31 +316,34 @@ export default function MyProductsPage() {
       {showForm && (
         <div className="bg-white p-5 rounded shadow mb-8">
           <form onSubmit={handleSubmit} className="space-y-4">
-            <input
+             <input
               name="name"
               value={form.name}
               onChange={handleChange}
               placeholder="Product Name"
               className="w-full border px-3 py-2 rounded text-sm"
-              required
             />
-
-            <textarea
+            {errors.name && (
+              <p className="text-red-500 text-xs mt-1">{errors.name}</p>
+            )}
+                        <textarea
               name="description"
               value={form.description}
               onChange={handleChange}
               placeholder="Enter description (one point per line)"
               rows={5}
               className="w-full border px-3 py-2 rounded text-sm"
-              required
             />
-
-            <select
+            {errors.description && (
+              <p className="text-red-500 text-xs mt-1">
+                {errors.description}
+              </p>
+            )}
+                        <select
               name="category"
               value={form.category}
               onChange={handleChange}
               className="w-full border px-3 py-2 rounded text-sm"
-              required
             >
               <option value="">Select Category</option>
               {categories.map((c) => (
@@ -287,26 +352,64 @@ export default function MyProductsPage() {
                 </option>
               ))}
             </select>
-
-            <div className="grid grid-cols-2 gap-3">
+            {errors.category && (
+              <p className="text-red-500 text-xs mt-1">{errors.category}</p>
+            )}
+                        <div className="grid grid-cols-2 gap-3">
               <input
-                name="price"
-                value={form.price}
+                name="brand"
+                value={form.brand}
                 onChange={handleChange}
-                placeholder="Price"
-                type="number"
+                placeholder="Brand (optional)"
                 className="border px-3 py-2 rounded text-sm"
-                required
               />
               <input
-                name="stock"
-                value={form.stock}
+                name="sku"
+                value={form.sku}
                 onChange={handleChange}
-                placeholder="Stock"
+                placeholder="SKU (optional)"
+                className="border px-3 py-2 rounded text-sm"
+              />
+            </div>
+                        <div className="grid grid-cols-3 gap-3">
+              <input
+                name="mrp"
+                value={form.mrp}
+                onChange={handleChange}
+                placeholder="MRP"
                 type="number"
                 className="border px-3 py-2 rounded text-sm"
-                required
               />
+              <div>
+                <input
+                  name="price"
+                  value={form.price}
+                  onChange={handleChange}
+                  placeholder="Selling Price"
+                  type="number"
+                  className="border px-3 py-2 rounded text-sm w-full"
+                />
+                {errors.price && (
+                  <p className="text-red-500 text-xs mt-1">
+                    {errors.price}
+                  </p>
+                )}
+              </div>
+              <div>
+                <input
+                  name="stock"
+                  value={form.stock}
+                  onChange={handleChange}
+                  placeholder="Stock"
+                  type="number"
+                  className="border px-3 py-2 rounded text-sm w-full"
+                />
+                {errors.stock && (
+                  <p className="text-red-500 text-xs mt-1">
+                    {errors.stock}
+                  </p>
+                )}
+              </div>
             </div>
 
             <input
@@ -315,6 +418,13 @@ export default function MyProductsPage() {
               onChange={handleChange}
               placeholder="Low Stock Alert"
               type="number"
+              className="border px-3 py-2 rounded text-sm"
+            />
+            <input
+              name="tags"
+              value={form.tags}
+              onChange={handleChange}
+              placeholder="Tags (comma separated, e.g. men,tshirt,cotton)"
               className="border px-3 py-2 rounded text-sm"
             />
 

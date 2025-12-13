@@ -22,7 +22,12 @@ const categorySchema = new mongoose.Schema(
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User'
-    }
+    },
+     parentCategory: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Category',
+      default: null,
+    },
   },
   {
     timestamps: true

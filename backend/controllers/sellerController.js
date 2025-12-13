@@ -38,6 +38,10 @@ exports.addProduct = async (req, res) => {
       stock,
       lowStockThreshold,
       images, // base64 array
+      brand,
+      sku,
+      mrp,
+      tags,
     } = req.body;
 
     let imageUrls = [];
@@ -59,6 +63,10 @@ exports.addProduct = async (req, res) => {
       sellerId: req.user._id,
       isActive: true,
       images: imageUrls,
+      brand,
+      sku,
+      mrp,
+      tags,
     });
 
     res.status(201).json({ message: 'Product created', product });
@@ -79,6 +87,10 @@ exports.updateProduct = async (req, res) => {
       stock,
       isActive,
       lowStockThreshold,
+      brand,
+      sku,
+      mrp,
+      tags,
     } = req.body;
 
     const product = await Product.findOne({
@@ -101,7 +113,28 @@ exports.updateProduct = async (req, res) => {
     if (lowStockThreshold !== undefined) {
       product.lowStockThreshold = lowStockThreshold;
     }
+    if (brand !== undefined) product.brand = brand;
+    if (sku !== undefined) product.sku = sku;
+    if (mrp !== undefined) product.mrp = mrp;
+    if (Array.isArray(tags)) product.tags = tags;
 
+      if (Array.isArray(req.body.images)) {
+      const incomingImages = req.body.images;
+      const finalImages = [];
+
+      for (const img of incomingImages) {
+        if (typeof img === 'string' && img.startsWith('data:image/')) {
+          // New local image (base64) → upload to Cloudinary
+          const uploaded = await uploadImage(img);
+          finalImages.push(uploaded.url);
+        } else if (typeof img === 'string' && img.trim() !== '') {
+          // Existing image URL → keep as is
+          finalImages.push(img);
+        }
+      }
+
+      product.images = finalImages;
+    }
     await product.save();
     await product.populate('category', 'name');
 

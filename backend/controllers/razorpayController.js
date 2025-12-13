@@ -6,6 +6,8 @@ const Product = require("../models/Product");
 const InventoryLog = require("../models/Inventory");
 const mongoose = require("mongoose");
 const Address = require("../models/Address");
+const sendSafeEmail = require('../utils/sendSafeEmail');
+const { orderConfirmedEmail } = require('../utils/emailTemplates');
 
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID,
@@ -102,7 +104,7 @@ exports.createRazorpayOrder = async (req, res) => {
 
     await session.commitTransaction();
     session.endSession();
-    console.log(`✅ Razorpay order created successfully: ${razorpayOrder.id} for user ${req.user.id}`);
+    console.log(` Razorpay order created successfully: ${razorpayOrder.id} for user ${req.user.id}`);
     return res.json({
       success: true,
       orderId: razorpayOrder.id,
@@ -197,21 +199,24 @@ exports.verifyRazorpayPayment = async (req, res) => {
       { session }
     );
 
-    await session.commitTransaction();
+        await session.commitTransaction();
 
-    //  Send order confirmation email
-    const User = require('../models/User');
-    const { orderConfirmedEmail } = require('../utils/emailTemplates');
-    const sendEmail = require('../utils/sendEmail');
+    // Order confirmation email for prepaid (safe)
+    try {
+      const customerId = order.customerId;
 
-    const customer = await User.findById(order.customerId);
-    const template = orderConfirmedEmail(order, customer);
-    await sendEmail({ to: customer.email, ...template }).catch((e) => {
-  console.error('Order confirmation email failed:', e.message);
-  // Continue anyway - payment is done
-});
-    
-   
+      const { subject, html } = orderConfirmedEmail(order, { name: 'Customer' });
+
+      await sendSafeEmail({
+        toUserId: customerId,
+        subject,
+        html,
+      });
+    } catch (e) {
+      console.error('Order confirmation email failed:', e.message);
+      // Continue anyway - payment is done
+    }
+
     session.endSession();
 
     return res.json({
@@ -219,6 +224,7 @@ exports.verifyRazorpayPayment = async (req, res) => {
       message: "Payment verified successfully",
       order,
     });
+
   } catch (err) {
     await session.abortTransaction();
     session.endSession();

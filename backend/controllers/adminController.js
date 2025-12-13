@@ -72,6 +72,46 @@ exports.rejectSeller = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+// Suspend seller
+exports.suspendSeller = async (req, res) => {
+  try {
+    const { sellerId } = req.params;
+    const { reason } = req.body;
+
+    const seller = await Seller.findById(sellerId);
+    if (!seller) {
+      return res.status(404).json({ message: 'Seller not found' });
+    }
+
+    seller.status = 'suspended';
+    seller.suspensionReason = reason || '';
+    await seller.save();
+
+    return res.json({ message: 'Seller suspended successfully', seller });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+// Activate seller
+exports.activateSeller = async (req, res) => {
+  try {
+    const { sellerId } = req.params;
+
+    const seller = await Seller.findById(sellerId);
+    if (!seller) {
+      return res.status(404).json({ message: 'Seller not found' });
+    }
+
+    seller.status = 'active';
+    seller.suspensionReason = '';
+    await seller.save();
+
+    return res.json({ message: 'Seller activated successfully', seller });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
 
 /**
  * CATEGORY MANAGEMENT

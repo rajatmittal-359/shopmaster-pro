@@ -65,6 +65,23 @@ const productSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+      brand: {
+    type: String,
+    trim: true,
+  },
+  sku: {
+    type: String,
+    trim: true,
+  },
+  mrp: {
+    type: Number,
+  },
+  tags: [
+    {
+      type: String,
+      trim: true,
+    },
+  ],
   },
   {
     timestamps: true,
