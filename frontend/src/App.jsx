@@ -26,6 +26,7 @@ import SellerProductDetailsPage from './pages/seller/SellerProductDetailsPage';
 import InventoryLogsPage from './pages/admin/InventoryLogsPage';
 import SellerInventoryLogsPage from './pages/seller/InventoryLogsPage';
 import ErrorBoundary from './components/common/ErrorBoundary';
+import SellerOrderDetailsPage from "./pages/seller/SellerOrderDetailsPage";  // ✅ ADD THIS
 
 // 🔐 load user thunk
 import { loadUserThunk } from './redux/slices/authSlice';
@@ -72,6 +73,8 @@ function App() {
           <Route path="/seller/dashboard" element={<SellerDashboard />} />
           <Route path="/seller/products" element={<MyProductsPage />} />
           <Route path="/seller/orders" element={<SellerOrdersPage />} />
+          <Route path="/seller/orders/:orderId" element={<SellerOrderDetailsPage />} />  {/* ✅ ADD THIS */}
+
           <Route path="/seller/products/:id" element={<SellerProductDetailsPage />} />
           <Route path="/seller/inventory-logs" element={<SellerInventoryLogsPage />} />
         </Route>

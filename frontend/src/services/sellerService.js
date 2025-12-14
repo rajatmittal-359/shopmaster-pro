@@ -19,3 +19,8 @@ export const updateOrderStatus = (orderId, status) =>
 export const getSellerAnalytics = () => api.get('/seller/analytics');
 export const updateTracking = (orderId, data) =>
   api.patch(`/seller/orders/${orderId}/tracking`, data);
+
+
+// Get single order details
+export const getOrderDetails = (orderId) => api.get(`/seller/orders/${orderId}`);
+

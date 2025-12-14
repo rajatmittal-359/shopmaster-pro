@@ -10,20 +10,19 @@ const Order = require('../models/Order');
  */
 
 // Get all pending sellers (awaiting approval)
-exports.getPendingSellers = async (req, res) => {
+// ✅ NEW CODE - Get ALL sellers
+exports.getAllSellers = async (req, res) => {
   try {
-    const pendingSellers = await Seller.find({ isApproved: false })
-      .populate('userId', 'name email')
+    const allSellers = await Seller.find({})
+      .populate("userId", "name email")
       .sort({ createdAt: -1 });
-
-    res.json({
-      count: pendingSellers.length,
-      sellers: pendingSellers,
-    });
+    
+    res.json({ count: allSellers.length, sellers: allSellers });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
+
 
 // Approve seller
 exports.approveSeller = async (req, res) => {

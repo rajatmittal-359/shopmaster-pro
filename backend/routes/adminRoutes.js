@@ -3,7 +3,7 @@ const router = express.Router();
 const authMiddleware = require('../middlewares/authMiddleware');
 const roleMiddleware = require('../middlewares/roleMiddleware');
 const {
-  getPendingSellers,
+  getAllSellers,        // ✅ CHANGED: getPendingSellers → getAllSellers
   approveSeller,
   rejectSeller,
   createCategory,
@@ -14,17 +14,17 @@ const {
   suspendSeller,
   activateSeller
 } = require('../controllers/adminController');
-const Category = require('../models/Category');
+
 // All routes require admin role
 router.use(authMiddleware, roleMiddleware('admin'));
 
 // Seller management
-router.get('/sellers/pending', getPendingSellers);
+router.get('/sellers/pending', getAllSellers);  // ✅ CHANGED: function name
 router.patch('/sellers/:sellerId/approve', approveSeller);
 router.patch('/sellers/:sellerId/reject', rejectSeller);
-// nayi routes – same guard already apply hai upar
 router.patch('/sellers/:sellerId/suspend', suspendSeller);
 router.patch('/sellers/:sellerId/activate', activateSeller);
+
 // Category management
 router.post('/categories', createCategory);
 router.get('/categories', getCategories);

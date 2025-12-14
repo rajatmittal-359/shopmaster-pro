@@ -13,6 +13,7 @@ const {
   updateStock,
   getLowStockProducts,
   getMyOrders,
+  getOrderDetails,
   updateOrderStatus,
   getSellerAnalytics,
   updateTracking
@@ -34,6 +35,7 @@ router.get('/products/low-stock', getLowStockProducts);
 router.get('/products/:id', getProductById);
 
 router.get('/orders', getMyOrders);
+router.get('/orders/:orderId', getOrderDetails);  
 
 router.patch('/orders/:orderId/status', updateOrderStatus);
 router.patch(

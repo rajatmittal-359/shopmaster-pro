@@ -227,10 +227,8 @@ exports.getLowStockProducts = async (req, res) => {
 // Get orders that contain this seller's products
 exports.getMyOrders = async (req, res) => {
   try {
-    const orders = await Order.find({
-      'items.sellerId': req.user._id,
-    })
-      .populate('customerId', 'name email')
+    const orders = await Order.find({ "items.sellerId": req.user._id })
+      .populate("customerId", "name email")
       .sort({ createdAt: -1 });
 
     const sellerOrders = orders.map((order) => {
@@ -244,18 +242,63 @@ exports.getMyOrders = async (req, res) => {
         items: sellerItems,
         status: order.status,
         paymentStatus: order.paymentStatus,
+        trackingInfo: order.trackingInfo,  // ✅ ADDED
         createdAt: order.createdAt,
       };
     });
 
-    res.json({
-      count: sellerOrders.length,
-      orders: sellerOrders,
-    });
+    res.json({ count: sellerOrders.length, orders: sellerOrders });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
+
+// Get single order details for seller
+exports.getOrderDetails = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const sellerId = req.user._id;
+
+    const order = await Order.findById(orderId)
+      .populate("customerId", "name email")
+      .populate("shippingAddressId");
+
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    // Verify this order has items from this seller
+    const hasSellerItems = order.items.some(
+      (item) => item.sellerId.toString() === sellerId.toString()
+    );
+
+    if (!hasSellerItems) {
+      return res.status(403).json({ message: "Access denied to this order" });
+    }
+
+    // Filter items - only show this seller's items
+    const sellerItems = order.items.filter(
+      (item) => item.sellerId.toString() === sellerId.toString()
+    );
+
+    const orderData = {
+      _id: order._id,
+      customerId: order.customerId,
+      items: sellerItems,
+      status: order.status,
+      paymentStatus: order.paymentStatus,
+      shippingAddressId: order.shippingAddressId,
+      trackingInfo: order.trackingInfo,
+      createdAt: order.createdAt,
+      updatedAt: order.updatedAt,
+    };
+
+    res.json({ success: true, order: orderData });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 
 // Update order status from seller side
 // Allowed forward-only transitions:
