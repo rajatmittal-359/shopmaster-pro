@@ -103,15 +103,17 @@ const authSlice = createSlice({
         state.loading = true;
         state.error = null;
       })
-      .addCase(verifyOtpThunk.fulfilled, (state, action) => {
-        state.loading = false;
-        state.token = action.payload.token;
-        state.role = action.payload.role;
-        state.user = action.payload.user;
-        localStorage.setItem('smp_token', action.payload.token);
-        localStorage.setItem('smp_role', action.payload.role);
-        state.tempEmail = null;
-      })
+      // ✅ verifyOtp fulfilled
+.addCase(verifyOtpThunk.fulfilled, (state, action) => {
+  state.loading = false;
+  state.token = action.payload.token;
+  state.role = action.payload.role || action.payload.user?.role;   // ⬅️ same pattern
+  state.user = action.payload.user;
+  localStorage.setItem('smp_token', action.payload.token);
+  localStorage.setItem('smp_role', state.role);
+  state.tempEmail = null;
+})
+
       .addCase(verifyOtpThunk.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
@@ -133,11 +135,16 @@ const authSlice = createSlice({
   state.loading = false;
   state.error = action.payload;
 })
+.addCase(loadUserThunk.fulfilled, (state, action) => {
+  state.user = action.payload.user || action.payload;  // agar API sirf user object bheje
+  state.role = action.payload.role || action.payload.user?.role || state.role;
+})
+.addCase(loadUserThunk.rejected, (state) => {
+  // token expire ho gaya ho to clean up optional
+  state.user = null;
+  state.role = null;
+})
 
-      .addCase(loadUserThunk.fulfilled, (state, action) => {
-        state.user = action.payload.user;
-        state.role = action.payload.role;
-      });
   },
 });
 

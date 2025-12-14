@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+// src/pages/seller/MyProductsPage.jsx
+import { useEffect, useState, useRef } from "react";
 import Layout from "../../components/common/Layout";
 import {
   getMyProducts,
@@ -27,8 +28,6 @@ export default function MyProductsPage() {
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState("newest");
 
-  const navigate = useNavigate();
-
   const [form, setForm] = useState({
     name: "",
     description: "",
@@ -36,22 +35,24 @@ export default function MyProductsPage() {
     price: "",
     stock: "",
     lowStockThreshold: "10",
-    images: [],
+    images: [], // only NEW uploads (base64)
     brand: "",
     sku: "",
     mrp: "",
     tags: "",
   });
 
+  const [existingImages, setExistingImages] = useState([]); // URLs already on product
   const [errors, setErrors] = useState({});
 
+  const navigate = useNavigate();
+  const formRef = useRef(null);
 
-  // Load products + categories
+  // ---------- LOAD DATA ----------
   useEffect(() => {
     loadData();
   }, []);
 
-  // Apply filters/sort whenever deps change
   useEffect(() => {
     applySearchAndSort();
   }, [search, sort, products]);
@@ -76,11 +77,17 @@ export default function MyProductsPage() {
     let temp = [...products];
 
     if (search.trim()) {
-      temp = temp.filter(
-        (p) =>
-          p.name.toLowerCase().includes(search.toLowerCase()) ||
-          p.category?.name.toLowerCase().includes(search.toLowerCase())
-      );
+      const q = search.toLowerCase();
+      temp = temp.filter((p) => {
+        const inName = p.name?.toLowerCase().includes(q);
+        const inCat = p.category?.name?.toLowerCase().includes(q);
+        const inBrand = p.brand?.toLowerCase().includes(q);
+        const inSku = p.sku?.toLowerCase().includes(q);
+        const inTags = (p.tags || []).some((t) =>
+          t.toLowerCase().includes(q)
+        );
+        return inName || inCat || inBrand || inSku || inTags;
+      });
     }
 
     if (sort === "newest") {
@@ -96,38 +103,35 @@ export default function MyProductsPage() {
     setFiltered(temp);
   };
 
+  // ---------- FORM HANDLERS ----------
   const handleChange = (e) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
   const handleImageChange = (e) => {
     const files = Array.from(e.target.files);
-    const maxSize = 5 * 1024 * 1024; // 5MB
+    const maxSize = 5 * 1024 * 1024;
 
     files.forEach((file) => {
       if (file.size > maxSize) {
         toastError(`${file.name} is too large (max 5MB)`);
         return;
       }
-
       if (!file.type.startsWith("image/")) {
         toastError(`${file.name} is not an image`);
         return;
       }
 
       const reader = new FileReader();
-
       reader.onloadend = () => {
         setForm((prev) => ({
           ...prev,
           images: [...prev.images, reader.result],
         }));
       };
-
       reader.onerror = () => {
         toastError("Failed to read image");
       };
-
       reader.readAsDataURL(file);
     });
   };
@@ -143,23 +147,18 @@ export default function MyProductsPage() {
     e.preventDefault();
 
     const newErrors = {};
-
     if (!form.name.trim() || form.name.trim().length < 3) {
       newErrors.name = "Name must be at least 3 characters";
     }
-
     if (!form.description.trim() || form.description.trim().length < 10) {
       newErrors.description = "Description must be at least 10 characters";
     }
-
     if (!form.category) {
       newErrors.category = "Category is required";
     }
-
     if (!form.price || Number(form.price) <= 0) {
       newErrors.price = "Price must be greater than 0";
     }
-
     if (form.stock === "" || Number(form.stock) < 0) {
       newErrors.stock = "Stock cannot be negative";
     }
@@ -185,12 +184,26 @@ export default function MyProductsPage() {
       };
 
       if (editingId) {
+        // merge existing + new
+        const allImages = [
+          ...existingImages, // URLs user kept
+          ...(form.images || []), // new base64 uploads
+        ];
+
+        if (allImages.length > 0) {
+          payload.images = allImages;
+        } else {
+          delete payload.images;
+        }
+
         await updateProduct(editingId, payload);
         toastSuccess("Product updated");
       } else {
+        // create
         await addProduct(payload);
         toastSuccess("Product created");
       }
+
       resetForm();
       await loadData();
     } catch (err) {
@@ -198,9 +211,9 @@ export default function MyProductsPage() {
     }
   };
 
-
   const handleEdit = (prod) => {
     setEditingId(prod._id);
+    setExistingImages(prod.images || []);
     setForm({
       name: prod.name,
       description: prod.description,
@@ -208,7 +221,7 @@ export default function MyProductsPage() {
       price: prod.price,
       stock: prod.stock,
       lowStockThreshold: prod.lowStockThreshold || "10",
-      images: prod.images || [],
+      images: [], // only new uploads from now
       brand: prod.brand || "",
       sku: prod.sku || "",
       mrp: prod.mrp || "",
@@ -216,8 +229,14 @@ export default function MyProductsPage() {
     });
     setErrors({});
     setShowForm(true);
-  };
 
+    setTimeout(() => {
+      formRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }, 100);
+  };
 
   const handleDelete = async (id) => {
     if (!window.confirm("Delete this product?")) return;
@@ -244,23 +263,21 @@ export default function MyProductsPage() {
       mrp: "",
       tags: "",
     });
+    setExistingImages([]);
     setErrors({});
     setEditingId(null);
     setShowForm(false);
   };
 
+  const renderBullets = (text = "") => (
+    <ul className="list-disc ml-4 space-y-1 text-xs text-gray-600">
+      {text.split("\n").map((line, i) => (
+        <li key={i}>{line}</li>
+      ))}
+    </ul>
+  );
 
-  const renderBullets = (text = "") => {
-    return (
-      <ul className="list-disc ml-4 space-y-1 text-xs text-gray-600">
-        {text.split("\n").map((line, i) => (
-          <li key={i}>{line}</li>
-        ))}
-      </ul>
-    );
-  };
-
-  // 🔹 Loading full-page skeleton
+  // ---------- RENDER ----------
   if (loading) {
     return (
       <Layout title="My Products">
@@ -284,17 +301,32 @@ export default function MyProductsPage() {
         <h2 className="text-2xl font-bold">My Products</h2>
 
         <button
-          onClick={() => setShowForm((p) => !p)}
+          onClick={() => {
+            const next = !showForm;
+            setShowForm(next);
+            if (!next) {
+              resetForm();
+            } else {
+              setTimeout(
+                () =>
+                  formRef.current?.scrollIntoView({
+                    behavior: "smooth",
+                    block: "start",
+                  }),
+                100
+              );
+            }
+          }}
           className="px-5 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded text-sm font-semibold"
         >
-          {showForm ? "Cancel" : "+ Add Product"}
+          {showForm ? "Close Form" : "+ Add Product"}
         </button>
       </div>
 
       {/* Search + Sort */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
         <input
-          placeholder="Search by name or category..."
+          placeholder="Search by name, brand, SKU or tag..."
           className="border px-3 py-2 rounded text-sm"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -314,9 +346,9 @@ export default function MyProductsPage() {
 
       {/* Form */}
       {showForm && (
-        <div className="bg-white p-5 rounded shadow mb-8">
+        <div ref={formRef} className="bg-white p-5 rounded shadow mb-8">
           <form onSubmit={handleSubmit} className="space-y-4">
-             <input
+            <input
               name="name"
               value={form.name}
               onChange={handleChange}
@@ -326,7 +358,8 @@ export default function MyProductsPage() {
             {errors.name && (
               <p className="text-red-500 text-xs mt-1">{errors.name}</p>
             )}
-                        <textarea
+
+            <textarea
               name="description"
               value={form.description}
               onChange={handleChange}
@@ -339,7 +372,8 @@ export default function MyProductsPage() {
                 {errors.description}
               </p>
             )}
-                        <select
+
+            <select
               name="category"
               value={form.category}
               onChange={handleChange}
@@ -355,7 +389,8 @@ export default function MyProductsPage() {
             {errors.category && (
               <p className="text-red-500 text-xs mt-1">{errors.category}</p>
             )}
-                        <div className="grid grid-cols-2 gap-3">
+
+            <div className="grid grid-cols-2 gap-3">
               <input
                 name="brand"
                 value={form.brand}
@@ -371,7 +406,8 @@ export default function MyProductsPage() {
                 className="border px-3 py-2 rounded text-sm"
               />
             </div>
-                        <div className="grid grid-cols-3 gap-3">
+
+            <div className="grid grid-cols-3 gap-3">
               <input
                 name="mrp"
                 value={form.mrp}
@@ -420,6 +456,7 @@ export default function MyProductsPage() {
               type="number"
               className="border px-3 py-2 rounded text-sm"
             />
+
             <input
               name="tags"
               value={form.tags}
@@ -428,7 +465,45 @@ export default function MyProductsPage() {
               className="border px-3 py-2 rounded text-sm"
             />
 
+            {/* Existing images */}
+            {existingImages.length > 0 && (
+              <div className="space-y-1">
+                <p className="text-xs text-gray-600">Existing images</p>
+                <div className="flex flex-wrap gap-2">
+                  {existingImages.map((img, idx) => (
+                    <div
+                      key={idx}
+                      className="w-16 h-16 rounded overflow-hidden border relative"
+                    >
+                      <img
+                        src={img}
+                        alt="existing"
+                        className="w-full h-full object-cover"
+                      />
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setExistingImages((prev) =>
+                            prev.filter((_, i) => i !== idx)
+                          )
+                        }
+                        className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* New images */}
             <div className="space-y-2">
+              <p className="text-xs text-gray-600">
+                {editingId
+                  ? "Upload new images if you want to add more or replace existing."
+                  : "Upload product images (multiple allowed)."}
+              </p>
               <input
                 type="file"
                 multiple
@@ -436,7 +511,6 @@ export default function MyProductsPage() {
                 className="text-sm"
               />
 
-              {/* Selected images preview */}
               {form.images.length > 0 && (
                 <div className="flex flex-wrap gap-2 mt-2">
                   {form.images.map((img, idx) => (
@@ -483,37 +557,52 @@ export default function MyProductsPage() {
       {!loading && filtered.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {filtered.map((prod) => (
-            <div key={prod._id} className="border rounded shadow bg-white">
+            <div
+              key={prod._id}
+              className="border rounded-lg shadow-sm bg-white flex flex-col"
+            >
               {prod.images?.length > 0 && (
-                <Swiper
-                  modules={[Navigation, Pagination]}
-                  navigation
-                  pagination={{ clickable: true }}
-                >
-                  {prod.images.map((img, i) => (
-                    <SwiperSlide key={i}>
-                      <img
-                        src={img}
-                        className="w-full h-48 object-cover"
-                        alt={prod.name}
-                      />
-                    </SwiperSlide>
-                  ))}
-                </Swiper>
+                <div className="h-56 w-full">
+                  <Swiper
+                    modules={[Navigation, Pagination]}
+                    navigation
+                    pagination={{ clickable: true }}
+                    className="h-full"
+                  >
+                    {prod.images.map((img, i) => (
+                      <SwiperSlide key={i}>
+                        <img
+                          src={img}
+                          className="w-full h-56 object-contain bg-gray-50"
+                          alt={prod.name}
+                        />
+                      </SwiperSlide>
+                    ))}
+                  </Swiper>
+                </div>
               )}
 
-              <div className="p-4 space-y-2">
-                <h3 className="font-bold text-sm">{prod.name}</h3>
+              <div className="p-4 space-y-2 flex-1 flex flex-col">
+                <h3 className="font-semibold text-sm line-clamp-2">
+                  {prod.name}
+                </h3>
                 <p className="text-xs text-gray-500">
                   Category: {prod.category?.name || "Uncategorized"}
                 </p>
 
                 {renderBullets(prod.description)}
 
-                <div className="flex justify-between items-center pt-2">
-                  <span className="font-bold text-orange-600 text-sm">
-                    ₹{prod.price}
-                  </span>
+                <div className="flex justify-between items-center pt-2 text-sm">
+                  <div className="space-x-1">
+                    {prod.mrp && prod.mrp > prod.price && (
+                      <span className="text-xs line-through text-gray-400">
+                        ₹{prod.mrp}
+                      </span>
+                    )}
+                    <span className="font-bold text-orange-600">
+                      ₹{prod.price}
+                    </span>
+                  </div>
                   <span
                     className={`text-xs font-semibold ${
                       prod.stock <= prod.lowStockThreshold
@@ -525,9 +614,11 @@ export default function MyProductsPage() {
                   </span>
                 </div>
 
-                <div className="flex gap-2 pt-3">
+                <div className="flex gap-2 pt-3 mt-auto">
                   <button
-                    onClick={() => navigate(`/seller/products/${prod._id}`)}
+                    onClick={() =>
+                      navigate(`/seller/products/${prod._id}`)
+                    }
                     className="flex-1 border border-orange-500 text-orange-600 text-xs py-1.5 rounded hover:bg-orange-50"
                   >
                     View

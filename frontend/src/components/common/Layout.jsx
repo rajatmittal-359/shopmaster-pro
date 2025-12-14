@@ -52,13 +52,9 @@ export default function Layout({ children, title = 'Dashboard' }) {
       >
         <span className="w-5 mr-3">📊</span>Customer Dashboard
       </Link>
-      <Link 
-        to="/customer/shop" 
-        onClick={() => setIsSidebarOpen(false)}
-        className="flex items-center p-3 rounded-md hover:bg-orange-100 text-gray-700 hover:text-orange-600 transition-all duration-200 block"
-      >
-        <span className="w-5 mr-3">🛍️</span>Shop
-      </Link>
+      <Link to="/shop" onClick={() => setIsSidebarOpen(false)} className="flex items-center p-3 rounded-md hover:bg-orange-100 text-gray-700 hover:text-orange-600 transition-all duration-200 block">
+  <span className="w-5 mr-3">🛍️</span>Shop
+</Link>
       <Link 
         to="/customer/cart" 
         onClick={() => setIsSidebarOpen(false)}

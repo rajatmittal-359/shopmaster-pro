@@ -118,7 +118,7 @@ exports.updateProduct = async (req, res) => {
     if (mrp !== undefined) product.mrp = mrp;
     if (Array.isArray(tags)) product.tags = tags;
 
-      if (Array.isArray(req.body.images)) {
+      if (Array.isArray(req.body.images) && req.body.images.length > 0) {
       const incomingImages = req.body.images;
       const finalImages = [];
 

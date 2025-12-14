@@ -114,20 +114,21 @@ export default function HomePage() {
   };
 
   // Client-side sort for current page
-  const getSortedProducts = () => {
-    const copy = [...products];
-    switch (filters.sortBy) {
-      case 'price_low_high':
-        return copy.sort((a, b) => a.price - b.price);
-      case 'price_high_low':
-        return copy.sort((a, b) => b.price - a.price);
-      case 'name_asc':
-        return copy.sort((a, b) => a.name.localeCompare(b.name));
-      case 'newest':
-      default:
-        return copy; // already newest from backend
-    }
-  };
+const getSortedProducts = () => {
+  const copy = [...products];
+  switch (filters.sortBy) {
+    case 'price_low_high':
+      return copy.sort((a, b) => (a.price || 0) - (b.price || 0));
+    case 'price_high_low':
+      return copy.sort((a, b) => (b.price || 0) - (a.price || 0));
+    case 'name_asc':
+      return copy.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    case 'newest':
+    default:
+      return copy;
+  }
+};
+
 
   const sortedProducts = getSortedProducts();
 
@@ -147,12 +148,13 @@ export default function HomePage() {
           {/* Top search + sort */}
           <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
             <input
-              type="text"
-              placeholder="Search products..."
-              value={filters.search}
-              onChange={handleSearchChange}
-              className="flex-1 border rounded px-3 py-2 text-sm"
-            />
+  type="text"
+  placeholder="Search by name, brand, tags..."
+  value={filters.search}
+  onChange={handleSearchChange}
+  className="flex-1 border rounded px-3 py-2 text-sm"
+/>
+
             <select
               value={filters.sortBy}
               onChange={(e) => handleFilterChange('sortBy', e.target.value)}
@@ -164,7 +166,11 @@ export default function HomePage() {
               <option value="name_asc">Name: A → Z</option>
             </select>
           </div>
+          
         </div>
+<p className="text-[15px] text-gray-800">
+  Search matches product name, description, brand and tags.
+</p>
 
         <div className="grid grid-cols-1 md:grid-cols-[260px_minmax(0,1fr)] gap-6">
           {/* LEFT FILTERS */}
@@ -193,8 +199,9 @@ export default function HomePage() {
               <>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                   {sortedProducts.map((product) => (
-                    <ProductCard key={product._id} product={product} />
-                  ))}
+  <ProductCard key={product._id} product={product} />
+))}
+
                 </div>
 
                 {/* Pagination */}

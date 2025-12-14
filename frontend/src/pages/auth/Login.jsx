@@ -21,21 +21,23 @@ export default function Login() {
 
 const handleSubmit = async (e) => {
   e.preventDefault();
-
   const result = await dispatch(loginThunk(form));
-  console.log('login result:', result); // TEMP dekhne ke liye
-
-if (loginThunk.fulfilled.match(result)) {
-  const userRole = result.payload.role || result.payload.user?.role;
-
-  if (userRole === 'customer') navigate('/customer/shop');
-  else if (userRole === 'seller') navigate('/seller/dashboard');
-  else if (userRole === 'admin') navigate('/admin/dashboard');
-  else navigate('/');
-}
-
-  // Yahan koi setForm({ email: '', password: '' }) MAT rakho
+  
+  if (loginThunk.fulfilled.match(result)) {
+    const userRole = result.payload.role || result.payload.user?.role;
+    
+    if (userRole === 'customer') {
+      navigate('/shop');  // ✅ CHANGE THIS LINE
+    } else if (userRole === 'seller') {
+      navigate('/seller/dashboard');
+    } else if (userRole === 'admin') {
+      navigate('/admin/dashboard');
+    } else {
+      navigate('/');
+    }
+  }
 };
+
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4">

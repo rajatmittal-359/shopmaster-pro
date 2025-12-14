@@ -6,7 +6,12 @@ export default function AdminCategoriesPage() {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({ name: '', description: '' });
+  const [form, setForm] = useState({
+  name: '',
+  description: '',
+  parentCategory: '', // empty = main category
+});
+
 
   const loadCategories = async () => {
     try {
@@ -32,8 +37,13 @@ export default function AdminCategoriesPage() {
     e.preventDefault();
     try {
       setSaving(true);
-      await api.post('/admin/categories', form);
-      setForm({ name: '', description: '' });
+      await api.post('/admin/categories', {
+  name: form.name,
+  description: form.description,
+  parentCategory: form.parentCategory || null, // '' => null
+});
+setForm({ name: '', description: '', parentCategory: '' });
+
       loadCategories();
       toastSuccess('Category created successfully');
     } catch (err) {
@@ -95,6 +105,31 @@ export default function AdminCategoriesPage() {
                 className="w-full border rounded px-3 py-2 text-sm"
               />
             </div>
+                        <div>
+              <label className="block text-sm mb-1">
+                Parent Category (optional)
+              </label>
+              <select
+                name="parentCategory"
+                value={form.parentCategory}
+                onChange={handleChange}
+                className="w-full border rounded px-3 py-2 text-sm"
+              >
+                <option value="">Main category</option>
+                {categories
+                  .filter((c) => !c.parentCategory) // sirf main
+                  .map((c) => (
+                    <option key={c._id} value={c._id}>
+                      {c.name}
+                    </option>
+                  ))}
+              </select>
+              <p className="text-[11px] text-gray-500 mt-1">
+                Main category banane ke liye upar wala option chhodo.
+                Subcategory ke liye parent select karo.
+              </p>
+            </div>
+
             <button
               type="submit"
               disabled={saving}

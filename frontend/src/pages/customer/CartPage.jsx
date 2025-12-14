@@ -53,15 +53,16 @@ export default function CartPage() {
     }
   };
 
-if (loading) return (
-  <Layout title="...">
-    <div className="animate-pulse space-y-4">
-      <div className="h-8 bg-gray-200 rounded w-1/4" />
-      <div className="h-32 bg-gray-200 rounded" />
-      <div className="h-32 bg-gray-200 rounded" />
-    </div>
-  </Layout>
-);
+  if (loading)
+    return (
+      <Layout title="My Cart">
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 bg-gray-200 rounded w-1/4" />
+          <div className="h-32 bg-gray-200 rounded" />
+          <div className="h-32 bg-gray-200 rounded" />
+        </div>
+      </Layout>
+    );
 
   if (!cart || cart.items.length === 0) {
     return (
@@ -69,7 +70,7 @@ if (loading) return (
         <div className="bg-white rounded shadow p-8 text-center">
           <p className="text-gray-600 mb-4">Your cart is empty</p>
           <Link
-            to="/customer/shop"
+            to="/shop"   // ✅ public shop
             className="inline-block px-6 py-2 bg-orange-500 text-white rounded hover:bg-orange-600"
           >
             Continue Shopping
@@ -82,7 +83,9 @@ if (loading) return (
   return (
     <Layout title="My Cart">
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-2xl font-bold">My Cart ({cart.items.length} items)</h2>
+        <h2 className="text-2xl font-bold">
+          My Cart ({cart.items.length} items)
+        </h2>
         <button
           onClick={clearCart}
           className="text-sm text-red-600 hover:underline"
@@ -134,7 +137,9 @@ if (loading) return (
 
                   <div className="flex items-center gap-2 border rounded">
                     <button
-                      onClick={() => updateQuantity(item.productId._id, item.quantity - 1)}
+                      onClick={() =>
+                        updateQuantity(item.productId._id, item.quantity - 1)
+                      }
                       className="px-2 py-1 hover:bg-gray-100"
                       disabled={item.quantity <= 1}
                     >
@@ -142,7 +147,9 @@ if (loading) return (
                     </button>
                     <span className="px-3 py-1 text-sm">{item.quantity}</span>
                     <button
-                      onClick={() => updateQuantity(item.productId._id, item.quantity + 1)}
+                      onClick={() =>
+                        updateQuantity(item.productId._id, item.quantity + 1)
+                      }
                       className="px-2 py-1 hover:bg-gray-100"
                     >
                       +
@@ -162,7 +169,7 @@ if (loading) return (
         <div className="lg:col-span-1">
           <div className="bg-white rounded shadow p-4 sticky top-4">
             <h3 className="font-semibold text-lg mb-3">Order Summary</h3>
-            
+
             <div className="space-y-2 text-sm mb-4">
               <div className="flex justify-between">
                 <span>Subtotal ({cart.items.length} items)</span>
@@ -186,7 +193,7 @@ if (loading) return (
             </button>
 
             <Link
-              to="/customer/shop"
+              to="/shop"   // ✅ public shop
               className="block text-center text-sm text-blue-600 hover:underline mt-3"
             >
               Continue Shopping
