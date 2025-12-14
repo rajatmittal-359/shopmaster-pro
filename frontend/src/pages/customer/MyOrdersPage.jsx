@@ -46,15 +46,17 @@ export default function MyOrdersPage() {
     }
   };
 
-if (loading) return (
-  <Layout title="...">
-    <div className="animate-pulse space-y-4">
-      <div className="h-8 bg-gray-200 rounded w-1/4" />
-      <div className="h-32 bg-gray-200 rounded" />
-      <div className="h-32 bg-gray-200 rounded" />
-    </div>
-  </Layout>
-);
+  if (loading) {
+    return (
+      <Layout title="My Orders">
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 bg-gray-200 rounded w-1/4" />
+          <div className="h-32 bg-gray-200 rounded" />
+          <div className="h-32 bg-gray-200 rounded" />
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout title="My Orders">
@@ -82,11 +84,17 @@ if (loading) return (
                     <p className="text-sm mt-1">
                       Total: <strong>₹{order.totalAmount}</strong>
                     </p>
+                    {order.shippingAddressId && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        Delivering to: {order.shippingAddressId.city},{" "}
+                        {order.shippingAddressId.state}
+                      </p>
+                    )}
                   </div>
 
                   <div className="flex items-center gap-3">
                     <span
-                      className={`text-xs px-2 py-1 rounded ${
+                      className={`text-xs px-2 py-1 rounded capitalize ${
                         statusColors[order.status]
                       }`}
                     >

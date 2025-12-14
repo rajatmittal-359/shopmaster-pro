@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FiMenu, FiX } from 'react-icons/fi';
 import { useDispatch, useSelector } from 'react-redux';
 import { logout } from '../../redux/slices/authSlice';
+// Layout.jsx ke top pe:
+import { FiMenu, FiX, FiShoppingCart, FiHeart } from 'react-icons/fi';
 
 export default function Layout({ children, title = 'Dashboard' }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -178,30 +179,64 @@ export default function Layout({ children, title = 'Dashboard' }) {
           isSidebarOpen ? 'md:ml-64' : 'md:ml-0'
         }`}
       >
-        {/* ✅ HEADER */}
-        <header className="h-16 flex items-center justify-between px-4 bg-white shadow-sm">
-          <button
-            className="text-2xl text-gray-700"
-            onClick={() => setIsSidebarOpen((prev) => !prev)}
-          >
-            {isSidebarOpen ? <FiX /> : <FiMenu />}
-          </button>
+        
+<header className="h-16 flex items-center justify-between px-4 bg-white shadow-sm">
+  {/* Left: sidebar toggle */}
+  <button
+    className="text-2xl text-gray-700"
+    onClick={() => setIsSidebarOpen((prev) => !prev)}
+  >
+    {isSidebarOpen ? <FiX /> : <FiMenu />}
+  </button>
 
-          <h1 className="font-semibold text-lg">{title}</h1>
+  {/* Center: title */}
+  {role === 'customer' ? (
+    <button
+      onClick={() => navigate('/shop')}
+      className="font-semibold text-lg text-gray-800 hover:text-orange-600"
+    >
+      {title}
+    </button>
+  ) : (
+    <h1 className="font-semibold text-lg">{title}</h1>
+  )}
 
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-gray-600">Hello, {name}</span>
-            <button
-              onClick={handleLogout}
-              className="text-xs px-3 py-1 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700"
-            >
-              Logout
-            </button>
-            <div className="w-8 h-8 rounded-full bg-orange-500 text-white flex items-center justify-center text-xs">
-              {initial}
-            </div>
-          </div>
-        </header>
+  {/* Right: compact action bar */}
+  <div className="flex items-center gap-4">
+    {role === 'customer' && (
+      <div className="flex items-center gap-3 px-3 py-1 rounded-full border border-gray-200 bg-gray-50">
+        <button
+          onClick={() => navigate('/customer/cart')}
+          className="text-gray-700 hover:text-orange-600 transition-colors"
+        >
+          <FiShoppingCart className="w-5 h-5" />
+        </button>
+        <span className="w-px h-4 bg-gray-300" />
+        <button
+          onClick={() => navigate('/customer/wishlist')}
+          className="text-gray-700 hover:text-pink-600 transition-colors"
+        >
+          <FiHeart className="w-4 h-4" />
+        </button>
+      </div>
+    )}
+
+    <div className="flex items-center gap-2">
+      <span className="text-sm text-gray-600 hidden sm:inline">
+        Hello, {name}
+      </span>
+      <button
+        onClick={handleLogout}
+        className="flex items-center gap-1 text-xs px-3 py-1.5 rounded-full bg-gray-100 text-gray-700 hover:bg-red-50 hover:text-red-600 border border-transparent hover:border-red-200 transition-colors"
+      >
+        Logout
+      </button>
+      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-orange-500 to-red-500 text-white flex items-center justify-center text-sm font-semibold shadow-sm">
+        {initial}
+      </div>
+    </div>
+  </div>
+</header>
 
         <main className="flex-1 overflow-y-auto p-4">{children}</main>
       </div>

@@ -1,3 +1,4 @@
+// frontend/src/pages/customer/OrderDetailsPage.jsx
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Layout from "../../components/common/Layout";
@@ -72,10 +73,11 @@ export default function OrderDetailsPage() {
     );
   }
 
+  const addr = order.shippingAddressId;
+
   return (
     <Layout title="Order Details">
       <div className="max-w-4xl mx-auto p-4 space-y-6">
-
         {/* ORDER HEADER */}
         <div className="bg-white p-4 rounded shadow">
           <p className="text-sm font-semibold">Order ID: {order._id}</p>
@@ -83,10 +85,10 @@ export default function OrderDetailsPage() {
             {new Date(order.createdAt).toLocaleString()}
           </p>
           <p className="text-sm mt-2">
-            Status: <strong>{order.status}</strong>
+            Status: <strong className="capitalize">{order.status}</strong>
           </p>
           <p className="text-sm">
-            Payment: <strong>{order.paymentStatus}</strong>
+            Payment: <strong className="uppercase">{order.paymentStatus}</strong>
           </p>
         </div>
 
@@ -108,7 +110,14 @@ export default function OrderDetailsPage() {
                     />
                   )}
                   <div>
-                    <p className="text-sm font-medium">{item.name}</p>
+                    <p className="text-sm font-medium">
+                      {item.name}{" "}
+                      {item.status === "cancelled" && (
+                        <span className="text-xs text-red-500">
+                          (cancelled)
+                        </span>
+                      )}
+                    </p>
                     <p className="text-xs text-gray-500">
                       ₹{item.price} × {item.quantity}
                     </p>
@@ -125,22 +134,59 @@ export default function OrderDetailsPage() {
         {/* SHIPPING */}
         <div className="bg-white p-4 rounded shadow">
           <h2 className="font-semibold mb-2">Shipping Address</h2>
-          <p className="text-sm">{order.shippingAddressId?.street}</p>
-          <p className="text-sm">
-            {order.shippingAddressId?.city},{" "}
-            {order.shippingAddressId?.state} -{" "}
-            {order.shippingAddressId?.zipCode}
-          </p>
-          <p className="text-sm">{order.shippingAddressId?.country}</p>
+          {addr ? (
+            <>
+              <p className="text-sm">{addr.street}</p>
+              <p className="text-sm">
+                {addr.city}, {addr.state} - {addr.zipCode}
+              </p>
+              <p className="text-sm">{addr.country}</p>
+            </>
+          ) : (
+            <p className="text-sm text-gray-500">
+              Shipping address not available.
+            </p>
+          )}
         </div>
+
         {/* TRACKING INFO */}
-{order.trackingInfo && (
-  <div className="mt-2 text-sm">
-    <p><strong>Courier:</strong> {order.trackingInfo.courierName}</p>
-    <p><strong>Tracking:</strong> {order.trackingInfo.trackingNumber}</p>
-    <p><strong>Shipped:</strong> {new Date(order.trackingInfo.shippedDate).toLocaleDateString()}</p>
+{/* TRACKING INFO */}
+{/* TRACKING INFO */}
+{order.trackingInfo && order.trackingInfo.courierName && (
+  <div className="bg-blue-50 border border-blue-200 rounded p-4 text-sm">
+    <h2 className="font-semibold mb-2">Track Your Shipment</h2>
+
+    <p className="text-xs text-gray-600 mb-2">
+      Copy the tracking number below and click the button to see live status.
+    </p>
+
+    <p>
+      <strong>Courier:</strong> {order.trackingInfo.courierName}
+    </p>
+    <p>
+      <strong>Tracking Number:</strong> {order.trackingInfo.trackingNumber}
+    </p>
+    {order.trackingInfo.shippedDate && (
+      <p>
+        <strong>Shipped:</strong>{" "}
+        {new Date(order.trackingInfo.shippedDate).toLocaleDateString()}
+      </p>
+    )}
+
+    {order.trackingInfo.courierName?.toLowerCase() === "shiprocket" && (
+      <a
+        href="https://www.shiprocket.in/shipment-tracking/"
+        target="_blank"
+        rel="noreferrer"
+        className="inline-block mt-3 px-3 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
+      >
+        Open Shiprocket Tracking
+      </a>
+    )}
   </div>
 )}
+
+
 
         {/* TOTAL */}
         <div className="bg-white p-4 rounded shadow flex justify-between font-bold">

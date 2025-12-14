@@ -17,35 +17,35 @@ export default function CheckoutPage() {
   const navigate = useNavigate();
 
   // Load cart + addresses
+  const loadData = async () => {
+    try {
+      setLoading(true);
+
+      const [cartRes, addrRes] = await Promise.all([
+        getCart(),
+        getAddresses(),
+      ]);
+
+      const c = cartRes.data.cart;
+      setCart(c);
+
+      const list = addrRes.data.addresses || [];
+      setAddresses(list);
+
+      const def = list.find((a) => a.isDefault);
+      if (def) setSelectedAddressId(def._id);
+      else if (list[0]) setSelectedAddressId(list[0]._id);
+    } catch (err) {
+      console.error(err);
+      toastError(
+        err.response?.data?.message || "Failed to load checkout details"
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        setLoading(true);
-
-        const [cartRes, addrRes] = await Promise.all([
-          getCart(),
-          getAddresses(),
-        ]);
-
-        const c = cartRes.data.cart;
-        setCart(c);
-
-        const list = addrRes.data.addresses || [];
-        setAddresses(list);
-
-        const def = list.find((a) => a.isDefault);
-        if (def) setSelectedAddressId(def._id);
-        else if (list[0]) setSelectedAddressId(list[0]._id);
-      } catch (err) {
-        console.error(err);
-        toastError(
-          err.response?.data?.message || "Failed to load checkout details"
-        );
-      } finally {
-        setLoading(false);
-      }
-    };
-
     loadData();
   }, []);
 
@@ -227,52 +227,88 @@ export default function CheckoutPage() {
 
           {/* SHIPPING ADDRESS */}
           <div className="bg-white p-5 rounded shadow">
-            <h2 className="text-lg font-semibold mb-4">2. Delivery Address</h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold">2. Delivery Address</h2>
+
+              <div className="flex items-center gap-3">
+                {addresses.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={loadData}
+                    className="text-xs text-blue-600 hover:underline"
+                  >
+                    Refresh
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => navigate("/customer/addresses")}
+                  className="text-xs text-orange-600 hover:underline font-semibold"
+                >
+                  Manage addresses
+                </button>
+              </div>
+            </div>
 
             {addresses.length === 0 && (
               <p className="text-sm text-gray-600">
-                You have no saved addresses. Please add one from “My
-                Addresses”.
+                You have no saved addresses. Click{" "}
+                <span className="font-semibold">“Manage addresses”</span> above
+                to add a new address, then return to this page and press{" "}
+                <span className="font-semibold">“Refresh”</span>. [web:48]
               </p>
             )}
 
             {addresses.length > 0 && (
-              <div className="space-y-3">
-                {addresses.map((addr) => (
-                  <label
-                    key={addr._id}
-                    className={`block border rounded p-3 cursor-pointer ${
-                      selectedAddressId === addr._id
-                        ? "border-orange-500 bg-orange-50"
-                        : ""
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="address"
-                      className="mr-2"
-                      checked={selectedAddressId === addr._id}
-                      onChange={() => setSelectedAddressId(addr._id)}
-                    />
+              <>
+                <p className="text-xs text-gray-600 mb-3">
+                  Want to change the address? Click{" "}
+                  <span className="font-semibold">“Manage addresses”</span> to
+                  add or edit, then come back here and press{" "}
+                  <span className="font-semibold">“Refresh”</span> to see the
+                  latest list. [web:44]
+                </p>
 
-                    <span className="font-semibold text-sm">
-                      {addr.label}
-                    </span>
+                <div className="space-y-3">
+                  {addresses.map((addr) => (
+                    <label
+                      key={addr._id}
+                      className={`block border rounded p-3 cursor-pointer ${
+                        selectedAddressId === addr._id
+                          ? "border-orange-500 bg-orange-50"
+                          : ""
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="address"
+                        className="mr-2"
+                        checked={selectedAddressId === addr._id}
+                        onChange={() => setSelectedAddressId(addr._id)}
+                      />
 
-                    {addr.isDefault && (
-                      <span className="ml-2 text-[10px] bg-green-100 text-green-700 px-1 rounded">
-                        Default
+                      <span className="font-semibold text-sm">
+                        {addr.label}
                       </span>
-                    )}
 
-                    <p className="text-xs mt-1">
-                      {addr.street}, {addr.city}, {addr.state} -{" "}
-                      {addr.zipCode}
-                    </p>
-                    <p className="text-xs">{addr.country}</p>
-                  </label>
-                ))}
-              </div>
+                      {addr.isDefault && (
+                        <span className="ml-2 text-[10px] bg-green-100 text-green-700 px-1 rounded">
+                          Default
+                        </span>
+                      )}
+
+                      <p className="text-xs mt-1">
+                        {addr.street}, {addr.city}, {addr.state} -{" "}
+                        {addr.zipCode}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {addr.country} • {addr.phoneNumber}
+                      </p>
+                    </label>
+                  ))}
+                </div>
+              </>
             )}
           </div>
         </div>
@@ -324,9 +360,9 @@ export default function CheckoutPage() {
           </div>
 
           <div className="mt-2 text-xs text-gray-600 bg-gray-50 p-3 rounded">
-            ✅ Cash on Delivery & Online payments <br />
-            ✅ Secure Payments via Razorpay <br />
-            ✅ Easy Return Policy
+            Cash on Delivery and online payments via Razorpay give users
+            flexibility and reduce checkout drop‑offs when implemented with a
+            simple, clear UI. [web:51][web:55]
           </div>
 
           <button

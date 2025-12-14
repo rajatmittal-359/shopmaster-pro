@@ -199,40 +199,42 @@ exports.checkout = async (req, res) => {
     session.endSession();
   }
 };
+// CUSTOMER - Get my orders (list)
+exports.getMyOrders = async (req, res) => {
+  try {
+    const orders = await Order.find({ customerId: req.user._id })
+      .sort({ createdAt: -1 })
+      .populate("shippingAddressId"); // ✅ ADD THIS
 
-  exports.getMyOrders = async (req, res) => {
-    try {
-      const orders = await Order.find({
-        customerId: req.user._id,
-      }).sort({ createdAt: -1 });
+    res.json({ success: true, orders });
+  } catch (err) {
+    console.error("GET MY ORDERS ERROR", err.message);
+    res.status(500).json({ message: err.message });
+  }
+};
 
-      res.json({ success: true, orders });
 
-    } catch (err) {
-      console.error("GET MY ORDERS ERROR:", err.message);
-      res.status(500).json({ message: err.message });
+
+// backend/controllers/customerController.js
+
+// CUSTOMER - Get single order details
+exports.getOrderDetails = async (req, res) => {
+  try {
+    const order = await Order.findOne({
+      _id: req.params.orderId,
+      customerId: req.user._id,
+    }).populate("shippingAddressId"); // ✅ IMPORTANT
+
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
     }
-  };
 
-
-  exports.getOrderDetails = async (req, res) => {
-    try {
-      const order = await Order.findOne({
-        _id: req.params.orderId,
-        customerId: req.user._id,
-      });
-
-      if (!order) {
-        return res.status(404).json({ message: "Order not found" });
-      }
-
-      res.json({ success: true, order });
-
-    } catch (err) {
-      console.error("GET ORDER DETAILS ERROR:", err.message);
-      res.status(500).json({ message: err.message });
-    }
-  };
+    res.json({ success: true, order });
+  } catch (err) {
+    console.error("GET ORDER DETAILS ERROR", err.message);
+    res.status(500).json({ message: err.message });
+  }
+};
 
 
  
