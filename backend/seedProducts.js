@@ -143,257 +143,218 @@ async function seedProducts() {
     const sellerId = seller._id;
 
     const products = [
-      // ========== FASHION & APPAREL ==========
-      
-      // Men's Clothing
       product({
-        sellerId,
-        name: "UrbanFlex Men's Oversized T-Shirt",
-        description: "100% cotton oversized t-shirt with breathable fabric.\nComfortable for daily casual wear.",
-        category: categories.menClothing,
-        price: 799,
-        mrp: 999,
-        brand: "UrbanFlex",
-        sku: "UF-TSHIRT-001",
-        tags: ["t-shirt", "casual", "cotton", "oversized", "men"],
-        images: img.tshirt
-      }),
-      product({
-        sellerId,
-        name: "Classic Blue Slim Fit Jeans",
-        description: "Stretchable denim slim fit jeans with 5-pocket styling.\nPerfect for a modern, stylish look.",
-        category: categories.menClothing,
-        price: 1499,
-        mrp: 1799,
-        brand: "DenimStyle",
-        sku: "DS-JEANS-002",
-        tags: ["jeans", "denim", "slim fit", "men", "fashion"],
-        images: img.jeans
-      }),
+  sellerId,
+  name: "Traditional Gold Plated Bridal Necklace Set",
+  description: `
+Handcrafted traditional necklace set designed for weddings and festive occasions.
 
-      // Women's Clothing
-      product({
-        sellerId,
-        name: "Women's Floral Summer Dress",
-        description: "Lightweight floral printed summer dress for daily wear.\nSoft and breathable fabric.",
-        category: categories.womenClothing,
-        price: 1299,
-        mrp: 1599,
-        brand: "FloralVibe",
-        sku: "FV-DRESS-005",
-        tags: ["dress", "floral", "summer", "women", "casual"],
-        images: img.dress
-      }),
+Made with brass alloy and premium gold plating for a rich finish.
+Includes matching earrings for a complete bridal look.
 
-      // ========== FOOTWEAR ==========
-      
-      product({
-        sellerId,
-        name: "SprintRun Men's Running Shoes",
-        description: "Breathable mesh running shoes with cushioned sole.\nLightweight and comfortable for long runs.",
-        category: categories.menFootwear,
-        price: 1999,
-        mrp: 2499,
-        brand: "SprintRun",
-        sku: "SR-RUN-006",
-        tags: ["running shoes", "men", "sports", "cushioned"],
-        images: img.shoes
-      }),
-      product({
-        sellerId,
-        name: "StreetKick Casual Sneakers - White",
-        description: "Stylish white sneakers with cushioned comfort.\nPerfect for daily walks and casual outings.",
-        category: categories.menFootwear,
-        price: 1799,
-        mrp: 2199,
-        brand: "StreetKick",
-        sku: "SK-SNEAKERS-007",
-        tags: ["sneakers", "white", "casual", "men", "comfort"],
-        images: img.sneakers
-      }),
-      product({
-        sellerId,
-        name: "Women's Slip-On Sneakers - Pink",
-        description: "Lightweight slip-on sneakers with flexible sole.\nStylish and easy to wear.",
-        category: categories.womenFootwear,
-        price: 1599,
-        mrp: 1899,
-        brand: "StreetKick",
-        sku: "SK-SLIP-010",
-        tags: ["sneakers", "pink", "slip-on", "women", "casual"],
-        images: img.sneakers
-      }),
+Care: Store in a dry place. Avoid direct contact with water or perfume.
+Ships within 2–3 business days. 7-day replacement available.
+`,
+  category: categories.artificialJewelry,
+  price: 4590,
+  mrp: 5990,
+  brand: "Charmora",
+  sku: "CH-JWL-001",
+  tags: ["necklace", "bridal", "gold plated", "jewellery"],
+  images: ["CLOUDINARY_URL_HERE"]
+}),
+product({
+  sellerId,
+  name: "Oxidized Silver Jhumka Earrings",
+  description: `
+Traditional oxidized jhumka earrings with detailed handcrafted design.
 
-      // ========== JEWELRY & ACCESSORIES ==========
-      
-      product({
-        sellerId,
-        name: "SilverAura Gold-Plated Necklace Set",
-        description: "Elegant gold-plated necklace with matching earrings.\nPerfect for special occasions.",
-        category: categories.artificialJewelry,
-        price: 2499,
-        mrp: 2999,
-        brand: "SilverAura",
-        sku: "SA-NECKLACE-011",
-        tags: ["necklace", "gold", "jewelry", "women", "elegant"],
-        images: img.necklace
-      }),
-      product({
-        sellerId,
-        name: "Everyday Stud Earrings Set - 6 Pairs",
-        description: "Daily wear stud earrings set with hypoallergenic metal.\nVariety of styles for daily use.",
-        category: categories.artificialJewelry,
-        price: 599,
-        mrp: 799,
-        brand: "SilverAura",
-        sku: "SA-EARRINGS-012",
-        tags: ["earrings", "stud", "hypoallergenic", "women", "daily"],
-        images: img.earrings
-      }),
+Lightweight and suitable for daily ethnic wear and festive styling.
+Comfortable for long hours of use.
 
-      // ========== BAGS & LUGGAGE ==========
-      
-      product({
-        sellerId,
-        name: "MetroLine Laptop Backpack 15.6\"",
-        description: "Water-resistant laptop backpack with multi-pockets.\nOrganized storage for daily use.",
-        category: categories.backpacks,
-        price: 2199,
-        mrp: 2599,
-        brand: "MetroLine",
-        sku: "ML-BACKPACK-015",
-        tags: ["backpack", "laptop", "water-resistant", "organizer"],
-        images: img.backpack
-      }),
-      product({
-        sellerId,
-        name: "Classic Leather Men's Wallet",
-        description: "Durable genuine leather wallet with multiple slots.\nCompact and stylish for everyday carry.",
-        category: categories.handbagsWallets,
-        price: 799,
-        mrp: 999,
-        brand: "MetroLine",
-        sku: "ML-WALLET-016",
-        tags: ["wallet", "leather", "men", "compact", "stylish"],
-        images: img.wallet
-      }),
+Care: Clean with a soft dry cloth after use.
+Ships within 2–3 business days.
+`,
+  category: categories.artificialJewelry,
+  price: 1290,
+  mrp: 1790,
+  brand: "Charmora",
+  sku: "CH-JWL-002",
+  tags: ["earrings", "jhumka", "oxidized", "ethnic"],
+  images: ["CLOUDINARY_URL_HERE"]
+}),
+product({
+  sellerId,
+  name: "925 Sterling Silver Adjustable Ring",
+  description: `
+Elegant sterling silver ring crafted for everyday wear.
 
-      // ========== WATCHES & WEARABLES ==========
-      
-      product({
-        sellerId,
-        name: "ChronoEdge Men's Analog Watch",
-        description: "Premium analog watch with stainless steel build.\nClassic style for formal and casual wear.",
-        category: categories.menWatches,
-        price: 2899,
-        mrp: 3499,
-        brand: "ChronoEdge",
-        sku: "CE-WATCH-019",
-        tags: ["watch", "analog", "men", "stainless steel", "classic"],
-        images: img.watch
-      }),
-      product({
-        sellerId,
-        name: "Elegance Women's Bracelet Watch",
-        description: "Beautiful rose gold women's watch with crystal dial.\nElegant design for any occasion.",
-        category: categories.womenWatches,
-        price: 2599,
-        mrp: 3099,
-        brand: "ChronoEdge",
-        sku: "CE-BRACELET-020",
-        tags: ["bracelet watch", "rose gold", "women", "elegant", "crystal"],
-        images: img.watch
-      }),
-      product({
-        sellerId,
-        name: "ActiveFit Smartwatch",
-        description: "Smartwatch with health tracking and notification alerts.\nModern features for fitness enthusiasts.",
-        category: categories.smartWearables,
-        price: 3499,
-        mrp: 3999,
-        brand: "ActiveFit",
-        sku: "AF-SMARTWATCH-021",
-        tags: ["smartwatch", "health tracking", "notification", "fitness"],
-        images: img.smartwatch
-      }),
+Made from 925 purity silver with adjustable sizing.
+Minimal design suitable for office and casual outfits.
 
-      // ========== ELECTRONICS & ACCESSORIES ==========
-      
-      product({
-        sellerId,
-        name: "EchoPods Wireless Earbuds",
-        description: "Bluetooth earbuds with long battery backup.\nGreat sound quality for music and calls.",
-        category: categories.audioDevices,
-        price: 1599,
-        mrp: 1999,
-        brand: "EchoPods",
-        sku: "EP-EARBUDS-022",
-        tags: ["earbuds", "wireless", "Bluetooth", "music", "long battery"],
-        images: img.earbuds
-      }),
-      product({
-        sellerId,
-        name: "BassPro Over-Ear Headphones",
-        description: "Comfortable headphones with powerful bass.\nPerfect for immersive audio experience.",
-        category: categories.audioDevices,
-        price: 1299,
-        mrp: 1599,
-        brand: "BassPro",
-        sku: "BP-HEADPHONES-023",
-        tags: ["headphones", "over-ear", "bass", "music", "comfort"],
-        images: img.headphones
-      }),
-      product({
-        sellerId,
-        name: "PowerPlus 10000mAh Power Bank",
-        description: "Fast-charging power bank with LED indicators.\nPortable and reliable for travel.",
-        category: categories.mobileAccessories,
-        price: 1199,
-        mrp: 1499,
-        brand: "PowerPlus",
-        sku: "PP-POWERBANK-024",
-        tags: ["power bank", "fast charging", "portable", "LED", "travel"],
-        images: img.powerbank
-      }),
+Care: Avoid moisture. Store in a jewelry box when not in use.
+`,
+  category: categories.silverJewelry,
+  price: 1890,
+  mrp: 2490,
+  brand: "Charmora",
+  sku: "CH-JWL-003",
+  tags: ["silver ring", "925 silver", "adjustable"],
+  images: ["CLOUDINARY_URL_HERE"]
+}),
+product({
+  sellerId,
+  name: "Men's Cotton Regular Fit T-Shirt",
+  description: `
+Premium cotton t-shirt designed for daily casual wear.
 
-      // ========== BEAUTY & PERSONAL CARE ==========
-      
-      product({
-        sellerId,
-        name: "FreshMist Unisex Perfume - 100ml",
-        description: "Long-lasting fresh fragrance suitable for daily wear.\nLight and refreshing scent.",
-        category: categories.fragrances,
-        price: 999,
-        mrp: 1299,
-        brand: "FreshMist",
-        sku: "FM-PERFUME-025",
-        tags: ["perfume", "unisex", "long-lasting", "fresh", "daily"],
-        images: img.perfume
-      }),
-      product({
-        sellerId,
-        name: "GlowCare Face Wash - 150ml",
-        description: "Oil-control face wash with aloe vera extract.\nGentle formula for all skin types.",
-        category: categories.skincare,
-        price: 349,
-        mrp: 449,
-        brand: "GlowCare",
-        sku: "GC-FACEWASH-026",
-        tags: ["face wash", "oil control", "aloe vera", "gentle", "all skin"],
-        images: img.facewash
-      }),
-      product({
-        sellerId,
-        name: "HydraSoft Body Lotion - 400ml",
-        description: "24-hour moisturizing lotion for smooth skin.\nLightweight and non-greasy.",
-        category: categories.skincare,
-        price: 499,
-        mrp: 599,
-        brand: "HydraSoft",
-        sku: "HS-LOTION-027",
-        tags: ["body lotion", "moisturizing", "lightweight", "non-greasy", "skin care"],
-        images: img.lotion
-      }),
+Made from breathable fabric with regular fit for all-day comfort.
+Suitable for summer and indoor wear.
+
+Care: Machine wash cold. Do not bleach.
+`,
+  category: categories.menClothing,
+  price: 890,
+  mrp: 1190,
+  brand: "MetroLine",
+  sku: "ML-MEN-001",
+  tags: ["t-shirt", "cotton", "men wear"],
+  images: ["CLOUDINARY_URL_HERE"]
+}),
+product({
+  sellerId,
+  name: "Women's Printed Cotton Kurti",
+  description: `
+Comfortable cotton kurti with elegant printed design.
+
+Suitable for office, daily wear, and casual outings.
+Soft fabric ensures comfort throughout the day.
+
+Care: Hand wash recommended for longer fabric life.
+`,
+  category: categories.womenClothing,
+  price: 1390,
+  mrp: 1890,
+  brand: "MetroLine",
+  sku: "ML-WOM-001",
+  tags: ["kurti", "cotton", "women wear"],
+  images: ["CLOUDINARY_URL_HERE"]
+}),
+product({
+  sellerId,
+  name: "Men's Lightweight Running Shoes",
+  description: `
+Running shoes designed for jogging, walking, and light workouts.
+
+Breathable mesh upper with cushioned EVA sole for shock absorption.
+Provides good grip and comfort for daily use.
+
+Care: Clean with dry cloth after use.
+`,
+  category: categories.menFootwear,
+  price: 2690,
+  mrp: 3290,
+  brand: "ActiveCore",
+  sku: "AC-SHOE-001",
+  tags: ["running shoes", "men", "sports"],
+  images: ["CLOUDINARY_URL_HERE"]
+}),
+product({
+  sellerId,
+  name: "Women's Casual Flat Sandals",
+  description: `
+Comfortable flat sandals suitable for daily wear.
+
+Soft sole with adjustable strap for better fit.
+Lightweight design ideal for long walking hours.
+
+Care: Wipe clean with a damp cloth.
+`,
+  category: categories.womenFootwear,
+  price: 1490,
+  mrp: 1990,
+  brand: "ActiveCore",
+  sku: "AC-SANDAL-002",
+  tags: ["sandals", "women", "casual"],
+  images: ["CLOUDINARY_URL_HERE"]
+}),
+product({
+  sellerId,
+  name: "Water Resistant Laptop Backpack",
+  description: `
+Durable backpack designed for office and travel use.
+
+Supports laptops up to 15.6 inches with padded compartment.
+Multiple pockets for organized storage.
+
+Care: Spot clean only.
+`,
+  category: categories.backpacks,
+  price: 2490,
+  mrp: 3190,
+  brand: "MetroLine",
+  sku: "ML-BAG-001",
+  tags: ["backpack", "laptop bag", "travel"],
+  images: ["CLOUDINARY_URL_HERE"]
+}),
+product({
+  sellerId,
+  name: "Genuine Leather Men's Wallet",
+  description: `
+Compact leather wallet with multiple card slots.
+
+Made from genuine leather with durable stitching.
+Slim design suitable for daily use.
+
+Care: Keep away from water for longer durability.
+`,
+  category: categories.handbagsWallets,
+  price: 990,
+  mrp: 1490,
+  brand: "MetroLine",
+  sku: "ML-WALLET-001",
+  tags: ["wallet", "leather", "men"],
+  images: ["CLOUDINARY_URL_HERE"]
+}),
+product({
+  sellerId,
+  name: "Fitness Smartwatch with Heart Rate Monitor",
+  description: `
+Smartwatch designed for fitness tracking and daily activity monitoring.
+
+Features step count, heart rate tracking, and notification alerts.
+Suitable for everyday fitness routines.
+
+Warranty: 6 months manufacturer warranty.
+`,
+  category: categories.smartWearables,
+  price: 3490,
+  mrp: 4290,
+  brand: "ActiveCore",
+  sku: "AC-WATCH-001",
+  tags: ["smartwatch", "fitness", "wearable"],
+  images: ["CLOUDINARY_URL_HERE"]
+}),
+product({
+  sellerId,
+  name: "Unisex Long-Lasting Eau De Parfum – 100ml",
+  description: `
+Fresh and long-lasting fragrance suitable for both men and women.
+
+Balanced notes for daily wear and special occasions.
+Alcohol-based perfume with premium fragrance oils.
+
+Care: Store away from direct sunlight.
+`,
+  category: categories.fragrances,
+  price: 1590,
+  mrp: 2190,
+  brand: "AuraScent",
+  sku: "AS-PERF-001",
+  tags: ["perfume", "unisex", "fragrance"],
+  images: ["CLOUDINARY_URL_HERE"]
+})
+
     ];
 
     // Clear old products

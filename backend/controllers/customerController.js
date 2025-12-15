@@ -263,10 +263,11 @@ exports.cancelOrder = async (req, res) => {
   
   try {
     if (order.razorpayOrderId) {
-      const refund = await razorpay.payments.refund(order.razorpayOrderId, {
-        amount: Math.round(order.totalAmount * 100),
-        speed: 'normal',
-      });
+const refund = await razorpay.payments.refund(order.razorpayPaymentId, {
+  amount: Math.round(order.totalAmount * 100),
+  speed: 'normal',
+});
+
       order.refundId = refund.id;
       order.refundStatus = 'processing';
       console.log('✅ Refund initiated:', refund.id);
@@ -407,10 +408,11 @@ if (order.paymentStatus === 'completed') {
   
   try {
     if (order.razorpayOrderId) {
-      const refund = await razorpay.payments.refund(order.razorpayOrderId, {
-        amount: Math.round(order.totalAmount * 100),
-        speed: 'normal',
-      });
+      const refund = await razorpay.payments.refund(order.razorpayPaymentId, {
+  amount: Math.round(order.totalAmount * 100),
+  speed: 'normal',
+});
+
       order.refundId = refund.id;
       order.refundStatus = 'processing';
       console.log('✅ Return refund initiated:', refund.id);
