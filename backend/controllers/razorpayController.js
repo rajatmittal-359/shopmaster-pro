@@ -56,7 +56,7 @@ exports.createRazorpayOrder = async (req, res) => {
         });
       }
       if (product.stock < item.quantity) {
-        console.log(`⚠️ Stock insufficient: ${product.name} (Available: ${product.stock}, Requested: ${item.quantity})`);
+        console.log(` Stock insufficient: ${product.name} (Available: ${product.stock}, Requested: ${item.quantity})`);
         await session.abortTransaction();
         return res.status(400).json({
           success: false,
@@ -64,15 +64,14 @@ exports.createRazorpayOrder = async (req, res) => {
         });
       }
     }
-    
     if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
-      await session.abortTransaction();
-      session.endSession();
-      return res.status(500).json({
-        success: false,
-        message: 'Payment gateway not configured',
-      });
-    }
+  await session.abortTransaction();
+  session.endSession();
+  return res.status(500).json({
+    success: false,
+    message: 'Payment gateway not configured',
+  });
+}
 
     // Create razorpay order BEFORE saving to DB
     const razorpayOrder = await razorpay.orders.create({
@@ -105,8 +104,7 @@ exports.createRazorpayOrder = async (req, res) => {
 
     await session.commitTransaction();
     session.endSession();
-    console.log(`✅ Razorpay order created successfully: ${razorpayOrder.id} for user ${req.user.id}`);
-    
+    console.log(` Razorpay order created successfully: ${razorpayOrder.id} for user ${req.user.id}`);
     return res.json({
       success: true,
       orderId: razorpayOrder.id,
@@ -120,13 +118,14 @@ exports.createRazorpayOrder = async (req, res) => {
     await session.abortTransaction();
     session.endSession();
     console.error('RAZORPAY ORDER ERROR:', err.message);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to create payment order',
-      error: process.env.NODE_ENV === 'development' ? err.message : undefined,
-    });
+return res.status(500).json({
+  success: false,
+  message: 'Failed to create payment order',
+  error: process.env.NODE_ENV === 'development' ? err.message : undefined,
+});
   }
 };
+
 
 exports.verifyRazorpayPayment = async (req, res) => {
   const session = await mongoose.startSession();
@@ -165,10 +164,7 @@ exports.verifyRazorpayPayment = async (req, res) => {
         .json({ success: false, message: "Order not found" });
     }
 
-    // ✅ FIX #2: Save payment ID and signature
     order.paymentStatus = "completed";
-    order.razorpayPaymentId = razorpay_payment_id;
-    order.razorpaySignature = razorpay_signature;
     await order.save({ session });
 
     for (const item of order.items) {
@@ -203,7 +199,7 @@ exports.verifyRazorpayPayment = async (req, res) => {
       { session }
     );
 
-    await session.commitTransaction();
+        await session.commitTransaction();
 
     // Order confirmation email for prepaid (safe)
     try {

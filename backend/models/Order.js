@@ -53,39 +53,30 @@ const orderSchema = new mongoose.Schema(
       ref: 'Address',
       required: true
     },
-    paymentStatus: {
-      type: String,
-      enum: ["pending", "completed", "failed", "cod"],
-      default: "cod"
-    },
-    razorpayOrderId: {
-      type: String,
-      default: null,
-    },
-    // ✅ NEW FIELDS ADDED:
-    razorpayPaymentId: {
-      type: String,
-      default: null,
-    },
-    razorpaySignature: {
-      type: String,
-      default: null,
-    },
-    // ✅ ALREADY EXISTS (kept as is):
-    refundId: {
-      type: String,
-      default: null,
-    },
-    refundStatus: {
-      type: String,
-      enum: ['processing', 'completed', 'failed'],
-      default: null,
-    },
-    trackingInfo: {
-      courierName: { type: String, default: null },
-      trackingNumber: { type: String, default: null },
-      shippedDate: { type: Date, default: null }
-    }
+paymentStatus: {
+  type: String,
+  enum: ["pending", "completed", "failed", "cod"],
+  default: "cod"
+},
+razorpayOrderId: {
+  type: String,
+  default: null,
+},
+refundId: {
+  type: String,
+  default: null,
+},
+refundStatus: {
+  type: String,
+  enum: ['processing', 'completed', 'failed'],
+  default: null,
+},
+trackingInfo: {
+  courierName: { type: String, default: null },
+  trackingNumber: { type: String, default: null },
+  shippedDate: { type: Date, default: null }
+}
+
   },
   {
     timestamps: true
