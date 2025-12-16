@@ -141,7 +141,8 @@ exports.checkout = async (req, res) => {
           totalAmount: cart.totalAmount,
           shippingAddressId,
           status: "pending",
-          paymentStatus: "cod",
+          paymentStatus: "pending",
+          paymentMethod: "cod",
         },
       ],
       { session }
