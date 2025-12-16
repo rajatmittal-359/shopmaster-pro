@@ -115,30 +115,30 @@ export default function Layout({ children, title = 'Dashboard' }) {
           <h1 className="font-semibold text-lg">{title}</h1>
 
           {isLoggedIn ? (
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-8">
               {role === 'customer' && (
                 <>
                   <FiShoppingCart
                     onClick={() => navigate('/customer/cart')}
-                    className="cursor-pointer"
+                    className="cursor-pointer text-2xl"
                   />
                   <FiHeart
                     onClick={() => navigate('/customer/wishlist')}
-                    className="cursor-pointer"
+                    className="cursor-pointer text-2xl"
                   />
                 </>
               )}
-              <button onClick={handleLogout} className="text-sm text-red-600">
+              <button onClick={handleLogout} className="text-xl font-extrabold text-red-600 cursor-pointer">
                 Logout
               </button>
-              <div className="w-8 h-8 rounded-full bg-orange-500 text-white flex items-center justify-center">
+              <div className="w-12 h-12 rounded-full bg-orange-500 text-white text-xl flex items-center justify-center">
                 {initial}
               </div>
             </div>
           ) : (
             <button
               onClick={() => navigate('/login')}
-              className="text-sm text-orange-600"
+              className="text-xl font-extrabold cursor-pointer text-orange-600"
             >
               Login
             </button>
