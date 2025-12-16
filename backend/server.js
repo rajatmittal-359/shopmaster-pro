@@ -15,6 +15,8 @@ app.use(
     origin: [
       "http://localhost:5173",
       "https://shopmaster-pro.onrender.com",
+      "https://shopmasterpro.in",
+      "https://www.shopmasterpro.in"
     ],
     credentials: false,
   })
