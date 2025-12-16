@@ -38,44 +38,91 @@ const orderSchema = new mongoose.Schema(
       ref: 'User',
       required: true
     },
+
     items: [orderItemSchema],
+
     totalAmount: {
       type: Number,
       required: true
     },
+
+    // 📦 Order fulfilment status
     status: {
       type: String,
-      enum: ['pending', 'processing', 'shipped', 'delivered', 'cancelled', 'returned'],
+      enum: [
+        'pending',
+        'processing',
+        'shipped',
+        'delivered',
+        'cancelled',
+        'returned'
+      ],
       default: 'pending'
     },
+
     shippingAddressId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Address',
       required: true
     },
-paymentStatus: {
-  type: String,
-  enum: ["pending", "completed", "failed", "cod"],
-  default: "cod"
-},
-razorpayOrderId: {
-  type: String,
-  default: null,
-},
-refundId: {
-  type: String,
-  default: null,
-},
-refundStatus: {
-  type: String,
-  enum: ['processing', 'completed', 'failed'],
-  default: null,
-},
-trackingInfo: {
-  courierName: { type: String, default: null },
-  trackingNumber: { type: String, default: null },
-  shippedDate: { type: Date, default: null }
-}
+
+    // 💳 PAYMENT (MINIMUM ESSENTIAL – FIXED)
+    paymentMethod: {
+      type: String,
+      enum: ['cod', 'razorpay'],
+      required: true
+    },
+
+    paymentStatus: {
+      type: String,
+      enum: ['pending', 'paid', 'failed', 'refunded'],
+      default: 'pending'
+    },
+
+    // 💠 Razorpay references (safe for COD as null)
+    razorpayOrderId: {
+      type: String,
+      default: null
+    },
+
+    razorpayPaymentId: {
+      type: String,
+      default: null
+    },
+
+    razorpaySignature: {
+      type: String,
+      default: null
+    },
+
+    // 🔁 Refund readiness (structure only)
+    refundId: {
+      type: String,
+      default: null
+    },
+
+    refundStatus: {
+      type: String,
+      enum: ['processing', 'completed', 'failed'],
+      default: null
+    },
+
+    refundAmount: {
+      type: Number,
+      default: null
+    },
+
+    refundedAt: {
+      type: Date,
+      default: null
+    },
+
+    // 🚚 Tracking
+    trackingInfo: {
+      courierName: { type: String, default: null },
+      trackingNumber: { type: String, default: null },
+      shippedDate: { type: Date, default: null }
+    }
 
   },
   {
@@ -83,10 +130,11 @@ trackingInfo: {
   }
 );
 
-// Indexes
+// 📌 Indexes
 orderSchema.index({ customerId: 1 });
 orderSchema.index({ 'items.sellerId': 1 });
 orderSchema.index({ status: 1 });
+orderSchema.index({ paymentStatus: 1 });
 
 const Order = mongoose.model('Order', orderSchema);
 
