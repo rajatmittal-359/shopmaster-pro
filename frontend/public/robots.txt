@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+
+# Private / non-SEO pages
+Disallow: /admin
+Disallow: /seller
+Disallow: /checkout
+Disallow: /cart
+
+# Sitemap location
+Sitemap: https://www.shopmasterpro.in/sitemap.xml
