@@ -81,11 +81,11 @@ const { orderConfirmedEmail } = require('../utils/emailTemplates');
 exports.checkout = async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction();
-  
+
   try {
     const { shippingAddressId } = req.body;
 
-    //  Validate address exists & belongs to user
+    // ✅ Validate address
     const address = await Address.findOne({
       _id: shippingAddressId,
       userId: req.user._id,
@@ -93,8 +93,8 @@ exports.checkout = async (req, res) => {
 
     if (!address) {
       await session.abortTransaction();
-      return res.status(400).json({ 
-        message: "Invalid shipping address. Please select a valid address." 
+      return res.status(400).json({
+        message: "Invalid shipping address. Please select a valid address.",
       });
     }
 
@@ -107,98 +107,114 @@ exports.checkout = async (req, res) => {
       return res.status(400).json({ message: "Cart is empty" });
     }
 
-    // Atomic stock validation
+    // ✅ Stock validation
     for (const item of cart.items) {
       const product = await Product.findById(item.productId._id).session(session);
-      
+
       if (!product || !product.isActive) {
         await session.abortTransaction();
-        return res.status(400).json({ 
-          message: `Product ${item.productId.name} is no longer available` 
+        return res.status(400).json({
+          message: `Product ${item.productId.name} is no longer available`,
         });
       }
 
       if (product.stock < item.quantity) {
         await session.abortTransaction();
-        return res.status(400).json({ 
-          message: `Insufficient stock for ${product.name}. Available: ${product.stock}` 
+        return res.status(400).json({
+          message: `Insufficient stock for ${product.name}. Available: ${product.stock}`,
         });
       }
     }
 
-    //  Create order
-    const order = await Order.create([{
-      customerId: req.user._id,
-      items: cart.items.map((item) => ({
-        productId: item.productId._id,
-        name: item.productId.name,
-        quantity: item.quantity,
-        price: item.price,
-        sellerId: item.productId.sellerId,
-      })),
-      totalAmount: cart.totalAmount,
-      shippingAddressId,
-      status: "pending",
-      paymentStatus: "cod",
-    }], { session });
+    // ✅ Create order
+    const order = await Order.create(
+      [
+        {
+          customerId: req.user._id,
+          items: cart.items.map((item) => ({
+            productId: item.productId._id,
+            name: item.productId.name,
+            quantity: item.quantity,
+            price: item.price,
+            sellerId: item.productId.sellerId,
+          })),
+          totalAmount: cart.totalAmount,
+          shippingAddressId,
+          status: "pending",
+          paymentStatus: "cod",
+        },
+      ],
+      { session }
+    );
 
-    //  Update stock atomically
+    // ✅ Update stock + inventory logs
     for (const item of cart.items) {
-      await Product.findByIdAndUpdate(
-        item.productId._id,
-        { $inc: { stock: -item.quantity } },
+      const product = await Product.findById(item.productId._id).session(session);
+
+      const stockBefore = product.stock;
+      const stockAfter = stockBefore - item.quantity;
+
+      product.stock = stockAfter;
+      await product.save({ session });
+
+      await InventoryLog.create(
+        [
+          {
+            productId: item.productId._id,
+            type: "sale",
+            quantity: -item.quantity,
+            stockBefore,
+            stockAfter,
+            orderId: order[0]._id,
+            performedBy: req.user._id,
+          },
+        ],
         { session }
       );
-
-      // Log inventory
-      await InventoryLog.create([{
-        productId: item.productId._id,
-        type: "sale",
-        quantity: -item.quantity,
-        stockBefore: item.productId.stock,
-        stockAfter: item.productId.stock - item.quantity,
-        orderId: order[0]._id,
-        performedBy: req.user._id,
-      }], { session });
     }
 
-    //  Clear cart
+    // ✅ Clear cart
     cart.items = [];
     cart.totalAmount = 0;
     await cart.save({ session });
 
- await session.commitTransaction();
+    // ✅ Commit DB transaction
+    await session.commitTransaction();
 
-    // COD order confirmation email (safe)
-    try {
-      const customer = req.user; // login user
-
-      const { subject, html } = orderConfirmedEmail(order[0], customer);
-
-      await sendSafeEmail({
-        toUserId: customer._id,
-        toEmail: customer.email, // optional
-        subject,
-        html,
-      });
-    } catch (emailErr) {
-      console.error('COD order email failed:', emailErr.message);
-    }
-
+    // 🔥 SEND RESPONSE IMMEDIATELY (THIS FIXES RENDER DELAY)
     res.status(201).json({
       success: true,
       order: order[0],
     });
+
+    // 🔁 BACKGROUND TASK (EMAIL – NON BLOCKING)
+    setImmediate(async () => {
+      try {
+        const customer = req.user;
+        const { subject, html } = orderConfirmedEmail(order[0], customer);
+
+        await sendSafeEmail({
+          toUserId: customer._id,
+          toEmail: customer.email,
+          subject,
+          html,
+        });
+      } catch (emailErr) {
+        console.error("COD order email failed:", emailErr.message);
+      }
+    });
+
   } catch (err) {
     await session.abortTransaction();
     console.error("CHECKOUT ERROR:", err.message);
-    res.status(500).json({ 
-      message: err.message || "Checkout failed. Please try again." 
+    res.status(500).json({
+      message: err.message || "Checkout failed. Please try again.",
     });
   } finally {
     session.endSession();
   }
 };
+
 // CUSTOMER - Get my orders (list)
 exports.getMyOrders = async (req, res) => {
   try {
