@@ -115,7 +115,7 @@ export default function Layout({ children, title = 'Dashboard' }) {
           <h1 className="font-semibold text-lg">{title}</h1>
 
           {isLoggedIn ? (
-            <div className="flex items-center gap-8">
+            <div className="flex items-center gap-7">
               {role === 'customer' && (
                 <>
                   <FiShoppingCart
