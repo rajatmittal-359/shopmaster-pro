@@ -74,11 +74,15 @@ exports.createRazorpayOrder = async (req, res) => {
 }
 
     // Create razorpay order BEFORE saving to DB
-    const razorpayOrder = await razorpay.orders.create({
-      amount: Math.round(cart.totalAmount * 100),
-      currency: 'INR',
-      receipt: `order_${req.user.id}_${Date.now()}`,
-    });
+    // Create a short receipt ID (max 40 chars)
+const shortUserId = String(req.user.id).slice(-8); // last 8 chars only
+const shortTimestamp = Date.now().toString().slice(-8); // last 8 digits
+
+const razorpayOrder = await razorpay.orders.create({
+  amount: Math.round(cart.totalAmount * 100),
+  currency: 'INR',
+  receipt: `ord_${shortUserId}_${shortTimestamp}`,
+});
 
     // Now create DB order with razorpay order_id
     const order = await Order.create(
