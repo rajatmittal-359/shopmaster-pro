@@ -6,21 +6,25 @@ const Product = require("../models/Product");
 const InventoryLog = require("../models/Inventory");
 const mongoose = require("mongoose");
 const Address = require("../models/Address");
-const sendSafeEmail = require('../utils/sendSafeEmail');
-const { orderConfirmedEmail } = require('../utils/emailTemplates');
+const sendSafeEmail = require("../utils/sendSafeEmail");
+const { orderConfirmedEmail } = require("../utils/emailTemplates");
 
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID,
   key_secret: process.env.RAZORPAY_KEY_SECRET,
 });
 
+// =======================
+// Create Razorpay Order
+// =======================
 exports.createRazorpayOrder = async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction();
-  
+
   try {
     const { shippingAddressId } = req.body;
 
+    // Validate address
     const address = await Address.findOne({
       _id: shippingAddressId,
       userId: req.user.id,
@@ -30,20 +34,22 @@ exports.createRazorpayOrder = async (req, res) => {
       await session.abortTransaction();
       return res
         .status(400)
-        .json({ success: false, message: 'Invalid shipping address' });
+        .json({ success: false, message: "Invalid shipping address" });
     }
 
+    // Load cart
     const cart = await Cart.findOne({ userId: req.user.id })
-      .populate('items.productId')
+      .populate("items.productId")
       .session(session);
 
     if (!cart || cart.items.length === 0) {
       await session.abortTransaction();
       return res
         .status(400)
-        .json({ success: false, message: 'Cart is empty' });
+        .json({ success: false, message: "Cart is empty" });
     }
 
+    // Stock validation
     for (const item of cart.items) {
       const product = await Product.findById(item.productId._id).session(
         session
@@ -56,7 +62,9 @@ exports.createRazorpayOrder = async (req, res) => {
         });
       }
       if (product.stock < item.quantity) {
-        console.log(` Stock insufficient: ${product.name} (Available: ${product.stock}, Requested: ${item.quantity})`);
+        console.log(
+          ` Stock insufficient: ${product.name} (Available: ${product.stock}, Requested: ${item.quantity})`
+        );
         await session.abortTransaction();
         return res.status(400).json({
           success: false,
@@ -64,27 +72,29 @@ exports.createRazorpayOrder = async (req, res) => {
         });
       }
     }
+
+    // Env check
     if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
-  await session.abortTransaction();
-  session.endSession();
-  return res.status(500).json({
-    success: false,
-    message: 'Payment gateway not configured',
-  });
-}
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(500).json({
+        success: false,
+        message: "Payment gateway not configured",
+      });
+    }
 
-    // Create razorpay order BEFORE saving to DB
-    // Create a short receipt ID (max 40 chars)
-const shortUserId = String(req.user.id).slice(-8); // last 8 chars only
-const shortTimestamp = Date.now().toString().slice(-8); // last 8 digits
+    // Short receipt ID (max 40 chars)
+    const shortUserId = String(req.user.id).slice(-8);
+    const shortTimestamp = Date.now().toString().slice(-8);
 
-const razorpayOrder = await razorpay.orders.create({
-  amount: Math.round(cart.totalAmount * 100),
-  currency: 'INR',
-  receipt: `ord_${shortUserId}_${shortTimestamp}`,
-});
+    // Create Razorpay order
+    const razorpayOrder = await razorpay.orders.create({
+      amount: Math.round(cart.totalAmount * 100),
+      currency: "INR",
+      receipt: `ord_${shortUserId}_${shortTimestamp}`,
+    });
 
-    // Now create DB order with razorpay order_id
+    // Create DB order with razorpayOrderId
     const order = await Order.create(
       [
         {
@@ -98,8 +108,9 @@ const razorpayOrder = await razorpay.orders.create({
           })),
           totalAmount: cart.totalAmount,
           shippingAddressId,
-          status: 'pending',
-          paymentStatus: 'pending',
+          status: "pending",
+          paymentMethod: "razorpay",
+          paymentStatus: "pending",
           razorpayOrderId: razorpayOrder.id,
         },
       ],
@@ -108,7 +119,11 @@ const razorpayOrder = await razorpay.orders.create({
 
     await session.commitTransaction();
     session.endSession();
-    console.log(` Razorpay order created successfully: ${razorpayOrder.id} for user ${req.user.id}`);
+
+    console.log(
+      ` Razorpay order created successfully: ${razorpayOrder.id} for user ${req.user.id}`
+    );
+
     return res.json({
       success: true,
       orderId: razorpayOrder.id,
@@ -117,27 +132,37 @@ const razorpayOrder = await razorpay.orders.create({
       dbOrderId: order[0]._id,
       keyId: process.env.RAZORPAY_KEY_ID,
     });
-} catch (err) {
-  // Detailed logging for debugging
-  console.log('⚠️ Razorpay order creation failed, rolling back transaction. Raw error:', err);
-  console.log('⚠️ Razorpay order creation failed, error message:', err?.message);
+  } catch (err) {
+    // Detailed logging
+    console.log(
+      "⚠️ Razorpay order creation failed, rolling back transaction. Raw error:",
+      err
+    );
+    console.log(
+      "⚠️ Razorpay order creation failed, error message:",
+      err?.message
+    );
 
-  await session.abortTransaction();
-  session.endSession();
+    await session.abortTransaction();
+    session.endSession();
 
-  console.error('RAZORPAY ORDER ERROR (message):', err?.message);
-  console.error('RAZORPAY ORDER ERROR (stack):', err?.stack);
+    console.error("RAZORPAY ORDER ERROR (message):", err?.message);
+    console.error("RAZORPAY ORDER ERROR (stack):", err?.stack);
 
-  return res.status(500).json({
-    success: false,
-    message: 'Failed to create payment order',
-    error: process.env.NODE_ENV === 'development' ? (err?.message || 'Unknown error') : undefined,
-  });
-}
-
+    return res.status(500).json({
+      success: false,
+      message: "Failed to create payment order",
+      error:
+        process.env.NODE_ENV === "development"
+          ? err?.message || "Unknown error"
+          : undefined,
+    });
+  }
 };
 
-
+// =======================
+// Verify Razorpay Payment
+// =======================
 exports.verifyRazorpayPayment = async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction();
@@ -150,6 +175,7 @@ exports.verifyRazorpayPayment = async (req, res) => {
       dbOrderId,
     } = req.body;
 
+    // Verify signature
     const body = razorpay_order_id + "|" + razorpay_payment_id;
     const expectedSignature = crypto
       .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
@@ -164,6 +190,7 @@ exports.verifyRazorpayPayment = async (req, res) => {
       });
     }
 
+    // Fetch order
     const order = await Order.findById(dbOrderId)
       .populate("items.productId")
       .session(session);
@@ -175,13 +202,15 @@ exports.verifyRazorpayPayment = async (req, res) => {
         .json({ success: false, message: "Order not found" });
     }
 
-order.paymentMethod = "razorpay"; // sirf agar already set nahi hai
-order.paymentStatus = "paid";
-order.razorpayPaymentId = razorpay_payment_id;
-order.razorpaySignature = razorpay_signature;
+    // Update payment details
+    order.paymentMethod = "razorpay";
+    order.paymentStatus = "paid";
+    order.razorpayPaymentId = razorpay_payment_id;
+    order.razorpaySignature = razorpay_signature;
 
-await order.save({ session });
+    await order.save({ session });
 
+    // Update stock + inventory logs
     for (const item of order.items) {
       const productDoc = await Product.findById(item.productId).session(
         session
@@ -208,19 +237,19 @@ await order.save({ session });
       );
     }
 
+    // Clear cart
     await Cart.findOneAndUpdate(
       { userId: order.customerId },
       { items: [], totalAmount: 0 },
       { session }
     );
 
-        await session.commitTransaction();
+    await session.commitTransaction();
 
-    // Order confirmation email for prepaid (safe)
+    // Order confirmation email (non‑blocking)
     try {
       const customerId = order.customerId;
-
-      const { subject, html } = orderConfirmedEmail(order, { name: 'Customer' });
+      const { subject, html } = orderConfirmedEmail(order, { name: "Customer" });
 
       await sendSafeEmail({
         toUserId: customerId,
@@ -228,8 +257,8 @@ await order.save({ session });
         html,
       });
     } catch (e) {
-      console.error('Order confirmation email failed:', e.message);
-      // Continue anyway - payment is done
+      console.error("Order confirmation email failed:", e.message);
+      // Payment done, so don't fail response
     }
 
     session.endSession();
@@ -239,7 +268,6 @@ await order.save({ session });
       message: "Payment verified successfully",
       order,
     });
-
   } catch (err) {
     await session.abortTransaction();
     session.endSession();
