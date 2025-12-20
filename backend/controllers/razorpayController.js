@@ -113,17 +113,24 @@ exports.createRazorpayOrder = async (req, res) => {
       dbOrderId: order[0]._id,
       keyId: process.env.RAZORPAY_KEY_ID,
     });
-  } catch (err) {
-    console.log('⚠️ Razorpay order creation failed, rolling back transaction:', err.message);
-    await session.abortTransaction();
-    session.endSession();
-    console.error('RAZORPAY ORDER ERROR:', err.message);
-return res.status(500).json({
-  success: false,
-  message: 'Failed to create payment order',
-  error: process.env.NODE_ENV === 'development' ? err.message : undefined,
-});
-  }
+} catch (err) {
+  // Detailed logging for debugging
+  console.log('⚠️ Razorpay order creation failed, rolling back transaction. Raw error:', err);
+  console.log('⚠️ Razorpay order creation failed, error message:', err?.message);
+
+  await session.abortTransaction();
+  session.endSession();
+
+  console.error('RAZORPAY ORDER ERROR (message):', err?.message);
+  console.error('RAZORPAY ORDER ERROR (stack):', err?.stack);
+
+  return res.status(500).json({
+    success: false,
+    message: 'Failed to create payment order',
+    error: process.env.NODE_ENV === 'development' ? (err?.message || 'Unknown error') : undefined,
+  });
+}
+
 };
 
 
