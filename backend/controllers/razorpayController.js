@@ -164,8 +164,12 @@ exports.verifyRazorpayPayment = async (req, res) => {
         .json({ success: false, message: "Order not found" });
     }
 
-    order.paymentStatus = "completed";
-    await order.save({ session });
+order.paymentMethod = "razorpay"; // sirf agar already set nahi hai
+order.paymentStatus = "paid";
+order.razorpayPaymentId = razorpay_payment_id;
+order.razorpaySignature = razorpay_signature;
+
+await order.save({ session });
 
     for (const item of order.items) {
       const productDoc = await Product.findById(item.productId).session(
