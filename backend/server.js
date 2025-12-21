@@ -21,14 +21,11 @@ app.use(
     credentials: false,
   })
 );
-
 const { startCronJobs } = require('./jobs/cronJobs');
 startCronJobs();
-
-// ✅ CRITICAL: Razorpay webhook MUST be registered BEFORE customerRoutes
+//  CRITICAL: Razorpay webhook MUST be registered BEFORE customerRoutes
 const { handleRazorpayWebhook } = require('./controllers/razorpayController');
 app.post('/api/customer/razorpay/webhook', handleRazorpayWebhook);
-
 // Routes imports
 const authRoutes = require('./routes/authRoutes');
 const adminRoutes = require('./routes/adminRoutes');

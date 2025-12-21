@@ -259,52 +259,69 @@ exports.cancelOrder = async (req, res) => {
   try {
     const order = await Order.findOne({
       _id: req.params.orderId,
-      customerId: req.user._id,
+      customerId: req.user.id,
     });
 
     if (!order) {
       return res.status(404).json({ message: "Order not found" });
     }
 
-    if (!["pending", "processing"].includes(order.status)) {
+    // Status validation
+    if (!['pending', 'processing'].includes(order.status)) {
       return res.status(400).json({ message: "Order cannot be cancelled" });
     }
 
-    order.status = "cancelled";
-
-if (order.paymentStatus === 'completed') {
-  const Razorpay = require('razorpay');
-  const razorpay = new Razorpay({
-    key_id: process.env.RAZORPAY_KEY_ID,
-    key_secret: process.env.RAZORPAY_KEY_SECRET,
-  });
-  
-  try {
-    if (order.razorpayPaymentId) {  // ✅ CORRECT - Payment ID
-      const refund = await razorpay.payments.refund(order.razorpayPaymentId, {
-        amount: Math.round(order.totalAmount * 100),
-        speed: 'normal',
+    // ✅ FIX #2: COD delivered order protection
+    if (order.paymentMethod === 'cod' && order.paymentStatus === 'completed') {
+      return res.status(400).json({
+        success: false,
+        message: "COD order already delivered and payment collected. Cannot cancel. Please use Return option if needed."
       });
-      order.refundId = refund.id;
-      order.refundStatus = 'processing';
-      console.log('Refund initiated', refund.id);
     }
-  } catch (refundErr) {
-    console.error('Refund failed', refundErr.message);
-    // Continue with cancellation anyway
-  }
-}
 
+    order.status = 'cancelled';
 
-await order.save();
+    // Refund logic for completed payments
+    if (order.paymentStatus === 'completed') {
+      const Razorpay = require('razorpay');
+      const razorpay = new Razorpay({
+        key_id: process.env.RAZORPAY_KEY_ID,
+        key_secret: process.env.RAZORPAY_KEY_SECRET,
+      });
+
+      try {
+        if (order.razorpayPaymentId) {
+          const refund = await razorpay.payments.refund(order.razorpayPaymentId, {
+            amount: Math.round(order.totalAmount * 100),
+            speed: 'normal',
+          });
+          order.refundId = refund.id;
+          order.refundStatus = 'processing';
+          console.log("Refund initiated:", refund.id);
+        }
+      } catch (refundErr) {
+        console.error("Refund failed", refundErr.message);
+        // ✅ FIX #1: Stop cancellation if refund fails
+        return res.status(500).json({
+          success: false,
+          message: "Refund initiation failed. Please contact support. Your payment is safe.",
+          error: refundErr.message,
+          orderId: order._id
+        });
+      }
+    }
+
+    await order.save();
+
+    // Restore inventory
     for (const item of order.items) {
       if (item.status === 'active') {
         await applyInventoryChange({
           productId: item.productId,
           quantity: item.quantity,
-          type: "return",
+          type: 'return',
           orderId: order._id,
-          performedBy: req.user._id,
+          performedBy: req.user.id,
         });
         item.status = 'cancelled';
       }
@@ -416,11 +433,19 @@ exports.cancelOrderItem = async (req, res) => {
       refundAmount: order.paymentStatus === 'paid' ? refundAmount : null,
       order 
     });
-  } catch (err) {
-    await session.abortTransaction();
-    console.error('CANCEL ORDER ITEM ERROR', err.message);
-    res.status(500).json({ message: err.message });
-  } finally {
+  } catch (refundErr) {
+  console.error("Partial refund failed", refundErr.message);
+  // ✅ FIX: Stop item cancellation if refund fails
+  await session.abortTransaction();
+  return res.status(500).json({
+    success: false,
+    message: "Partial refund initiation failed. Please contact support.",
+    error: refundErr.message,
+    orderId: order._id,
+    itemId: itemId
+  });
+}
+ finally {
     session.endSession();
   }
 };
@@ -464,8 +489,16 @@ if (order.paymentStatus === 'completed') {
       console.log('Return refund initiated', refund.id);
     }
   } catch (refundErr) {
-    console.error('Refund failed', refundErr.message);
-  }
+  console.error("Return refund failed", refundErr.message);
+  // ✅ FIX: Stop return if refund fails
+  return res.status(500).json({
+    success: false,
+    message: "Refund initiation failed for return. Please contact support.",
+    error: refundErr.message,
+    orderId: order._id
+  });
+}
+
 }
 
 
