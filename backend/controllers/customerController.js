@@ -271,7 +271,8 @@ exports.cancelOrder = async (req, res) => {
     }
 
     order.status = "cancelled";
-    if (order.paymentStatus === 'completed') {
+
+if (order.paymentStatus === 'completed') {
   const Razorpay = require('razorpay');
   const razorpay = new Razorpay({
     key_id: process.env.RAZORPAY_KEY_ID,
@@ -279,20 +280,21 @@ exports.cancelOrder = async (req, res) => {
   });
   
   try {
-    if (order.razorpayOrderId) {
-      const refund = await razorpay.payments.refund(order.razorpayOrderId, {
+    if (order.razorpayPaymentId) {  // ✅ CORRECT - Payment ID
+      const refund = await razorpay.payments.refund(order.razorpayPaymentId, {
         amount: Math.round(order.totalAmount * 100),
         speed: 'normal',
       });
       order.refundId = refund.id;
       order.refundStatus = 'processing';
-      console.log('✅ Refund initiated:', refund.id);
+      console.log('Refund initiated', refund.id);
     }
   } catch (refundErr) {
-    console.error('Refund failed:', refundErr.message);
+    console.error('Refund failed', refundErr.message);
     // Continue with cancellation anyway
   }
 }
+
 
 await order.save();
     for (const item of order.items) {
@@ -318,48 +320,50 @@ await order.save();
   }
 };
 
-// Replace entire cancelOrderItem function (Line ~200)
+
 exports.cancelOrderItem = async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction();
   
   try {
     const { orderId, itemId } = req.params;
-
-    const order = await Order.findOne({
-      _id: orderId,
-      customerId: req.user._id,
+    const order = await Order.findOne({ 
+      _id: orderId, 
+      customerId: req.user._id 
     }).session(session);
-
+    
     if (!order) {
       await session.abortTransaction();
       return res.status(404).json({ message: 'Order not found' });
     }
-
+    
     if (!['pending', 'processing'].includes(order.status)) {
       await session.abortTransaction();
       return res.status(400).json({ 
         message: 'Items can be cancelled only for pending/processing orders' 
       });
     }
-
+    
     const item = order.items.id(itemId);
     if (!item) {
       await session.abortTransaction();
       return res.status(404).json({ message: 'Order item not found' });
     }
-
+    
     if (item.status === 'cancelled') {
       await session.abortTransaction();
       return res.status(400).json({ message: 'Item already cancelled' });
     }
-
-    // ✅ First restore inventory
+    
+    // ✅ NEW: Calculate refund amount for this item
+    const refundAmount = item.price * item.quantity;
+    
+    // First restore inventory
     const product = await Product.findById(item.productId).session(session);
     const stockBefore = product.stock;
     product.stock += item.quantity;
     await product.save({ session });
-
+    
     await InventoryLog.create([{
       productId: item.productId,
       type: 'return',
@@ -369,30 +373,57 @@ exports.cancelOrderItem = async (req, res) => {
       orderId: order._id,
       performedBy: req.user._id,
     }], { session });
-
-    // ✅ Then update order
-    item.status = 'cancelled';
-    order.totalAmount -= item.price * item.quantity;
-    if (order.totalAmount < 0) order.totalAmount = 0;
-
-    const allCancelled = order.items.every((it) => it.status === 'cancelled');
-    if (allCancelled) {
-      order.status = 'cancelled';
+    
+    // ✅ NEW: Process refund if payment completed
+    if (order.paymentStatus === 'paid' && order.razorpayPaymentId) {
+      const Razorpay = require('razorpay');
+      const razorpay = new Razorpay({
+        key_id: process.env.RAZORPAY_KEY_ID,
+        key_secret: process.env.RAZORPAY_KEY_SECRET,
+      });
+      
+      try {
+        const refund = await razorpay.payments.refund(order.razorpayPaymentId, {
+          amount: Math.round(refundAmount * 100), // Partial refund
+          speed: 'normal',
+        });
+        
+        // Store refund info (you may want to track per-item refunds)
+        item.refundId = refund.id;
+        item.refundStatus = 'processing';
+        console.log(`Partial refund initiated: ${refund.id} for ₹${refundAmount}`);
+      } catch (refundErr) {
+        console.error('Partial refund failed:', refundErr.message);
+        // Continue with cancellation even if refund fails
+        // Admin can manually refund from Razorpay dashboard
+      }
     }
-
+    
+    // Then update order
+    item.status = 'cancelled';
+    order.totalAmount -= refundAmount;
+    if (order.totalAmount < 0) order.totalAmount = 0;
+    
+    const allCancelled = order.items.every(it => it.status === 'cancelled');
+    if (allCancelled) order.status = 'cancelled';
+    
     await order.save({ session });
     await session.commitTransaction();
-
-    res.json({ success: true, message: 'Order item cancelled', order });
+    
+    res.json({ 
+      success: true, 
+      message: 'Order item cancelled', 
+      refundAmount: order.paymentStatus === 'paid' ? refundAmount : null,
+      order 
+    });
   } catch (err) {
     await session.abortTransaction();
-    console.error('CANCEL ORDER ITEM ERROR:', err.message);
+    console.error('CANCEL ORDER ITEM ERROR', err.message);
     res.status(500).json({ message: err.message });
   } finally {
     session.endSession();
   }
 };
-
 
 
   exports.returnOrder = async (req, res) => {
@@ -423,19 +454,20 @@ if (order.paymentStatus === 'completed') {
   });
   
   try {
-    if (order.razorpayOrderId) {
-      const refund = await razorpay.payments.refund(order.razorpayOrderId, {
+    if (order.razorpayPaymentId) {  // ✅ CORRECT - Payment ID
+      const refund = await razorpay.payments.refund(order.razorpayPaymentId, {
         amount: Math.round(order.totalAmount * 100),
         speed: 'normal',
       });
       order.refundId = refund.id;
       order.refundStatus = 'processing';
-      console.log('✅ Return refund initiated:', refund.id);
+      console.log('Return refund initiated', refund.id);
     }
   } catch (refundErr) {
-    console.error('Refund failed:', refundErr.message);
+    console.error('Refund failed', refundErr.message);
   }
 }
+
 
 
       await order.save();

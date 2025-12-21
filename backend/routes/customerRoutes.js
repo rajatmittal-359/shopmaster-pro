@@ -63,6 +63,7 @@ router.post("/checkout-online", createRazorpayOrder);
 // Online payment – verify Razorpay payment
 router.post("/verify-payment", verifyRazorpayPayment);
 
+router.post('/razorpay/webhook',handleRazorpayWebhook);
 // Orders
 router.get("/orders", getMyOrders);
 router.get("/orders/:orderId", getOrderDetails);

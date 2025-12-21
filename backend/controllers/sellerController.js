@@ -308,76 +308,71 @@ exports.updateOrderStatus = async (req, res) => {
   try {
     const { orderId } = req.params;
     const { status } = req.body;
-
+    
     const validStatuses = ['processing', 'shipped', 'delivered'];
     if (!validStatuses.includes(status)) {
-      return res.status(400).json({
-        message:
-          'Invalid status. Valid values: processing, shipped, delivered',
+      return res.status(400).json({ 
+        message: 'Invalid status. Valid values: processing, shipped, delivered' 
       });
     }
-
+    
     const order = await Order.findById(orderId);
-
     if (!order) {
       return res.status(404).json({ message: 'Order not found' });
     }
-
+    
     // Check order already cancelled/returned
     if (['cancelled', 'returned'].includes(order.status)) {
-      return res.status(400).json({
-        message: `Order is already ${order.status} and cannot be updated`,
+      return res.status(400).json({ 
+        message: `Order is already ${order.status} and cannot be updated` 
       });
     }
-
+    
     // Ensure this seller is part of this order
     const hasSellerItems = order.items.some(
-      (item) => item.sellerId.toString() === req.user._id.toString()
+      item => item.sellerId.toString() === req.user._id.toString()
     );
-
     if (!hasSellerItems) {
-      return res.status(403).json({
-        message: 'You do not have permission to update this order',
+      return res.status(403).json({ 
+        message: 'You do not have permission to update this order' 
       });
     }
-
+    
     // Enforce forward-only transitions
     const allowedNext = {
-      pending: ['processing'],
-      processing: ['shipped'],
-      shipped: ['delivered'],
-      delivered: [],
-      cancelled: [],
-      returned: [],
+      'pending': ['processing'],
+      'processing': ['shipped'],
+      'shipped': ['delivered'],
+      'delivered': [],
+      'cancelled': [],
+      'returned': []
     };
-
+    
     const currentStatus = order.status;
-    const allowedForCurrent = allowedNext[currentStatus] || [];
-
+    const allowedForCurrent = allowedNext[currentStatus];
     if (!allowedForCurrent.includes(status)) {
-      return res.status(400).json({
-        message: `Invalid status transition: ${currentStatus} -> ${status}`,
+      return res.status(400).json({ 
+        message: `Invalid status transition: ${currentStatus} -> ${status}` 
       });
     }
-
+    
     // Apply new status
     order.status = status;
-
-    // When delivered, mark payment as completed
+    
+    // ✅ FIXED: When delivered, mark payment as completed for ALL payment methods
     if (status === 'delivered') {
+      // For COD: payment received at delivery
+      // For Razorpay: already paid, just marking completed
       order.paymentStatus = 'completed';
     }
-
+    
     await order.save();
-
-    res.json({
-      message: 'Order status updated successfully',
-      order,
-    });
+    res.json({ message: 'Order status updated successfully', order });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
+
 
 /**
  * SELLER ANALYTICS & PROFILE
@@ -386,39 +381,32 @@ exports.updateOrderStatus = async (req, res) => {
 // Get seller analytics (products + revenue)
 exports.getSellerAnalytics = async (req, res) => {
   try {
-    const totalProducts = await Product.countDocuments({
-      sellerId: req.user._id,
+    const totalProducts = await Product.countDocuments({ sellerId: req.user._id });
+    const activeProducts = await Product.countDocuments({ 
+      sellerId: req.user._id, 
+      isActive: true 
     });
-
-    const activeProducts = await Product.countDocuments({
-      sellerId: req.user._id,
-      isActive: true,
-    });
-
+    
     const allProducts = await Product.find({ sellerId: req.user._id });
-    const lowStockCount = allProducts.filter(
-      (p) => p.stock <= p.lowStockThreshold
-    ).length;
-
-    // Revenue from completed orders
+    const lowStockCount = allProducts.filter(p => p.stock < p.lowStockThreshold).length;
+    
+    // ✅ FIXED: Revenue from completed orders (both COD delivered + Razorpay paid)
     const revenue = await Order.aggregate([
       { $unwind: '$items' },
-      {
-        $match: {
-          'items.sellerId': req.user._id,
-          paymentStatus: 'completed',
-        },
+      { 
+        $match: { 
+          'items.sellerId': req.user._id, 
+          paymentStatus: 'completed'  // ✅ Now works after delivery
+        }
       },
       {
         $group: {
           _id: null,
-          total: {
-            $sum: { $multiply: ['$items.price', '$items.quantity'] },
-          },
-        },
-      },
+          total: { $sum: { $multiply: ['$items.price', '$items.quantity'] }}
+        }
+      }
     ]);
-
+    
     res.json({
       products: {
         total: totalProducts,

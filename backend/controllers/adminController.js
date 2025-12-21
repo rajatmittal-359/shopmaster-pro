@@ -285,105 +285,99 @@ exports.deleteCategory = async (req, res) => {
 exports.getAnalytics = async (req, res) => {
   try {
     // ---------- BASIC COUNTS ----------
-    const [totalSellers, pendingSellers, totalProducts, totalOrders] =
-      await Promise.all([
-        Seller.countDocuments({ isApproved: true }),
-        Seller.countDocuments({ isApproved: false }),
-        Product.countDocuments(),
-        Order.countDocuments(),
-      ]);
-
+    const [totalSellers, pendingSellers, totalProducts, totalOrders] = await Promise.all([
+      Seller.countDocuments({ isApproved: true }),
+      Seller.countDocuments({ isApproved: false }),
+      Product.countDocuments(),
+      Order.countDocuments(),
+    ]);
+    
+    // ✅ FIXED: Now works because seller sets paymentStatus='completed' on delivery
     const totalRevenueAgg = await Order.aggregate([
-      { $match: { paymentStatus: 'completed' } },
-      {
-        $group: {
-          _id: null,
-          total: { $sum: '$totalAmount' },
-        },
+      { $match: { paymentStatus: 'completed' }}, // ✅ Includes COD after delivery
+      { 
+        $group: { 
+          _id: null, 
+          total: { $sum: '$totalAmount' }
+        }
       },
     ]);
-
     const totalRevenue = totalRevenueAgg[0]?.total || 0;
-
+    
     // ---------- REVENUE BY DAY (LAST 7 DAYS) ----------
     const now = new Date();
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(now.getDate() - 6); // today + last 6 days
-
+    
     const revenueByDayAgg = await Order.aggregate([
-      {
-        $match: {
-          paymentStatus: 'completed',
-          createdAt: { $gte: sevenDaysAgo },
-        },
+      { 
+        $match: { 
+          paymentStatus: 'completed', // ✅ Includes COD after delivery
+          createdAt: { $gte: sevenDaysAgo }
+        }
       },
-      {
-        $group: {
-          _id: {
-            $dateToString: { format: '%Y-%m-%d', date: '$createdAt' },
-          },
+      { 
+        $group: { 
+          _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' }},
           total: { $sum: '$totalAmount' },
-          count: { $sum: 1 },
-        },
+          count: { $sum: 1 }
+        }
       },
-      { $sort: { _id: 1 } },
+      { $sort: { '_id': 1 }}
     ]);
-
-    const revenueByDay = revenueByDayAgg.map((d) => ({
+    
+    const revenueByDay = revenueByDayAgg.map(d => ({
       date: d._id,
       total: d.total,
       orders: d.count,
     }));
-
+    
     // ---------- TOP SELLERS BY REVENUE ----------
     const topSellersAgg = await Order.aggregate([
-      { $match: { paymentStatus: 'completed' } },
+      { $match: { paymentStatus: 'completed' }}, // ✅ Includes COD after delivery
       { $unwind: '$items' },
-      {
-        $group: {
+      { 
+        $group: { 
           _id: '$items.sellerId',
-          revenue: {
-            $sum: { $multiply: ['$items.price', '$items.quantity'] },
-          },
-          itemsSold: { $sum: '$items.quantity' },
-        },
+          revenue: { $sum: { $multiply: ['$items.price', '$items.quantity'] }},
+          itemsSold: { $sum: '$items.quantity' }
+        }
       },
-      { $sort: { revenue: -1 } },
+      { $sort: { revenue: -1 }},
       { $limit: 5 },
-      {
+      { 
         $lookup: {
           from: 'users',
           localField: '_id',
           foreignField: '_id',
-          as: 'seller',
-        },
+          as: 'seller'
+        }
       },
       { $unwind: '$seller' },
-      {
+      { 
         $project: {
           _id: 1,
           revenue: 1,
           itemsSold: 1,
           sellerName: '$seller.name',
-          sellerEmail: '$seller.email',
-        },
-      },
+          sellerEmail: '$seller.email'
+        }
+      }
     ]);
-
     const topSellers = topSellersAgg;
-
+    
     // ---------- GLOBAL LOW STOCK LIST ----------
     const lowStockProducts = await Product.find({
       isActive: true,
-      $expr: { $lte: ['$stock', '$lowStockThreshold'] },
+      $expr: { $lte: ['$stock', '$lowStockThreshold'] }
     })
-      .populate('sellerId', 'name email')
-      .populate('category', 'name')
-      .sort({ stock: 1 })
-      .limit(10);
-
-    const lowStockGlobal = lowStockProducts.map((p) => ({
-      id: p._id,
+    .populate('sellerId', 'name email')
+    .populate('category', 'name')
+    .sort({ stock: 1 })
+    .limit(10);
+    
+    const lowStockGlobal = lowStockProducts.map(p => ({
+      _id: p._id,
       name: p.name,
       stock: p.stock,
       lowStockThreshold: p.lowStockThreshold,
@@ -391,7 +385,7 @@ exports.getAnalytics = async (req, res) => {
       sellerEmail: p.sellerId?.email,
       category: p.category?.name,
     }));
-
+    
     // ---------- RESPONSE (BACKWARD COMPATIBLE) ----------
     res.json({
       // old structure (AdminDashboard.jsx already use karta hai)
@@ -401,11 +395,11 @@ exports.getAnalytics = async (req, res) => {
       },
       products: totalProducts,
       orders: totalOrders,
-      revenue: totalRevenue,
-
+      revenue: totalRevenue, // ✅ Now includes COD orders
+      
       // new advanced analytics (future UI use ke liye ready)
-      revenueByDay,
-      topSellers,
+      revenueByDay, // ✅ Now includes COD
+      topSellers, // ✅ Now includes COD sellers
       lowStockGlobal,
     });
   } catch (error) {

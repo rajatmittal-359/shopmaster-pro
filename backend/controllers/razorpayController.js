@@ -280,27 +280,126 @@ exports.verifyRazorpayPayment = async (req, res) => {
 // =======================
 // Razorpay Webhook (stub)
 // =======================
+// Razorpay Webhook - Auto-confirm payments on network failure
 exports.handleRazorpayWebhook = async (req, res) => {
   try {
-    const razorpaySignature = req.headers["x-razorpay-signature"];
+    const razorpaySignature = req.headers['x-razorpay-signature'];
     const body = JSON.stringify(req.body);
-
+    
     const expectedSignature = crypto
-      .createHmac("sha256", process.env.RAZORPAY_WEBHOOK_SECRET)
+      .createHmac('sha256', process.env.RAZORPAY_WEBHOOK_SECRET)
       .update(body)
-      .digest("hex");
-
+      .digest('hex');
+    
     if (razorpaySignature !== expectedSignature) {
-      return res.status(400).json({ message: "Invalid webhook signature" });
+      return res.status(400).json({ message: 'Invalid webhook signature' });
     }
-
-    console.log("Razorpay webhook event:", req.body.event);
-
-    // TODO: payment.captured etc handle karna (next phase me)
-
-    return res.json({ status: "ok" });
+    
+    const event = req.body.event;
+    const payload = req.body.payload.payment.entity;
+    
+    console.log('Razorpay webhook event:', event);
+    
+    // ✅ NEW: Handle payment.captured event
+    if (event === 'payment.captured') {
+      const session = await mongoose.startSession();
+      session.startTransaction();
+      
+      try {
+        // Find order by razorpayOrderId
+        const order = await Order.findOne({ 
+          razorpayOrderId: payload.order_id 
+        })
+        .populate('items.productId')
+        .session(session);
+        
+        if (!order) {
+          console.error('Order not found for razorpayOrderId:', payload.order_id);
+          await session.abortTransaction();
+          return res.json({ status: 'order_not_found' });
+        }
+        
+        // ✅ Check if already processed (idempotency)
+        if (order.paymentStatus === 'paid' || order.paymentStatus === 'completed') {
+          console.log('Payment already processed for order:', order._id);
+          await session.abortTransaction();
+          return res.json({ status: 'already_processed' });
+        }
+        
+        // ✅ Update payment details
+        order.paymentMethod = 'razorpay';
+        order.paymentStatus = 'paid';
+        order.razorpayPaymentId = payload.id;
+        order.razorpaySignature = 'webhook'; // Webhook doesn't provide signature
+        await order.save({ session });
+        
+        // ✅ Update stock & inventory logs
+        for (const item of order.items) {
+          const productDoc = await Product.findById(item.productId._id).session(session);
+          const stockBefore = productDoc.stock;
+          const stockAfter = stockBefore - item.quantity;
+          
+          productDoc.stock = stockAfter;
+          await productDoc.save({ session });
+          
+          await InventoryLog.create([{
+            productId: item.productId._id,
+            type: 'sale',
+            quantity: -item.quantity,
+            stockBefore,
+            stockAfter,
+            orderId: order._id,
+            performedBy: order.customerId,
+          }], { session });
+        }
+        
+        // ✅ Clear cart
+        await Cart.findOneAndUpdate(
+          { userId: order.customerId },
+          { items: [], totalAmount: 0 },
+          { session }
+        );
+        
+        await session.commitTransaction();
+        
+        // ✅ Send order confirmation email (non-blocking)
+        setImmediate(async () => {
+          try {
+            const User = require('../models/User');
+            const customer = await User.findById(order.customerId);
+            const { orderConfirmedEmail } = require('../utils/emailTemplates');
+            const { subject, html } = orderConfirmedEmail(order, customer);
+            const sendSafeEmail = require('../utils/sendSafeEmail');
+            await sendSafeEmail({ toUserId: customer._id, subject, html });
+          } catch (e) {
+            console.error('Webhook order email failed:', e.message);
+          }
+        });
+        
+        console.log('✅ Webhook: Payment confirmed for order', order._id);
+        return res.json({ status: 'ok' });
+        
+      } catch (err) {
+        await session.abortTransaction();
+        console.error('Webhook processing error:', err.message);
+        return res.status(500).json({ message: 'Processing failed' });
+      } finally {
+        session.endSession();
+      }
+    }
+    
+    // ✅ Handle payment.failed event
+    if (event === 'payment.failed') {
+      console.log('Payment failed:', payload.order_id);
+      // Order remains "pending" - customer can retry
+      return res.json({ status: 'ok' });
+    }
+    
+    // Other events - ignore
+    return res.json({ status: 'ok' });
+    
   } catch (err) {
-    console.error("Webhook error:", err.message);
-    return res.status(500).json({ message: "Webhook handling failed" });
+    console.error('Webhook error:', err.message);
+    return res.status(500).json({ message: 'Webhook handling failed' });
   }
 };
