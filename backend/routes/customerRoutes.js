@@ -42,7 +42,10 @@ const {
 // Test route
 router.get("/test", (req, res) => res.json({ ok: true }));
 
-// All below routes require authenticated customer
+// ✅ WEBHOOK ROUTE - MUST BE BEFORE authMiddleware (Razorpay calls it)
+router.post('/razorpay/webhook', handleRazorpayWebhook);
+
+// ✅ All below routes require authenticated customer
 router.use(authMiddleware, roleMiddleware("customer"));
 
 // Cart routes
@@ -63,7 +66,6 @@ router.post("/checkout-online", createRazorpayOrder);
 // Online payment – verify Razorpay payment
 router.post("/verify-payment", verifyRazorpayPayment);
 
-router.post('/razorpay/webhook',handleRazorpayWebhook);
 // Orders
 router.get("/orders", getMyOrders);
 router.get("/orders/:orderId", getOrderDetails);
