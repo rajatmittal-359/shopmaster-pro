@@ -32,18 +32,14 @@ const {
   clearWishlist,
 } = require("../controllers/wishlistController");
 
-// Razorpay controller imports
+// Razorpay controller imports (only for authenticated routes)
 const {
   createRazorpayOrder,
   verifyRazorpayPayment,
-  handleRazorpayWebhook,
 } = require("../controllers/razorpayController");
 
 // Test route
 router.get("/test", (req, res) => res.json({ ok: true }));
-
-// ✅ WEBHOOK ROUTE - MUST BE BEFORE authMiddleware (Razorpay calls it)
-router.post('/razorpay/webhook', handleRazorpayWebhook);
 
 // ✅ All below routes require authenticated customer
 router.use(authMiddleware, roleMiddleware("customer"));
