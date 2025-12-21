@@ -21,10 +21,7 @@ export default function CheckoutPage() {
     try {
       setLoading(true);
 
-      const [cartRes, addrRes] = await Promise.all([
-        getCart(),
-        getAddresses(),
-      ]);
+      const [cartRes, addrRes] = await Promise.all([getCart(), getAddresses()]);
 
       const c = cartRes.data.cart;
       setCart(c);
@@ -75,6 +72,12 @@ export default function CheckoutPage() {
           return;
         }
 
+        if (!window.Razorpay) {
+          toastError("Payment SDK not loaded. Please refresh the page.");
+          setPlacing(false);
+          return;
+        }
+
         const options = {
           key: res.data.keyId || import.meta.env.VITE_RAZORPAY_KEY_ID,
           amount: res.data.amount, // in paise
@@ -84,6 +87,8 @@ export default function CheckoutPage() {
           order_id: res.data.orderId,
           handler: async function (response) {
             try {
+              toastSuccess("Payment received. Verifying your order...");
+
               const verifyRes = await api.post("/customer/verify-payment", {
                 razorpay_order_id: response.razorpay_order_id,
                 razorpay_payment_id: response.razorpay_payment_id,
@@ -92,22 +97,25 @@ export default function CheckoutPage() {
               });
 
               if (verifyRes.data.success) {
-                toastSuccess("Payment successful!");
+                toastSuccess("Order placed successfully!");
                 navigate("/customer/orders");
               } else {
                 toastError(
-                  verifyRes.data.message || "Payment verification failed"
+                  verifyRes.data.message ||
+                    "Payment could not be verified. If money was deducted, please contact support."
                 );
               }
             } catch (err) {
               toastError(
-                err.response?.data?.message || "Payment verification failed"
+                err.response?.data?.message ||
+                  "Payment verification failed. If money was deducted, please contact support."
               );
             } finally {
               setPlacing(false);
             }
           },
           prefill: {
+            // Optionally populate from logged‑in user profile later
             name: "",
             email: "",
           },
@@ -115,18 +123,15 @@ export default function CheckoutPage() {
             color: "#EA580C",
           },
           modal: {
+            escape: false,
             ondismiss: function () {
               setPlacing(false);
-              toastError("Payment cancelled");
+              toastError(
+                "Payment cancelled. You have not been charged, you can try again."
+              );
             },
           },
         };
-
-        if (!window.Razorpay) {
-          toastError("Payment SDK not loaded. Please refresh the page.");
-          setPlacing(false);
-          return;
-        }
 
         const rzp = new window.Razorpay(options);
 
@@ -199,7 +204,7 @@ export default function CheckoutPage() {
                   <div className="flex items-center gap-4">
                     <img
                       src={item.productId.images?.[0]}
-                      alt=""
+                      alt={item.productId.name}
                       className="w-16 h-16 rounded object-cover border"
                     />
                     <div>
@@ -256,7 +261,7 @@ export default function CheckoutPage() {
                 You have no saved addresses. Click{" "}
                 <span className="font-semibold">“Manage addresses”</span> above
                 to add a new address, then return to this page and press{" "}
-                <span className="font-semibold">“Refresh”</span>. [web:48]
+                <span className="font-semibold">“Refresh”</span>.
               </p>
             )}
 
@@ -267,7 +272,7 @@ export default function CheckoutPage() {
                   <span className="font-semibold">“Manage addresses”</span> to
                   add or edit, then come back here and press{" "}
                   <span className="font-semibold">“Refresh”</span> to see the
-                  latest list. [web:44]
+                  latest list.
                 </p>
 
                 <div className="space-y-3">
@@ -360,9 +365,8 @@ export default function CheckoutPage() {
           </div>
 
           <div className="mt-2 text-xs text-gray-600 bg-gray-50 p-3 rounded">
-            Cash on Delivery and online payments via Razorpay give users
-            flexibility and reduce checkout drop‑offs when implemented with a
-            simple, clear UI. [web:51][web:55]
+            Clear order summary and simple payment options reduce confusion and
+            improve trust on the checkout page. [web:69][web:68]
           </div>
 
           <button

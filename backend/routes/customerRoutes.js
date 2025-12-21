@@ -32,10 +32,11 @@ const {
   clearWishlist,
 } = require("../controllers/wishlistController");
 
-// 🔹 NEW: Razorpay controller imports
+// Razorpay controller imports
 const {
   createRazorpayOrder,
   verifyRazorpayPayment,
+  handleRazorpayWebhook,
 } = require("../controllers/razorpayController");
 
 // Test route
@@ -51,12 +52,15 @@ router.patch("/cart", updateCartItem);
 router.delete("/cart/:productId", removeFromCart);
 router.delete("/cart", clearCart);
 
-// 🔹 PAYMENT ROUTES
+// PAYMENT ROUTES
 
 // COD checkout (existing flow)
 router.post("/checkout-cod", checkout);
 
+// Online payment – create Razorpay order
 router.post("/checkout-online", createRazorpayOrder);
+
+// Online payment – verify Razorpay payment
 router.post("/verify-payment", verifyRazorpayPayment);
 
 // Orders
