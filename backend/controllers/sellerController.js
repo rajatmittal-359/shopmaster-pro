@@ -93,58 +93,56 @@ exports.updateProduct = async (req, res) => {
       sku,
       mrp,
       tags,
+      weight,  // ✅ ADDED
     } = req.body;
 
     const product = await Product.findOne({
       _id: productId,
-      sellerId: req.user._id,
+      sellerId: req.user.id,
     });
 
     if (!product) {
       return res.status(404).json({
-        message: 'Product not found or you do not have permission',
+        message: "Product not found or you do not have permission",
       });
     }
 
+    // Update scalar fields
     if (name) product.name = name;
     if (description) product.description = description;
     if (category) product.category = category;
     if (price !== undefined) product.price = price;
     if (stock !== undefined) product.stock = stock;
     if (isActive !== undefined) product.isActive = isActive;
-    if (lowStockThreshold !== undefined) {
-      product.lowStockThreshold = lowStockThreshold;
-    }
+    if (lowStockThreshold !== undefined) product.lowStockThreshold = lowStockThreshold;
     if (brand !== undefined) product.brand = brand;
     if (sku !== undefined) product.sku = sku;
     if (mrp !== undefined) product.mrp = mrp;
     if (Array.isArray(tags)) product.tags = tags;
+    if (weight !== undefined) product.weight = weight;  // ✅ ADDED
 
-    // ✅ Images handling (URLs + new base64 uploads)
+    // Images handling (existing code...)
     if (Array.isArray(req.body.images) && req.body.images.length > 0) {
       const incomingImages = req.body.images;
       const finalImages = [];
 
       for (const img of incomingImages) {
-        if (typeof img === 'string' && img.startsWith('data:image/')) {
-          // New local image (base64) → upload to Cloudinary
+        if (typeof img === "string" && img.startsWith("data:image/")) {
           const uploaded = await uploadImage(img);
           finalImages.push(uploaded.url);
-        } else if (typeof img === 'string' && img.trim() !== '') {
-          // Existing image URL → keep as is
+        } else if (typeof img === "string" && img.trim() !== "") {
           finalImages.push(img);
         }
-        // other types are ignored safely
       }
 
       product.images = finalImages;
     }
 
     await product.save();
-    await product.populate('category', 'name');
+    await product.populate("category", "name");
 
     res.json({
-      message: 'Product updated successfully',
+      message: "Product updated successfully",
       product,
     });
   } catch (error) {
