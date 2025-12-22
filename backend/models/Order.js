@@ -117,11 +117,42 @@ const orderSchema = new mongoose.Schema(
       default: null
     },
 
-    // 🚚 Tracking
+    // 🚚 Manual tracking (existing flow)
     trackingInfo: {
       courierName: { type: String, default: null },
       trackingNumber: { type: String, default: null },
       shippedDate: { type: Date, default: null }
+    },
+
+    // 🚀 Shiprocket / external shipping integration (NEW FIELDS)
+    shippingProvider: {
+      type: String,
+      enum: ['none', 'shiprocket'],
+      default: 'none',
+    },
+    shippingCharges: {
+      type: Number,
+      default: 0,
+    },
+    shippingAwb: {
+      type: String,
+      default: null,
+    },
+    shippingCourierName: {
+      type: String,
+      default: null,
+    },
+    shippingShipmentId: {
+      type: String,
+      default: null, // Shiprocket shipment_id
+    },
+    shippingOrderId: {
+      type: String,
+      default: null, // Shiprocket order_id
+    },
+    shippingTrackingUrl: {
+      type: String,
+      default: null,
     }
 
   },
