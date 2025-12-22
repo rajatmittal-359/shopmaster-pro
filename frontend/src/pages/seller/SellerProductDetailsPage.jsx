@@ -126,14 +126,17 @@ export default function SellerProductDetailsPage() {
               </span>
             </p>
 
-            <p className="text-sm">
-              Status:{" "}
-              <span className={`font-semibold ${
-                product.status === "active" ? "text-green-600" : "text-gray-500"
-              }`}>
-                {product.status}
-              </span>
-            </p>
+<p className="text-sm">
+  Status:{" "}
+  <span
+    className={`font-semibold ${
+      product.isActive ? "text-green-600" : "text-gray-500"
+    }`}
+  >
+    {product.isActive ? "Active" : "Inactive"}
+  </span>
+</p>
+
           </div>
 
           {/* RIGHT */}
