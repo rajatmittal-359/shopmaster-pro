@@ -355,7 +355,14 @@ exports.updateOrderStatus = async (req, res) => {
         message: `Invalid status transition: ${currentStatus} -> ${status}` 
       });
     }
-    
+     // ✅ ADD VALIDATION
+  // Block status change if payment pending AND method is online
+  if (order.paymentStatus === 'pending' && order.paymentMethod !== 'cod') {
+    return res.status(400).json({
+      message: 'Cannot process order - Payment not completed. Customer should retry payment or cancel order.'
+    });
+  }
+  
     // Apply new status
     order.status = status;
     
