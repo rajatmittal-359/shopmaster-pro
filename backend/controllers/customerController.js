@@ -6,6 +6,8 @@ const Address = require('../models/Address');
 const { applyInventoryChange } = require("./inventoryController");
 const InventoryLog = require("../models/Inventory");
 
+const { getShippingRate } = require('../utils/shiprocketService');
+
 const sendSafeEmail = require('../utils/sendSafeEmail');
 const { orderConfirmedEmail } = require('../utils/emailTemplates');
 
@@ -125,28 +127,67 @@ exports.checkout = async (req, res) => {
         });
       }
     }
+    // Calculate shipping charges
+let shippingCharges = 0;
+let shippingCourier = null;
+
+try {
+  // Calculate total cart weight
+  const totalWeight = cart.items.reduce((sum, item) => {
+    return sum + (item.productId.weight || 0.5) * item.quantity;
+  }, 0);
+
+  // Get customer pincode from address
+  const pincode = address.zipCode;
+
+  // Check if COD order
+  const isCOD = req.body.paymentMethod === 'cod';
+
+  // Call Shiprocket API
+  const shippingData = await getShippingRate(pincode, totalWeight, isCOD);
+
+  if (shippingData && shippingData.available_courier_companies && shippingData.available_courier_companies.length > 0) {
+    // Select cheapest courier
+    const couriers = shippingData.available_courier_companies;
+    const cheapest = couriers.reduce((min, curr) => 
+      curr.rate < min.rate ? curr : min
+    );
+
+    shippingCharges = cheapest.rate;
+    shippingCourier = cheapest.courier_name;
+  } else {
+    // Fallback: Fixed ₹100 if API fails
+    shippingCharges = 100;
+    shippingCourier = 'Standard Shipping';
+  }
+} catch (shipErr) {
+  console.error('Shipping calculation failed:', shipErr.message);
+  // Fallback: Don't block checkout
+  shippingCharges = 100;
+  shippingCourier = 'Standard Shipping';
+}
 
     // ✅ Create order
-    const order = await Order.create(
-      [
-        {
-          customerId: req.user._id,
-          items: cart.items.map((item) => ({
-            productId: item.productId._id,
-            name: item.productId.name,
-            quantity: item.quantity,
-            price: item.price,
-            sellerId: item.productId.sellerId,
-          })),
-          totalAmount: cart.totalAmount,
-          shippingAddressId,
-          status: "pending",
-          paymentStatus: "pending",
-          paymentMethod: "cod",
-        },
-      ],
-      { session }
-    );
+const order = await Order.create([{
+  customerId: req.user._id,
+  items: cart.items.map((item) => ({
+    productId: item.productId._id,
+    name: item.productId.name,
+    quantity: item.quantity,
+    price: item.price,
+    sellerId: item.productId.sellerId,
+  })),
+  totalAmount: cart.totalAmount + shippingCharges, // ✅ ADD SHIPPING
+  shippingAddressId,
+  status: 'pending',
+  paymentStatus: 'pending',
+  paymentMethod: 'cod',
+  // ✅ NEW SHIPPING FIELDS
+  shippingCharges,
+  shippingProvider: 'shiprocket',
+  shippingCourierName: shippingCourier,
+}], { session });
+
 
     // ✅ Update stock + inventory logs
     for (const item of cart.items) {
@@ -593,3 +634,19 @@ if (order.paymentStatus === 'completed') {
       res.status(500).json({ message: err.message });
     }
   };
+  // TEMP TEST ONLY - later delete
+exports.testShiprocketRate = async (req, res) => {
+  try {
+    const { pincode } = req.query;
+
+    const data = await getShippingRate(pincode, 0.5, true); // 0.5 kg, COD true
+
+    console.log('SHIPROCKET RAW RESPONSE ===>');
+    console.dir(data, { depth: null });
+
+    res.json({ ok: true, data });
+  } catch (err) {
+    console.error('SHIPROCKET TEST ERROR', err.message);
+    res.status(500).json({ ok: false, message: err.message });
+  }
+};

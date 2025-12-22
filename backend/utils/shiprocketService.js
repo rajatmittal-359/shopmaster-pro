@@ -15,6 +15,13 @@ async function getShiprocketToken() {
   const email = process.env.SHIPROCKET_API_EMAIL;
   const password = process.env.SHIPROCKET_API_PASSWORD;
 
+  console.log(
+    'SHIPROCKET ENV EMAIL =',
+    email,
+    'PWD LENGTH =',
+    password?.length
+  );
+
   if (!email || !password) {
     throw new Error('Shiprocket API credentials not configured');
   }
@@ -32,33 +39,35 @@ async function getShiprocketToken() {
   return token;
 }
 
-async function getShippingRate({ deliveryPincode, weightKg, isCod }) {
-  const token = await getShiprocketToken();
+async function getShippingRate(deliveryPincode, weightKg, isCod) {
+  try {
+    const token = await getShiprocketToken();
+    const pickupPincode = process.env.SHIPROCKET_PICKUP_PINCODE;
+    if (!pickupPincode)
+      throw new Error('Shiprocket pickup pincode not configured');
 
-  const pickupPincode = process.env.SHIPROCKET_PICKUP_PINCODE;
-  if (!pickupPincode) {
-    throw new Error('Shiprocket pickup pincode not configured');
+    const res = await axios.get(
+      `${SHIPROCKET_BASE_URL}/courier/serviceability`,
+      {
+        params: {
+          pickup_postcode: pickupPincode,
+          delivery_postcode: deliveryPincode,
+          weight: weightKg,
+          cod: isCod ? 1 : 0,
+        },
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+
+    return res.data;
+  } catch (err) {
+    console.error(
+      'SHIPROCKET SERVICE ERROR:',
+      err.response?.status,
+      err.response?.data || err.message
+    );
+    throw err;
   }
-
-  const res = await axios.get(
-    `${SHIPROCKET_BASE_URL}/courier/serviceability`,
-    {
-      params: {
-        pickup_postcode: pickupPincode,
-        delivery_postcode: deliveryPincode,
-        weight: weightKg,
-        cod: isCod ? 1 : 0,
-        // optional extras: mode, order_type etc.
-      },
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    }
-  );
-
-  return res.data;
 }
 
-module.exports = {
-  getShippingRate,
-};
+module.exports = { getShippingRate };

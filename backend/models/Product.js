@@ -38,6 +38,13 @@ const productSchema = new mongoose.Schema(
       min: [0, 'Stock cannot be negative'],
       default: 0,
     },
+    weight: {
+  type: Number,
+  default: 0.5, // kg (realistic default for small items)
+  min: [0.1, 'Weight must be at least 0.1 kg'],
+  max: [30, 'Weight cannot exceed 30 kg for single product'],
+},
+
     images: {
       type: [String],
       validate: {

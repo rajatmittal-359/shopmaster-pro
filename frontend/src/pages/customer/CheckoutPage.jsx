@@ -13,6 +13,8 @@ export default function CheckoutPage() {
   const [loading, setLoading] = useState(true);
   const [placing, setPlacing] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState("cod"); // "cod" | "online"
+  const [shippingCharges, setShippingCharges] = useState(0); // ✅ NEW STATE
+  const [calculatingShipping, setCalculatingShipping] = useState(false); // ✅ NEW STATE
 
   const navigate = useNavigate();
 
@@ -45,6 +47,42 @@ export default function CheckoutPage() {
   useEffect(() => {
     loadData();
   }, []);
+
+  // ✅ NEW: Calculate shipping when address changes
+  useEffect(() => {
+    if (selectedAddressId && cart) {
+      calculateShipping();
+    }
+  }, [selectedAddressId]);
+
+  const calculateShipping = async () => {
+    if (!selectedAddressId || !cart) return;
+
+    try {
+      setCalculatingShipping(true);
+      
+      // Call backend to calculate shipping (you can create a dedicated endpoint or reuse logic)
+      // For now, using fallback estimation
+      const address = addresses.find(a => a._id === selectedAddressId);
+      
+      if (address) {
+        // Estimate based on pincode (you can enhance this with actual API call)
+        // For now, using smart fallback
+        const estimatedWeight = cart.items.reduce((sum, item) => {
+          return sum + (0.5 * item.quantity); // Assume 0.5kg per item
+        }, 0);
+
+        // Simple estimation: ₹50 base + ₹20 per kg
+        const estimated = Math.round(50 + (estimatedWeight * 20));
+        setShippingCharges(estimated);
+      }
+    } catch (err) {
+      console.error("Shipping calculation error:", err);
+      setShippingCharges(100); // Fallback
+    } finally {
+      setCalculatingShipping(false);
+    }
+  };
 
   const handlePlaceOrder = async () => {
     if (!selectedAddressId) {
@@ -184,6 +222,10 @@ export default function CheckoutPage() {
     );
   }
 
+  // ✅ Calculate totals
+  const subtotal = cart.totalAmount;
+  const finalTotal = subtotal + shippingCharges;
+
   return (
     <Layout title="Checkout">
       <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6 p-4">
@@ -226,7 +268,7 @@ export default function CheckoutPage() {
 
             <div className="mt-4 flex justify-between items-center border-t pt-4">
               <span className="font-semibold text-sm">Subtotal</span>
-              <span className="font-bold text-lg">₹{cart.totalAmount}</span>
+              <span className="font-bold text-lg">₹{subtotal}</span>
             </div>
           </div>
 
@@ -259,9 +301,9 @@ export default function CheckoutPage() {
             {addresses.length === 0 && (
               <p className="text-sm text-gray-600">
                 You have no saved addresses. Click{" "}
-                <span className="font-semibold">“Manage addresses”</span> above
+                <span className="font-semibold">"Manage addresses"</span> above
                 to add a new address, then return to this page and press{" "}
-                <span className="font-semibold">“Refresh”</span>.
+                <span className="font-semibold">"Refresh"</span>.
               </p>
             )}
 
@@ -269,9 +311,9 @@ export default function CheckoutPage() {
               <>
                 <p className="text-xs text-gray-600 mb-3">
                   Want to change the address? Click{" "}
-                  <span className="font-semibold">“Manage addresses”</span> to
+                  <span className="font-semibold">"Manage addresses"</span> to
                   add or edit, then come back here and press{" "}
-                  <span className="font-semibold">“Refresh”</span> to see the
+                  <span className="font-semibold">"Refresh"</span> to see the
                   latest list.
                 </p>
 
@@ -279,10 +321,10 @@ export default function CheckoutPage() {
                   {addresses.map((addr) => (
                     <label
                       key={addr._id}
-                      className={`block border rounded p-3 cursor-pointer ${
+                      className={`block border rounded p-3 cursor-pointer transition-all ${
                         selectedAddressId === addr._id
                           ? "border-orange-500 bg-orange-50"
-                          : ""
+                          : "hover:border-gray-400"
                       }`}
                     >
                       <input
@@ -322,66 +364,84 @@ export default function CheckoutPage() {
         <div className="bg-white p-5 rounded shadow h-fit sticky top-20">
           <h2 className="text-lg font-semibold mb-4">3. Order Summary</h2>
 
-          <div className="flex justify-between text-sm mb-2">
-            <span>Items Total</span>
-            <span>₹{cart.totalAmount}</span>
+          {/* ✅ ENHANCED PRICING BREAKDOWN */}
+          <div className="space-y-2 text-sm">
+            <div className="flex justify-between">
+              <span className="text-gray-600">Items Total</span>
+              <span className="font-medium">₹{subtotal}</span>
+            </div>
+
+            <div className="flex justify-between">
+              <span className="text-gray-600">Shipping Charges</span>
+              {calculatingShipping ? (
+                <span className="text-xs text-blue-500 animate-pulse">Calculating...</span>
+              ) : (
+                <span className="font-medium text-green-600">
+                  ₹{shippingCharges}
+                </span>
+              )}
+            </div>
+
+            {shippingCharges > 0 && (
+              <p className="text-xs text-gray-500 italic">
+                Actual shipping charges will be calculated based on pincode & weight at checkout
+              </p>
+            )}
           </div>
 
-          <div className="flex justify-between text-sm mb-2">
-            <span>Delivery</span>
-            <span className="text-green-600">FREE</span>
-          </div>
-
-          <div className="flex justify-between font-bold text-base border-t pt-3 mt-3">
-            <span>Grand Total</span>
-            <span>₹{cart.totalAmount}</span>
+          <div className="flex justify-between font-bold text-lg border-t pt-3 mt-3">
+            <span>Order Total</span>
+            <span className="text-orange-600">₹{finalTotal}</span>
           </div>
 
           {/* PAYMENT METHOD */}
-          <div className="bg-white mt-4 mb-3">
+          <div className="mt-4 mb-3">
             <h3 className="text-sm font-semibold mb-2">Payment Method</h3>
 
-            <label className="flex items-center gap-2 mb-2 cursor-pointer">
+            <label className="flex items-center gap-2 mb-2 cursor-pointer p-2 border rounded hover:bg-gray-50">
               <input
                 type="radio"
                 name="payment"
                 value="cod"
                 checked={paymentMethod === "cod"}
                 onChange={(e) => setPaymentMethod(e.target.value)}
+                className="accent-orange-500"
               />
-              <span>Cash on Delivery</span>
+              <span className="text-sm">Cash on Delivery</span>
             </label>
 
-            <label className="flex items-center gap-2 cursor-pointer">
+            <label className="flex items-center gap-2 cursor-pointer p-2 border rounded hover:bg-gray-50">
               <input
                 type="radio"
                 name="payment"
                 value="online"
                 checked={paymentMethod === "online"}
                 onChange={(e) => setPaymentMethod(e.target.value)}
+                className="accent-orange-500"
               />
-              <span>Pay Online (UPI / Card / Net Banking)</span>
+              <span className="text-sm">Pay Online (UPI / Card / Net Banking)</span>
             </label>
-          </div>
-
-          <div className="mt-2 text-xs text-gray-600 bg-gray-50 p-3 rounded">
-            Clear order summary and simple payment options reduce confusion and
-            improve trust on the checkout page. [web:69][web:68]
           </div>
 
           <button
             onClick={handlePlaceOrder}
-            disabled={placing || addresses.length === 0}
-            className="w-full mt-4 bg-orange-500 hover:bg-orange-600 text-white py-2 rounded text-sm font-semibold disabled:opacity-60"
+            disabled={placing || addresses.length === 0 || calculatingShipping}
+            className="w-full mt-4 bg-orange-500 hover:bg-orange-600 text-white py-3 rounded font-semibold disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
           >
             {placing
               ? paymentMethod === "online"
                 ? "Redirecting to payment..."
                 : "Placing Order..."
               : paymentMethod === "online"
-              ? "Proceed to Payment"
-              : "Place Order (COD)"}
+              ? `Pay ₹${finalTotal}`
+              : `Place Order ₹${finalTotal}`}
           </button>
+
+          {addresses.length === 0 && (
+            <p className="text-xs text-red-500 mt-2 text-center">
+              Please add a delivery address to proceed
+            </p>
+          )}
         </div>
       </div>
     </Layout>

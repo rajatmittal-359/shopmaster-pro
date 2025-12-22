@@ -9,6 +9,7 @@ const InventoryLog = require("../models/Inventory");
 const Address = require("../models/Address");
 const sendSafeEmail = require("../utils/sendSafeEmail");
 const { orderConfirmedEmail } = require("../utils/emailTemplates");
+const { getShippingRate } = require('../utils/shiprocketService'); // ✅ NEW IMPORT
 
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID,
@@ -76,6 +77,46 @@ exports.createRazorpayOrder = async (req, res) => {
       }
     }
 
+    // ✅ 3.5) Calculate shipping charges (NEW)
+    let shippingCharges = 0;
+    let shippingCourier = null;
+
+    try {
+      // Calculate total cart weight
+      const totalWeight = cart.items.reduce((sum, item) => {
+        return sum + (item.productId.weight || 0.5) * item.quantity;
+      }, 0);
+
+      // Get customer pincode from address
+      const pincode = address.zipCode;
+
+      // Razorpay orders are prepaid (not COD)
+      const isCOD = false;
+
+      // Call Shiprocket API
+      const shippingData = await getShippingRate(pincode, totalWeight, isCOD);
+
+      if (shippingData && shippingData.available_courier_companies && shippingData.available_courier_companies.length > 0) {
+        // Select cheapest courier
+        const couriers = shippingData.available_courier_companies;
+        const cheapest = couriers.reduce((min, curr) => 
+          curr.rate < min.rate ? curr : min
+        );
+
+        shippingCharges = cheapest.rate;
+        shippingCourier = cheapest.courier_name;
+      } else {
+        // Fallback: Fixed ₹100 if API fails
+        shippingCharges = 100;
+        shippingCourier = 'Standard Shipping';
+      }
+    } catch (shipErr) {
+      console.error('Shipping calculation failed:', shipErr.message);
+      // Fallback: Don't block checkout
+      shippingCharges = 100;
+      shippingCourier = 'Standard Shipping';
+    }
+
     // 4) Env check
     if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
       await session.abortTransaction();
@@ -90,14 +131,17 @@ exports.createRazorpayOrder = async (req, res) => {
     const shortUserId = String(req.user.id).slice(-8);
     const shortTimestamp = Date.now().toString().slice(-8);
 
-    // 6) Create Razorpay order
+    // ✅ 6) Calculate total with shipping
+    const finalAmount = cart.totalAmount + shippingCharges;
+
+    // 7) Create Razorpay order
     const razorpayOrder = await razorpay.orders.create({
-      amount: Math.round(cart.totalAmount * 100),
+      amount: Math.round(finalAmount * 100), // ✅ CHANGED
       currency: "INR",
       receipt: `ord_${shortUserId}_${shortTimestamp}`,
     });
 
-    // 7) Create DB order with razorpayOrderId
+    // 8) Create DB order with razorpayOrderId
     const order = await Order.create(
       [
         {
@@ -109,12 +153,16 @@ exports.createRazorpayOrder = async (req, res) => {
             price: item.price,
             sellerId: item.productId.sellerId,
           })),
-          totalAmount: cart.totalAmount,
+          totalAmount: finalAmount, // ✅ CHANGED
           shippingAddressId,
           status: "pending",
           paymentMethod: "razorpay",
           paymentStatus: "pending",
           razorpayOrderId: razorpayOrder.id,
+          // ✅ NEW SHIPPING FIELDS
+          shippingCharges,
+          shippingProvider: 'shiprocket',
+          shippingCourierName: shippingCourier,
         },
       ],
       { session }
@@ -161,6 +209,7 @@ exports.createRazorpayOrder = async (req, res) => {
     });
   }
 };
+
 
 // =======================
 // Verify Razorpay Payment
