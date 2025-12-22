@@ -61,16 +61,16 @@ export default function CheckoutPage() {
   }, []);
 
   // Whenever address or paymentMethod or cart change → get real totals from backend
+  // ✅ FIXED: Debounced shipping calculation
   useEffect(() => {
-    const canPreview =
-      selectedAddressId && cart && cart.items && cart.items.length > 0;
-
+    const canPreview = selectedAddressId && cart && cart.items && cart.items.length > 0;
     if (!canPreview) return;
 
-    const preview = async () => {
+    // Debounce: wait 500ms after last change
+    const timer = setTimeout(async () => {
       try {
         setCalculatingTotals(true);
-        const res = await api.post("/customer/checkout-preview", {
+        const res = await api.post('/customer/checkout-preview', {
           shippingAddressId: selectedAddressId,
           paymentMethod,
         });
@@ -80,30 +80,27 @@ export default function CheckoutPage() {
           setShippingCharges(res.data.shippingCharges);
           setGrandTotal(res.data.grandTotal);
         } else {
-          toastError(
-            res.data.message || "Failed to calculate shipping & total amount"
-          );
-          // fallback – show items only
+          toastError(res.data.message || 'Failed to calculate shipping');
+          // Fallback
           setItemsTotal(cart.totalAmount);
           setShippingCharges(0);
           setGrandTotal(cart.totalAmount);
         }
       } catch (err) {
-        console.error("PREVIEW ERROR:", err.message);
-        toastError(
-          err.response?.data?.message ||
-            "Could not calculate shipping. Using items total only."
-        );
+        console.error('PREVIEW ERROR:', err.message);
+        toastError('Could not calculate shipping. Using items total only.');
+        // Fallback
         setItemsTotal(cart.totalAmount);
         setShippingCharges(0);
         setGrandTotal(cart.totalAmount);
       } finally {
         setCalculatingTotals(false);
       }
-    };
+    }, 500); // Debounce 500ms
 
-    preview();
-  }, [selectedAddressId, paymentMethod, cart]);
+    return () => clearTimeout(timer);
+  }, [selectedAddressId, paymentMethod]); // ✅ Removed 'cart' dependency
+
 
   const handlePlaceOrder = async () => {
     if (!selectedAddressId) {

@@ -18,6 +18,7 @@ const statusColors = {
 export default function MyOrdersPage() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [cancellingItemId, setCancellingItemId] = useState(null); // ✅ NEW: Track cancelling state
 
   const fetchOrders = async () => {
     try {
@@ -26,9 +27,7 @@ export default function MyOrdersPage() {
       setOrders(res.data.orders || []);
     } catch (err) {
       console.error("GET MY ORDERS ERROR", err);
-      toastError(
-        err?.response?.data?.message || "Failed to load orders"
-      );
+      toastError(err?.response?.data?.message || "Failed to load orders");
     } finally {
       setLoading(false);
     }
@@ -38,14 +37,21 @@ export default function MyOrdersPage() {
     fetchOrders();
   }, []);
 
-  const handleCancelItem = async (orderId, itemId) => {
+  // ✅ EXISTING: Cancel item function (unchanged)
+  const handleCancelItem = async (orderId, itemId, itemName) => {
+    if (!window.confirm(`Cancel "${itemName}" from this order?`)) {
+      return;
+    }
     try {
+      setCancellingItemId(itemId);
       await cancelOrderItem(orderId, itemId);
-      toastSuccess("Item cancelled");
+      toastSuccess("Item cancelled successfully");
       await fetchOrders();
     } catch (err) {
       const msg = err?.response?.data?.message || "Failed to cancel item";
       toastError(msg);
+    } finally {
+      setCancellingItemId(null);
     }
   };
 
@@ -64,9 +70,7 @@ export default function MyOrdersPage() {
   return (
     <Layout title="My Orders">
       <div className="max-w-5xl mx-auto p-4">
-        <h1 className="text-2xl font-bold mb-4">
-          My Orders ({orders.length})
-        </h1>
+        <h1 className="text-2xl font-bold mb-4">My Orders ({orders.length})</h1>
 
         {orders.length === 0 ? (
           <div className="bg-white border rounded p-8 text-center">
@@ -125,9 +129,7 @@ export default function MyOrdersPage() {
 
                         <p className="text-sm font-bold">
                           Total:{" "}
-                          <span className="text-orange-600">
-                            ₹{orderTotal}
-                          </span>
+                          <span className="text-orange-600">₹{orderTotal}</span>
                         </p>
                       </div>
 
@@ -158,7 +160,8 @@ export default function MyOrdersPage() {
                     <div className="flex items-center gap-3">
                       <span
                         className={`text-xs px-3 py-1 rounded-full capitalize font-medium ${
-                          statusColors[order.status] || "bg-gray-100 text-gray-700"
+                          statusColors[order.status] ||
+                          "bg-gray-100 text-gray-700"
                         }`}
                       >
                         {order.status}
@@ -173,20 +176,20 @@ export default function MyOrdersPage() {
                     </div>
                   </div>
 
-                  {/* Items preview */}
+                  {/* Items preview with cancel button - ✅ NEW */}
                   <div className="space-y-2">
                     {order.items.slice(0, 2).map((item) => (
                       <div
                         key={item._id}
-                        className="flex gap-3 items-center"
+                        className={`flex gap-3 items-center ${
+                          item.status === "cancelled" ? "opacity-50" : ""
+                        }`}
                       >
                         <div className="w-12 h-12 bg-gray-100 rounded flex-shrink-0 flex items-center justify-center text-xs text-gray-400">
                           📦
                         </div>
                         <div className="flex-1">
-                          <p className="text-sm font-medium">
-                            {item.name}
-                          </p>
+                          <p className="text-sm font-medium">{item.name}</p>
                           <p className="text-xs text-gray-500">
                             Qty: {item.quantity} × ₹{item.price}
                             {item.status === "cancelled" && (
@@ -196,9 +199,29 @@ export default function MyOrdersPage() {
                             )}
                           </p>
                         </div>
-                        <p className="text-sm font-semibold">
-                          ₹{item.price * item.quantity}
-                        </p>
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-semibold">
+                            ₹{item.price * item.quantity}
+                          </p>
+
+                          {/* ✅ NEW: Cancel Item Button */}
+                          {order.status !== "delivered" &&
+                            order.status !== "cancelled" &&
+                            order.status !== "returned" &&
+                            item.status !== "cancelled" && (
+                              <button
+                                onClick={() =>
+                                  handleCancelItem(order._id, item._id, item.name)
+                                }
+                                disabled={cancellingItemId === item._id}
+                                className="text-[10px] text-red-600 hover:underline disabled:opacity-50 whitespace-nowrap"
+                              >
+                                {cancellingItemId === item._id
+                                  ? "Cancelling..."
+                                  : "Cancel"}
+                              </button>
+                            )}
+                        </div>
                       </div>
                     ))}
 
