@@ -78,44 +78,71 @@ exports.createRazorpayOrder = async (req, res) => {
     }
 
     // ✅ 3.5) Calculate shipping charges (NEW)
-    let shippingCharges = 0;
-    let shippingCourier = null;
+// ✅ 3.5) Calculate shipping charges (NEW)
+let shippingCharges = 0;
+let shippingCourier = null;
 
-    try {
-      // Calculate total cart weight
-      const totalWeight = cart.items.reduce((sum, item) => {
-        return sum + (item.productId.weight || 0.5) * item.quantity;
-      }, 0);
+try {
+  // Calculate total cart weight
+  const totalWeight = cart.items.reduce((sum, item) => {
+    return sum + (item.productId.weight || 0.5) * item.quantity;
+  }, 0);
 
-      // Get customer pincode from address
-      const pincode = address.zipCode;
+  // Get customer pincode from address
+  const pincode = address.zipCode;
 
-      // Razorpay orders are prepaid (not COD)
-      const isCOD = false;
+  // Razorpay orders are prepaid (not COD)
+  const isCOD = false;
 
-      // Call Shiprocket API
-      const shippingData = await getShippingRate(pincode, totalWeight, isCOD);
+  // Call Shiprocket API
+  const shippingData = await getShippingRate(pincode, totalWeight, isCOD);
 
-      if (shippingData && shippingData.available_courier_companies && shippingData.available_courier_companies.length > 0) {
-        // Select cheapest courier
-        const couriers = shippingData.available_courier_companies;
-        const cheapest = couriers.reduce((min, curr) => 
-          curr.rate < min.rate ? curr : min
-        );
+  // ✅ FIXED: Correct path & field access
+  const couriers = 
+    shippingData?.data?.available_courier_companies || 
+    shippingData?.available_courier_companies || 
+    [];
 
-        shippingCharges = cheapest.rate;
-        shippingCourier = cheapest.courier_name;
-      } else {
-        // Fallback: Fixed ₹100 if API fails
-        shippingCharges = 100;
-        shippingCourier = 'Standard Shipping';
-      }
-    } catch (shipErr) {
-      console.error('Shipping calculation failed:', shipErr.message);
-      // Fallback: Don't block checkout
-      shippingCharges = 100;
-      shippingCourier = 'Standard Shipping';
-    }
+  if (couriers.length > 0) {
+    // Select cheapest courier
+    const cheapest = couriers.reduce((min, curr) => {
+      // ✅ Try multiple field names
+      const currRate = curr.freight_charge || curr.rate || curr.total_charge || 0;
+      const minRate = min.freight_charge || min.rate || min.total_charge || 0;
+      return currRate < minRate ? curr : min;
+    });
+
+    // ✅ Get base shipping rate
+    const baseRate = cheapest.freight_charge || cheapest.rate || cheapest.total_charge || 0;
+    
+    // ✅ COD charges (prepaid = 0)
+    const codFee = 0; // Razorpay is prepaid, no COD charges
+
+    shippingCharges = Math.round(baseRate + codFee);
+    shippingCourier = cheapest.courier_name || cheapest.courier_company_id || 'Shiprocket';
+
+    // ✅ DEBUG LOG
+    console.log('📦 RAZORPAY SHIPPING:', {
+      totalWeight,
+      pincode,
+      baseRate,
+      codFee,
+      total: shippingCharges,
+      courier: shippingCourier
+    });
+  } else {
+    // Fallback: Fixed ₹100 if API fails
+    shippingCharges = 100;
+    shippingCourier = 'Standard Shipping';
+    console.warn('⚠️ Shiprocket: No couriers available - using fallback');
+  }
+} catch (shipErr) {
+  console.error('Shipping calculation failed:', shipErr.message);
+  // Fallback: Don't block checkout
+  shippingCharges = 100;
+  shippingCourier = 'Standard Shipping';
+}
+
 
     // 4) Env check
     if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {

@@ -1,3 +1,5 @@
+// src/pages/customer/CheckoutPage.jsx
+
 import { useEffect, useState } from "react";
 import Layout from "../../components/common/Layout";
 import { getCart } from "../../services/cartService";
@@ -12,9 +14,13 @@ export default function CheckoutPage() {
   const [selectedAddressId, setSelectedAddressId] = useState("");
   const [loading, setLoading] = useState(true);
   const [placing, setPlacing] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState("cod"); // "cod" | "online"
-  const [shippingCharges, setShippingCharges] = useState(0); // ✅ NEW STATE
-  const [calculatingShipping, setCalculatingShipping] = useState(false); // ✅ NEW STATE
+  const [paymentMethod, setPaymentMethod] = useState("cod");
+
+  // pricing
+  const [itemsTotal, setItemsTotal] = useState(0);
+  const [shippingCharges, setShippingCharges] = useState(0);
+  const [grandTotal, setGrandTotal] = useState(0);
+  const [calculatingTotals, setCalculatingTotals] = useState(false);
 
   const navigate = useNavigate();
 
@@ -23,7 +29,10 @@ export default function CheckoutPage() {
     try {
       setLoading(true);
 
-      const [cartRes, addrRes] = await Promise.all([getCart(), getAddresses()]);
+      const [cartRes, addrRes] = await Promise.all([
+        getCart(),
+        getAddresses(),
+      ]);
 
       const c = cartRes.data.cart;
       setCart(c);
@@ -34,6 +43,9 @@ export default function CheckoutPage() {
       const def = list.find((a) => a.isDefault);
       if (def) setSelectedAddressId(def._id);
       else if (list[0]) setSelectedAddressId(list[0]._id);
+
+      // basic totals
+      setItemsTotal(c?.totalAmount || 0);
     } catch (err) {
       console.error(err);
       toastError(
@@ -48,41 +60,50 @@ export default function CheckoutPage() {
     loadData();
   }, []);
 
-  // ✅ NEW: Calculate shipping when address changes
+  // Whenever address or paymentMethod or cart change → get real totals from backend
   useEffect(() => {
-    if (selectedAddressId && cart) {
-      calculateShipping();
-    }
-  }, [selectedAddressId]);
+    const canPreview =
+      selectedAddressId && cart && cart.items && cart.items.length > 0;
 
-  const calculateShipping = async () => {
-    if (!selectedAddressId || !cart) return;
+    if (!canPreview) return;
 
-    try {
-      setCalculatingShipping(true);
-      
-      // Call backend to calculate shipping (you can create a dedicated endpoint or reuse logic)
-      // For now, using fallback estimation
-      const address = addresses.find(a => a._id === selectedAddressId);
-      
-      if (address) {
-        // Estimate based on pincode (you can enhance this with actual API call)
-        // For now, using smart fallback
-        const estimatedWeight = cart.items.reduce((sum, item) => {
-          return sum + (0.5 * item.quantity); // Assume 0.5kg per item
-        }, 0);
+    const preview = async () => {
+      try {
+        setCalculatingTotals(true);
+        const res = await api.post("/customer/checkout-preview", {
+          shippingAddressId: selectedAddressId,
+          paymentMethod,
+        });
 
-        // Simple estimation: ₹50 base + ₹20 per kg
-        const estimated = Math.round(50 + (estimatedWeight * 20));
-        setShippingCharges(estimated);
+        if (res.data.success) {
+          setItemsTotal(res.data.itemsTotal);
+          setShippingCharges(res.data.shippingCharges);
+          setGrandTotal(res.data.grandTotal);
+        } else {
+          toastError(
+            res.data.message || "Failed to calculate shipping & total amount"
+          );
+          // fallback – show items only
+          setItemsTotal(cart.totalAmount);
+          setShippingCharges(0);
+          setGrandTotal(cart.totalAmount);
+        }
+      } catch (err) {
+        console.error("PREVIEW ERROR:", err.message);
+        toastError(
+          err.response?.data?.message ||
+            "Could not calculate shipping. Using items total only."
+        );
+        setItemsTotal(cart.totalAmount);
+        setShippingCharges(0);
+        setGrandTotal(cart.totalAmount);
+      } finally {
+        setCalculatingTotals(false);
       }
-    } catch (err) {
-      console.error("Shipping calculation error:", err);
-      setShippingCharges(100); // Fallback
-    } finally {
-      setCalculatingShipping(false);
-    }
-  };
+    };
+
+    preview();
+  }, [selectedAddressId, paymentMethod, cart]);
 
   const handlePlaceOrder = async () => {
     if (!selectedAddressId) {
@@ -98,7 +119,7 @@ export default function CheckoutPage() {
     try {
       setPlacing(true);
 
-      // ONLINE PAYMENT (Razorpay via global script)
+      // ONLINE PAYMENT (Razorpay)
       if (paymentMethod === "online") {
         const res = await api.post("/customer/checkout-online", {
           shippingAddressId: selectedAddressId,
@@ -116,12 +137,14 @@ export default function CheckoutPage() {
           return;
         }
 
+        const payable = (res.data.amount || 0) / 100; // in rupees
+
         const options = {
           key: res.data.keyId || import.meta.env.VITE_RAZORPAY_KEY_ID,
           amount: res.data.amount, // in paise
           currency: res.data.currency,
           name: "ShopMaster Pro",
-          description: "Order Payment",
+          description: `Order Payment (₹${payable})`,
           order_id: res.data.orderId,
           handler: async function (response) {
             try {
@@ -153,7 +176,6 @@ export default function CheckoutPage() {
             }
           },
           prefill: {
-            // Optionally populate from logged‑in user profile later
             name: "",
             email: "",
           },
@@ -222,10 +244,6 @@ export default function CheckoutPage() {
     );
   }
 
-  // ✅ Calculate totals
-  const subtotal = cart.totalAmount;
-  const finalTotal = subtotal + shippingCharges;
-
   return (
     <Layout title="Checkout">
       <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6 p-4">
@@ -268,7 +286,7 @@ export default function CheckoutPage() {
 
             <div className="mt-4 flex justify-between items-center border-t pt-4">
               <span className="font-semibold text-sm">Subtotal</span>
-              <span className="font-bold text-lg">₹{subtotal}</span>
+              <span className="font-bold text-lg">₹{itemsTotal}</span>
             </div>
           </div>
 
@@ -364,35 +382,35 @@ export default function CheckoutPage() {
         <div className="bg-white p-5 rounded shadow h-fit sticky top-20">
           <h2 className="text-lg font-semibold mb-4">3. Order Summary</h2>
 
-          {/* ✅ ENHANCED PRICING BREAKDOWN */}
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
               <span className="text-gray-600">Items Total</span>
-              <span className="font-medium">₹{subtotal}</span>
+              <span className="font-medium">₹{itemsTotal}</span>
             </div>
 
             <div className="flex justify-between">
-              <span className="text-gray-600">Shipping Charges</span>
-              {calculatingShipping ? (
-                <span className="text-xs text-blue-500 animate-pulse">Calculating...</span>
+              <span className="text-gray-600">Shipping</span>
+              {calculatingTotals ? (
+                <span className="text-xs text-blue-500 animate-pulse">
+                  Calculating...
+                </span>
               ) : (
                 <span className="font-medium text-green-600">
                   ₹{shippingCharges}
                 </span>
               )}
             </div>
-
-            {shippingCharges > 0 && (
-              <p className="text-xs text-gray-500 italic">
-                Actual shipping charges will be calculated based on pincode & weight at checkout
-              </p>
-            )}
           </div>
 
           <div className="flex justify-between font-bold text-lg border-t pt-3 mt-3">
             <span>Order Total</span>
-            <span className="text-orange-600">₹{finalTotal}</span>
+            <span className="text-orange-600">₹{grandTotal}</span>
           </div>
+
+          <p className="text-xs text-gray-500 mt-2">
+            This is the final amount including shipping. You will see the same
+            total on the payment page.
+          </p>
 
           {/* PAYMENT METHOD */}
           <div className="mt-4 mb-3">
@@ -419,13 +437,17 @@ export default function CheckoutPage() {
                 onChange={(e) => setPaymentMethod(e.target.value)}
                 className="accent-orange-500"
               />
-              <span className="text-sm">Pay Online (UPI / Card / Net Banking)</span>
+              <span className="text-sm">
+                Pay Online (UPI / Card / Net Banking)
+              </span>
             </label>
           </div>
 
           <button
             onClick={handlePlaceOrder}
-            disabled={placing || addresses.length === 0 || calculatingShipping}
+            disabled={
+              placing || addresses.length === 0 || calculatingTotals
+            }
             className="w-full mt-4 bg-orange-500 hover:bg-orange-600 text-white py-3 rounded font-semibold disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
           >
             {placing
@@ -433,8 +455,8 @@ export default function CheckoutPage() {
                 ? "Redirecting to payment..."
                 : "Placing Order..."
               : paymentMethod === "online"
-              ? `Pay ₹${finalTotal}`
-              : `Place Order ₹${finalTotal}`}
+              ? `Pay ₹${grandTotal} Online`
+              : `Place Order (COD – ₹${grandTotal})`}
           </button>
 
           {addresses.length === 0 && (

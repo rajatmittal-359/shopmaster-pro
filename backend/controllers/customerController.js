@@ -6,7 +6,8 @@ const Address = require('../models/Address');
 const { applyInventoryChange } = require("./inventoryController");
 const InventoryLog = require("../models/Inventory");
 
-const { getShippingRate } = require('../utils/shiprocketService');
+const { getShippingRate, pickBestCourier } = require('../utils/shiprocketService');
+
 
 const sendSafeEmail = require('../utils/sendSafeEmail');
 const { orderConfirmedEmail } = require('../utils/emailTemplates');
@@ -96,22 +97,24 @@ exports.checkout = async (req, res) => {
     if (!address) {
       await session.abortTransaction();
       return res.status(400).json({
-        message: "Invalid shipping address. Please select a valid address.",
+        message: 'Invalid shipping address. Please select a valid address.',
       });
     }
 
     const cart = await Cart.findOne({ userId: req.user._id })
-      .populate("items.productId")
+      .populate('items.productId')
       .session(session);
 
     if (!cart || cart.items.length === 0) {
       await session.abortTransaction();
-      return res.status(400).json({ message: "Cart is empty" });
+      return res.status(400).json({ message: 'Cart is empty' });
     }
 
     // ✅ Stock validation
     for (const item of cart.items) {
-      const product = await Product.findById(item.productId._id).session(session);
+      const product = await Product.findById(item.productId._id).session(
+        session
+      );
 
       if (!product || !product.isActive) {
         await session.abortTransaction();
@@ -127,71 +130,101 @@ exports.checkout = async (req, res) => {
         });
       }
     }
-    // Calculate shipping charges
+
+    // ✅ Calculate shipping charges via Shiprocket
+// ✅ Calculate shipping charges via Shiprocket
 let shippingCharges = 0;
 let shippingCourier = null;
 
 try {
-  // Calculate total cart weight
+  // Total cart weight (fallback 0.5 kg per item)
   const totalWeight = cart.items.reduce((sum, item) => {
     return sum + (item.productId.weight || 0.5) * item.quantity;
   }, 0);
 
-  // Get customer pincode from address
   const pincode = address.zipCode;
-
-  // Check if COD order
   const isCOD = req.body.paymentMethod === 'cod';
 
-  // Call Shiprocket API
   const shippingData = await getShippingRate(pincode, totalWeight, isCOD);
 
-  if (shippingData && shippingData.available_courier_companies && shippingData.available_courier_companies.length > 0) {
-    // Select cheapest courier
-    const couriers = shippingData.available_courier_companies;
-    const cheapest = couriers.reduce((min, curr) => 
-      curr.rate < min.rate ? curr : min
-    );
+  // ✅ FIXED: Correct path & field access
+  const couriers =
+    shippingData?.data?.available_courier_companies ||
+    shippingData?.available_courier_companies ||
+    [];
 
-    shippingCharges = cheapest.rate;
-    shippingCourier = cheapest.courier_name;
+  if (couriers.length > 0) {
+    // Cheapest courier pick
+    const cheapest = couriers.reduce((min, curr) => {
+      // ✅ Try multiple field names
+      const currRate = curr.freight_charge || curr.rate || curr.total_charge || 0;
+      const minRate = min.freight_charge || min.rate || min.total_charge || 0;
+      return currRate < minRate ? curr : min;
+    });
+
+    // ✅ Get base shipping rate
+    const baseRate = cheapest.freight_charge || cheapest.rate || cheapest.total_charge || 0;
+    
+    // ✅ Get COD charges if applicable
+    const codFee = isCOD && (cheapest.cod_charges || cheapest.cod_charge || 0);
+
+    shippingCharges = Math.round(baseRate + codFee);
+    shippingCourier = cheapest.courier_name || cheapest.courier_company_id || 'Shiprocket';
+
+    // ✅ DEBUG LOG
+    console.log('📦 COD SHIPPING:', {
+      totalWeight,
+      pincode,
+      isCOD,
+      baseRate,
+      codFee,
+      total: shippingCharges,
+      courier: shippingCourier
+    });
   } else {
-    // Fallback: Fixed ₹100 if API fails
+    // Fallback
     shippingCharges = 100;
     shippingCourier = 'Standard Shipping';
+    console.warn('⚠️ Shiprocket: No couriers available - using fallback');
   }
 } catch (shipErr) {
   console.error('Shipping calculation failed:', shipErr.message);
-  // Fallback: Don't block checkout
   shippingCharges = 100;
   shippingCourier = 'Standard Shipping';
 }
 
-    // ✅ Create order
-const order = await Order.create([{
-  customerId: req.user._id,
-  items: cart.items.map((item) => ({
-    productId: item.productId._id,
-    name: item.productId.name,
-    quantity: item.quantity,
-    price: item.price,
-    sellerId: item.productId.sellerId,
-  })),
-  totalAmount: cart.totalAmount + shippingCharges, // ✅ ADD SHIPPING
-  shippingAddressId,
-  status: 'pending',
-  paymentStatus: 'pending',
-  paymentMethod: 'cod',
-  // ✅ NEW SHIPPING FIELDS
-  shippingCharges,
-  shippingProvider: 'shiprocket',
-  shippingCourierName: shippingCourier,
-}], { session });
 
+    // ✅ Create order
+    const order = await Order.create(
+      [
+        {
+          customerId: req.user._id,
+          items: cart.items.map((item) => ({
+            productId: item.productId._id,
+            name: item.productId.name,
+            quantity: item.quantity,
+            price: item.price,
+            sellerId: item.productId.sellerId,
+          })),
+          totalAmount: cart.totalAmount + shippingCharges,
+          shippingAddressId,
+          status: 'pending',
+          paymentStatus: 'pending',
+          paymentMethod: 'cod',
+          // ✅ NEW SHIPPING FIELDS
+          shippingCharges,
+          shippingProvider: 'shiprocket',
+          shippingCourierName: shippingCourier,
+        },
+      ],
+      { session }
+    );
 
     // ✅ Update stock + inventory logs
     for (const item of cart.items) {
-      const product = await Product.findById(item.productId._id).session(session);
+      const product = await Product.findById(item.productId._id).session(
+        session
+      );
 
       const stockBefore = product.stock;
       const stockAfter = stockBefore - item.quantity;
@@ -203,7 +236,7 @@ const order = await Order.create([{
         [
           {
             productId: item.productId._id,
-            type: "sale",
+            type: 'sale',
             quantity: -item.quantity,
             stockBefore,
             stockAfter,
@@ -223,13 +256,13 @@ const order = await Order.create([{
     // ✅ Commit DB transaction
     await session.commitTransaction();
 
-    // 🔥 SEND RESPONSE IMMEDIATELY (THIS FIXES RENDER DELAY)
+    // 🔥 Immediate response
     res.status(201).json({
       success: true,
       order: order[0],
     });
 
-    // 🔁 BACKGROUND TASK (EMAIL – NON BLOCKING)
+    // 🔁 Background email
     setImmediate(async () => {
       try {
         const customer = req.user;
@@ -242,15 +275,14 @@ const order = await Order.create([{
           html,
         });
       } catch (emailErr) {
-        console.error("COD order email failed:", emailErr.message);
+        console.error('COD order email failed:', emailErr.message);
       }
     });
-
   } catch (err) {
     await session.abortTransaction();
-    console.error("CHECKOUT ERROR:", err.message);
+    console.error('CHECKOUT ERROR:', err.message);
     res.status(500).json({
-      message: err.message || "Checkout failed. Please try again.",
+      message: err.message || 'Checkout failed. Please try again.',
     });
   } finally {
     session.endSession();
@@ -648,5 +680,97 @@ exports.testShiprocketRate = async (req, res) => {
   } catch (err) {
     console.error('SHIPROCKET TEST ERROR', err.message);
     res.status(500).json({ ok: false, message: err.message });
+  }
+};
+
+
+// PREVIEW TOTAL (no order creation)
+exports.previewTotals = async (req, res) => {
+  try {
+    const { shippingAddressId, paymentMethod } = req.body;
+
+    const address = await Address.findOne({
+      _id: shippingAddressId,
+      userId: req.user._id,
+    });
+
+    if (!address) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid shipping address. Please select a valid address.",
+      });
+    }
+
+    const cart = await Cart.findOne({ userId: req.user._id })
+      .populate("items.productId");
+
+    if (!cart || cart.items.length === 0) {
+      return res.status(400).json({ success: false, message: "Cart is empty" });
+    }
+
+    // total items amount
+    const itemsTotal = cart.totalAmount;
+
+    // shipping calculation (same as checkout)
+    let shippingCharges = 0;
+    let shippingCourier = null;
+
+    try {
+      const totalWeight = cart.items.reduce((sum, item) => {
+        return sum + (item.productId.weight || 0.5) * item.quantity;
+      }, 0);
+
+      const pincode = address.zipCode;
+      const isCOD = paymentMethod === "cod";
+
+      const shippingData = await getShippingRate(pincode, totalWeight, isCOD);
+
+      const couriers =
+        shippingData?.data?.available_courier_companies ||
+        shippingData?.available_courier_companies ||
+        [];
+
+      if (couriers.length > 0) {
+        const cheapest = couriers.reduce((min, curr) => {
+          const currRate =
+            curr.freight_charge || curr.rate || curr.total_charge || 0;
+          const minRate =
+            min.freight_charge || min.rate || min.total_charge || 0;
+          return currRate < minRate ? curr : min;
+        });
+
+        const baseRate =
+          cheapest.freight_charge || cheapest.rate || cheapest.total_charge || 0;
+        const codFee =
+          isCOD && (cheapest.cod_charges || cheapest.cod_charge || 0);
+
+        shippingCharges = Math.round(baseRate + codFee);
+        shippingCourier =
+          cheapest.courier_name || cheapest.courier_company_id || "Shiprocket";
+      } else {
+        shippingCharges = 100;
+        shippingCourier = "Standard Shipping";
+      }
+    } catch (err) {
+      console.error("PREVIEW SHIPPING ERROR:", err.message);
+      shippingCharges = 100;
+      shippingCourier = "Standard Shipping";
+    }
+
+    const grandTotal = itemsTotal + shippingCharges;
+
+    return res.json({
+      success: true,
+      itemsTotal,
+      shippingCharges,
+      grandTotal,
+      shippingCourier,
+    });
+  } catch (err) {
+    console.error("PREVIEW TOTAL ERROR:", err.message);
+    return res.status(500).json({
+      success: false,
+      message: err.message || "Failed to calculate totals",
+    });
   }
 };

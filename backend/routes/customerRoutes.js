@@ -17,6 +17,7 @@ const {
   cancelOrderItem,
   returnOrder,
   testShiprocketRate,
+  previewTotals
 } = require("../controllers/customerController");
 
 const {
@@ -92,4 +93,6 @@ router.get(
   testShiprocketRate
 );
 
+
+router.post("/checkout-preview", previewTotals);
 module.exports = router;
