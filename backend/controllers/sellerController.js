@@ -359,12 +359,14 @@ exports.updateOrderStatus = async (req, res) => {
     // Apply new status
     order.status = status;
     
-    // ✅ FIXED: When delivered, mark payment as completed for ALL payment methods
-    if (status === 'delivered') {
-      // For COD: payment received at delivery
-      // For Razorpay: already paid, just marking completed
-      order.paymentStatus = 'completed';
-    }
+if (status === 'delivered') {
+  // COD: Mark payment as received when delivered
+  if (order.paymentMethod === 'cod' && order.paymentStatus === 'pending') {
+    order.paymentStatus = 'paid';
+  }
+  // Online: Already paid, no change needed
+}
+
     
     await order.save();
     res.json({ message: 'Order status updated successfully', order });
