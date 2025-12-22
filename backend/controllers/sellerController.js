@@ -76,6 +76,8 @@ exports.addProduct = async (req, res) => {
 };
 
 // Update product
+// backend/controllers/sellerController.js
+
 exports.updateProduct = async (req, res) => {
   try {
     const { productId } = req.params;
@@ -118,7 +120,8 @@ exports.updateProduct = async (req, res) => {
     if (mrp !== undefined) product.mrp = mrp;
     if (Array.isArray(tags)) product.tags = tags;
 
-      if (Array.isArray(req.body.images) && req.body.images.length > 0) {
+    // ✅ Images handling (URLs + new base64 uploads)
+    if (Array.isArray(req.body.images) && req.body.images.length > 0) {
       const incomingImages = req.body.images;
       const finalImages = [];
 
@@ -131,10 +134,12 @@ exports.updateProduct = async (req, res) => {
           // Existing image URL → keep as is
           finalImages.push(img);
         }
+        // other types are ignored safely
       }
 
       product.images = finalImages;
     }
+
     await product.save();
     await product.populate('category', 'name');
 
@@ -146,6 +151,7 @@ exports.updateProduct = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
 
 // Soft delete product
 exports.deleteProduct = async (req, res) => {

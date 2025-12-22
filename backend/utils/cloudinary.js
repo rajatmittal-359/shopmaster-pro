@@ -13,10 +13,12 @@ const uploadImage = async (file, folder = 'shopmaster-products') => {
   try {
     // ✅ Validate format
     if (!file || typeof file !== 'string') {
+      console.error('UPLOAD IMAGE INVALID TYPE:', typeof file, file);
       throw new Error('Invalid image data');
     }
 
     if (!file.startsWith('data:image/')) {
+      console.error('UPLOAD IMAGE INVALID FORMAT SAMPLE:', file.slice(0, 50));
       throw new Error('Invalid image format. Only images allowed (JPEG, PNG, WebP)');
     }
 
