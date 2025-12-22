@@ -1,31 +1,17 @@
+// frontend/src/pages/customer/OrderDetailsPage.jsx
 import { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import Layout from '../../components/common/Layout';
-import { getOrderDetails, cancelOrder, cancelOrderItem } from '../../services/orderService';
+import { getOrderDetails, cancelOrder, returnOrder, cancelOrderItem } from '../../services/orderService';
 import { toastSuccess, toastError } from '../../utils/toast';
-
-// Status color mapping
-const statusColors = {
-  pending: 'bg-yellow-100 text-yellow-700',
-  processing: 'bg-blue-100 text-blue-700',
-  shipped: 'bg-purple-100 text-purple-700',
-  delivered: 'bg-green-100 text-green-700',
-  cancelled: 'bg-red-100 text-red-700',
-  returned: 'bg-gray-100 text-gray-700',
-};
-
-const paymentStatusColors = {
-  pending: 'bg-yellow-100 text-yellow-700',
-  paid: 'bg-green-100 text-green-700',
-  completed: 'bg-green-100 text-green-700',
-};
 
 export default function OrderDetailsPage() {
   const { orderId } = useParams();
+  const navigate = useNavigate();
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [cancelling, setCancelling] = useState(false);
-  const [cancellingItemId, setCancellingItemId] = useState(null);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [cancellingItemId, setCancellingItemId] = useState(null); // ✅ NEW
 
   const loadOrder = async () => {
     try {
@@ -44,121 +30,100 @@ export default function OrderDetailsPage() {
     loadOrder();
   }, [orderId]);
 
-  const handleCancelOrder = async () => {
-    if (!window.confirm('Are you sure you want to cancel this entire order?')) {
-      return;
-    }
+  const handleCancel = async () => {
+    if (!window.confirm('Cancel this entire order?')) return;
     try {
-      setCancelling(true);
+      setActionLoading(true);
       await cancelOrder(orderId);
       toastSuccess('Order cancelled successfully');
-      await loadOrder();
+      navigate('/customer/orders');
     } catch (err) {
-      console.error(err);
-      toastError(err?.response?.data?.message || 'Failed to cancel order');
+      toastError(err?.response?.data?.message || 'Cancel failed');
     } finally {
-      setCancelling(false);
+      setActionLoading(false);
+    }
+  };
+
+  const handleReturn = async () => {
+    if (!window.confirm('Return this order?')) return;
+    try {
+      setActionLoading(true);
+      await returnOrder(orderId);
+      toastSuccess('Order returned successfully');
+      navigate('/customer/orders');
+    } catch (err) {
+      toastError(err?.response?.data?.message || 'Return failed');
+    } finally {
+      setActionLoading(false);
     }
   };
 
   // ✅ NEW: Cancel individual item
   const handleCancelItem = async (itemId, itemName) => {
-    if (!window.confirm(`Cancel "${itemName}" from this order?`)) {
-      return;
-    }
+    if (!window.confirm(`Cancel "${itemName}" from this order?`)) return;
     try {
       setCancellingItemId(itemId);
       await cancelOrderItem(orderId, itemId);
       toastSuccess('Item cancelled successfully');
-      await loadOrder();
+      await loadOrder(); // Reload order to show updated data
     } catch (err) {
-      console.error(err);
       toastError(err?.response?.data?.message || 'Failed to cancel item');
     } finally {
       setCancellingItemId(null);
     }
   };
 
-  if (loading) {
-    return (
-      <Layout title="Order Details">
-        <div className="animate-pulse space-y-4 max-w-4xl mx-auto p-4">
-          <div className="h-8 bg-gray-200 rounded w-1/3"></div>
-          <div className="h-64 bg-gray-200 rounded"></div>
-        </div>
-      </Layout>
-    );
-  }
+  if (loading) return <Layout title="Order Details"><p className="p-6">Loading...</p></Layout>;
+  if (!order) return <Layout title="Order Details"><p className="p-6">Order not found</p></Layout>;
 
-  if (!order) {
-    return (
-      <Layout title="Order Not Found">
-        <div className="max-w-4xl mx-auto p-4 text-center">
-          <p className="text-gray-600 mb-4">Order not found</p>
-          <Link to="/customer/orders" className="text-blue-600 hover:underline">
-            Back to Orders
-          </Link>
-        </div>
-      </Layout>
-    );
-  }
+  const addr = order.shippingAddressId; // ✅ Works if backend populates it
 
   return (
     <Layout title="Order Details">
       <div className="max-w-4xl mx-auto p-4 space-y-6">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-          <div>
-            <h2 className="text-2xl font-bold">Order Details</h2>
-            <p className="text-sm text-gray-600">
-              Order ID: #{order._id.slice(-6)}
-            </p>
-            <p className="text-xs text-gray-500">
-              {new Date(order.createdAt).toLocaleString()}
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            <span
-              className={`px-3 py-1 rounded text-sm font-medium capitalize ${
-                statusColors[order.status] || 'bg-gray-100 text-gray-700'
-              }`}
-            >
-              {order.status}
-            </span>
-            <span
-              className={`px-3 py-1 rounded text-sm font-medium capitalize ${
-                paymentStatusColors[order.paymentStatus] || 'bg-gray-100 text-gray-700'
-              }`}
-            >
-              Payment: {order.paymentStatus}
-            </span>
-          </div>
+        {/* ORDER HEADER */}
+        <div className="bg-white p-4 rounded shadow">
+          <p className="text-sm font-semibold">Order ID: #{order._id.slice(-8)}</p>
+          <p className="text-xs text-gray-500">{new Date(order.createdAt).toLocaleString()}</p>
+          <p className="text-sm mt-2">
+            Status: <strong className="capitalize">{order.status}</strong>
+          </p>
+          <p className="text-sm">
+            Payment: <strong className="uppercase">{order.paymentStatus}</strong>
+          </p>
         </div>
 
-        {/* Items */}
-        <div className="bg-white rounded shadow p-5">
-          <h3 className="font-semibold text-lg mb-4">Items</h3>
-          <div className="space-y-4">
-            {order.items.map((item) => (
+        {/* ITEMS */}
+        <div className="bg-white p-4 rounded shadow">
+          <h2 className="font-semibold mb-3">Items</h2>
+          <div className="space-y-3">
+            {order.items.map(item => (
               <div
                 key={item._id}
-                className={`flex flex-col sm:flex-row sm:justify-between gap-3 pb-4 border-b last:border-b-0 ${
-                  item.status === 'cancelled' ? 'opacity-50' : ''
+                className={`flex justify-between items-start border-b pb-3 ${
+                  item.status === 'cancelled' ? 'opacity-60' : ''
                 }`}
               >
-                <div className="flex-1">
-                  <p className="font-medium">{item.name}</p>
-                  <p className="text-sm text-gray-600">
-                    ₹{item.price} × {item.quantity}
-                  </p>
-                  {item.status === 'cancelled' && (
-                    <span className="inline-block mt-1 text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded">
-                      Cancelled
-                    </span>
+                <div className="flex items-center gap-3 flex-1">
+                  {item.productId?.images?.[0] && (
+                    <img
+                      src={item.productId.images[0]}
+                      alt={item.name}
+                      className="w-16 h-16 object-cover border rounded"
+                    />
                   )}
+                  <div className="flex-1">
+                    <p className="text-sm font-medium">{item.name}</p>
+                    <p className="text-xs text-gray-500">₹{item.price} × {item.quantity}</p>
+                    {item.status === 'cancelled' && (
+                      <span className="inline-block mt-1 text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded">
+                        Cancelled
+                      </span>
+                    )}
+                  </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <p className="font-bold">₹{item.price * item.quantity}</p>
+                <div className="flex flex-col items-end gap-2">
+                  <p className="text-sm font-semibold">₹{item.price * item.quantity}</p>
                   
                   {/* ✅ NEW: Cancel Item Button */}
                   {order.status !== 'delivered' &&
@@ -179,62 +144,55 @@ export default function OrderDetailsPage() {
           </div>
 
           {/* Order Total */}
-          <div className="mt-4 pt-4 border-t space-y-2">
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-600">Items Total</span>
-              <span className="font-medium">
-                ₹{order.items.reduce((sum, item) => sum + item.price * item.quantity, 0)}
-              </span>
+          <div className="mt-4 pt-4 border-t space-y-1 text-sm">
+            <div className="flex justify-between">
+              <span className="text-gray-600">Subtotal</span>
+              <span>₹{order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0)}</span>
             </div>
             {order.shippingCharges > 0 && (
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600">Shipping Charges</span>
-                <span className="font-medium text-green-600">₹{order.shippingCharges}</span>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Shipping</span>
+                <span className="text-green-600">₹{order.shippingCharges}</span>
               </div>
             )}
-            <div className="flex justify-between text-lg font-bold border-t pt-2">
+            <div className="flex justify-between font-bold text-lg border-t pt-2">
               <span>Grand Total</span>
               <span className="text-orange-600">₹{order.totalAmount}</span>
             </div>
           </div>
         </div>
 
-        {/* Shipping Address - ✅ FIXED */}
-        <div className="bg-white rounded shadow p-5">
-          <h3 className="font-semibold text-lg mb-3">Shipping Address</h3>
-          {order.shippingAddressId ? (
+        {/* SHIPPING ADDRESS - ✅ FIXED */}
+        <div className="bg-white p-4 rounded shadow">
+          <h2 className="font-semibold mb-2">Shipping Address</h2>
+          {addr ? (
             <div className="text-sm text-gray-700 space-y-1">
-              <p className="font-medium">{order.shippingAddressId.label || 'Home'}</p>
-              <p>{order.shippingAddressId.street}</p>
-              <p>
-                {order.shippingAddressId.city}, {order.shippingAddressId.state} - {order.shippingAddressId.zipCode}
-              </p>
-              <p>{order.shippingAddressId.country || 'India'}</p>
-              <p className="text-gray-600">Phone: {order.shippingAddressId.phoneNumber}</p>
+              <p className="font-medium">{addr.label || 'Home'}</p>
+              <p>{addr.street}</p>
+              <p>{addr.city}, {addr.state} - {addr.zipCode}</p>
+              <p>{addr.country || 'India'}</p>
+              <p className="text-gray-600">Phone: {addr.phoneNumber}</p>
             </div>
           ) : (
-            <p className="text-sm text-gray-500">Address not available</p>
+            <p className="text-sm text-gray-500">Shipping address not available.</p>
           )}
         </div>
 
-        {/* Tracking Info */}
-        {order.trackingInfo && (
-          <div className="bg-white rounded shadow p-5">
-            <h3 className="font-semibold text-lg mb-3">Tracking Information</h3>
+        {/* TRACKING INFO - ✅ IMPROVED */}
+        {order.trackingInfo && order.trackingInfo.courierName && (
+          <div className="bg-blue-50 border border-blue-200 rounded p-4">
+            <h2 className="font-semibold mb-3 text-sm">Track Your Shipment</h2>
             <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-gray-600">Courier</span>
-                <span className="font-medium">{order.trackingInfo.courierName || 'N/A'}</span>
-              </div>
+              <p><strong>Courier:</strong> {order.trackingInfo.courierName}</p>
               {order.trackingInfo.trackingNumber && (
                 <div className="flex flex-col gap-2">
-                  <span className="text-gray-600">Tracking Number</span>
+                  <strong>Tracking Number:</strong>
                   <div className="flex gap-2">
                     <input
                       type="text"
                       value={order.trackingInfo.trackingNumber}
                       readOnly
-                      className="flex-1 px-3 py-2 bg-gray-50 border rounded text-sm"
+                      className="flex-1 px-3 py-2 bg-white border rounded text-sm font-mono"
                     />
                     <button
                       onClick={() => {
@@ -249,12 +207,9 @@ export default function OrderDetailsPage() {
                 </div>
               )}
               {order.trackingInfo.shippedDate && (
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Shipped Date</span>
-                  <span className="font-medium">
-                    {new Date(order.trackingInfo.shippedDate).toLocaleDateString()}
-                  </span>
-                </div>
+                <p>
+                  <strong>Shipped:</strong> {new Date(order.trackingInfo.shippedDate).toLocaleDateString()}
+                </p>
               )}
               {order.trackingInfo.courierName?.toLowerCase().includes('shiprocket') && (
                 <a
@@ -270,56 +225,34 @@ export default function OrderDetailsPage() {
           </div>
         )}
 
-        {/* Payment Info */}
-        <div className="bg-white rounded shadow p-5">
-          <h3 className="font-semibold text-lg mb-3">Payment Information</h3>
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span className="text-gray-600">Payment Method</span>
-              <span className="font-medium capitalize">
-                {order.paymentMethod === 'cod' ? 'Cash on Delivery' : 'Online Payment'}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Payment Status</span>
-              <span
-                className={`px-2 py-1 rounded text-xs font-medium capitalize ${
-                  paymentStatusColors[order.paymentStatus] || 'bg-gray-100 text-gray-700'
-                }`}
-              >
-                {order.paymentStatus}
-              </span>
-            </div>
-            {order.razorpayPaymentId && (
-              <div className="flex justify-between">
-                <span className="text-gray-600">Payment ID</span>
-                <span className="font-mono text-xs">{order.razorpayPaymentId}</span>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Actions */}
+        {/* ACTION BUTTONS */}
         <div className="flex flex-col sm:flex-row gap-3">
-          <Link
-            to="/customer/orders"
-            className="flex-1 text-center px-4 py-2 border border-gray-300 rounded hover:bg-gray-50"
+          <button
+            onClick={() => navigate('/customer/orders')}
+            className="flex-1 px-4 py-2 border border-gray-300 rounded hover:bg-gray-50"
           >
             Back to Orders
-          </Link>
-          
-          {/* Cancel Order Button */}
-          {order.status !== 'delivered' &&
-            order.status !== 'cancelled' &&
-            order.status !== 'returned' && (
-              <button
-                onClick={handleCancelOrder}
-                disabled={cancelling}
-                className="flex-1 px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 disabled:opacity-50"
-              >
-                {cancelling ? 'Cancelling...' : 'Cancel Entire Order'}
-              </button>
-            )}
+          </button>
+
+          {['pending', 'processing'].includes(order.status) && (
+            <button
+              onClick={handleCancel}
+              disabled={actionLoading}
+              className="flex-1 px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 disabled:opacity-50"
+            >
+              {actionLoading ? 'Cancelling...' : 'Cancel Entire Order'}
+            </button>
+          )}
+
+          {order.status === 'delivered' && (
+            <button
+              onClick={handleReturn}
+              disabled={actionLoading}
+              className="flex-1 px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600 disabled:opacity-50"
+            >
+              {actionLoading ? 'Returning...' : 'Return Order'}
+            </button>
+          )}
         </div>
       </div>
     </Layout>
