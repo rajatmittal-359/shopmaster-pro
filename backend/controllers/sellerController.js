@@ -409,7 +409,7 @@ exports.getSellerAnalytics = async (req, res) => {
       { 
         $match: { 
           'items.sellerId': req.user._id, 
-          paymentStatus: 'completed'  // ✅ Now works after delivery
+          paymentStatus: { $in: ["paid", "completed"] }  // ✅ Now works after delivery
         }
       },
       {
