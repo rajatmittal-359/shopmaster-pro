@@ -294,7 +294,11 @@ exports.getAnalytics = async (req, res) => {
     
     // ✅ FIXED: Now works because seller sets paymentStatus='completed' on delivery
     const totalRevenueAgg = await Order.aggregate([
-      { $match: { paymentStatus: 'completed' }}, // ✅ Includes COD after delivery
+        { 
+    $match: { 
+      paymentStatus: { $in: ['paid', 'completed'] }   // ← change yaha
+    }
+  }, // ✅ Includes COD after delivery
       { 
         $group: { 
           _id: null, 
@@ -311,11 +315,11 @@ exports.getAnalytics = async (req, res) => {
     
     const revenueByDayAgg = await Order.aggregate([
       { 
-        $match: { 
-          paymentStatus: 'completed', // ✅ Includes COD after delivery
-          createdAt: { $gte: sevenDaysAgo }
-        }
-      },
+    $match: { 
+      paymentStatus: { $in: ['paid', 'completed'] },  // ← yaha
+      createdAt: { $gte: sevenDaysAgo }
+    }
+  },
       { 
         $group: { 
           _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' }},
@@ -334,7 +338,11 @@ exports.getAnalytics = async (req, res) => {
     
     // ---------- TOP SELLERS BY REVENUE ----------
     const topSellersAgg = await Order.aggregate([
-      { $match: { paymentStatus: 'completed' }}, // ✅ Includes COD after delivery
+        { 
+    $match: { 
+      paymentStatus: { $in: ['paid', 'completed'] }   // ← yaha
+    }
+  }, // ✅ Includes COD after delivery
       { $unwind: '$items' },
       { 
         $group: { 
