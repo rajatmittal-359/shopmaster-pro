@@ -170,20 +170,25 @@ export default function CartPage() {
           <div className="bg-white rounded shadow p-4 sticky top-4">
             <h3 className="font-semibold text-lg mb-3">Order Summary</h3>
 
-            <div className="space-y-2 text-sm mb-4">
-              <div className="flex justify-between">
-                <span>Subtotal ({cart.items.length} items)</span>
-                <span>₹{cart.totalAmount}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Shipping</span>
-                <span className="text-green-600">FREE</span>
-              </div>
-              <div className="border-t pt-2 flex justify-between font-bold text-lg">
-                <span>Total</span>
-                <span>₹{cart.totalAmount}</span>
-              </div>
-            </div>
+<div className="space-y-2 text-sm mb-4">
+  <div className="flex justify-between">
+    <span>Subtotal ({cart.items.length} items)</span>
+    <span>₹{cart.totalAmount}</span>
+  </div>
+
+  <div className="flex justify-between">
+    <span>Shipping</span>
+    <span className="text-xs text-gray-500">
+      Calculated at checkout
+    </span>
+  </div>
+
+  <div className="border-t pt-2 flex justify-between font-bold text-lg">
+    <span>Total</span>
+    <span>₹{cart.totalAmount}</span> {/* items total only */}
+  </div>
+</div>
+
 
             <button
               onClick={() => navigate('/customer/checkout')}
