@@ -15,7 +15,7 @@ router.get('/categories/all', async (req, res) => {
     const categories = await Category.find({ isActive: true })
       .populate('parentCategory', 'name')  // ✅ Parent info add
       .select('name description parentCategory')
-      .sort({ name: 1 });
+      
     
     res.json({ categories });
   } catch (error) {

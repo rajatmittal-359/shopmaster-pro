@@ -28,6 +28,7 @@ const categorySchema = new mongoose.Schema(
       ref: 'Category',
       default: null,
     },
+    
   },
   {
     timestamps: true
