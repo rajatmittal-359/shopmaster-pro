@@ -143,9 +143,18 @@ export default function ProductCard({ product }) {
         </p>
 
         <div className="flex items-center justify-between mt-2">
-          <span className="text-base font-bold text-orange-600">
-            ₹{product.price}
-          </span>
+          <div className="flex items-center gap-2">
+  {product.mrp && product.mrp > product.price && (
+    <span className="text-sm text-gray-400 line-through">
+      ₹{product.mrp}
+    </span>
+  )}
+
+  <span className="text-base font-bold text-orange-600">
+    ₹{product.price}
+  </span>
+</div>
+
           <span className="text-[11px] text-gray-500">
             Stock: {product.stock}
           </span>
