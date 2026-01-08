@@ -38,7 +38,7 @@ export default function MyProductsPage() {
     category: "",
     price: "",
     stock: "",
-    lowStockThreshold: "10",
+    lowStockThreshold: "",
     images: [],
     brand: "",
     sku: "",
@@ -203,7 +203,11 @@ export default function MyProductsPage() {
         category: form.category,
         price: Number(form.price),
         stock: Number(form.stock),
-        lowStockThreshold: Number(form.lowStockThreshold || 10),
+        lowStockThreshold:
+  form.lowStockThreshold === ""
+    ? undefined
+    : Number(form.lowStockThreshold),
+
         brand: form.brand || undefined,
         sku: form.sku || undefined,
         mrp: form.mrp ? Number(form.mrp) : undefined,
@@ -278,7 +282,11 @@ export default function MyProductsPage() {
       category: prod.category?._id || "",
       price: prod.price,
       stock: prod.stock,
-      lowStockThreshold: prod.lowStockThreshold || "10",
+      lowStockThreshold:
+  typeof prod.lowStockThreshold === "number"
+    ? String(prod.lowStockThreshold)
+    : "",
+
       images: [],
       brand: prod.brand || "",
       sku: prod.sku || "",
@@ -317,7 +325,7 @@ export default function MyProductsPage() {
       category: "",
       price: "",
       stock: "",
-      lowStockThreshold: "10",
+      lowStockThreshold: "",
       images: [],
       brand: "",
       sku: "",
