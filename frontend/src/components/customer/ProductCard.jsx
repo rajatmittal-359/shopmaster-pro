@@ -24,12 +24,9 @@ export default function ProductCard({ product }) {
   const shortDesc =
     plainDesc.length > 90 ? plainDesc.slice(0, 90).trim() + '…' : plainDesc;
 
-const isLowStock =
-  typeof product.lowStockThreshold === 'number' &&
-  product.lowStockThreshold > 0 &&
-  product.stock > 0 &&
-  product.stock <= product.lowStockThreshold;
-
+  const isLowStock =
+    typeof product.lowStockThreshold === 'number' &&
+    product.stock <= product.lowStockThreshold;
 
   // ✅ Wishlist status – only for logged-in customers
   useEffect(() => {

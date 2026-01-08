@@ -59,7 +59,11 @@ exports.addProduct = async (req, res) => {
       category,
       price,
       stock,
-      lowStockThreshold: lowStockThreshold || 10,
+      lowStockThreshold:
+  typeof lowStockThreshold === 'number'
+    ? lowStockThreshold
+    : 10,
+
       sellerId: req.user._id,
       isActive: true,
       images: imageUrls,
@@ -114,7 +118,9 @@ exports.updateProduct = async (req, res) => {
     if (price !== undefined) product.price = price;
     if (stock !== undefined) product.stock = stock;
     if (isActive !== undefined) product.isActive = isActive;
-    if (lowStockThreshold !== undefined) product.lowStockThreshold = lowStockThreshold;
+    if (typeof lowStockThreshold === 'number') {
+  product.lowStockThreshold = lowStockThreshold;
+};
     if (brand !== undefined) product.brand = brand;
     if (sku !== undefined) product.sku = sku;
     if (mrp !== undefined) product.mrp = mrp;
