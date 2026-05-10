@@ -29,8 +29,7 @@ const wishlistSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// Index for faster queries
-wishlistSchema.index({ userId: 1 });
+
 
 const Wishlist = mongoose.model('Wishlist', wishlistSchema);
 
