@@ -20,31 +20,32 @@ const {
 } = require('../controllers/sellerController');
 
 const checkSellerStatus = require('../middlewares/checkSellerStatus');
+const { requireApprovedSeller } = require('../middlewares/checkSellerStatus');
 router.use(authMiddleware, roleMiddleware('seller'), checkSellerStatus);
 
-
+// Read-only routes stay available to an unapproved seller so they can still see
+// their own dashboard and the "account under review" state.
 router.get('/profile', getSellerProfile);
 
 
 router.get('/products', getMyProducts);
-router.post('/products', addProduct);
-router.patch('/products/:productId', updateProduct);
-router.delete('/products/:productId', deleteProduct);
-router.patch('/products/:productId/stock', updateStock);
 router.get('/products/low-stock', getLowStockProducts);
 router.get('/products/:id', getProductById);
 
 router.get('/orders', getMyOrders);
-router.get('/orders/:orderId', getOrderDetails);  
-
-router.patch('/orders/:orderId/status', updateOrderStatus);
-router.patch(
-  '/orders/:orderId/tracking',
-  authMiddleware,
-  roleMiddleware('seller'),
-  updateTracking
-);
+router.get('/orders/:orderId', getOrderDetails);
 
 router.get('/analytics', getSellerAnalytics);
+
+// Capabilities that admin approval is meant to unlock: listing/altering catalogue
+// and fulfilling orders. Previously these were reachable by any non-suspended
+// seller, which made approve/reject purely cosmetic.
+router.post('/products', requireApprovedSeller, addProduct);
+router.patch('/products/:productId', requireApprovedSeller, updateProduct);
+router.delete('/products/:productId', requireApprovedSeller, deleteProduct);
+router.patch('/products/:productId/stock', requireApprovedSeller, updateStock);
+
+router.patch('/orders/:orderId/status', requireApprovedSeller, updateOrderStatus);
+router.patch('/orders/:orderId/tracking', requireApprovedSeller, updateTracking);
 
 module.exports = router;

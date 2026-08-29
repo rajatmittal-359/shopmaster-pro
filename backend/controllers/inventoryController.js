@@ -61,9 +61,24 @@ exports.applyInventoryChange = async ({
 };
 
 // ✅ ADMIN + SELLER INVENTORY LOGS API
+//
+// An inventory log has no seller field of its own; ownership is derived through
+// productId -> Product.sellerId. A seller therefore only sees logs for products
+// they own. Admins keep the platform-wide view, which is the existing intended
+// role model (inventoryRoutes allows both roles).
 exports.getInventoryLogs = async (req, res) => {
   try {
-    const logs = await InventoryLog.find()
+    const filter = {};
+
+    if (req.user.role === "seller") {
+      const ownedProductIds = await Product.find({ sellerId: req.user._id })
+        .distinct("_id");
+
+      // No products means no logs - never fall through to an unscoped query.
+      filter.productId = { $in: ownedProductIds };
+    }
+
+    const logs = await InventoryLog.find(filter)
       .populate("productId", "name")
       .populate("orderId", "_id")
       .populate("performedBy", "name email")

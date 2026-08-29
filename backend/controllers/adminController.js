@@ -1,4 +1,5 @@
 // backend/controllers/adminController.js
+const mongoose = require('mongoose');
 const User = require('../models/User');
 const Seller = require('../models/Seller');
 const Category = require('../models/Category');
@@ -221,9 +222,18 @@ exports.updateCategory = async (req, res) => {
       }
     }
 
+    // findByIdAndUpdate bypasses the pre('save') hook, so the materialized
+    // path and slug are computed explicitly here to stay consistent.
+    const update = { name, description, isActive };
+    if (parentCategory !== undefined) {
+      update.parentCategory = parentCategory || null;
+      update.ancestors = await Category.buildAncestors(parentCategory || null);
+    }
+    if (name) update.slug = Category.slugify(name);
+
     const category = await Category.findByIdAndUpdate(
       categoryId,
-      { name, description, isActive, parentCategory: parentCategory || null },
+      update,
       { new: true, runValidators: true }
     ).populate('parentCategory', 'name');
 
@@ -277,6 +287,74 @@ exports.deleteCategory = async (req, res) => {
   }
 };
 
+
+/**
+ * ORDER OPERATIONS (read-only platform visibility)
+ *
+ * The admin previously had no order endpoint at all, so the platform operator
+ * could not investigate a disputed order. Seller and customer order routes stay
+ * scoped as they are; this is an additional admin-scoped view, not a relaxation
+ * of those boundaries.
+ */
+
+// Get platform orders (paginated, optionally filtered)
+exports.getAllOrders = async (req, res) => {
+  try {
+    const { status, paymentStatus, page = 1, limit = 20 } = req.query;
+
+    const filter = {};
+    if (status) filter.status = status;
+    if (paymentStatus) filter.paymentStatus = paymentStatus;
+
+    const numericLimit = Math.min(Math.max(Number(limit) || 20, 1), 100);
+    const numericPage = Math.max(Number(page) || 1, 1);
+
+    const [orders, total] = await Promise.all([
+      Order.find(filter)
+        .populate('customerId', 'name email')
+        .populate('items.sellerId', 'name email')
+        .sort({ createdAt: -1 })
+        .limit(numericLimit)
+        .skip((numericPage - 1) * numericLimit),
+      Order.countDocuments(filter),
+    ]);
+
+    res.json({
+      orders,
+      total,
+      currentPage: numericPage,
+      totalPages: Math.ceil(total / numericLimit),
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Get a single order in full (admin sees every seller's items, unlike the
+// seller view which filters items down to that seller's own)
+exports.getOrderById = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+
+    if (!mongoose.isValidObjectId(orderId)) {
+      return res.status(400).json({ message: 'Invalid order id' });
+    }
+
+    const order = await Order.findById(orderId)
+      .populate('customerId', 'name email')
+      .populate('items.sellerId', 'name email')
+      .populate('items.productId', 'name images')
+      .populate('shippingAddressId');
+
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+
+    res.json({ success: true, order });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
 
 /**
  * PLATFORM ANALYTICS (STEP-6 ENHANCED)

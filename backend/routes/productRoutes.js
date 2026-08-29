@@ -1,5 +1,6 @@
 // backend/routes/productRoutes.js
 const express = require('express');
+const mongoose = require('mongoose');
 const router = express.Router();
 const Product = require('../models/Product');
 const Category = require('../models/Category');
@@ -25,48 +26,63 @@ router.get('/categories/all', async (req, res) => {
 // Get category hierarchy tree - PUBLIC
 router.get('/categories/tree', async (req, res) => {
   try {
-    const allCategories = await Category.find({ isActive: true })
-      .populate('parentCategory', 'name')
-      .select('name description parentCategory')
-      .sort({ name: 1 });
+    // Only browsable categories: active, and with no deactivated ancestor.
+    const browsableIds = await Category.getBrowsableIds();
 
-    // Build tree structure
+    const allCategories = await Category.find({ _id: { $in: browsableIds } })
+      .select('name slug description parentCategory ancestors')
+      .sort({ name: 1 })
+      .lean();
+
+    // Live product count per leaf category, rolled up to every ancestor so a
+    // parent reports everything beneath it.
+    const counts = await Product.aggregate([
+      { $match: { isActive: true, stock: { $gt: 0 }, category: { $in: browsableIds } } },
+      { $group: { _id: '$category', n: { $sum: 1 } } },
+    ]);
+    const directCount = new Map(counts.map((c) => [String(c._id), c.n]));
+
     const categoryMap = {};
     const roots = [];
 
-    // First pass: create lookup map
-    allCategories.forEach(cat => {
-      categoryMap[cat._id.toString()] = {
+    allCategories.forEach((cat) => {
+      categoryMap[String(cat._id)] = {
         _id: cat._id,
         name: cat.name,
+        slug: cat.slug,
         description: cat.description,
-        parentCategory: cat.parentCategory?._id || null,
-        children: []
+        parentCategory: cat.parentCategory || null,
+        productCount: directCount.get(String(cat._id)) || 0,
+        children: [],
       };
     });
 
-    // Second pass: build parent-child relationships
-    allCategories.forEach(cat => {
-      if (cat.parentCategory && cat.parentCategory._id) {
-        const parentId = cat.parentCategory._id.toString();
-        const parent = categoryMap[parentId];
-        if (parent) {
-          parent.children.push(categoryMap[cat._id.toString()]);
-        }
-      } else {
-        // No parent = root category
-        roots.push(categoryMap[cat._id.toString()]);
-      }
+    // Roll each leaf's count up through its ancestors.
+    allCategories.forEach((cat) => {
+      const n = directCount.get(String(cat._id)) || 0;
+      if (!n) return;
+      (cat.ancestors || []).forEach((a) => {
+        const node = categoryMap[String(a)];
+        if (node) node.productCount += n;
+      });
     });
 
-    res.json({ 
+    allCategories.forEach((cat) => {
+      const node = categoryMap[String(cat._id)];
+      const parent = cat.parentCategory && categoryMap[String(cat.parentCategory)];
+      if (parent) parent.children.push(node);
+      else roots.push(node);
+    });
+
+    res.json({
       categories: roots,
-      totalCategories: allCategories.length 
+      totalCategories: allCategories.length,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 });
+
 
 
 /**
@@ -93,8 +109,24 @@ router.get('/', async (req, res) => {
 
     const filter = { isActive: true, stock: { $gt: 0 } };
 
+    // A category contains everything beneath it. Selecting a main category
+    // returns its whole subtree, not just products pinned directly to it
+    // (products live on leaves, so an exact match always returned nothing).
+    // getBrowsableIds also drops any category sitting under a deactivated
+    // parent, so switching off a parent hides its products too.
     if (category) {
-      filter.category = category;
+      if (!mongoose.isValidObjectId(category)) {
+        return res.status(400).json({ message: 'Invalid category id' });
+      }
+      const categoryIds = await Category.getBrowsableIds(category);
+      if (categoryIds.length === 0) {
+        return res.json({ products: [], totalPages: 0, currentPage: 1, total: 0 });
+      }
+      filter.category = { $in: categoryIds };
+    } else {
+      // No category selected: still exclude products whose category (or any of
+      // its ancestors) has been deactivated.
+      filter.category = { $in: await Category.getBrowsableIds() };
     }
 
     // Text/regex search

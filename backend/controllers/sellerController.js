@@ -2,7 +2,101 @@
 const Product = require('../models/Product');
 const Order = require('../models/Order');
 const Seller = require('../models/Seller');
+const InventoryLog = require('../models/Inventory');
+const Category = require('../models/Category');
+const mongoose = require('mongoose');
 const { uploadImage, deleteImage } = require('../utils/cloudinary');
+
+/**
+ * A seller's catalogue is their non-deleted products. deleteProduct() is a soft
+ * delete and there is no seller-facing way to view or restore removed products,
+ * so every count shown on the dashboard is scoped to what the seller can
+ * actually inspect in their product list.
+ */
+const sellerCatalogueFilter = (sellerId) => ({ sellerId, isActive: true });
+
+/**
+ * "Low stock" means at or below the seller's own alert threshold.
+ * '<=' is the definition already used by admin analytics, the low-stock cron
+ * job and the storefront badge. The seller dashboard previously used '<' and
+ * therefore disagreed with its own low-stock list.
+ */
+const isLowStock = (product) => product.stock <= product.lowStockThreshold;
+
+/**
+ * Record a seller-initiated manual stock change in the inventory audit trail.
+ *
+ * Order-driven stock movements already write InventoryLog rows; seller-initiated
+ * edits did not, so the "Inventory Logs" page was missing exactly the
+ * "manual adjustments" it claims to show.
+ *
+ * quantity is stored as the DELTA, matching how 'sale' (negative) and
+ * 'return'/'restock' (positive) are already recorded, so the logs page can
+ * render every row the same way.
+ *
+ * Returns null when nothing actually changed, so a no-op edit logs nothing.
+ */
+const logStockAdjustment = async ({
+  productId,
+  stockBefore,
+  stockAfter,
+  performedBy,
+  reason,
+}) => {
+  if (stockBefore === stockAfter) return null;
+
+  return InventoryLog.create({
+    productId,
+    type: 'adjustment',
+    quantity: stockAfter - stockBefore,
+    stockBefore,
+    stockAfter,
+    performedBy,
+    reason: reason || 'Manual stock update by seller',
+  });
+};
+
+/**
+ * Products must sit on a leaf category.
+ *
+ * A parent category is a container: its products are the union of its
+ * descendants. Allowing a product to be pinned directly to a parent creates
+ * items that belong to a branch and a leaf at once, which no rollup can
+ * represent consistently. Amazon/Flipkart apply the same rule.
+ *
+ * Returns an error message, or null when the category is acceptable.
+ */
+const validateLeafCategory = async (categoryId) => {
+  if (!categoryId) return null;
+  if (!mongoose.isValidObjectId(categoryId)) return 'Invalid category';
+
+  const category = await Category.findById(categoryId).select('name isActive').lean();
+  if (!category) return 'Category not found';
+  if (category.isActive === false) return `Category "${category.name}" is not active`;
+
+  if (await Category.hasChildren(categoryId)) {
+    return `"${category.name}" is a main category. Please choose one of its subcategories.`;
+  }
+  return null;
+};
+
+/** Accept only a non-negative integer stock value. */
+const parseStock = (raw) => {
+  if (raw === undefined || raw === null || raw === '') {
+    return { ok: false, message: 'Stock is required' };
+  }
+  if (typeof raw !== 'number' && typeof raw !== 'string') {
+    return { ok: false, message: 'Stock must be a number' };
+  }
+  const value = Number(raw);
+  if (!Number.isInteger(value)) {
+    return { ok: false, message: 'Stock must be a whole number' };
+  }
+  if (value < 0) {
+    return { ok: false, message: 'Stock cannot be negative' };
+  }
+  return { ok: true, value };
+};
 
 /**
  * SELLER PRODUCTS
@@ -11,10 +105,7 @@ const { uploadImage, deleteImage } = require('../utils/cloudinary');
 // Get seller's products
 exports.getMyProducts = async (req, res) => {
   try {
-    const products = await Product.find({
-      sellerId: req.user._id,
-      isActive: true,
-    })
+    const products = await Product.find(sellerCatalogueFilter(req.user._id))
       .populate('category', 'name')
       .sort({ createdAt: -1 });
 
@@ -43,6 +134,11 @@ exports.addProduct = async (req, res) => {
       mrp,
       tags,
     } = req.body;
+
+    const categoryError = await validateLeafCategory(category);
+    if (categoryError) {
+      return res.status(400).json({ message: categoryError });
+    }
 
     let imageUrls = [];
 
@@ -111,6 +207,17 @@ exports.updateProduct = async (req, res) => {
       });
     }
 
+    if (category) {
+      const categoryError = await validateLeafCategory(category);
+      if (categoryError) {
+        return res.status(400).json({ message: categoryError });
+      }
+    }
+
+    // Captured before mutation so a stock edit made through the product form
+    // is audited the same way as one made through the stock endpoint.
+    const stockBefore = product.stock;
+
     // Update scalar fields
     if (name) product.name = name;
     if (description) product.description = description;
@@ -145,6 +252,17 @@ exports.updateProduct = async (req, res) => {
     }
 
     await product.save();
+
+    // No-ops are ignored by logStockAdjustment, so editing other fields does
+    // not produce a spurious inventory entry.
+    await logStockAdjustment({
+      productId: product._id,
+      stockBefore,
+      stockAfter: product.stock,
+      performedBy: req.user._id,
+      reason: 'Stock changed via product edit',
+    });
+
     await product.populate("category", "name");
 
     res.json({
@@ -182,23 +300,38 @@ exports.deleteProduct = async (req, res) => {
 exports.updateStock = async (req, res) => {
   try {
     const { productId } = req.params;
-    const { stock } = req.body;
+    const { stock, reason } = req.body;
 
-    if (stock < 0) {
-      return res.status(400).json({ message: 'Stock cannot be negative' });
+    const parsed = parseStock(stock);
+    if (!parsed.ok) {
+      return res.status(400).json({ message: parsed.message });
     }
 
-    const product = await Product.findOneAndUpdate(
-      { _id: productId, sellerId: req.user._id },
-      { stock },
-      { new: true }
-    ).populate('category', 'name');
+    // Ownership scope preserved from the previous findOneAndUpdate filter.
+    const product = await Product.findOne({
+      _id: productId,
+      sellerId: req.user._id,
+    });
 
     if (!product) {
       return res.status(404).json({
         message: 'Product not found or you do not have permission',
       });
     }
+
+    const stockBefore = product.stock;
+    product.stock = parsed.value;
+    await product.save();
+
+    await logStockAdjustment({
+      productId: product._id,
+      stockBefore,
+      stockAfter: product.stock,
+      performedBy: req.user._id,
+      reason,
+    });
+
+    await product.populate('category', 'name');
 
     res.json({
       message: 'Stock updated successfully',
@@ -213,13 +346,12 @@ exports.updateStock = async (req, res) => {
 // Get low stock products
 exports.getLowStockProducts = async (req, res) => {
   try {
-    const products = await Product.find({
-      sellerId: req.user._id,
-    }).populate('category', 'name');
+    // Same catalogue scope and same threshold predicate as the dashboard count.
+    const products = await Product.find(
+      sellerCatalogueFilter(req.user._id)
+    ).populate('category', 'name');
 
-    const lowStockProducts = products.filter(
-      (product) => product.stock <= product.lowStockThreshold
-    );
+    const lowStockProducts = products.filter(isLowStock);
 
     res.json({
       count: lowStockProducts.length,
@@ -237,7 +369,17 @@ exports.getLowStockProducts = async (req, res) => {
 // Get orders that contain this seller's products
 exports.getMyOrders = async (req, res) => {
   try {
-    const orders = await Order.find({ "items.sellerId": req.user._id })
+    // A prepaid order that was never paid is an abandoned checkout, not work.
+    // Those records are created up-front by createRazorpayOrder and previously
+    // sat in the seller's queue forever with nothing to act on. COD orders are
+    // actionable from creation, so only unpaid razorpay orders are excluded.
+    const orders = await Order.find({
+      "items.sellerId": req.user._id,
+      $or: [
+        { paymentMethod: { $ne: "razorpay" } },
+        { paymentStatus: { $ne: "pending" } },
+      ],
+    })
       .populate("customerId", "name email")
       .sort({ createdAt: -1 });
 
@@ -400,14 +542,14 @@ if (status === 'delivered') {
 // Get seller analytics (products + revenue)
 exports.getSellerAnalytics = async (req, res) => {
   try {
-    const totalProducts = await Product.countDocuments({ sellerId: req.user._id });
-    const activeProducts = await Product.countDocuments({ 
-      sellerId: req.user._id, 
-      isActive: true 
-    });
-    
-    const allProducts = await Product.find({ sellerId: req.user._id });
-    const lowStockCount = allProducts.filter(p => p.stock < p.lowStockThreshold).length;
+    // Scoped to the seller's catalogue so these counts match /seller/products.
+    const catalogue = sellerCatalogueFilter(req.user._id);
+
+    const totalProducts = await Product.countDocuments(catalogue);
+    const activeProducts = await Product.countDocuments(catalogue);
+
+    const catalogueProducts = await Product.find(catalogue);
+    const lowStockCount = catalogueProducts.filter(isLowStock).length;
     
     // ✅ FIXED: Revenue from completed orders (both COD delivered + Razorpay paid)
     const revenue = await Order.aggregate([

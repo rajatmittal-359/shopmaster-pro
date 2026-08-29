@@ -6,15 +6,101 @@ const Address = require('../models/Address');
 const { applyInventoryChange } = require("./inventoryController");
 const InventoryLog = require("../models/Inventory");
 
-const { getShippingRate, pickBestCourier } = require('../utils/shiprocketService');
+// Imported as a module object rather than destructured so the Shiprocket call
+// stays late-bound: destructuring captured the function reference at load time,
+// which made this third-party boundary impossible to stub in tests.
+const shiprocketService = require('../utils/shiprocketService');
 
 
 const sendSafeEmail = require('../utils/sendSafeEmail');
 const { orderConfirmedEmail } = require('../utils/emailTemplates');
 
+/**
+ * Validate a client-supplied cart quantity at the request boundary.
+ * Without this, bad input reached Mongoose and surfaced as a 500 with raw
+ * schema paths ("Cast to Number failed for value \"abc\""), and a missing
+ * quantity produced a NaN cart total.
+ * Returns { ok: true, value } or { ok: false, message }.
+ */
+const parseQuantity = (raw) => {
+  if (raw === undefined || raw === null || raw === '') {
+    return { ok: false, message: 'Quantity is required' };
+  }
+  if (typeof raw !== 'number' && typeof raw !== 'string') {
+    return { ok: false, message: 'Quantity must be a number' };
+  }
+  const value = Number(raw);
+  if (!Number.isFinite(value)) {
+    return { ok: false, message: 'Quantity must be a valid number' };
+  }
+  if (!Number.isInteger(value)) {
+    return { ok: false, message: 'Quantity must be a whole number' };
+  }
+  if (value < 1) {
+    return { ok: false, message: 'Quantity must be at least 1' };
+  }
+  return { ok: true, value };
+};
+
+const FALLBACK_SHIPPING = 100;
+
+/**
+ * Single source of truth for COD/prepaid shipping cost.
+ * checkout() and previewTotals() previously carried near-identical copies of
+ * this block with different isCOD inputs, which is why the quoted total and the
+ * charged total diverged. Sharing one function makes divergence impossible.
+ */
+const calculateShipping = async (cartItems, address, isCOD) => {
+  try {
+    // Total cart weight (fallback 0.5 kg per item)
+    const totalWeight = cartItems.reduce(
+      (sum, item) => sum + (item.productId.weight || 0.5) * item.quantity,
+      0
+    );
+
+    const shippingData = await shiprocketService.getShippingRate(address.zipCode, totalWeight, isCOD);
+
+    const couriers =
+      shippingData?.data?.available_courier_companies ||
+      shippingData?.available_courier_companies ||
+      [];
+
+    if (couriers.length === 0) {
+      console.warn('⚠️ Shiprocket: No couriers available - using fallback');
+      return { shippingCharges: FALLBACK_SHIPPING, shippingCourier: 'Standard Shipping' };
+    }
+
+    const rateOf = (c) => c.freight_charge || c.rate || c.total_charge || 0;
+    const cheapest = couriers.reduce((min, curr) =>
+      rateOf(curr) < rateOf(min) ? curr : min
+    );
+
+    const baseRate = rateOf(cheapest);
+    const codFee = isCOD ? cheapest.cod_charges || cheapest.cod_charge || 0 : 0;
+
+    return {
+      shippingCharges: Math.round(baseRate + codFee),
+      shippingCourier:
+        cheapest.courier_name || cheapest.courier_company_id || 'Shiprocket',
+    };
+  } catch (shipErr) {
+    console.error('Shipping calculation failed:', shipErr.message);
+    return { shippingCharges: FALLBACK_SHIPPING, shippingCourier: 'Standard Shipping' };
+  }
+};
+
   exports.addToCart = async (req, res) => {
     try {
       const { productId, quantity } = req.body;
+
+      if (!productId || !mongoose.isValidObjectId(productId)) {
+        return res.status(400).json({ message: "A valid productId is required" });
+      }
+
+      const parsed = parseQuantity(quantity);
+      if (!parsed.ok) {
+        return res.status(400).json({ message: parsed.message });
+      }
 
       let cart = await Cart.findOne({ userId: req.user._id });
 
@@ -36,12 +122,28 @@ const { orderConfirmedEmail } = require('../utils/emailTemplates');
         (i) => i.productId.toString() === productId
       );
 
+      // Repeated adds compound, so the stock ceiling is checked against the
+      // resulting quantity, not just the increment.
+      const existingQty = itemIndex > -1 ? cart.items[itemIndex].quantity : 0;
+      const requestedQty = existingQty + parsed.value;
+
+      if (requestedQty > product.stock) {
+        return res.status(400).json({
+          message:
+            product.stock > 0
+              ? `Only ${product.stock} unit(s) available. Your cart already has ${existingQty}.`
+              : `${product.name} is out of stock`,
+          availableStock: product.stock,
+          inCart: existingQty,
+        });
+      }
+
       if (itemIndex > -1) {
-        cart.items[itemIndex].quantity += quantity;
+        cart.items[itemIndex].quantity = requestedQty;
       } else {
         cart.items.push({
           productId,
-          quantity,
+          quantity: parsed.value,
           price: product.price,
         });
       }
@@ -131,67 +233,14 @@ exports.checkout = async (req, res) => {
       }
     }
 
-    // ✅ Calculate shipping charges via Shiprocket
-// ✅ Calculate shipping charges via Shiprocket
-let shippingCharges = 0;
-let shippingCourier = null;
-
-try {
-  // Total cart weight (fallback 0.5 kg per item)
-  const totalWeight = cart.items.reduce((sum, item) => {
-    return sum + (item.productId.weight || 0.5) * item.quantity;
-  }, 0);
-
-  const pincode = address.zipCode;
-  const isCOD = req.body.paymentMethod === 'cod';
-
-  const shippingData = await getShippingRate(pincode, totalWeight, isCOD);
-
-  // ✅ FIXED: Correct path & field access
-  const couriers =
-    shippingData?.data?.available_courier_companies ||
-    shippingData?.available_courier_companies ||
-    [];
-
-  if (couriers.length > 0) {
-    // Cheapest courier pick
-    const cheapest = couriers.reduce((min, curr) => {
-      // ✅ Try multiple field names
-      const currRate = curr.freight_charge || curr.rate || curr.total_charge || 0;
-      const minRate = min.freight_charge || min.rate || min.total_charge || 0;
-      return currRate < minRate ? curr : min;
-    });
-
-    // ✅ Get base shipping rate
-    const baseRate = cheapest.freight_charge || cheapest.rate || cheapest.total_charge || 0;
-    
-    // ✅ Get COD charges if applicable
-    const codFee = isCOD && (cheapest.cod_charges || cheapest.cod_charge || 0);
-
-    shippingCharges = Math.round(baseRate + codFee);
-    shippingCourier = cheapest.courier_name || cheapest.courier_company_id || 'Shiprocket';
-
-    // ✅ DEBUG LOG
-    console.log('📦 COD SHIPPING:', {
-      totalWeight,
-      pincode,
-      isCOD,
-      baseRate,
-      codFee,
-      total: shippingCharges,
-      courier: shippingCourier
-    });
-  } else {
-    // Fallback
-    shippingCharges = 100;
-    shippingCourier = 'Standard Shipping';
-    console.warn('⚠️ Shiprocket: No couriers available - using fallback');
-  }
-} catch (shipErr) {
-  console.error('Shipping calculation failed:', shipErr.message);
-  shippingCharges = 100;
-  shippingCourier = 'Standard Shipping';
-}
+    // Shipping for the COD endpoint is always priced with COD logic.
+    // It previously read req.body.paymentMethod, which the client never sends
+    // to /checkout-cod, so isCOD was false and the COD fee was silently dropped.
+    const { shippingCharges, shippingCourier } = await calculateShipping(
+      cart.items,
+      address,
+      true
+    );
 
 
     // ✅ Create order
@@ -345,7 +394,9 @@ exports.cancelOrder = async (req, res) => {
     }
 
     // ✅ FIX #2: COD delivered order protection
-    if (order.paymentMethod === 'cod' && order.paymentStatus === 'completed') {
+    // 'paid' is the state the seller sets on COD delivery; 'completed' is not a
+    // member of the paymentStatus enum, so this guard never fired.
+    if (order.paymentMethod === 'cod' && order.paymentStatus === 'paid') {
       return res.status(400).json({
         success: false,
         message: "COD order already delivered and payment collected. Cannot cancel. Please use Return option if needed."
@@ -354,8 +405,10 @@ exports.cancelOrder = async (req, res) => {
 
     order.status = 'cancelled';
 
-    // Refund logic for completed payments
-    if (order.paymentStatus === 'completed') {
+    // Refund logic for captured prepaid payments.
+    // Previously guarded on 'completed', which the schema does not allow, so no
+    // refund was ever initiated for a prepaid cancellation.
+    if (order.paymentStatus === 'paid' && order.paymentMethod === 'razorpay') {
       const Razorpay = require('razorpay');
       const razorpay = new Razorpay({
         key_id: process.env.RAZORPAY_KEY_ID,
@@ -364,12 +417,18 @@ exports.cancelOrder = async (req, res) => {
 
       try {
         if (order.razorpayPaymentId) {
+          const refundAmount = order.totalAmount;
           const refund = await razorpay.payments.refund(order.razorpayPaymentId, {
-            amount: Math.round(order.totalAmount * 100),
+            amount: Math.round(refundAmount * 100),
             speed: 'normal',
           });
           order.refundId = refund.id;
           order.refundStatus = 'processing';
+          order.refundAmount = refundAmount;
+          order.refundedAt = new Date();
+          // Terminal payment state. Also keeps the order out of revenue
+          // aggregations, which previously relied on zeroing totalAmount.
+          order.paymentStatus = 'refunded';
           console.log("Refund initiated:", refund.id);
         }
       } catch (refundErr) {
@@ -383,8 +442,6 @@ exports.cancelOrder = async (req, res) => {
         });
       }
     }
-
-    await order.save();
 
     // Restore inventory
     for (const item of order.items) {
@@ -400,7 +457,9 @@ exports.cancelOrder = async (req, res) => {
       }
     }
 
-    order.totalAmount = 0;
+    // NOTE: totalAmount is deliberately preserved. It previously was set to 0,
+    // which destroyed the order's financial history. Cancelled orders are kept
+    // out of revenue reporting by paymentStatus, not by erasing the amount.
     await order.save();
 
     res.json({ success: true, message: "Order cancelled", order });
@@ -543,22 +602,28 @@ exports.cancelOrderItem = async (req, res) => {
 
       order.status = 'returned';
 
-// Initiate refund for returned orders
-if (order.paymentStatus === 'completed') {
+// Initiate refund for returned prepaid orders.
+// Previously guarded on 'completed', which the paymentStatus enum does not
+// allow, so a returned prepaid order was never refunded.
+if (order.paymentStatus === 'paid' && order.paymentMethod === 'razorpay') {
   const Razorpay = require('razorpay');
   const razorpay = new Razorpay({
     key_id: process.env.RAZORPAY_KEY_ID,
     key_secret: process.env.RAZORPAY_KEY_SECRET,
   });
-  
+
   try {
     if (order.razorpayPaymentId) {  // ✅ CORRECT - Payment ID
+      const refundAmount = order.totalAmount;
       const refund = await razorpay.payments.refund(order.razorpayPaymentId, {
-        amount: Math.round(order.totalAmount * 100),
+        amount: Math.round(refundAmount * 100),
         speed: 'normal',
       });
       order.refundId = refund.id;
       order.refundStatus = 'processing';
+      order.refundAmount = refundAmount;
+      order.refundedAt = new Date();
+      order.paymentStatus = 'refunded';
       console.log('Return refund initiated', refund.id);
     }
   } catch (refundErr) {
@@ -600,6 +665,15 @@ if (order.paymentStatus === 'completed') {
     try {
       const { productId, quantity } = req.body;
 
+      if (!productId || !mongoose.isValidObjectId(productId)) {
+        return res.status(400).json({ message: "A valid productId is required" });
+      }
+
+      const parsed = parseQuantity(quantity);
+      if (!parsed.ok) {
+        return res.status(400).json({ message: parsed.message });
+      }
+
       const cart = await Cart.findOne({ userId: req.user._id });
 
       if (!cart) return res.status(404).json({ message: "Cart not found" });
@@ -610,7 +684,22 @@ if (order.paymentStatus === 'completed') {
 
       if (!item) return res.status(404).json({ message: "Item not found" });
 
-      item.quantity = quantity;
+      const product = await Product.findById(productId);
+      if (!product || !product.isActive) {
+        return res.status(404).json({ message: "Product not available" });
+      }
+
+      if (parsed.value > product.stock) {
+        return res.status(400).json({
+          message:
+            product.stock > 0
+              ? `Only ${product.stock} unit(s) available`
+              : `${product.name} is out of stock`,
+          availableStock: product.stock,
+        });
+      }
+
+      item.quantity = parsed.value;
 
       cart.totalAmount = cart.items.reduce(
         (sum, i) => sum + i.price * i.quantity,
@@ -671,7 +760,7 @@ exports.testShiprocketRate = async (req, res) => {
   try {
     const { pincode } = req.query;
 
-    const data = await getShippingRate(pincode, 0.5, true); // 0.5 kg, COD true
+    const data = await shiprocketService.getShippingRate(pincode, 0.5, true); // 0.5 kg, COD true
 
     console.log('SHIPROCKET RAW RESPONSE ===>');
     console.dir(data, { depth: null });
@@ -711,51 +800,13 @@ exports.previewTotals = async (req, res) => {
     // total items amount
     const itemsTotal = cart.totalAmount;
 
-    // shipping calculation (same as checkout)
-    let shippingCharges = 0;
-    let shippingCourier = null;
-
-    try {
-      const totalWeight = cart.items.reduce((sum, item) => {
-        return sum + (item.productId.weight || 0.5) * item.quantity;
-      }, 0);
-
-      const pincode = address.zipCode;
-      const isCOD = paymentMethod === "cod";
-
-      const shippingData = await getShippingRate(pincode, totalWeight, isCOD);
-
-      const couriers =
-        shippingData?.data?.available_courier_companies ||
-        shippingData?.available_courier_companies ||
-        [];
-
-      if (couriers.length > 0) {
-        const cheapest = couriers.reduce((min, curr) => {
-          const currRate =
-            curr.freight_charge || curr.rate || curr.total_charge || 0;
-          const minRate =
-            min.freight_charge || min.rate || min.total_charge || 0;
-          return currRate < minRate ? curr : min;
-        });
-
-        const baseRate =
-          cheapest.freight_charge || cheapest.rate || cheapest.total_charge || 0;
-        const codFee =
-          isCOD && (cheapest.cod_charges || cheapest.cod_charge || 0);
-
-        shippingCharges = Math.round(baseRate + codFee);
-        shippingCourier =
-          cheapest.courier_name || cheapest.courier_company_id || "Shiprocket";
-      } else {
-        shippingCharges = 100;
-        shippingCourier = "Standard Shipping";
-      }
-    } catch (err) {
-      console.error("PREVIEW SHIPPING ERROR:", err.message);
-      shippingCharges = 100;
-      shippingCourier = "Standard Shipping";
-    }
+    // Same helper the COD checkout uses, so the quoted total and the charged
+    // total are computed by one code path and cannot diverge.
+    const { shippingCharges, shippingCourier } = await calculateShipping(
+      cart.items,
+      address,
+      paymentMethod === "cod"
+    );
 
     const grandTotal = itemsTotal + shippingCharges;
 

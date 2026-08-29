@@ -12,7 +12,9 @@ const {
   deleteCategory,
   getAnalytics,
   suspendSeller,
-  activateSeller
+  activateSeller,
+  getAllOrders,
+  getOrderById
 } = require('../controllers/adminController');
 
 // All routes require admin role
@@ -30,6 +32,10 @@ router.post('/categories', createCategory);
 router.get('/categories', getCategories);
 router.patch('/categories/:categoryId', updateCategory);
 router.delete('/categories/:categoryId', deleteCategory);
+
+// Order operations (read-only platform visibility)
+router.get('/orders', getAllOrders);
+router.get('/orders/:orderId', getOrderById);
 
 // Analytics
 router.get('/analytics', getAnalytics);
