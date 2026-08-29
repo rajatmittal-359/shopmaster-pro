@@ -4,8 +4,17 @@ package-lock.json
 
 # Environment variables
 .env
+.env.*
+!.env.example
 .env.local
 .env.production
+
+# Credentials / tokens - never commit
+bearertoken.txt
+*.tok
+
+# Local tooling
+.claude/
 
 # Build outputs
 dist/
