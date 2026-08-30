@@ -16,7 +16,6 @@ const {
   cancelOrder,
   cancelOrderItem,
   returnOrder,
-  testShiprocketRate,
   previewTotals
 } = require("../controllers/customerController");
 
@@ -83,15 +82,6 @@ router.post("/addresses", addAddress);
 router.patch("/addresses/:id", updateAddress);
 router.delete("/addresses/:id", deleteAddress);
 
-
-
-// Shiprocket test route - TEMP
-router.get(
-  '/test-shiprocket',
-  authMiddleware,
-  roleMiddleware('customer'),
-  testShiprocketRate
-);
 
 
 router.post("/checkout-preview", previewTotals);

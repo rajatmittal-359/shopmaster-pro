@@ -11,7 +11,6 @@ const Order = require('../models/Order');
  */
 
 // Get all pending sellers (awaiting approval)
-// ✅ NEW CODE - Get ALL sellers
 exports.getAllSellers = async (req, res) => {
   try {
     const allSellers = await Seller.find({})

@@ -15,13 +15,6 @@
     const email = process.env.SHIPROCKET_API_EMAIL;
     const password = process.env.SHIPROCKET_API_PASSWORD;
 
-    console.log(
-        'SHIPROCKET ENV EMAIL =',
-        email,
-        'PWD LENGTH =',
-        password?.length
-    );
-
     if (!email || !password) {
         throw new Error('Shiprocket API credentials not configured');
     }

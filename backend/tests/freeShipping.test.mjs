@@ -17,7 +17,7 @@ import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 
 const shiprocket = require('../utils/shiprocketService');
-const { calculateShipping, FALLBACK_SHIPPING } = require('../utils/shipping');
+const { calculateShipping, fallbackPrice } = require('../utils/shipping');
 
 const ADDRESS = { zipCode: '560038' };
 
@@ -141,13 +141,13 @@ describe('an ordinary basket is unaffected', () => {
 });
 
 describe('the courier being unavailable never blocks checkout', () => {
-  it('falls back to a flat rate when the API throws', async () => {
+  it('falls back to the weight band when the API throws', async () => {
     shiprocket.getShippingRate = vi.fn(async () => {
       throw new Error('shiprocket down');
     });
 
     const result = await calculateShipping([line(0.5, 1)], ADDRESS, false);
-    expect(result.shippingCharges).toBe(FALLBACK_SHIPPING);
+    expect(result.shippingCharges).toBe(fallbackPrice(0.5));
   });
 
   it('falls back when no courier serves the pincode', async () => {
@@ -156,7 +156,29 @@ describe('the courier being unavailable never blocks checkout', () => {
     }));
 
     const result = await calculateShipping([line(0.5, 1)], ADDRESS, false);
-    expect(result.shippingCharges).toBe(FALLBACK_SHIPPING);
+    expect(result.shippingCharges).toBe(fallbackPrice(0.5));
+  });
+
+  it('the fallback is never below what the courier actually charges', async () => {
+    shiprocket.getShippingRate = vi.fn(async () => {
+      throw new Error('shiprocket down');
+    });
+
+    // Worst real rates measured against the live API on 2026-08-30. The
+    // fallback previously sat at a flat Rs100, under every one of them, so the
+    // platform paid the difference on every outage order.
+    const worstObserved = [[0.5, 123], [1, 214], [2, 367], [3, 509], [5, 841]];
+
+    for (const [kg, real] of worstObserved) {
+      const result = await calculateShipping([line(kg, 1)], ADDRESS, false);
+      expect(result.shippingCharges).toBeGreaterThanOrEqual(real);
+    }
+  });
+
+  it('charges more for a heavier parcel', async () => {
+    // A flat rate cannot express this, which is why one lost money.
+    expect(fallbackPrice(2)).toBeGreaterThan(fallbackPrice(0.5));
+    expect(fallbackPrice(5)).toBeGreaterThan(fallbackPrice(2));
   });
 
   it('still delivers a free basket for zero even if the courier is down', async () => {

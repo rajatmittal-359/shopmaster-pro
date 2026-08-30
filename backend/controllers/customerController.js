@@ -229,7 +229,6 @@ exports.checkout = async (req, res) => {
           status: 'pending',
           paymentStatus: 'pending',
           paymentMethod: 'cod',
-          // ✅ NEW SHIPPING FIELDS
           shippingCharges,
           shippingProvider: 'shiprocket',
           shippingCourierName: shippingCourier,
@@ -493,7 +492,6 @@ exports.cancelOrderItem = async (req, res) => {
       return res.status(400).json({ message: 'Item already cancelled' });
     }
     
-    // ✅ NEW: Calculate refund amount for this item
     const refundAmount = item.price * item.quantity;
     
     // Give the units back - but only if this order ever took them.
@@ -525,7 +523,6 @@ exports.cancelOrderItem = async (req, res) => {
       await releaseReservation(order, session);
     }
     
-    // ✅ NEW: Process refund if payment completed
     if (order.paymentStatus === 'paid' && order.razorpayPaymentId) {
       const Razorpay = require('razorpay');
       const razorpay = new Razorpay({
@@ -757,22 +754,6 @@ if (order.paymentStatus === 'paid' && order.paymentMethod === 'razorpay') {
       res.status(500).json({ message: err.message });
     }
   };
-  // TEMP TEST ONLY - later delete
-exports.testShiprocketRate = async (req, res) => {
-  try {
-    const { pincode } = req.query;
-
-    const data = await shiprocketService.getShippingRate(pincode, 0.5, true); // 0.5 kg, COD true
-
-    console.log('SHIPROCKET RAW RESPONSE ===>');
-    console.dir(data, { depth: null });
-
-    res.json({ ok: true, data });
-  } catch (err) {
-    console.error('SHIPROCKET TEST ERROR', err.message);
-    res.status(500).json({ ok: false, message: err.message });
-  }
-};
 
 
 // PREVIEW TOTAL (no order creation)

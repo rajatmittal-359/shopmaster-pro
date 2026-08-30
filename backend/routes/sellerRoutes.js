@@ -48,4 +48,15 @@ router.patch('/products/:productId/stock', requireApprovedSeller, updateStock);
 router.patch('/orders/:orderId/status', requireApprovedSeller, updateOrderStatus);
 router.patch('/orders/:orderId/tracking', requireApprovedSeller, updateTracking);
 
+// A seller's own earnings, settlement history and the account they are paid into.
+const {
+  getMyEarnings,
+  getMyPayoutDetails,
+  updateMyPayoutDetails,
+} = require('../controllers/payoutController');
+
+router.get('/earnings', getMyEarnings);
+router.get('/payout-details', getMyPayoutDetails);
+router.patch('/payout-details', updateMyPayoutDetails);
+
 module.exports = router;

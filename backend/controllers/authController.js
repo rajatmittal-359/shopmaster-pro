@@ -18,20 +18,26 @@ exports.register = async (req, res) => {
       return res.status(400).json({ message: 'Email already exists' });
     }
 
+    // Validate BEFORE the user row exists. The check used to run after
+    // user.save(), so a seller who forgot their business name was left as a
+    // saved account with the seller role and no seller profile - unable to
+    // sell, and unable to register again with that email.
+    const isSeller = role === 'seller';
+    if (isSeller && !businessName) {
+      return res.status(400).json({ message: 'Business name required for seller' });
+    }
+
     const user = new User({
       name,
       email,
       password,
-      role: role === 'seller' ? 'seller' : 'customer',
+      role: isSeller ? 'seller' : 'customer',
     });
 
     const otp = user.generateOTP();
     await user.save();
 
-    if (user.role === 'seller') {
-      if (!businessName) {
-        return res.status(400).json({ message: 'Business name required for seller' });
-      }
+    if (isSeller) {
       await Seller.create({ userId: user._id, businessName });
     }
 

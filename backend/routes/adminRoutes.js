@@ -3,7 +3,7 @@ const router = express.Router();
 const authMiddleware = require('../middlewares/authMiddleware');
 const roleMiddleware = require('../middlewares/roleMiddleware');
 const {
-  getAllSellers,        // ✅ CHANGED: getPendingSellers → getAllSellers
+  getAllSellers,
   approveSeller,
   rejectSeller,
   createCategory,
@@ -17,11 +17,22 @@ const {
   getOrderById
 } = require('../controllers/adminController');
 
+const {
+  getPayableSellers,
+  createPayout,
+  listPayouts,
+  settlePayout,
+  failPayout,
+} = require('../controllers/payoutController');
+
 // All routes require admin role
 router.use(authMiddleware, roleMiddleware('admin'));
 
 // Seller management
-router.get('/sellers/pending', getAllSellers);  // ✅ CHANGED: function name
+// NOTE: the path says "pending" but this returns EVERY seller, whatever their
+// approval state. The frontend depends on the path, so it is left as-is rather
+// than renamed; the handler name is the accurate one.
+router.get('/sellers/pending', getAllSellers);
 router.patch('/sellers/:sellerId/approve', approveSeller);
 router.patch('/sellers/:sellerId/reject', rejectSeller);
 router.patch('/sellers/:sellerId/suspend', suspendSeller);
@@ -39,5 +50,12 @@ router.get('/orders/:orderId', getOrderById);
 
 // Analytics
 router.get('/analytics', getAnalytics);
+
+// Seller settlements. What is owed, and recording that it was transferred.
+router.get('/payouts/payable', getPayableSellers);
+router.get('/payouts', listPayouts);
+router.post('/payouts', createPayout);
+router.patch('/payouts/:payoutId/paid', settlePayout);
+router.patch('/payouts/:payoutId/failed', failPayout);
 
 module.exports = router;

@@ -197,7 +197,7 @@ describe('COD checkout pricing consistency', () => {
     expect(cod.body.grandTotal - online.body.grandTotal).toBe(COD_FEE);
   });
 
-  it('falls back to a flat rate when the courier API fails, for both paths', async () => {
+  it('falls back to the weight band when the courier API fails, for both paths', async () => {
     shiprocket.getShippingRate = vi.fn(async () => {
       throw new Error('shiprocket down');
     });
@@ -205,8 +205,8 @@ describe('COD checkout pricing consistency', () => {
     const quote = await preview('cod');
     await codCheckout();
 
-    expect(quote.body.shippingCharges).toBe(100);
-    expect(createdOrder.shippingCharges).toBe(100);
+    expect(quote.body.shippingCharges).toBe(125);
+    expect(createdOrder.shippingCharges).toBe(125);
     expect(createdOrder.totalAmount).toBe(quote.body.grandTotal);
   });
 });

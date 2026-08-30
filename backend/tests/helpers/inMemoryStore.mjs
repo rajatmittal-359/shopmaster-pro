@@ -45,12 +45,30 @@ const valuesAt = (doc, path) => {
 
 const asId = (v) => (v == null ? v : String(v._id || v));
 
-/** Supports only the operators the reservation code actually uses. */
+/**
+ * Supports only the operators this codebase actually queries with.
+ *
+ * A condition object may carry several operators at once
+ * (`{ $ne: null, $lte: date }`), so every one present must hold.
+ */
 const matchesCondition = (value, condition) => {
   if (condition && typeof condition === 'object' && !Array.isArray(condition)) {
-    if ('$gte' in condition) return Number(value) >= Number(condition.$gte);
-    if ('$lt' in condition) return new Date(value) < new Date(condition.$lt);
-    if ('$in' in condition) return condition.$in.some((c) => asId(c) === asId(value));
+    const ops = Object.keys(condition).filter((k) => k.startsWith('$'));
+    if (ops.length > 0) {
+      return ops.every((op) => {
+        const operand = condition[op];
+        switch (op) {
+          case '$gte': return Number(value) >= Number(operand);
+          case '$gt': return Number(value) > Number(operand);
+          case '$lte': return new Date(value) <= new Date(operand);
+          case '$lt': return new Date(value) < new Date(operand);
+          case '$ne': return asId(value) !== asId(operand);
+          case '$in': return operand.some((c) => asId(c) === asId(value));
+          case '$exists': return (value !== undefined) === operand;
+          default: return false;
+        }
+      });
+    }
   }
   return asId(value) === asId(condition);
 };
@@ -100,6 +118,42 @@ const applyUpdate = (doc, update) => {
 };
 
 /**
+ * A Mongoose query is thenable AND chainable. Callers may write
+ * `.select(...).sort(...).lean()` in any order before awaiting, so every
+ * builder method returns the same promise rather than a new object.
+ *
+ * The projection/ordering methods are no-ops: these tests assert on behaviour,
+ * not on which fields the driver happened to return.
+ */
+const project = (doc, fields) => {
+  if (!doc || typeof doc !== 'object') return doc;
+  const keep = new Set(fields.split(/\s+/).filter(Boolean).concat('_id'));
+  return Object.fromEntries(Object.entries(doc).filter(([k]) => keep.has(k)));
+};
+
+const fluent = (value) => {
+  let current = value;
+  const query = {
+    then: (resolve, reject) => Promise.resolve(current).then(resolve, reject),
+  };
+  for (const name of ['session', 'lean', 'sort', 'limit', 'skip', 'populate']) {
+    query[name] = () => query;
+  }
+  // select() is NOT a no-op. Treating it as one hid a real bug: a projection
+  // that omitted a field the caller then read, which passed every test and
+  // failed the moment it ran against MongoDB.
+  query.select = (fields) => {
+    if (typeof fields === 'string' && !fields.startsWith('-')) {
+      current = Array.isArray(current)
+        ? current.map((d) => project(d, fields))
+        : project(current, fields);
+    }
+    return query;
+  };
+  return query;
+};
+
+/**
  * One collection of plain documents.
  *
  * Every mutating method completes synchronously before returning its promise,
@@ -120,29 +174,16 @@ export class InMemoryCollection {
 
   findById(id) {
     const found = this.raw(id);
-    // Mongoose queries are thenable AND fluent, so callers may chain
-    // .session()/.lean() before awaiting.
-    const query = Promise.resolve(found ? clone(found) : null);
-    query.session = () => query;
-    query.lean = () => query;
-    return query;
+    return fluent(found ? clone(found) : null);
   }
 
   find(filter = {}) {
-    const rows = this.docs.filter((d) => matchesFilter(d, filter)).map(clone);
-    // Mongoose queries are thenable and expose .session()/.lean() fluently.
-    const query = Promise.resolve(rows);
-    query.session = () => query;
-    query.lean = () => query;
-    return query;
+    return fluent(this.docs.filter((d) => matchesFilter(d, filter)).map(clone));
   }
 
   findOne(filter = {}) {
     const found = this.docs.find((d) => matchesFilter(d, filter));
-    const query = Promise.resolve(found ? clone(found) : null);
-    query.session = () => query;
-    query.lean = () => query;
-    return query;
+    return fluent(found ? clone(found) : null);
   }
 
   /** Atomic: filter is evaluated and the update applied in one step. */
@@ -162,6 +203,64 @@ export class InMemoryCollection {
 
     applyUpdate(target, update);
     return Promise.resolve({ matchedCount: 1, modifiedCount: 1 });
+  }
+
+  /**
+   * Atomic across every matched document.
+   *
+   * Supports the positional array form MongoDB uses to claim individual
+   * subdocuments: `{ $set: { 'items.$[line].payoutId': id } }` with
+   * `arrayFilters`. That is the mechanism preventing a sale being paid twice,
+   * so it is modelled properly rather than approximated.
+   */
+  updateMany(filter, update, options = {}) {
+    const targets = this.docs.filter((d) => matchesFilter(d, filter));
+    let modified = 0;
+
+    for (const doc of targets) {
+      let touched = false;
+
+      for (const [path, value] of Object.entries(update.$set || {})) {
+        const positional = path.match(/^([^.]+)\.\$\[(\w+)\]\.(.+)$/);
+
+        if (!positional) {
+          doc[path] = value;
+          touched = true;
+          continue;
+        }
+
+        const [, arrayField, filterName, leafField] = positional;
+        const arrayFilter = (options.arrayFilters || []).find((f) =>
+          Object.keys(f).some((k) => k.startsWith(filterName + '.'))
+        );
+
+        for (const entry of doc[arrayField] || []) {
+          if (arrayFilter) {
+            const conditions = Object.fromEntries(
+              Object.entries(arrayFilter).map(([k, v]) => [k.replace(filterName + '.', ''), v])
+            );
+            if (!matchesFilter(entry, conditions)) continue;
+          }
+          entry[leafField] = value;
+          touched = true;
+        }
+      }
+
+      if (update.$inc) {
+        applyUpdate(doc, { $inc: update.$inc });
+        touched = true;
+      }
+      if (touched) modified++;
+    }
+
+    return Promise.resolve({ matchedCount: targets.length, modifiedCount: modified });
+  }
+
+  deleteOne(filter) {
+    const index = this.docs.findIndex((d) => matchesFilter(d, filter));
+    if (index === -1) return Promise.resolve({ deletedCount: 0 });
+    this.docs.splice(index, 1);
+    return Promise.resolve({ deletedCount: 1 });
   }
 
   create(doc) {

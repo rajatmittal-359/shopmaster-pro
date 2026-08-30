@@ -84,6 +84,10 @@ const HOUSE_SELLER = {
   key: 'CJ',
   businessName: 'Charming Jewels',
   commissionRate: 0, // own store: the platform does not charge itself
+  // Its takings are already in the platform's gateway account, so it is never
+  // paid out to. Marked explicitly, not inferred from the 0% rate - a
+  // negotiated 0% partner would still need paying.
+  isPlatformOwned: true,
   gstNumber: '08AABCU9603R1ZM',
   isApproved: true,
   kycStatus: 'verified',
@@ -411,6 +415,7 @@ const run = async () => {
     businessName: HOUSE_SELLER.businessName,
     gstNumber: HOUSE_SELLER.gstNumber,
     commissionRate: HOUSE_SELLER.commissionRate,
+    isPlatformOwned: HOUSE_SELLER.isPlatformOwned,
     isApproved: HOUSE_SELLER.isApproved,
     kycStatus: HOUSE_SELLER.kycStatus,
     status: HOUSE_SELLER.status,

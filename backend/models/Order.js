@@ -51,6 +51,21 @@ const orderItemSchema = new mongoose.Schema({
     default: 0,
     min: 0
   },
+
+  /**
+   * The payout that has already paid this line to its seller.
+   *
+   * This is the claim that makes double-payment impossible: a payout only ever
+   * takes lines where this is still null, in one conditional write. Without it
+   * a payout would have to be inferred from date ranges, and two runs over
+   * overlapping ranges would pay the same sale twice.
+   */
+  payoutId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Payout',
+    default: null,
+    index: true
+  },
 });
 
 const orderSchema = new mongoose.Schema(

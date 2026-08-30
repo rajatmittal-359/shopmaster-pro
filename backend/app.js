@@ -26,6 +26,12 @@ app.post(
   handleRazorpayWebhook
 );
 
+// Caching policy. Private by default: only the anonymous catalogue opts out,
+// because a shared cache must never be allowed to hold a customer's cart or
+// order list. See middlewares/cacheControl.js.
+const { noStore, publicCatalogue } = require('./middlewares/cacheControl');
+app.use(noStore);
+
 // Global body parsing for every other route.
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
@@ -48,7 +54,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/seller', sellerRoutes);
 app.use('/api/customer', customerRoutes);
-app.use('/api/public/products', productRoutes);
+app.use('/api/public/products', publicCatalogue, productRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/inventory', inventoryRoutes);
 

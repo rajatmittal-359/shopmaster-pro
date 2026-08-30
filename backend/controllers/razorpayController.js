@@ -233,7 +233,7 @@ exports.createRazorpayOrder = async (req, res) => {
 
     // 7) Create Razorpay order
     const razorpayOrder = await getRazorpay().orders.create({
-      amount: Math.round(finalAmount * 100), // ✅ CHANGED
+      amount: Math.round(finalAmount * 100),
       currency: "INR",
       receipt: `ord_${shortUserId}_${shortTimestamp}`,
     });
@@ -256,7 +256,7 @@ exports.createRazorpayOrder = async (req, res) => {
         {
           customerId: req.user.id,
           items: orderItems,
-          totalAmount: finalAmount, // ✅ CHANGED
+          totalAmount: finalAmount,
           shippingAddressId,
           status: "pending",
           paymentMethod: "razorpay",
@@ -265,7 +265,6 @@ exports.createRazorpayOrder = async (req, res) => {
           // The units this order is holding, and until when.
           reservationStatus: 'held',
           reservationExpiresAt: reservation.expiresAt,
-          // ✅ NEW SHIPPING FIELDS
           shippingCharges,
           shippingProvider: 'shiprocket',
           shippingCourierName: shippingCourier,
@@ -290,20 +289,11 @@ exports.createRazorpayOrder = async (req, res) => {
       keyId: process.env.RAZORPAY_KEY_ID,
     });
   } catch (err) {
-    console.log(
-      "⚠️ Razorpay order creation failed, rolling back transaction. Raw error:",
-      err
-    );
-    console.log(
-      "⚠️ Razorpay order creation failed, error message:",
-      err?.message
-    );
-
     await session.abortTransaction();
     session.endSession();
 
-    console.error("RAZORPAY ORDER ERROR (message):", err?.message);
-    console.error("RAZORPAY ORDER ERROR (stack):", err?.stack);
+    console.error('Razorpay order creation failed, rolled back:', err?.message);
+    if (process.env.NODE_ENV !== 'production') console.error(err?.stack);
 
     return res.status(500).json({
       success: false,
@@ -558,7 +548,6 @@ exports.handleRazorpayWebhook = async (req, res) => {
 
     console.log('Razorpay webhook event:', event);
 
-    // ✅ NEW: Handle payment.captured event
     if (event === 'payment.captured') {
       if (!payload || !payload.order_id) {
         console.warn('payment.captured without a payment entity - ignoring');

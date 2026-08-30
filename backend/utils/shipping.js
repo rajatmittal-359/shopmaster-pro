@@ -16,8 +16,54 @@
  */
 const shiprocketService = require('./shiprocketService');
 
-/** Charged when the courier API cannot be reached. See the note below. */
-const FALLBACK_SHIPPING = 100;
+/**
+ * Charged when the courier API cannot be reached.
+ *
+ * This used to be a flat Rs100, which was BELOW every real rate. Every order
+ * that hit the fallback was under-charged and the platform silently absorbed
+ * the difference - Rs70 on a ring, Rs234 on a showpiece, more than the whole
+ * 8% commission on a Rs1600 sale.
+ *
+ * The bands below are the worst observed price across five destination zones
+ * (Jaipur local, Delhi, Mumbai, Bengaluru, Guwahati), measured against the live
+ * Shiprocket API on 2026-08-30 from pickup pincode 302019:
+ *
+ *     weight    cheapest .. worst
+ *     0.5 kg    Rs71 .. Rs123
+ *     1   kg    Rs113 .. Rs214
+ *     2   kg    Rs128 .. Rs367
+ *     3   kg    Rs131 .. Rs509
+ *     5   kg    Rs200 .. Rs841
+ *
+ * Worst-case is deliberate: the fallback only fires when the courier API is
+ * down, which is rare, and under-charging is a guaranteed loss on every such
+ * order while over-charging is an occasional annoyance on a few. A local
+ * Jaipur delivery during an outage will be quoted more than it costs.
+ *
+ * Above 5 kg the sample is thin and real rates were not monotonic, so the last
+ * band is extrapolated. Re-measure before stocking genuinely heavy goods; the
+ * catalogue's heaviest item today is 1.2 kg.
+ */
+const FALLBACK_BANDS = [
+  { upToKg: 0.5, price: 125 },
+  { upToKg: 1, price: 215 },
+  { upToKg: 2, price: 370 },
+  { upToKg: 3, price: 510 },
+  { upToKg: 5, price: 845 },
+];
+
+/** Added per kilogram beyond the heaviest measured band. */
+const FALLBACK_PER_EXTRA_KG = 50;
+
+/** What to charge for `weightKg` when no live quote is available. */
+const fallbackPrice = (weightKg) => {
+  const band = FALLBACK_BANDS.find((b) => weightKg <= b.upToKg);
+  if (band) return band.price;
+
+  const heaviest = FALLBACK_BANDS[FALLBACK_BANDS.length - 1];
+  const extraKg = Math.ceil(weightKg - heaviest.upToKg);
+  return heaviest.price + extraKg * FALLBACK_PER_EXTRA_KG;
+};
 
 /** Assumed weight for a product that has none recorded. */
 const DEFAULT_ITEM_WEIGHT = 0.5;
@@ -69,9 +115,9 @@ const calculateShipping = async (cartItems, address, isCOD) => {
       [];
 
     if (couriers.length === 0) {
-      console.warn('Shiprocket: no couriers available - using fallback');
+      console.warn('Shiprocket: no couriers available - using the weight fallback');
       return {
-        shippingCharges: FALLBACK_SHIPPING,
+        shippingCharges: fallbackPrice(totalWeight),
         shippingCourier: 'Standard Shipping',
         freeShipping: false,
       };
@@ -89,15 +135,11 @@ const calculateShipping = async (cartItems, address, isCOD) => {
       freeShipping: false,
     };
   } catch (err) {
-    // Never block a checkout because the courier API is down.
-    //
-    // NOTE: the flat fallback is currently BELOW real rates (they start around
-    // Rs170 and climb with weight), so every order that lands here is
-    // under-charged and the platform absorbs the difference. Raising it to a
-    // weight-based table is a pending business decision.
+    // Never block a checkout because the courier API is down; charge the
+    // weight band instead, which is priced not to lose money.
     console.error('Shipping calculation failed:', err.message);
     return {
-      shippingCharges: FALLBACK_SHIPPING,
+      shippingCharges: fallbackPrice(totalWeight),
       shippingCourier: 'Standard Shipping',
       freeShipping: false,
     };
@@ -107,6 +149,7 @@ const calculateShipping = async (cartItems, address, isCOD) => {
 module.exports = {
   calculateShipping,
   isFreeShipping,
-  FALLBACK_SHIPPING,
+  fallbackPrice,
+  FALLBACK_BANDS,
   DEFAULT_ITEM_WEIGHT,
 };

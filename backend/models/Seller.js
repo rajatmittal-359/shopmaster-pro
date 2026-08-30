@@ -61,6 +61,19 @@ const sellerSchema = new mongoose.Schema(
       max: [100, 'Commission rate cannot exceed 100%']
     },
 
+    /**
+     * This shop belongs to the platform itself.
+     *
+     * All customer money already lands in the platform's own gateway account,
+     * so there is nobody to transfer it to - its sales are revenue, not a
+     * liability. Marked explicitly rather than inferred from a 0% commission,
+     * because a negotiated 0% partner would still need paying.
+     */
+    isPlatformOwned: {
+      type: Boolean,
+      default: false
+    },
+
     isApproved: {
       type: Boolean,
       default: false
