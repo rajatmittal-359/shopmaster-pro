@@ -37,6 +37,7 @@ export default function SellerOrdersPage() {
       setOrders(res.data.orders);
     } catch (err) {
       console.error('Failed to load seller orders', err);
+      toastError('Could not load your orders');
       toastError(err?.response?.data?.message || 'Failed to load orders');
     } finally {
       setLoading(false);

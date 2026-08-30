@@ -25,6 +25,7 @@ export default function WishlistPage() {
       setQtyMap(map);
     } catch (err) {
       console.error(err);
+      toastError('Could not load your wishlist');
     } finally {
       setLoading(false);
     }

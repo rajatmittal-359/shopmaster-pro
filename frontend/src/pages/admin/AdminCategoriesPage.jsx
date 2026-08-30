@@ -22,6 +22,7 @@ export default function AdminCategoriesPage() {
       setCategories(res.data.categories || []);
     } catch (err) {
       console.error(err);
+      toastError('Could not load categories');
     } finally {
       setLoading(false);
     }

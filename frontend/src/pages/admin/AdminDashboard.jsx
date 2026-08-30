@@ -3,6 +3,7 @@ import Layout from "../../components/common/Layout";
 import { getAdminAnalytics } from "../../services/adminService";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from "recharts";
 
+import { toastError } from '../../utils/toast';
 export default function AdminDashboard() {
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -18,6 +19,7 @@ export default function AdminDashboard() {
       setAnalytics(res.data);
     } catch (error) {
       console.error("Failed to load admin analytics", error);
+      toastError('Could not load the dashboard');
     } finally {
       setLoading(false);
     }

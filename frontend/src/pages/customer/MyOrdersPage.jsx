@@ -30,6 +30,7 @@ export default function MyOrdersPage() {
       setOrders(res.data.orders || []);
     } catch (err) {
       console.error("GET MY ORDERS ERROR", err);
+      toastError('Could not load your orders');
       toastError(err?.response?.data?.message || "Failed to load orders");
     } finally {
       setLoading(false);

@@ -37,6 +37,7 @@ export default function AddressesPage() {
       setAddresses(res.data.addresses || []);
     } catch (err) {
       console.error(err);
+      toastError('Could not load your addresses');
     } finally {
       setLoading(false);
     }

@@ -4,6 +4,7 @@ import Layout from '../../components/common/Layout';
 import api from '../../utils/api';
 
 import { useConfirm } from '../../context/confirmContext';
+import { toastError } from '../../utils/toast';
 export default function CartPage() {
   const confirm = useConfirm();
   const [cart, setCart] = useState(null);
@@ -21,6 +22,7 @@ export default function CartPage() {
       setCart(res.data.cart);
     } catch (err) {
       console.error(err);
+      toastError('Could not load your cart');
     } finally {
       setLoading(false);
     }
@@ -32,7 +34,7 @@ export default function CartPage() {
       await api.patch('/customer/cart', { productId, quantity });
       loadCart();
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to update');
+      toastError(err.response?.data?.message || 'Could not update the quantity');
     }
   };
 
@@ -41,7 +43,7 @@ export default function CartPage() {
       await api.delete(`/customer/cart/${productId}`);
       loadCart();
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to remove');
+      toastError(err.response?.data?.message || 'Could not remove that item');
     }
   };
 
@@ -56,7 +58,7 @@ export default function CartPage() {
       await api.delete('/customer/cart');
       loadCart();
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to clear');
+      toastError(err.response?.data?.message || 'Could not empty your cart');
     }
   };
 

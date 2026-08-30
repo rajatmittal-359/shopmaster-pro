@@ -5,6 +5,7 @@ import api from "../../utils/api";
 import { Link } from "react-router-dom";
 
 import { orderRefShort } from '../../utils/orderRef';
+import { toastError } from '../../utils/toast';
 export default function CustomerDashboard() {
   const [stats, setStats] = useState({
     totalOrders: 0,
@@ -41,6 +42,7 @@ export default function CustomerDashboard() {
         setRecentOrders(orders.slice(0, 5));
       } catch (err) {
         console.error("CUSTOMER DASHBOARD ERROR:", err);
+        toastError('Could not load your dashboard');
       } finally {
         setLoading(false);
       }

@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import Layout from "../../components/common/Layout";
 import { getSellerProfile, getSellerAnalytics } from "../../services/sellerService";
 
+import { toastError } from '../../utils/toast';
 export default function SellerDashboard() {
   const [profile, setProfile] = useState(null);
   const [analytics, setAnalytics] = useState(null);
@@ -20,6 +21,7 @@ export default function SellerDashboard() {
         setAnalytics(analyticsRes.data);
       } catch (err) {
         console.error("Failed to load seller dashboard", err);
+        toastError('Could not load your dashboard');
       } finally {
         setLoading(false);
       }

@@ -3,6 +3,7 @@ import Layout from "../../components/common/Layout";
 import { getInventoryLogs } from "../../services/inventoryService";
 
 import { orderRefShort } from '../../utils/orderRef';
+import { toastError } from '../../utils/toast';
 const TYPE_OPTIONS = [
   { value: "all", label: "All types" },
   { value: "sale", label: "Sales" },
@@ -25,6 +26,7 @@ export default function InventoryLogsPage() {
       setLogs(res.data.logs || []);
     } catch (error) {
       console.error("Failed to load admin inventory logs", error);
+      toastError('Could not load inventory logs');
     } finally {
       setLoading(false);
     }

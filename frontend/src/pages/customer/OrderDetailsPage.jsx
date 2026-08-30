@@ -23,6 +23,7 @@ export default function OrderDetailsPage() {
       setOrder(res.data.order);
     } catch (err) {
       console.error(err);
+      toastError('Could not load this order');
       toastError(err?.response?.data?.message || 'Failed to load order');
     } finally {
       setLoading(false);
