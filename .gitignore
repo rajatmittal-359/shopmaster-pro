@@ -33,7 +33,3 @@ Thumbs.db
 npm-debug.log*
 .playwright-mcp/
 
-# Local-only analysis. These name vulnerabilities with file:line and were never
-# meant to be public; they also go stale the moment the code is fixed.
-AUDIT-REPORT.*
-BUSINESS-GAP-ANALYSIS.md

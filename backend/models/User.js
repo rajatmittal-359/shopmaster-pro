@@ -46,6 +46,13 @@
         otpExpiry: {
         type: Date,
         select: false
+        },
+        // When the last verification code went out. Without this, "send me
+        // another code" is a button that mails anyone, as fast as it is
+        // pressed, from an address the shop pays for.
+        otpLastSentAt: {
+        type: Date,
+        select: false
         }
     },
     {
