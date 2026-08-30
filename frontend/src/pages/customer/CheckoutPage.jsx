@@ -19,6 +19,10 @@ export default function CheckoutPage() {
   // pricing
   const [itemsTotal, setItemsTotal] = useState(0);
   const [shippingCharges, setShippingCharges] = useState(0);
+  // Delivery speeds this address can actually have. Same-day only appears when
+  // a hyperlocal rider will genuinely take it, so the list is address-specific.
+  const [deliveryOptions, setDeliveryOptions] = useState([]);
+  const [deliveryOption, setDeliveryOption] = useState('standard');
   const [grandTotal, setGrandTotal] = useState(0);
   const [calculatingTotals, setCalculatingTotals] = useState(false);
 
@@ -73,12 +77,17 @@ export default function CheckoutPage() {
         const res = await api.post('/customer/checkout-preview', {
           shippingAddressId: selectedAddressId,
           paymentMethod,
+          deliveryOption,
         });
 
         if (res.data.success) {
           setItemsTotal(res.data.itemsTotal);
           setShippingCharges(res.data.shippingCharges);
           setGrandTotal(res.data.grandTotal);
+          setDeliveryOptions(res.data.deliveryOptions || []);
+          // The server decides what is available; if same-day is gone by the
+          // time we ask, it tells us which option it actually priced.
+          if (res.data.deliveryOption) setDeliveryOption(res.data.deliveryOption);
         } else {
           toastError(res.data.message || 'Failed to calculate shipping');
           // Fallback
@@ -99,7 +108,7 @@ export default function CheckoutPage() {
     }, 500); // Debounce 500ms
 
     return () => clearTimeout(timer);
-  }, [selectedAddressId, paymentMethod]); // ✅ Removed 'cart' dependency
+  }, [selectedAddressId, paymentMethod, deliveryOption]);
 
 
   const handlePlaceOrder = async () => {
@@ -120,6 +129,7 @@ export default function CheckoutPage() {
       if (paymentMethod === "online") {
         const res = await api.post("/customer/checkout-online", {
           shippingAddressId: selectedAddressId,
+          deliveryOption,
         });
 
         if (!res.data.success) {
@@ -204,6 +214,7 @@ export default function CheckoutPage() {
       // COD FLOW
       const res = await api.post("/customer/checkout-cod", {
         shippingAddressId: selectedAddressId,
+        deliveryOption,
       });
 
       if (res.data.success && res.data.order?._id) {
@@ -393,11 +404,58 @@ export default function CheckoutPage() {
                 </span>
               ) : (
                 <span className="font-medium text-green-600">
-                  ₹{shippingCharges}
+                  {shippingCharges === 0 ? 'Free' : `₹${shippingCharges}`}
                 </span>
               )}
             </div>
           </div>
+
+          {/* Only worth showing when there is a genuine choice to make. A
+              single option is just the shipping line above, said twice. */}
+          {deliveryOptions.length > 1 && (
+            <div className="mt-4 border-t pt-3">
+              <p className="text-sm font-medium text-gray-700 mb-2">
+                Delivery speed
+              </p>
+
+              <div className="space-y-2">
+                {deliveryOptions.map((option) => (
+                  <label
+                    key={option.id}
+                    className={`flex cursor-pointer items-start gap-3 rounded border p-3 ${
+                      deliveryOption === option.id
+                        ? 'border-orange-500 bg-orange-50'
+                        : 'border-gray-200 hover:bg-gray-50'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="deliveryOption"
+                      className="mt-1"
+                      value={option.id}
+                      checked={deliveryOption === option.id}
+                      onChange={() => setDeliveryOption(option.id)}
+                      disabled={calculatingTotals || placing}
+                    />
+                    <span className="flex-1">
+                      <span className="flex justify-between">
+                        <span className="font-medium text-gray-800">
+                          {option.label}
+                        </span>
+                        <span className="font-medium text-gray-900">
+                          {option.price === 0 ? 'Free' : `₹${option.price}`}
+                        </span>
+                      </span>
+                      <span className="block text-xs text-gray-500">
+                        {option.etaText}
+                        {option.courier ? ` · ${option.courier}` : ''}
+                      </span>
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="flex justify-between font-bold text-lg border-t pt-3 mt-3">
             <span>Order Total</span>

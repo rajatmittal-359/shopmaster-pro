@@ -19,7 +19,11 @@ const require = createRequire(import.meta.url);
 
 const shiprocket = require('../utils/shiprocketService');
 const borzo = require('../utils/borzo');
-const { getDeliveryOptions, priceDeliveryOption } = require('../utils/shipping');
+const {
+  getDeliveryOptions,
+  priceDeliveryOption,
+  describeArrival,
+} = require('../utils/shipping');
 
 /** Same first three digits as the pickup pincode set in tests/setup.mjs. */
 const JAIPUR = {
@@ -63,7 +67,9 @@ beforeEach(() => {
     return {
       provider: 'borzo',
       price: 102,
-      arrivalBy: new Date('2026-08-30T19:01:00+05:30'),
+      // Relative, not a fixed date: a hard-coded one would make this suite
+      // start failing the day after it was written.
+      arrivalBy: new Date(Date.now() + 2 * 3600000),
     };
   });
 });
@@ -100,8 +106,9 @@ describe('what a customer is offered', () => {
     const [, sameDay] = await getDeliveryOptions(CART, JAIPUR, false);
 
     // Taken from the courier's own answer rather than a cut-off this codebase
-    // invents, so the promise is one the courier has actually made.
-    expect(sameDay.etaText).toMatch(/^Today by /);
+    // invents, so the promise is one the courier has actually made. Whether it
+    // reads Today or Tomorrow depends on the clock, which is the point.
+    expect(sameDay.etaText).toMatch(/^(Today|Tomorrow) by /);
     expect(sameDay.arrivalBy).toBeInstanceOf(Date);
   });
 
@@ -199,5 +206,42 @@ describe('free shipping and same-day', () => {
 
     expect(priced.freeShipping).toBe(false);
     expect(priced.shippingCharges).toBe(102);
+  });
+});
+
+describe('what the customer is told about timing', () => {
+  const hoursFromNow = (h) => new Date(Date.now() + h * 3600000);
+
+  it('says Today only when the arrival really is today', () => {
+    const now = new Date();
+    const laterToday = new Date(now);
+    laterToday.setHours(23, 30, 0, 0);
+
+    // Only meaningful if there is still time left in the day to test with.
+    if (laterToday > now) {
+      expect(describeArrival(laterToday)).toMatch(/^Today by /);
+    }
+  });
+
+  it('says Tomorrow rather than lying about Today', () => {
+    const now = new Date();
+    const tomorrow = new Date(now);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(10, 0, 0, 0);
+
+    // An order placed late at night is quoted for the next day. Calling that
+    // "Today by 10am" would be a promise the courier never made.
+    expect(describeArrival(tomorrow)).toMatch(/^Tomorrow by /);
+  });
+
+  it('names the date when it is further out', () => {
+    const text = describeArrival(hoursFromNow(24 * 4));
+
+    expect(text).toMatch(/^By /);
+    expect(text).not.toMatch(/Today|Tomorrow/);
+  });
+
+  it('falls back to Today when the courier gave no time', () => {
+    expect(describeArrival(null)).toBe('Today');
   });
 });

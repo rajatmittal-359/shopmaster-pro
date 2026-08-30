@@ -176,6 +176,33 @@ const calculateShipping = async (cartItems, address, isCOD) => {
 };
 
 /**
+ * Turns a courier's arrival time into words a customer can act on.
+ *
+ * Saying "Today" is only true if the arrival really falls on today's date. An
+ * order placed at 2am can be quoted an arrival a few hours later, which is
+ * still today - but one placed at 11pm is usually quoted for tomorrow, and
+ * calling that "Today by 9am" would be a promise the courier never made.
+ */
+const describeArrival = (arrivalBy) => {
+  if (!arrivalBy) return 'Today';
+
+  const time = arrivalBy.toLocaleTimeString('en-IN', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+
+  const now = new Date();
+  const sameDate = arrivalBy.toDateString() === now.toDateString();
+  if (sameDate) return `Today by ${time}`;
+
+  const tomorrow = new Date(now);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  if (arrivalBy.toDateString() === tomorrow.toDateString()) return `Tomorrow by ${time}`;
+
+  return `By ${arrivalBy.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}, ${time}`;
+};
+
+/**
  * Every way this basket can be delivered to this address.
  *
  * Standard always appears. Same-day appears only when the address is in the
@@ -213,12 +240,7 @@ const getDeliveryOptions = async (cartItems, address, isCOD) => {
     label: 'Same-day Delivery',
     price: sameDay.price,
     courier: 'Borzo',
-    etaText: sameDay.arrivalBy
-      ? `Today by ${sameDay.arrivalBy.toLocaleTimeString('en-IN', {
-          hour: '2-digit',
-          minute: '2-digit',
-        })}`
-      : 'Today',
+    etaText: describeArrival(sameDay.arrivalBy),
     arrivalBy: sameDay.arrivalBy,
   });
 
@@ -247,6 +269,7 @@ const priceDeliveryOption = async (cartItems, address, isCOD, optionId) => {
 
 module.exports = {
   getDeliveryOptions,
+  describeArrival,
   priceDeliveryOption,
   calculateShipping,
   isFreeShipping,
