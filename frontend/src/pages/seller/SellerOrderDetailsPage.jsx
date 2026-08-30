@@ -4,6 +4,7 @@ import Layout from '../../components/common/Layout';
 import { getOrderDetails, updateOrderStatus, updateTracking } from '../../services/sellerService';
 import { toastSuccess, toastError } from '../../utils/toast';
 
+import { orderRef } from '../../utils/orderRef';
 const statusFlow = ['processing', 'shipped', 'delivered'];
 
 const statusColors = {
@@ -146,7 +147,7 @@ export default function SellerOrderDetailsPage() {
         <div className="flex flex-col md:flex-row md:justify-between gap-3">
           <div>
             <h2 className="text-2xl font-bold">Order Details</h2>
-            <p className="text-sm text-gray-600">Order ID: #{order._id.slice(-6)}</p>
+            <p className="text-sm text-gray-600">Order {orderRef(order)}</p>
             <p className="text-xs text-gray-500">{new Date(order.createdAt).toLocaleString()}</p>
           </div>
           <div className="flex items-center gap-2">

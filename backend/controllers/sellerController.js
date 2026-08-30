@@ -128,6 +128,7 @@ exports.addProduct = async (req, res) => {
       price,
       stock,
       lowStockThreshold,
+      freeShipping,
       images, // base64 array
       brand,
       sku,
@@ -159,6 +160,8 @@ exports.addProduct = async (req, res) => {
   typeof lowStockThreshold === 'number'
     ? lowStockThreshold
     : 10,
+      // The seller chooses to absorb delivery on this product.
+      freeShipping: freeShipping === true,
 
       sellerId: req.user._id,
       isActive: true,
@@ -193,7 +196,8 @@ exports.updateProduct = async (req, res) => {
       sku,
       mrp,
       tags,
-      weight,  // ✅ ADDED
+      weight,
+      freeShipping,
     } = req.body;
 
     const product = await Product.findOne({
@@ -232,7 +236,10 @@ exports.updateProduct = async (req, res) => {
     if (sku !== undefined) product.sku = sku;
     if (mrp !== undefined) product.mrp = mrp;
     if (Array.isArray(tags)) product.tags = tags;
-    if (weight !== undefined) product.weight = weight;  // ✅ ADDED
+    if (weight !== undefined) product.weight = weight;
+    // Only an explicit boolean flips it, so an absent field never silently
+    // turns free delivery off on an existing product.
+    if (typeof freeShipping === 'boolean') product.freeShipping = freeShipping;
 
     // Images handling (existing code...)
     if (Array.isArray(req.body.images) && req.body.images.length > 0) {
@@ -388,13 +395,29 @@ exports.getMyOrders = async (req, res) => {
         (item) => item.sellerId.toString() === req.user._id.toString()
       );
 
+      // What this seller is owed for their own lines. The order's totalAmount
+      // belongs to the whole basket, which in a multi-seller order is other
+      // sellers' money too - showing it here would overstate their earnings.
+      const sellerSubtotal = sellerItems.reduce(
+        (sum, item) => (item.status === 'cancelled' ? sum : sum + item.price * item.quantity),
+        0
+      );
+      const sellerEarning = sellerItems.reduce(
+        (sum, item) => (item.status === 'cancelled' ? sum : sum + (item.sellerEarning || 0)),
+        0
+      );
+
       return {
         _id: order._id,
+        // The readable reference the customer will quote on the phone.
+        orderNumber: order.orderNumber,
         customerId: order.customerId,
         items: sellerItems,
+        sellerSubtotal,
+        sellerEarning,
         status: order.status,
         paymentStatus: order.paymentStatus,
-        trackingInfo: order.trackingInfo,  // ✅ ADDED
+        trackingInfo: order.trackingInfo,
         createdAt: order.createdAt,
       };
     });
@@ -435,6 +458,7 @@ exports.getOrderDetails = async (req, res) => {
 
     const orderData = {
       _id: order._id,
+      orderNumber: order.orderNumber,
       customerId: order.customerId,
       items: sellerItems,
       status: order.status,

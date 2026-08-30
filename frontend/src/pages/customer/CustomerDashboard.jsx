@@ -4,6 +4,7 @@ import Layout from "../../components/common/Layout";
 import api from "../../utils/api";
 import { Link } from "react-router-dom";
 
+import { orderRefShort } from '../../utils/orderRef';
 export default function CustomerDashboard() {
   const [stats, setStats] = useState({
     totalOrders: 0,
@@ -177,7 +178,7 @@ export default function CustomerDashboard() {
                 >
                   <div>
                     <p className="font-semibold">
-                      Order #{order._id.slice(-6)}
+                      Order {orderRefShort(order)}
                     </p>
                     <p className="text-xs text-gray-500">
                       {new Date(order.createdAt).toLocaleDateString()} • ₹

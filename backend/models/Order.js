@@ -29,6 +29,28 @@ const orderItemSchema = new mongoose.Schema({
     enum: ['active', 'cancelled'],
     default: 'active',
   },
+
+  // ---- Commission snapshot -------------------------------------------------
+  // Copied from the seller's profile at the moment the order is placed and then
+  // never recalculated. A seller's rate can change tomorrow; what they are owed
+  // for a sale made today must not. commissionAmount + sellerEarning always
+  // equals price * quantity. See utils/commission.js.
+  commissionRate: {
+    type: Number,
+    default: 0,
+    min: 0,
+    max: 100
+  },
+  commissionAmount: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
+  sellerEarning: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
 });
 
 const orderSchema = new mongoose.Schema(
@@ -40,6 +62,19 @@ const orderSchema = new mongoose.Schema(
     },
 
     items: [orderItemSchema],
+
+    /**
+     * Human-readable reference, e.g. SMP-260830-A3F19C.
+     *
+     * Customers and couriers need something they can read out over the phone;
+     * a raw ObjectId is not that. Derived from the _id, so it inherits the
+     * _id's uniqueness and needs no counter collection. Set in pre-validate.
+     */
+    orderNumber: {
+      type: String,
+      unique: true,
+      index: true
+    },
 
     totalAmount: {
       type: Number,
@@ -117,6 +152,49 @@ const orderSchema = new mongoose.Schema(
       default: null
     },
 
+    /**
+     * Whether this order is currently holding inventory, and until when.
+     *
+     *   none      COD, or a prepaid order whose hold was never taken
+     *   held      units are counted in Product.reserved for this order
+     *   consumed  payment succeeded; the hold became a sale
+     *   released  payment failed, was cancelled, or the hold expired
+     *
+     * Only 'held' blocks other customers. The status is moved with a
+     * compare-and-set so a hold can never be released or consumed twice, which
+     * is what stops a concurrent release and payment both touching stock.
+     */
+    reservationStatus: {
+      type: String,
+      enum: ['none', 'held', 'consumed', 'released'],
+      default: 'none',
+      index: true,
+    },
+
+    /**
+     * When an unpaid hold stops blocking other customers.
+     *
+     * Expired holds are released lazily, at the moment another checkout tries
+     * to reserve the same product - which is exactly when the units are needed
+     * and the only time the staleness can matter. No scheduler is involved.
+     */
+    reservationExpiresAt: {
+      type: Date,
+      default: null,
+    },
+
+    /**
+     * When the order actually reached the customer.
+     *
+     * Without this the return window cannot be computed at all: `status` only
+     * says an order IS delivered, never WHEN, and updatedAt moves on every
+     * later write. Set once, when status first becomes 'delivered'.
+     */
+    deliveredAt: {
+      type: Date,
+      default: null
+    },
+
     // 🚚 Manual tracking (existing flow)
     trackingInfo: {
       courierName: { type: String, default: null },
@@ -160,6 +238,22 @@ const orderSchema = new mongoose.Schema(
     timestamps: true
   }
 );
+
+/**
+ * Build the readable order number once, before validation runs so the
+ * `unique` constraint has a value to check. Mongoose assigns _id at document
+ * construction, so it is already available here.
+ */
+orderSchema.pre('validate', function () {
+  if (this.orderNumber) return;
+
+  const d = this.createdAt ? new Date(this.createdAt) : new Date();
+  const yy = String(d.getFullYear()).slice(-2);
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+
+  this.orderNumber = `SMP-${yy}${mm}${dd}-${String(this._id).slice(-6).toUpperCase()}`;
+});
 
 // 📌 Indexes
 orderSchema.index({ customerId: 1 });

@@ -7,7 +7,12 @@
     "start": "node server.js",
     "server": "nodemon server.js",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "seed": "node seed.js",
+    "seed:dry": "node seed.js --dry",
+    "seed:reset": "node seed.js --reset",
+    "sitemap": "node generateSitemap.js",
+    "images": "node addProductImages.js"
   },
   "keywords": [],
   "author": "",
@@ -17,17 +22,13 @@
     "@sendgrid/mail": "^8.1.6",
     "bcryptjs": "^3.0.3",
     "cloudinary": "^2.8.0",
-    "colors": "^1.4.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^9.0.0",
-    "multer": "^2.0.2",
     "node-cron": "^4.2.1",
-    "nodemailer": "^7.0.11",
-    "razorpay": "^2.9.6",
-    "stripe": "^20.0.0"
+    "razorpay": "^2.9.6"
   },
   "devDependencies": {
     "nodemon": "^3.1.11",

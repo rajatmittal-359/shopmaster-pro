@@ -1,11 +1,14 @@
 User-agent: *
 Allow: /
 
-# Private / non-SEO pages
-Disallow: /admin
-Disallow: /seller
-Disallow: /checkout
-Disallow: /cart
+# Private and transactional pages. These paths are the real routes: the
+# previous file blocked /cart and /checkout, which are not routes in this app
+# (they live under /customer/), so nothing was actually being excluded.
+Disallow: /customer/
+Disallow: /seller/
+Disallow: /admin/
+Disallow: /login
+Disallow: /register
+Disallow: /verify-otp
 
-# Sitemap location
 Sitemap: https://www.shopmasterpro.in/sitemap.xml

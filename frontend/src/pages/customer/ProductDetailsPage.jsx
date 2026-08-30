@@ -17,6 +17,7 @@ import {
   deleteReview,
 } from "../../services/reviewService";
 import { toastSuccess, toastError } from '../../utils/toast';
+import Seo, { productJsonLd } from '../../components/common/Seo';
 
 export default function ProductDetailsPage() {
   const { productId } = useParams();
@@ -245,8 +246,23 @@ const toggleWishlist = async () => {
     role === "customer" &&
     reviews.some((r) => r.userId?._id === user._id);
 
+  // Canonical form of this product's URL. The slug is preferred; an id-based
+  // link still resolves, but must not be advertised as canonical.
+  const canonicalPath = `/products/${product.slug || product._id}`;
+  const metaDescription = (product.description || '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 155);
+
   return (
     <Layout title={product.name}>
+      <Seo
+        title={product.name}
+        description={metaDescription}
+        path={canonicalPath}
+        image={product.images?.[0]}
+        jsonLd={productJsonLd(product, canonicalPath)}
+      />
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 p-4">
         {/* ✅ LEFT: IMAGE GALLERY */}
         <div>

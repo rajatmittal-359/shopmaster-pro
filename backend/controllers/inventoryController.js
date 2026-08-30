@@ -80,7 +80,7 @@ exports.getInventoryLogs = async (req, res) => {
 
     const logs = await InventoryLog.find(filter)
       .populate("productId", "name")
-      .populate("orderId", "_id")
+      .populate("orderId", "_id orderNumber")
       .populate("performedBy", "name email")
       .sort({ createdAt: -1 });
 

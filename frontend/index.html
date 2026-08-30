@@ -5,9 +5,16 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-    <title>ShopMaster Pro</title>
+    <!--
+      Defaults only. Each page sets its own <title>, description and canonical;
+      React 19 hoists those into <head> and they override what is here.
 
-    <link rel="canonical" href="https://www.shopmasterpro.in/" />
+      A hard-coded canonical used to live here pointing at the homepage. Because
+      this is a single-page app, that same tag was served for EVERY route, which
+      told search engines that every product page was a duplicate of the
+      homepage. It is deliberately not set here any more.
+    -->
+    <title>ShopMaster Pro</title>
     <meta name="description" content="ShopMaster Pro is a modern multi-category e-commerce platform where sellers can manage products and customers can shop easily online." />
     <meta name="robots" content="index, follow" />
   </head>

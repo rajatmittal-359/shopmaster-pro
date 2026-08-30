@@ -1,5 +1,8 @@
 const Cart = require("../models/Cart");
 const Order = require("../models/Order");
+const { applyCommission } = require("../utils/commission");
+const { calculateShipping } = require("../utils/shipping");
+const { releaseReservation } = require("../utils/reservation");
 const Product = require("../models/Product");
 const mongoose = require('mongoose'); 
 const Address = require('../models/Address'); 
@@ -42,52 +45,6 @@ const parseQuantity = (raw) => {
   return { ok: true, value };
 };
 
-const FALLBACK_SHIPPING = 100;
-
-/**
- * Single source of truth for COD/prepaid shipping cost.
- * checkout() and previewTotals() previously carried near-identical copies of
- * this block with different isCOD inputs, which is why the quoted total and the
- * charged total diverged. Sharing one function makes divergence impossible.
- */
-const calculateShipping = async (cartItems, address, isCOD) => {
-  try {
-    // Total cart weight (fallback 0.5 kg per item)
-    const totalWeight = cartItems.reduce(
-      (sum, item) => sum + (item.productId.weight || 0.5) * item.quantity,
-      0
-    );
-
-    const shippingData = await shiprocketService.getShippingRate(address.zipCode, totalWeight, isCOD);
-
-    const couriers =
-      shippingData?.data?.available_courier_companies ||
-      shippingData?.available_courier_companies ||
-      [];
-
-    if (couriers.length === 0) {
-      console.warn('⚠️ Shiprocket: No couriers available - using fallback');
-      return { shippingCharges: FALLBACK_SHIPPING, shippingCourier: 'Standard Shipping' };
-    }
-
-    const rateOf = (c) => c.freight_charge || c.rate || c.total_charge || 0;
-    const cheapest = couriers.reduce((min, curr) =>
-      rateOf(curr) < rateOf(min) ? curr : min
-    );
-
-    const baseRate = rateOf(cheapest);
-    const codFee = isCOD ? cheapest.cod_charges || cheapest.cod_charge || 0 : 0;
-
-    return {
-      shippingCharges: Math.round(baseRate + codFee),
-      shippingCourier:
-        cheapest.courier_name || cheapest.courier_company_id || 'Shiprocket',
-    };
-  } catch (shipErr) {
-    console.error('Shipping calculation failed:', shipErr.message);
-    return { shippingCharges: FALLBACK_SHIPPING, shippingCourier: 'Standard Shipping' };
-  }
-};
 
   exports.addToCart = async (req, res) => {
     try {
@@ -225,10 +182,16 @@ exports.checkout = async (req, res) => {
         });
       }
 
-      if (product.stock < item.quantity) {
+      // Units already held for an unpaid prepaid checkout are not on sale.
+      // Without this a COD order would eat a unit that a paying customer is
+      // mid-checkout for, and that customer's payment would then be
+      // unfulfillable - the exact failure this phase removes.
+      const available = product.stock - (product.reserved || 0);
+
+      if (available < item.quantity) {
         await session.abortTransaction();
         return res.status(400).json({
-          message: `Insufficient stock for ${product.name}. Available: ${product.stock}`,
+          message: `Insufficient stock for ${product.name}. Available: ${Math.max(0, available)}`,
         });
       }
     }
@@ -244,17 +207,23 @@ exports.checkout = async (req, res) => {
 
 
     // ✅ Create order
+    // Stamp platform commission onto each line before the order is written. The rate is
+    const orderItems = await applyCommission(
+      cart.items.map((item) => ({
+        productId: item.productId._id,
+        name: item.productId.name,
+        quantity: item.quantity,
+        price: item.price,
+        sellerId: item.productId.sellerId,
+      })),
+      session
+    );
+
     const order = await Order.create(
       [
         {
           customerId: req.user._id,
-          items: cart.items.map((item) => ({
-            productId: item.productId._id,
-            name: item.productId.name,
-            quantity: item.quantity,
-            price: item.price,
-            sellerId: item.productId.sellerId,
-          })),
+          items: orderItems,
           totalAmount: cart.totalAmount + shippingCharges,
           shippingAddressId,
           status: 'pending',
@@ -270,16 +239,36 @@ exports.checkout = async (req, res) => {
     );
 
     // ✅ Update stock + inventory logs
+    //
+    // COD keeps its original architecture: the sale is final at order creation,
+    // so stock is decremented here rather than reserved. The decrement is now a
+    // single conditional update instead of read-then-write, so two COD orders
+    // for the last unit cannot both succeed, and it subtracts against
+    // (stock - reserved) so it cannot take a unit a prepaid checkout is holding.
     for (const item of cart.items) {
-      const product = await Product.findById(item.productId._id).session(
-        session
+      const before = await Product.findOneAndUpdate(
+        {
+          _id: item.productId._id,
+          $expr: {
+            $gte: [
+              { $subtract: ['$stock', { $ifNull: ['$reserved', 0] }] },
+              item.quantity,
+            ],
+          },
+        },
+        { $inc: { stock: -item.quantity } },
+        { session, new: false }
       );
 
-      const stockBefore = product.stock;
-      const stockAfter = stockBefore - item.quantity;
+      if (!before) {
+        await session.abortTransaction();
+        return res.status(409).json({
+          message: `"${item.productId.name}" sold out while your order was being placed.`,
+        });
+      }
 
-      product.stock = stockAfter;
-      await product.save({ session });
+      const stockBefore = before.stock;
+      const stockAfter = stockBefore - item.quantity;
 
       await InventoryLog.create(
         [
@@ -507,21 +496,34 @@ exports.cancelOrderItem = async (req, res) => {
     // ✅ NEW: Calculate refund amount for this item
     const refundAmount = item.price * item.quantity;
     
-    // First restore inventory
-    const product = await Product.findById(item.productId).session(session);
-    const stockBefore = product.stock;
-    product.stock += item.quantity;
-    await product.save({ session });
-    
-    await InventoryLog.create([{
-      productId: item.productId,
-      type: 'return',
-      quantity: item.quantity,
-      stockBefore,
-      stockAfter: product.stock,
-      orderId: order._id,
-      performedBy: req.user._id,
-    }], { session });
+    // Give the units back - but only if this order ever took them.
+    //
+    // A prepaid order that has not been paid for never decremented stock; it
+    // only holds units. Restocking it inflated inventory out of nothing: a
+    // product with one unit became two after a single abandoned checkout.
+    // Releasing the hold is the correct undo, and it writes no inventory log
+    // because nothing permanent changed.
+    const consumedStock =
+      order.paymentMethod === 'cod' || order.reservationStatus === 'consumed';
+
+    if (consumedStock) {
+      const product = await Product.findById(item.productId).session(session);
+      const stockBefore = product.stock;
+      product.stock += item.quantity;
+      await product.save({ session });
+
+      await InventoryLog.create([{
+        productId: item.productId,
+        type: 'return',
+        quantity: item.quantity,
+        stockBefore,
+        stockAfter: product.stock,
+        orderId: order._id,
+        performedBy: req.user._id,
+      }], { session });
+    } else if (order.reservationStatus === 'held') {
+      await releaseReservation(order, session);
+    }
     
     // ✅ NEW: Process refund if payment completed
     if (order.paymentStatus === 'paid' && order.razorpayPaymentId) {

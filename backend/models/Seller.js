@@ -1,4 +1,7 @@
 const mongoose = require('mongoose');
+// Safe to require here: commission.js only requires this model lazily, inside a
+// function, so there is no circular dependency at load time.
+const { DEFAULT_COMMISSION_RATE } = require('../utils/commission');
 
 const sellerSchema = new mongoose.Schema(
   {
@@ -40,6 +43,24 @@ const sellerSchema = new mongoose.Schema(
         trim: true
       }
     },
+    /**
+     * Platform commission taken from this seller's sales, as a percentage of
+     * the item value (shipping is never commissioned).
+     *
+     * It lives per seller so a rate can be negotiated individually - the
+     * platform's own store is set to 0 here, while every other seller uses
+     * DEFAULT_COMMISSION_RATE from utils/commission.js unless changed by admin.
+     *
+     * Changing this NEVER alters past orders: the rate in force is copied onto
+     * each order item at the moment the order is placed. See utils/commission.js.
+     */
+    commissionRate: {
+      type: Number,
+      default: DEFAULT_COMMISSION_RATE,
+      min: [0, 'Commission rate cannot be negative'],
+      max: [100, 'Commission rate cannot exceed 100%']
+    },
+
     isApproved: {
       type: Boolean,
       default: false

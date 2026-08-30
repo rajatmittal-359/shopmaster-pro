@@ -6,6 +6,7 @@ import { getMyOrders, cancelOrderItem } from "../../services/orderService";
 import { Link } from "react-router-dom";
 import { toastSuccess, toastError } from "../../utils/toast";
 
+import { orderRef } from '../../utils/orderRef';
 const statusColors = {
   pending: "bg-yellow-100 text-yellow-700",
   processing: "bg-blue-100 text-blue-700",
@@ -100,7 +101,7 @@ export default function MyOrdersPage() {
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b">
                     <div>
                       <p className="text-sm font-semibold">
-                        Order ID: {order._id}
+                        Order {orderRef(order)}
                       </p>
                       <p className="text-xs text-gray-500">
                         {new Date(order.createdAt).toLocaleString()}

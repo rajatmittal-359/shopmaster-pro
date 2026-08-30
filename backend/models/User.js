@@ -16,8 +16,11 @@
         unique: true,
         lowercase: true,
         trim: true,
+        // The previous pattern ended in (\.\w{2,3})+ which caps the TLD at three
+        // characters, so real addresses on .store, .online and .jewelry were
+        // rejected at signup. This accepts any sane TLD length instead.
         match: [
-            /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/,
+            /^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$/,
             'Please provide a valid email'
         ]
         },

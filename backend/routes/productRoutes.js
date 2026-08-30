@@ -115,10 +115,21 @@ router.get('/', async (req, res) => {
     // getBrowsableIds also drops any category sitting under a deactivated
     // parent, so switching off a parent hides its products too.
     if (category) {
+      // Accept a slug or an ObjectId, so /shop?category=rings is a real,
+      // shareable, indexable URL and existing id-based links keep working.
+      let categoryId = category;
       if (!mongoose.isValidObjectId(category)) {
-        return res.status(400).json({ message: 'Invalid category id' });
+        const bySlug = await Category.findOne({ slug: category }).select('_id').lean();
+        // A category that does not exist is a 404, not an empty result page.
+        // Answering 200 with zero products creates a "soft 404": Google indexes
+        // the empty page as real content. Its JS SEO guidance calls this out
+        // explicitly, and it applies to any URL a crawler can reach.
+        if (!bySlug) {
+          return res.status(404).json({ message: 'Category not found' });
+        }
+        categoryId = bySlug._id;
       }
-      const categoryIds = await Category.getBrowsableIds(category);
+      const categoryIds = await Category.getBrowsableIds(categoryId);
       if (categoryIds.length === 0) {
         return res.json({ products: [], totalPages: 0, currentPage: 1, total: 0 });
       }
@@ -179,8 +190,14 @@ router.get('/:productId', async (req, res) => {
   try {
     const { productId } = req.params;
 
-    const product = await Product.findById(productId)
-      .populate('category', 'name description')
+    // Accept either the SEO slug or the raw ObjectId, so links shared before
+    // slugs existed keep working. Slug is tried first: it is the canonical form.
+    const product = await Product.findOne(
+      mongoose.isValidObjectId(productId)
+        ? { $or: [{ slug: productId }, { _id: productId }] }
+        : { slug: productId }
+    )
+      .populate('category', 'name slug description ancestors')
       .populate('sellerId', 'name');
 
     if (!product) {

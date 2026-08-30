@@ -4,9 +4,17 @@ import Layout from '../../components/common/Layout';
 import ProductCard from '../../components/customer/ProductCard';
 import FilterSidebar from '../../components/customer/FilterSidebar';
 import { getProducts, getCategories } from '../../services/productService';
+import { useSearchParams } from 'react-router-dom';
 import Loader from '../../components/common/Loader';
+import Seo from '../../components/common/Seo';
 
 export default function HomePage() {
+  // The category lives in the URL so a category page is shareable, bookmarkable
+  // and indexable. Previously it was local state only, so every category showed
+  // the same /shop URL and search engines saw one page instead of many.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const urlCategory = searchParams.get('category') || '';
+
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
 
@@ -19,7 +27,7 @@ export default function HomePage() {
 
   const [filters, setFilters] = useState({
     search: '',
-    category: '',
+    category: urlCategory,
     minPrice: '',
     maxPrice: '',
     sortBy: 'newest',
@@ -88,9 +96,17 @@ export default function HomePage() {
       [name]: value,
     }));
     setMeta((prev) => ({ ...prev, page: 1 }));
+
+    if (name === 'category') {
+      const next = new URLSearchParams(searchParams);
+      if (value) next.set('category', value);
+      else next.delete('category');
+      setSearchParams(next, { replace: true });
+    }
   };
 
   const handleClearFilters = () => {
+    setSearchParams({}, { replace: true });
     setFilters({
       search: '',
       category: '',
@@ -132,8 +148,20 @@ const getSortedProducts = () => {
 
   const sortedProducts = getSortedProducts();
 
+  const activeCategory = categories.find((c) => c._id === filters.category);
+  const shopPath = urlCategory ? `/shop?category=${urlCategory}` : '/shop';
+
   return (
     <Layout title="Shop">
+      <Seo
+        title={activeCategory ? activeCategory.name : 'Shop'}
+        description={
+          activeCategory
+            ? `Buy ${activeCategory.name} online at ShopMaster Pro. Genuine products, secure checkout and fast delivery across India.`
+            : 'Shop jewellery, fashion, footwear, electronics and more at ShopMaster Pro. Secure checkout and fast delivery across India.'
+        }
+        path={shopPath}
+      />
       <div className="flex flex-col gap-4">
         {/* Header row */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">

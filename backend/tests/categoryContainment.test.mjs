@@ -52,6 +52,7 @@ beforeEach(() => {
   originals.catFind = Category.find;
   originals.catFindById = Category.findById;
   originals.catExists = Category.exists;
+  originals.catFindOne = Category.findOne;
   originals.prodFind = Product.find;
   originals.prodCount = Product.countDocuments;
   originals.prodAggregate = Product.aggregate;
@@ -74,6 +75,10 @@ beforeEach(() => {
   );
   Category.exists = vi.fn(async (filter) =>
     categories.some((c) => String(c.parentCategory) === String(filter.parentCategory))
+  );
+  // The shop filter resolves a non-ObjectId query value as a category slug.
+  Category.findOne = vi.fn((filter = {}) =>
+    chainableQuery(categories.find((c) => c.slug === filter.slug) || null)
   );
 
   Product.find = vi.fn((filter = {}) => {
@@ -113,6 +118,7 @@ afterEach(() => {
   Category.find = originals.catFind;
   Category.findById = originals.catFindById;
   Category.exists = originals.catExists;
+  Category.findOne = originals.catFindOne;
   Product.find = originals.prodFind;
   Product.countDocuments = originals.prodCount;
   Product.aggregate = originals.prodAggregate;
@@ -171,9 +177,20 @@ describe('parent category rolls up its subtree', () => {
     expect(res.body.products).toHaveLength(PRODUCTS.length);
   });
 
-  it('rejects a malformed category id with 400', async () => {
+  // Behaviour changed deliberately when slugs were introduced: a non-ObjectId
+  // is now a legitimate category identifier, so it is looked up as a slug.
+  // An identifier that matches nothing is a 404 rather than an empty 200,
+  // because a 200 with no products is a soft 404 that Google will index.
+  it('returns 404 for a category identifier that matches nothing', async () => {
     const res = await shop('?category=not-an-id');
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(404);
+  });
+
+  it('accepts a category slug as well as an id', async () => {
+    const bySlug = await shop('?category=rings');
+    const byId = await shop(`?category=${SUB_RINGS}`);
+    expect(bySlug.status).toBe(200);
+    expect(bySlug.body.products).toHaveLength(byId.body.products.length);
   });
 });
 

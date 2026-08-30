@@ -4,6 +4,7 @@ import { getSellerOrders, updateOrderStatus, updateTracking } from '../../servic
 import { toastSuccess, toastError } from '../../utils/toast';
 import { Link } from 'react-router-dom';
 
+import { orderRef } from '../../utils/orderRef';
 const statusFlow = ['processing', 'shipped', 'delivered'];
 
 const statusColors = {
@@ -156,7 +157,7 @@ export default function SellerOrdersPage() {
                   <div className="flex flex-col md:flex-row md:justify-between gap-3 pb-3 border-b">
                     <div>
                       <span className="font-semibold text-sm">
-                        Order #{order._id.slice(-6)}
+                        Order {orderRef(order)}
                       </span>
                       <p className="text-xs text-gray-500 mt-1">
                         {new Date(order.createdAt).toLocaleString()}

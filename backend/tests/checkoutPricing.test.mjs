@@ -15,6 +15,7 @@ const Product = require('../models/Product');
 const Address = require('../models/Address');
 const Order = require('../models/Order');
 const InventoryLog = require('../models/Inventory');
+const Seller = require('../models/Seller');
 const shiprocket = require('../utils/shiprocketService');
 
 const CUSTOMER_ID = new mongoose.Types.ObjectId();
@@ -40,10 +41,12 @@ beforeEach(() => {
   originals.userFindById = User.findById;
   originals.cartFindOne = Cart.findOne;
   originals.productFindById = Product.findById;
+  originals.productFindOneAndUpdate = Product.findOneAndUpdate;
   originals.addressFindOne = Address.findOne;
   originals.orderCreate = Order.create;
   originals.inventoryCreate = InventoryLog.create;
   originals.startSession = mongoose.startSession;
+  originals.sellerFind = Seller.find;
   originals.getShippingRate = shiprocket.getShippingRate;
 
   rateCalls = [];
@@ -71,13 +74,28 @@ beforeEach(() => {
       name: 'C',
     })
   );
+  // Checkout stamps the platform commission onto every line, which reads the
+  // seller's rate. These tests assert shipping arithmetic, so a fixed rate
+  // keeps them independent of whatever the platform default happens to be.
+  Seller.find = vi.fn(() =>
+    chainableQuery([{ userId: SELLER_ID, commissionRate: 10 }])
+  );
+
   Cart.findOne = vi.fn(() => chainableQuery(cartDoc));
   Address.findOne = vi.fn(() =>
     chainableQuery({ _id: ADDRESS_ID, userId: CUSTOMER_ID, zipCode: '302019' })
   );
   Product.findById = vi.fn(() =>
-    chainableQuery({ _id: PRODUCT_ID, name: 'Ring', stock: 10, isActive: true, save: vi.fn(async () => {}) })
+    chainableQuery({
+      _id: PRODUCT_ID, name: 'Ring', stock: 10, reserved: 0, isActive: true,
+      save: vi.fn(async () => {}),
+    })
   );
+  // COD now decrements with a single conditional update rather than
+  // read-then-write. It returns the pre-update document.
+  Product.findOneAndUpdate = vi.fn(async () => ({
+    _id: PRODUCT_ID, name: 'Ring', stock: 10, reserved: 0,
+  }));
   InventoryLog.create = vi.fn(async () => [{}]);
   Order.create = vi.fn(async (docs) => {
     createdOrder = Array.isArray(docs) ? docs[0] : docs;
@@ -107,7 +125,9 @@ afterEach(() => {
   User.findById = originals.userFindById;
   Cart.findOne = originals.cartFindOne;
   Product.findById = originals.productFindById;
+  Product.findOneAndUpdate = originals.productFindOneAndUpdate;
   Address.findOne = originals.addressFindOne;
+  Seller.find = originals.sellerFind;
   Order.create = originals.orderCreate;
   InventoryLog.create = originals.inventoryCreate;
   mongoose.startSession = originals.startSession;
@@ -188,5 +208,74 @@ describe('COD checkout pricing consistency', () => {
     expect(quote.body.shippingCharges).toBe(100);
     expect(createdOrder.shippingCharges).toBe(100);
     expect(createdOrder.totalAmount).toBe(quote.body.grandTotal);
+  });
+});
+
+describe('COD respects inventory held for prepaid checkouts', () => {
+  // A COD order must not take a unit that a paying customer is mid-checkout
+  // for. If it did, that customer's payment would land on stock that no longer
+  // exists - the exact failure the reservation work removes.
+  it('refuses when every remaining unit is held by a prepaid checkout', async () => {
+    Product.findById = vi.fn(() =>
+      chainableQuery({
+        _id: PRODUCT_ID, name: 'Ring', stock: 1, reserved: 1, isActive: true,
+        save: vi.fn(async () => {}),
+      })
+    );
+
+    const res = await codCheckout();
+
+    expect(res.status).toBe(400);
+    expect(res.body.message).toMatch(/insufficient stock/i);
+  });
+
+  it('reports availability net of holds, not raw stock', async () => {
+    Product.findById = vi.fn(() =>
+      chainableQuery({
+        _id: PRODUCT_ID, name: 'Ring', stock: 5, reserved: 5, isActive: true,
+        save: vi.fn(async () => {}),
+      })
+    );
+
+    const res = await codCheckout();
+
+    // Telling the customer "5 available" while all five are spoken for would
+    // be a lie they cannot act on.
+    expect(res.body.message).toContain('Available: 0');
+  });
+
+  it('allows a purchase from the units that are genuinely free', async () => {
+    Product.findById = vi.fn(() =>
+      chainableQuery({
+        _id: PRODUCT_ID, name: 'Ring', stock: 5, reserved: 3, isActive: true,
+        save: vi.fn(async () => {}),
+      })
+    );
+
+    const res = await codCheckout();
+
+    // 201: the order was created from the two units nobody is holding.
+    expect(res.status).toBe(201);
+  });
+
+  it('decrements against availability so it cannot consume a held unit', async () => {
+    const calls = [];
+    Product.findOneAndUpdate = vi.fn(async (filter) => {
+      calls.push(filter);
+      return { _id: PRODUCT_ID, name: 'Ring', stock: 5, reserved: 3 };
+    });
+    Product.findById = vi.fn(() =>
+      chainableQuery({
+        _id: PRODUCT_ID, name: 'Ring', stock: 5, reserved: 3, isActive: true,
+        save: vi.fn(async () => {}),
+      })
+    );
+
+    await codCheckout();
+
+    expect(calls).toHaveLength(1);
+    // The condition must subtract reserved, not compare against stock alone.
+    expect(JSON.stringify(calls[0])).toContain('$subtract');
+    expect(JSON.stringify(calls[0])).toContain('reserved');
   });
 });

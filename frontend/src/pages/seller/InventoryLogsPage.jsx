@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import Layout from "../../components/common/Layout";
 import { getInventoryLogs } from "../../services/inventoryService";
 
+import { orderRefShort } from '../../utils/orderRef';
 const TYPE_OPTIONS = [
   { value: "all", label: "All types" },
   { value: "sale", label: "Sales" },
@@ -178,7 +179,7 @@ export default function SellerInventoryLogsPage() {
                   {getTypeBadge(log.type)}
                   {log.orderId && (
                     <span className="text-[11px] text-blue-600">
-                      Order #{log.orderId._id.slice(-6)}
+                      Order {orderRefShort(log.orderId)}
                     </span>
                   )}
                 </div>

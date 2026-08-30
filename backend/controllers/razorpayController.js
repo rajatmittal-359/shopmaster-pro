@@ -3,13 +3,19 @@ const crypto = require("crypto");
 const mongoose = require("mongoose");
 
 const Order = require("../models/Order");
+const { applyCommission } = require("../utils/commission");
 const Cart = require("../models/Cart");
 const Product = require("../models/Product");
 const InventoryLog = require("../models/Inventory");
 const Address = require("../models/Address");
 const sendSafeEmail = require("../utils/sendSafeEmail");
 const { orderConfirmedEmail } = require("../utils/emailTemplates");
-const { getShippingRate } = require('../utils/shiprocketService'); // ✅ NEW IMPORT
+const { calculateShipping } = require('../utils/shipping');
+const {
+  reserveForItems,
+  releaseReservation,
+  holdsInventory,
+} = require('../utils/reservation');
 
 // Lazily constructed: the Razorpay SDK throws when key_id is missing, so building
 // the client at module load made this file impossible to require without live
@@ -41,16 +47,30 @@ const getRazorpay = () => {
  * Returns { ok: true } or { ok: false, shortfall: { name, requested } }.
  */
 const commitStockForOrder = async (order, session) => {
+  // A held order already owns its units, so the sale takes them out of BOTH
+  // counters at once and cannot be beaten to them. An order without a hold
+  // (COD, or a prepaid hold that expired before payment landed) falls back to
+  // the plain conditional decrement, which is the behaviour that existed
+  // before reservations and is still the honest outcome there.
+  const consumesHold = holdsInventory(order);
+
   for (const item of order.items) {
     if (item.status === 'cancelled') continue;
 
     const productId = item.productId?._id || item.productId;
 
-    const before = await Product.findOneAndUpdate(
-      { _id: productId, stock: { $gte: item.quantity } },
-      { $inc: { stock: -item.quantity } },
-      { session, new: false }
-    );
+    const filter = consumesHold
+      ? { _id: productId, stock: { $gte: item.quantity }, reserved: { $gte: item.quantity } }
+      : { _id: productId, stock: { $gte: item.quantity } };
+
+    const update = consumesHold
+      ? { $inc: { stock: -item.quantity, reserved: -item.quantity } }
+      : { $inc: { stock: -item.quantity } };
+
+    const before = await Product.findOneAndUpdate(filter, update, {
+      session,
+      new: false,
+    });
 
     if (!before) {
       return { ok: false, shortfall: { name: item.name, requested: item.quantity } };
@@ -70,6 +90,17 @@ const commitStockForOrder = async (order, session) => {
       ],
       { session }
     );
+  }
+
+  // The hold has become a sale. Recorded so a later release can never hand
+  // back units that have already been sold.
+  if (consumesHold) {
+    await Order.updateOne(
+      { _id: order._id, reservationStatus: 'held' },
+      { $set: { reservationStatus: 'consumed', reservationExpiresAt: null } },
+      { session }
+    );
+    order.reservationStatus = 'consumed';
   }
 
   return { ok: true };
@@ -144,97 +175,43 @@ exports.createRazorpayOrder = async (req, res) => {
         .json({ success: false, message: "Cart is empty" });
     }
 
-    // 3) Stock validation
-    for (const item of cart.items) {
-      const product = await Product.findById(item.productId._id).session(
-        session
-      );
+    // 3) RESERVE the inventory rather than merely checking it.
+    //
+    // Checking was the old behaviour and it could not prevent anything: two
+    // customers both read "1 in stock", both paid, and only one could be
+    // fulfilled. Holding the units means the second customer is turned away
+    // BEFORE any money moves. All-or-nothing across the basket.
+    const reservation = await reserveForItems(
+      cart.items.map((item) => ({
+        productId: item.productId._id,
+        quantity: item.quantity,
+        name: item.productId.name,
+      })),
+      session
+    );
 
-      if (!product || !product.isActive) {
-        await session.abortTransaction();
-        return res.status(400).json({
-          success: false,
-          message: `Product ${item.productId.name} is no longer available`,
-        });
-      }
-
-      if (product.stock < item.quantity) {
-        console.log(
-          `Stock insufficient: ${product.name} (Available: ${product.stock}, Requested: ${item.quantity})`
-        );
-        await session.abortTransaction();
-        return res.status(400).json({
-          success: false,
-          message: `Insufficient stock for ${product.name}`,
-        });
-      }
+    if (!reservation.ok) {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(409).json({
+        success: false,
+        message:
+          reservation.shortfall.available > 0
+            ? `Only ${reservation.shortfall.available} unit(s) of "${reservation.shortfall.name}" are still available.`
+            : `"${reservation.shortfall.name}" is no longer available.`,
+        productName: reservation.shortfall.name,
+        available: reservation.shortfall.available,
+      });
     }
 
-    // ✅ 3.5) Calculate shipping charges (NEW)
-// ✅ 3.5) Calculate shipping charges (NEW)
-let shippingCharges = 0;
-let shippingCourier = null;
-
-try {
-  // Calculate total cart weight
-  const totalWeight = cart.items.reduce((sum, item) => {
-    return sum + (item.productId.weight || 0.5) * item.quantity;
-  }, 0);
-
-  // Get customer pincode from address
-  const pincode = address.zipCode;
-
-  // Razorpay orders are prepaid (not COD)
-  const isCOD = false;
-
-  // Call Shiprocket API
-  const shippingData = await getShippingRate(pincode, totalWeight, isCOD);
-
-  // ✅ FIXED: Correct path & field access
-  const couriers = 
-    shippingData?.data?.available_courier_companies || 
-    shippingData?.available_courier_companies || 
-    [];
-
-  if (couriers.length > 0) {
-    // Select cheapest courier
-    const cheapest = couriers.reduce((min, curr) => {
-      // ✅ Try multiple field names
-      const currRate = curr.freight_charge || curr.rate || curr.total_charge || 0;
-      const minRate = min.freight_charge || min.rate || min.total_charge || 0;
-      return currRate < minRate ? curr : min;
-    });
-
-    // ✅ Get base shipping rate
-    const baseRate = cheapest.freight_charge || cheapest.rate || cheapest.total_charge || 0;
-    
-    // ✅ COD charges (prepaid = 0)
-    const codFee = 0; // Razorpay is prepaid, no COD charges
-
-    shippingCharges = Math.round(baseRate + codFee);
-    shippingCourier = cheapest.courier_name || cheapest.courier_company_id || 'Shiprocket';
-
-    // ✅ DEBUG LOG
-    console.log('📦 RAZORPAY SHIPPING:', {
-      totalWeight,
-      pincode,
-      baseRate,
-      codFee,
-      total: shippingCharges,
-      courier: shippingCourier
-    });
-  } else {
-    // Fallback: Fixed ₹100 if API fails
-    shippingCharges = 100;
-    shippingCourier = 'Standard Shipping';
-    console.warn('⚠️ Shiprocket: No couriers available - using fallback');
-  }
-} catch (shipErr) {
-  console.error('Shipping calculation failed:', shipErr.message);
-  // Fallback: Don't block checkout
-  shippingCharges = 100;
-  shippingCourier = 'Standard Shipping';
-}
+    // Delivery is priced by the shared module so this path and the COD path
+    // can never diverge, and so free-shipping products are honoured here too.
+    // Razorpay orders are prepaid, hence isCOD = false.
+    const { shippingCharges, shippingCourier } = await calculateShipping(
+      cart.items,
+      address,
+      false
+    );
 
 
     // 4) Env check
@@ -262,23 +239,32 @@ try {
     });
 
     // 8) Create DB order with razorpayOrderId
+    // Same commission snapshot as the COD path - see utils/commission.js. The rate is
+    const orderItems = await applyCommission(
+      cart.items.map((item) => ({
+        productId: item.productId._id,
+        name: item.productId.name,
+        quantity: item.quantity,
+        price: item.price,
+        sellerId: item.productId.sellerId,
+      })),
+      session
+    );
+
     const order = await Order.create(
       [
         {
           customerId: req.user.id,
-          items: cart.items.map((item) => ({
-            productId: item.productId._id,
-            name: item.productId.name,
-            quantity: item.quantity,
-            price: item.price,
-            sellerId: item.productId.sellerId,
-          })),
+          items: orderItems,
           totalAmount: finalAmount, // ✅ CHANGED
           shippingAddressId,
           status: "pending",
           paymentMethod: "razorpay",
           paymentStatus: "pending",
           razorpayOrderId: razorpayOrder.id,
+          // The units this order is holding, and until when.
+          reservationStatus: 'held',
+          reservationExpiresAt: reservation.expiresAt,
           // ✅ NEW SHIPPING FIELDS
           shippingCharges,
           shippingProvider: 'shiprocket',
@@ -681,9 +667,34 @@ exports.handleRazorpayWebhook = async (req, res) => {
     }
     
     // ✅ Handle payment.failed event
+    //
+    // This is the only definitive failure signal the application actually
+    // receives from Razorpay, so it is the only one acted on. The order stays
+    // 'pending' - the customer may still retry - but the units it was holding
+    // go back on sale immediately rather than waiting out the expiry window.
     if (event === 'payment.failed') {
-      console.log('Payment failed:', payload?.order_id);
-      // Order remains "pending" - customer can retry
+      const failedOrderId = payload?.order_id;
+      console.log('Payment failed:', failedOrderId);
+
+      if (failedOrderId) {
+        try {
+          const order = await Order.findOne({ razorpayOrderId: failedOrderId });
+
+          // Only an unpaid order may give its units back. A paid order has
+          // already converted its hold into a sale, and releasing there would
+          // hand back stock that has been sold.
+          if (order && order.paymentStatus === 'pending') {
+            const released = await releaseReservation(order);
+            if (released) {
+              console.log('Released reservation for failed payment on order', order._id);
+            }
+          }
+        } catch (releaseErr) {
+          // Never fail the webhook over this: the expiry sweep is the backstop.
+          console.error('Failed to release reservation:', releaseErr.message);
+        }
+      }
+
       return res.json({ status: 'ok' });
     }
     

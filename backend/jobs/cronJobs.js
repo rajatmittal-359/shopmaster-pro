@@ -15,22 +15,28 @@ exports.startCronJobs = () => {
         $expr: { $lte: ['$stock', '$lowStockThreshold'] }
       }).populate('sellerId');
 
-      const sellerMap = {};
-      
+      // Product.sellerId references User, so the populated value IS the seller's
+      // user account. The old code read `.userId` off it as though it were a
+      // Seller profile; that is always undefined, so the lookup below returned
+      // null and every alert was silently skipped. Group by the user directly.
+      const bySeller = new Map();
+
       lowStock.forEach(p => {
-        const sid = p.sellerId._id.toString();
-        if (!sellerMap[sid]) sellerMap[sid] = { seller: p.sellerId, products: [] };
-        sellerMap[sid].products.push(p);
+        if (!p.sellerId) return; // product whose owner was deleted
+        const id = p.sellerId._id.toString();
+        if (!bySeller.has(id)) bySeller.set(id, { user: p.sellerId, products: [] });
+        bySeller.get(id).products.push(p);
       });
 
-      for (const data of Object.values(sellerMap)) {
-        const user = await User.findById(data.seller.userId);
-        if (!user) continue;
-        const template = lowStockEmail(data.products, user);
+      let sent = 0;
+      for (const { user, products } of bySeller.values()) {
+        if (!user.email) continue;
+        const template = lowStockEmail(products, user);
         await sendEmail({ to: user.email, ...template });
+        sent++;
       }
-      
-      console.log('✅ Low stock emails sent');
+
+      console.log(`✅ Low stock alerts sent to ${sent} seller(s) for ${lowStock.length} product(s)`);
     } catch (err) {
       console.error('❌ Cron error:', err.message);
     }

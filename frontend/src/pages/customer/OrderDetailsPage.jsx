@@ -5,6 +5,7 @@ import Layout from '../../components/common/Layout';
 import { getOrderDetails, cancelOrder, returnOrder, cancelOrderItem } from '../../services/orderService';
 import { toastSuccess, toastError } from '../../utils/toast';
 
+import { orderRef } from '../../utils/orderRef';
 export default function OrderDetailsPage() {
   const { orderId } = useParams();
   const navigate = useNavigate();
@@ -83,7 +84,7 @@ export default function OrderDetailsPage() {
       <div className="max-w-4xl mx-auto p-4 space-y-6">
         {/* ORDER HEADER */}
         <div className="bg-white p-4 rounded shadow">
-          <p className="text-sm font-semibold">Order ID: #{order._id.slice(-8)}</p>
+          <p className="text-sm font-semibold">Order {orderRef(order)}</p>
           <p className="text-xs text-gray-500">{new Date(order.createdAt).toLocaleString()}</p>
           <p className="text-sm mt-2">
             Status: <strong className="capitalize">{order.status}</strong>
