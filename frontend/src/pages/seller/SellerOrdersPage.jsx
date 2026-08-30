@@ -1,6 +1,12 @@
 import { useEffect, useState } from 'react';
 import Layout from '../../components/common/Layout';
-import { getSellerOrders, updateOrderStatus, updateTracking } from '../../services/sellerService';
+import {
+  getSellerOrders,
+  updateOrderStatus,
+  updateTracking,
+  shipOrder,
+  cancelShipment,
+} from '../../services/sellerService';
 import { toastSuccess, toastError } from '../../utils/toast';
 import { Link } from 'react-router-dom';
 
@@ -69,6 +75,59 @@ export default function SellerOrdersPage() {
       loadOrders();
     } catch (err) {
       toastError(err.response?.data?.message || 'Failed to update tracking');
+    }
+  };
+
+  /**
+   * Books a real courier for a packed parcel.
+   *
+   * Deliberately a button the seller presses rather than something that happens
+   * at checkout: until this moment no courier knows the order exists, so a
+   * mistaken order can be cancelled with nothing to undo. The confirmation says
+   * plainly what pressing it costs.
+   */
+  const handleShip = async (order) => {
+    const sameDay = order.deliveryOption === 'same_day';
+
+    const sure = await confirm({
+      title: sameDay ? 'Book a same-day rider?' : 'Book the courier?',
+      message: sameDay
+        ? 'A rider will be sent to collect this parcel today. This costs money and can only be cancelled before they arrive.'
+        : 'This books a real shipment, charges your courier wallet, and schedules a pickup. It can be cancelled until the parcel is collected.',
+      confirmLabel: sameDay ? 'Book rider' : 'Book courier',
+      danger: false,
+    });
+    if (!sure) return;
+
+    try {
+      setUpdatingId(order._id);
+      const { data } = await shipOrder(order._id);
+      toastSuccess(data.message || 'Courier booked');
+      loadOrders();
+    } catch (err) {
+      toastError(err?.response?.data?.message || 'Could not book the courier');
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
+  const handleCancelShipment = async (order) => {
+    const sure = await confirm({
+      title: 'Cancel this shipment?',
+      message: 'The courier is called off and the order goes back to processing.',
+      confirmLabel: 'Cancel shipment',
+    });
+    if (!sure) return;
+
+    try {
+      setUpdatingId(order._id);
+      const { data } = await cancelShipment(order._id);
+      toastSuccess(data.message || 'Shipment cancelled');
+      loadOrders();
+    } catch (err) {
+      toastError(err?.response?.data?.message || 'Could not cancel the shipment');
+    } finally {
+      setUpdatingId(null);
     }
   };
 
@@ -267,6 +326,33 @@ export default function SellerOrdersPage() {
                     >
                       View Full Details
                     </Link>
+
+                    {/* Book the courier, once the parcel is packed. Shown only
+                        while nothing has been booked yet. */}
+                    {!order.shippingAwb && !['cancelled', 'delivered', 'returned'].includes(order.status) && (
+                      <button
+                        onClick={() => handleShip(order)}
+                        disabled={updatingId === order._id}
+                        className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm rounded disabled:opacity-50"
+                      >
+                        {updatingId === order._id
+                          ? 'Booking...'
+                          : order.deliveryOption === 'same_day'
+                          ? 'Book same-day rider'
+                          : 'Book courier & ship'}
+                      </button>
+                    )}
+
+                    {/* Call it off, while that is still possible. */}
+                    {order.shippingAwb && order.status === 'shipped' && (
+                      <button
+                        onClick={() => handleCancelShipment(order)}
+                        disabled={updatingId === order._id}
+                        className="flex-1 px-4 py-2 border border-red-300 text-red-700 hover:bg-red-50 text-sm rounded disabled:opacity-50"
+                      >
+                        Cancel shipment
+                      </button>
+                    )}
 
                     {/* Update Status */}
                     {nextStatus && (

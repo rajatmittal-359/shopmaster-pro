@@ -24,3 +24,8 @@ export const updateTracking = (orderId, data) =>
 // Get single order details
 export const getOrderDetails = (orderId) => api.get(`/seller/orders/${orderId}`);
 
+/** Books the courier the customer paid for, once the parcel is packed. */
+export const shipOrder = (orderId) => api.post(`/seller/orders/${orderId}/ship`);
+
+/** Calls the courier off, while it has not collected yet. */
+export const cancelShipment = (orderId) => api.post(`/seller/orders/${orderId}/ship/cancel`);

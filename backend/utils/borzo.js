@@ -124,4 +124,107 @@ const quoteSameDay = async (address, weightKg) => {
   }
 };
 
-module.exports = { quoteSameDay, isConfigured, VEHICLE_MOTORBIKE };
+/**
+ * Books a rider for real.
+ *
+ * Same shape as the quote, plus the two ids needed to track or cancel it. A
+ * failure returns null with a reason rather than throwing, so a booking that
+ * does not go through leaves the order exactly as it was.
+ */
+const bookSameDay = async (order, address, weightKg) => {
+  if (!isConfigured()) return { ok: false, reason: 'Same-day courier is not configured' };
+
+  const pickup = process.env.BORZO_PICKUP_ADDRESS;
+  const pickupPhone = process.env.BORZO_PICKUP_PHONE;
+  if (!pickup || !pickupPhone) {
+    return { ok: false, reason: 'Pickup address is not configured' };
+  }
+
+  const drop = [address.street, address.city, address.state, address.zipCode]
+    .filter(Boolean)
+    .join(', ');
+
+  try {
+    const { data } = await axios.post(
+      `${baseUrl()}/api/business/${API_VERSION}/create-order`,
+      {
+        matter: `Order ${order.orderNumber}`,
+        total_weight_kg: weightKg,
+        vehicle_type_id: VEHICLE_MOTORBIKE,
+        points: [
+          { address: pickup, contact_person: { name: 'ShopMaster Pro', phone: pickupPhone } },
+          {
+            address: drop,
+            contact_person: { name: address.label || 'Customer', phone: address.phoneNumber },
+          },
+        ],
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'X-DV-Auth-Token': process.env.BORZO_API_TOKEN,
+        },
+        timeout: 15000,
+      }
+    );
+
+    if (!data || !data.is_successful || !data.order) {
+      const warnings = data && data.parameter_warnings;
+      return {
+        ok: false,
+        reason: warnings ? JSON.stringify(warnings) : 'Courier refused the booking',
+      };
+    }
+
+    return {
+      ok: true,
+      provider: 'borzo',
+      courierName: 'Borzo',
+      // Borzo has no AWB; its own order id is what tracks and cancels the job.
+      externalOrderId: String(data.order.order_id),
+      trackingNumber: String(data.order.order_name || data.order.order_id),
+      trackingUrl: data.order.tracking_url || null,
+    };
+  } catch (err) {
+    return { ok: false, reason: err.response?.data?.message || err.message };
+  }
+};
+
+/**
+ * Calls the rider off.
+ *
+ * Borzo refuses once a courier has visited an address, which is the honest
+ * point of no return - by then the parcel is already moving.
+ */
+const cancelSameDay = async (externalOrderId) => {
+  if (!isConfigured()) return { ok: false, reason: 'Same-day courier is not configured' };
+
+  try {
+    const { data } = await axios.post(
+      `${baseUrl()}/api/business/${API_VERSION}/cancel-order`,
+      { order_id: Number(externalOrderId) },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'X-DV-Auth-Token': process.env.BORZO_API_TOKEN,
+        },
+        timeout: 15000,
+      }
+    );
+
+    if (!data || !data.is_successful) {
+      return { ok: false, reason: 'The rider has already collected this parcel' };
+    }
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, reason: err.response?.data?.message || err.message };
+  }
+};
+
+module.exports = {
+  quoteSameDay,
+  bookSameDay,
+  cancelSameDay,
+  isConfigured,
+  VEHICLE_MOTORBIKE,
+};

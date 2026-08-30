@@ -48,6 +48,12 @@ router.patch('/products/:productId/stock', requireApprovedSeller, updateStock);
 router.patch('/orders/:orderId/status', requireApprovedSeller, updateOrderStatus);
 router.patch('/orders/:orderId/tracking', requireApprovedSeller, updateTracking);
 
+// Book the courier the customer paid for, once the parcel is packed. Nothing
+// reaches a courier before this is pressed.
+const { shipOrder, cancelShipment } = require('../controllers/sellerController');
+router.post('/orders/:orderId/ship', requireApprovedSeller, shipOrder);
+router.post('/orders/:orderId/ship/cancel', requireApprovedSeller, cancelShipment);
+
 // A seller's own earnings, settlement history and the account they are paid into.
 const {
   getMyEarnings,

@@ -705,3 +705,108 @@ return res.json({
     return res.status(500).json({ message: err.message });
   }
 };
+
+// --------------------------------------------------------------- shipping
+
+const shipment = require('../utils/shipmentBooking');
+const Address = require('../models/Address');
+
+/**
+ * Books a courier for an order that is packed and ready.
+ *
+ * Deliberately a seller action rather than something that happens at checkout:
+ * until this is pressed, no courier knows the order exists, so a mistaken or
+ * fraudulent order can be cancelled with nothing to undo.
+ *
+ * Whatever the customer paid for is what gets booked - same-day goes by
+ * hyperlocal rider, standard by courier.
+ */
+exports.shipOrder = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+
+    if (!mongoose.isValidObjectId(orderId)) {
+      return res.status(400).json({ success: false, message: 'Invalid order id' });
+    }
+
+    // Scoped to this seller's own lines, so one seller cannot ship another's order.
+    const order = await Order.findOne({
+      _id: orderId,
+      'items.sellerId': req.user._id,
+    }).populate('items.productId', 'weight sku');
+
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Order not found' });
+    }
+
+    // A prepaid order that has not been paid for must not be shipped.
+    if (order.paymentMethod !== 'cod' && order.paymentStatus !== 'paid') {
+      return res.status(400).json({
+        success: false,
+        message: 'This order has not been paid for yet',
+      });
+    }
+
+    const address = await Address.findById(order.shippingAddressId);
+    if (!address) {
+      return res.status(400).json({ success: false, message: 'Delivery address is missing' });
+    }
+
+    const result = await shipment.bookForOrder(order, address);
+
+    if (!result.ok) {
+      // Store any ids a half-finished booking left behind, so a shipment that
+      // exists at the courier is never invisible here.
+      if (result.update) await Order.updateOne({ _id: order._id }, { $set: result.update });
+      return res.status(409).json({ success: false, message: result.reason });
+    }
+
+    await Order.updateOne({ _id: order._id }, { $set: result.update });
+
+    res.json({
+      success: true,
+      message: result.pickupScheduled
+        ? 'Courier booked and pickup requested'
+        : 'Courier booked. Pickup could not be scheduled - request it from the courier dashboard.',
+      tracking: {
+        courierName: result.update.shippingCourierName,
+        trackingNumber: result.update.shippingAwb,
+        trackingUrl: result.update.shippingTrackingUrl,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+/**
+ * Calls the courier off, while that is still possible.
+ *
+ * Both couriers refuse once the parcel has been collected, which is the honest
+ * point of no return.
+ */
+exports.cancelShipment = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+
+    if (!mongoose.isValidObjectId(orderId)) {
+      return res.status(400).json({ success: false, message: 'Invalid order id' });
+    }
+
+    const order = await Order.findOne({ _id: orderId, 'items.sellerId': req.user._id });
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Order not found' });
+    }
+
+    const result = await shipment.cancelForOrder(order);
+    if (!result.ok) {
+      return res.status(409).json({ success: false, message: result.reason });
+    }
+
+    await Order.updateOne({ _id: order._id }, { $set: result.update });
+
+    res.json({ success: true, message: 'Shipment cancelled; the order is back to processing' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
