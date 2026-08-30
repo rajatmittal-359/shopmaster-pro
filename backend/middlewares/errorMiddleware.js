@@ -1,32 +1,22 @@
 // backend/middlewares/errorMiddleware.js
+//
+// The last stop for anything a controller did not catch. It classifies with
+// the same rules controllers use, so the two can never disagree about whether
+// a given error is the caller's fault or ours. See utils/apiError.
+const { describeError } = require('../utils/apiError');
+
+// eslint-disable-next-line no-unused-vars -- Express needs all four to see this
 const errorMiddleware = (err, req, res, next) => {
-  console.error('❌ Error:', err.message);
-  console.error(err.stack);
+  const { status, body } = describeError(err);
 
-  if (err.code === 11000) {
-    const field = Object.keys(err.keyPattern)[0];
-    return res.status(400).json({
-      message: `${field} already exists`,
-    });
+  if (status >= 500) {
+    console.error('Error:', err.message);
+    console.error(err.stack);
   }
 
-  if (err.name === 'ValidationError') {
-    const messages = Object.values(err.errors).map((e) => e.message);
-    return res.status(400).json({
-      message: 'Validation failed',
-      errors: messages,
-    });
-  }
-
-  if (err.name === 'CastError') {
-    return res.status(400).json({
-      message: 'Invalid ID format',
-    });
-  }
-
-  res.status(err.statusCode || 500).json({
-    message: err.message || 'Server Error',
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
+  return res.status(status).json({
+    ...body,
+    ...(status >= 500 && process.env.NODE_ENV === 'development' && { stack: err.stack }),
   });
 };
 

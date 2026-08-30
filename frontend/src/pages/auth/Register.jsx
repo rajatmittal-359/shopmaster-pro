@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { useAuth } from '../../context/authContext';
 import { useNavigate, Link } from 'react-router-dom';
+import { validateRegister } from '../../utils/validate';
 
 export default function Register() {
   const navigate = useNavigate();
@@ -15,13 +16,30 @@ export default function Register() {
     businessName: '',
   });
 
+  // Only filled in when the form is submitted. Marking a field red while
+  // someone is still typing their password tells them they are wrong before
+  // they have finished being right.
+  const [errors, setErrors] = useState({});
+
   const handleChange = (e) => {
-    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+    const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
+    // Clear this field's complaint as soon as it is being addressed.
+    setErrors((prev) => (prev[name] ? { ...prev, [name]: undefined } : prev));
     if (error) clearError();
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Caught here so the answer is instant. The server checks all of this
+    // again - see utils/validate.
+    const found = validateRegister(form);
+    if (Object.keys(found).length) {
+      setErrors(found);
+      return;
+    }
+    setErrors({});
 
     const result = await register(form);
     if (!result.ok) return; // the message is already on screen
@@ -53,9 +71,12 @@ export default function Register() {
               name="name"
               value={form.name}
               onChange={handleChange}
-              className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+              className={`w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 ${
+                errors.name ? 'border-red-400 focus:ring-red-400' : 'focus:ring-orange-400'
+              }`}
               required
             />
+            {errors.name && <p className="mt-1 text-xs text-red-600">{errors.name}</p>}
           </div>
 
           {/* Email */}
@@ -66,9 +87,12 @@ export default function Register() {
               name="email"
               value={form.email}
               onChange={handleChange}
-              className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+              className={`w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 ${
+                errors.email ? 'border-red-400 focus:ring-red-400' : 'focus:ring-orange-400'
+              }`}
               required
             />
+            {errors.email && <p className="mt-1 text-xs text-red-600">{errors.email}</p>}
           </div>
 
           {/* Password */}
@@ -79,9 +103,12 @@ export default function Register() {
               name="password"
               value={form.password}
               onChange={handleChange}
-              className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+              className={`w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 ${
+                errors.password ? 'border-red-400 focus:ring-red-400' : 'focus:ring-orange-400'
+              }`}
               required
             />
+            {errors.password && <p className="mt-1 text-xs text-red-600">{errors.password}</p>}
           </div>
 
           {/* Role */}
@@ -107,9 +134,12 @@ export default function Register() {
                 name="businessName"
                 value={form.businessName}
                 onChange={handleChange}
-                className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+                className={`w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 ${
+                  errors.businessName ? 'border-red-400 focus:ring-red-400' : 'focus:ring-orange-400'
+                }`}
                 required
               />
+              {errors.businessName && <p className="mt-1 text-xs text-red-600">{errors.businessName}</p>}
             </div>
           )}
 

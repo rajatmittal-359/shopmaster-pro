@@ -56,7 +56,7 @@ beforeEach(() => {
   originals.prodFind = Product.find;
   originals.prodCount = Product.countDocuments;
   originals.prodAggregate = Product.aggregate;
-  originals.prodCreate = Product.create;
+  originals.prodSave = Product.prototype.save;
   originals.userFindById = User.findById;
   originals.sellerFindOne = Seller.findOne;
   originals.logCreate = InventoryLog.create;
@@ -97,7 +97,12 @@ beforeEach(() => {
     { _id: SUB_RINGS, n: 2 },
     { _id: OTHER_SUB, n: 1 },
   ]);
-  Product.create = vi.fn(async (doc) => ({ _id: new mongoose.Types.ObjectId(), ...doc }));
+  // The controller builds the document, checks it, and only then saves - so
+  // saving is the seam that says "this product was accepted". Stubbing
+  // Product.create instead would leave a real save reaching for a database.
+  Product.prototype.save = vi.fn(async function save() {
+    return this;
+  });
 
   User.findById = vi.fn((id) =>
     chainableQuery({
@@ -122,7 +127,7 @@ afterEach(() => {
   Product.find = originals.prodFind;
   Product.countDocuments = originals.prodCount;
   Product.aggregate = originals.prodAggregate;
-  Product.create = originals.prodCreate;
+  Product.prototype.save = originals.prodSave;
   User.findById = originals.userFindById;
   Seller.findOne = originals.sellerFindOne;
   InventoryLog.create = originals.logCreate;
@@ -262,14 +267,14 @@ describe('products must be assigned to a leaf category', () => {
 
     expect(res.status).toBe(400);
     expect(res.body.message).toMatch(/main category.*subcategor/i);
-    expect(Product.create).not.toHaveBeenCalled();
+    expect(Product.prototype.save).not.toHaveBeenCalled();
   });
 
   it('accepts a product assigned to a leaf category', async () => {
     const res = await createProduct(SUB_RINGS);
 
     expect(res.status).toBe(201);
-    expect(Product.create).toHaveBeenCalled();
+    expect(Product.prototype.save).toHaveBeenCalled();
   });
 
   it('rejects an inactive category', async () => {
@@ -279,7 +284,7 @@ describe('products must be assigned to a leaf category', () => {
 
     expect(res.status).toBe(400);
     expect(res.body.message).toMatch(/not active/i);
-    expect(Product.create).not.toHaveBeenCalled();
+    expect(Product.prototype.save).not.toHaveBeenCalled();
   });
 
   it('rejects a category that does not exist', async () => {

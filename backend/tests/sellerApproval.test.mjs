@@ -14,10 +14,12 @@ const Seller = require('../models/Seller');
 const Product = require('../models/Product');
 const Order = require('../models/Order');
 const InventoryLog = require('../models/Inventory');
+const Category = require('../models/Category');
 
 const SELLER_USER = new mongoose.Types.ObjectId();
 const PRODUCT_ID = new mongoose.Types.ObjectId();
 const ORDER_ID = new mongoose.Types.ObjectId();
+const CATEGORY_ID = new mongoose.Types.ObjectId();
 
 const token = () =>
   jwt.sign({ userId: SELLER_USER.toString(), role: 'seller' }, process.env.JWT_SECRET, {
@@ -29,7 +31,17 @@ let sellerProfile;
 
 /** Routes that admin approval is meant to unlock. */
 const WRITE_ROUTES = [
-  ['post', '/api/seller/products', { name: 'X', price: 1 }],
+  [
+    'post',
+    '/api/seller/products',
+    {
+      name: 'Rose Gold Ring',
+      description: 'A hand-finished rose gold ring.',
+      category: CATEGORY_ID.toString(),
+      price: 1600,
+      stock: 5,
+    },
+  ],
   ['patch', `/api/seller/products/${PRODUCT_ID}`, { price: 5 }],
   ['delete', `/api/seller/products/${PRODUCT_ID}`, {}],
   ['patch', `/api/seller/products/${PRODUCT_ID}/stock`, { stock: 5 }],
@@ -49,7 +61,7 @@ beforeEach(() => {
   originals.sellerFindOne = Seller.findOne;
   originals.productFind = Product.find;
   originals.productCount = Product.countDocuments;
-  originals.productCreate = Product.create;
+  originals.productSave = Product.prototype.save;
   originals.productFindOne = Product.findOne;
   originals.productFindOneAndUpdate = Product.findOneAndUpdate;
   originals.orderFindById = Order.findById;
@@ -57,6 +69,8 @@ beforeEach(() => {
   // updateStock now writes an inventory audit log (Phase 2D), so this
   // third-party-of-the-controller must be stubbed for the write routes.
   originals.inventoryCreate = InventoryLog.create;
+  originals.catFindById = Category.findById;
+  originals.catExists = Category.exists;
 
   sellerProfile = {
     _id: new mongoose.Types.ObjectId(),
@@ -80,7 +94,12 @@ beforeEach(() => {
 
   Product.find = vi.fn(() => chainableQuery([]));
   Product.countDocuments = vi.fn(async () => 0);
-  Product.create = vi.fn(async (doc) => ({ _id: PRODUCT_ID, ...doc }));
+  // The controller builds the document, checks it, and only then saves - so
+  // saving is the seam that says "this product was accepted".
+  Product.prototype.save = vi.fn(async function save() {
+    this._id = PRODUCT_ID;
+    return this;
+  });
   Product.findOne = vi.fn(() =>
     chainableQuery({
       _id: PRODUCT_ID,
@@ -104,6 +123,11 @@ beforeEach(() => {
   );
   Order.aggregate = vi.fn(async () => []);
   InventoryLog.create = vi.fn(async (doc) => doc);
+  // A real leaf category, so the product being posted is one the shop would
+  // actually take. Otherwise this suite would be proving the approval gate
+  // against a product that could never exist.
+  Category.findById = vi.fn(() => chainableQuery({ _id: CATEGORY_ID, name: 'Rings', isActive: true }));
+  Category.exists = vi.fn(async () => null);
 });
 
 afterEach(() => {
@@ -111,12 +135,14 @@ afterEach(() => {
   Seller.findOne = originals.sellerFindOne;
   Product.find = originals.productFind;
   Product.countDocuments = originals.productCount;
-  Product.create = originals.productCreate;
+  Product.prototype.save = originals.productSave;
   Product.findOne = originals.productFindOne;
   Product.findOneAndUpdate = originals.productFindOneAndUpdate;
   Order.findById = originals.orderFindById;
   Order.aggregate = originals.orderAggregate;
   InventoryLog.create = originals.inventoryCreate;
+  Category.findById = originals.catFindById;
+  Category.exists = originals.catExists;
 });
 
 const call = ([method, path, body]) =>
@@ -136,7 +162,7 @@ describe('unapproved seller is blocked from approval-gated capabilities', () => 
 
   it('no product is created by a pending seller', async () => {
     await call(WRITE_ROUTES[0]);
-    expect(Product.create).not.toHaveBeenCalled();
+    expect(Product.prototype.save).not.toHaveBeenCalled();
   });
 
   it('enforcement is server-side: a direct API call cannot bypass it', async () => {
@@ -147,7 +173,7 @@ describe('unapproved seller is blocked from approval-gated capabilities', () => 
       .send({ name: 'Bypass attempt', price: 100, stock: 5 });
 
     expect(res.status).toBe(403);
-    expect(Product.create).not.toHaveBeenCalled();
+    expect(Product.prototype.save).not.toHaveBeenCalled();
   });
 });
 
@@ -178,7 +204,7 @@ describe('approved seller retains full capabilities', () => {
   it('can create a product', async () => {
     const res = await call(WRITE_ROUTES[0]);
     expect(res.status).not.toBe(403);
-    expect(Product.create).toHaveBeenCalled();
+    expect(Product.prototype.save).toHaveBeenCalled();
   });
 
   it('can update stock', async () => {

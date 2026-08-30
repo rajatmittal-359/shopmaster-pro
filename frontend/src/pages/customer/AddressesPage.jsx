@@ -7,6 +7,7 @@ import {
   deleteAddress,
 } from '../../services/addressService';
 import { toastSuccess, toastError } from '../../utils/toast';
+import { validateAddress, serverMessage } from '../../utils/validate';
 
 import { useConfirm } from '../../context/confirmContext';
 export default function AddressesPage() {
@@ -15,6 +16,7 @@ export default function AddressesPage() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const [errors, setErrors] = useState({});
   const [form, setForm] = useState({
     label: 'Home',
     phoneNumber: '',
@@ -49,10 +51,23 @@ export default function AddressesPage() {
       ...prev,
       [name]: type === 'checkbox' ? checked : value,
     }));
+    // Stop complaining about a field the moment it is being fixed.
+    setErrors((prev) => (prev[name] ? { ...prev, [name]: undefined } : prev));
   };
 
 const handleSubmit = async (e) => {
   e.preventDefault();
+
+  // A wrong PIN code or phone number is not a cosmetic problem here: it is
+  // where the parcel goes and who the rider calls. Caught before the request,
+  // and checked again by models/Address.
+  const found = validateAddress(form);
+  if (Object.keys(found).length) {
+    setErrors(found);
+    return;
+  }
+  setErrors({});
+
   try {
     if (editingId) {
       await updateAddress(editingId, form);
@@ -64,7 +79,7 @@ const handleSubmit = async (e) => {
     resetForm();
     loadAddresses();
   } catch (err) {
-    toastError(err?.response?.data?.message || 'Error saving address');
+    toastError(serverMessage(err, 'Error saving address'));
   }
 };
 
@@ -111,6 +126,7 @@ const handleDelete = async (id) => {
       isDefault: false,
     });
     setEditingId(null);
+    setErrors({});
     setShowForm(false);
   };
 
@@ -156,8 +172,11 @@ const handleDelete = async (id) => {
     required
     maxLength="10"
     placeholder="9876543210"
-    className="w-full border rounded px-3 py-2 text-sm"
+    className={`w-full border rounded px-3 py-2 text-sm ${
+      errors.phoneNumber ? 'border-red-400' : ''
+    }`}
   />
+  {errors.phoneNumber && <p className="mt-1 text-xs text-red-600">{errors.phoneNumber}</p>}
 </div>
 
               <div>
@@ -168,8 +187,11 @@ const handleDelete = async (id) => {
                   value={form.street}
                   onChange={handleChange}
                   required
-                  className="w-full border rounded px-3 py-2 text-sm"
+                  className={`w-full border rounded px-3 py-2 text-sm ${
+                    errors.street ? 'border-red-400' : ''
+                  }`}
                 />
+                {errors.street && <p className="mt-1 text-xs text-red-600">{errors.street}</p>}
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -181,8 +203,11 @@ const handleDelete = async (id) => {
                     value={form.city}
                     onChange={handleChange}
                     required
-                    className="w-full border rounded px-3 py-2 text-sm"
+                    className={`w-full border rounded px-3 py-2 text-sm ${
+                      errors.city ? 'border-red-400' : ''
+                    }`}
                   />
+                  {errors.city && <p className="mt-1 text-xs text-red-600">{errors.city}</p>}
                 </div>
                 <div>
                   <label className="block text-sm mb-1">State</label>
@@ -192,22 +217,31 @@ const handleDelete = async (id) => {
                     value={form.state}
                     onChange={handleChange}
                     required
-                    className="w-full border rounded px-3 py-2 text-sm"
+                    className={`w-full border rounded px-3 py-2 text-sm ${
+                      errors.state ? 'border-red-400' : ''
+                    }`}
                   />
+                  {errors.state && <p className="mt-1 text-xs text-red-600">{errors.state}</p>}
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm mb-1">Zip Code</label>
+                  <label className="block text-sm mb-1">PIN Code *</label>
                   <input
                     type="text"
                     name="zipCode"
+                    maxLength="6"
+                    inputMode="numeric"
+                    placeholder="302019"
                     value={form.zipCode}
                     onChange={handleChange}
                     required
-                    className="w-full border rounded px-3 py-2 text-sm"
+                    className={`w-full border rounded px-3 py-2 text-sm ${
+                      errors.zipCode ? 'border-red-400' : ''
+                    }`}
                   />
+                  {errors.zipCode && <p className="mt-1 text-xs text-red-600">{errors.zipCode}</p>}
                 </div>
                 <div>
                   <label className="block text-sm mb-1">Country</label>

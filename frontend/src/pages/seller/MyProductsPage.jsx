@@ -14,6 +14,7 @@ import "swiper/css";
 import "swiper/css/navigation";
 import "swiper/css/pagination";
 import { toastSuccess, toastError } from "../../utils/toast";
+import { validateProduct, serverMessage } from "../../utils/validate";
 import { useNavigate } from "react-router-dom";
 
 import { useConfirm } from '../../context/confirmContext';
@@ -175,21 +176,11 @@ export default function MyProductsPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const newErrors = {};
-    if (!form.name.trim() || form.name.trim().length < 3) {
-      newErrors.name = "Name must be at least 3 characters";
-    }
-    if (!form.description.trim() || form.description.trim().length < 10) {
-      newErrors.description = "Description must be at least 10 characters";
-    }
+    // These rules live in utils/validate next to the ones the register and
+    // address forms use, so all three say the same thing as the models do.
+    const newErrors = validateProduct(form);
     if (!form.category) {
       newErrors.category = "Please select both main and sub category";
-    }
-    if (!form.price || Number(form.price) <= 0) {
-      newErrors.price = "Price must be greater than 0";
-    }
-    if (form.stock === "" || Number(form.stock) < 0) {
-      newErrors.stock = "Stock cannot be negative";
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -254,7 +245,7 @@ export default function MyProductsPage() {
       await loadData();
     } catch (err) {
       toastError(
-        err?.response?.data?.message || "Error saving product"
+        serverMessage(err, "Error saving product")
       );
     }
   };
@@ -567,6 +558,9 @@ export default function MyProductsPage() {
                   type="number"
                   className="border border-gray-300 px-3 py-2 rounded-md text-sm w-full focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                 />
+                {errors.mrp && (
+                  <p className="text-red-500 text-xs mt-1">{errors.mrp}</p>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">
@@ -617,6 +611,9 @@ export default function MyProductsPage() {
                   step="0.1"
                   className="border border-gray-300 px-3 py-2 rounded-md text-sm w-full focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                 />
+                {errors.weight && (
+                  <p className="text-red-500 text-xs mt-1">{errors.weight}</p>
+                )}
               </div>
             </div>
 

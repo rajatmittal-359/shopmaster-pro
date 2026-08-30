@@ -64,6 +64,13 @@ const productSchema = new mongoose.Schema(
       type: Number,
       required: [true, 'Stock is required'],
       min: [0, 'Stock cannot be negative'],
+      // Units on a shelf come in whole numbers. Half a ring is not a thing
+      // that can be reserved, sold, or shipped, and stock - reserved stops
+      // being an answer once either side is fractional.
+      validate: {
+        validator: Number.isInteger,
+        message: 'Stock must be a whole number',
+      },
       default: 0,
     },
     /**

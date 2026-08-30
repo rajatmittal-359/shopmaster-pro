@@ -1,4 +1,5 @@
 // backend/controllers/reviewController.js
+const { sendError } = require('../utils/apiError');
 const Review = require('../models/Review');
 const Order = require('../models/Order');
 const Product = require('../models/Product');
@@ -17,7 +18,7 @@ exports.getProductReviews = async (req, res) => {
       reviews,
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    sendError(res, error);
   }
 };
 
@@ -102,7 +103,7 @@ if (!purchasedItem) {
         .status(400)
         .json({ message: 'You have already reviewed this product' });
     }
-    res.status(500).json({ message: error.message });
+    sendError(res, error);
   }
 };
 
@@ -131,7 +132,7 @@ exports.deleteReview = async (req, res) => {
 
     res.json({ message: 'Review deleted successfully' });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    sendError(res, error);
   }
 };
 
@@ -147,6 +148,6 @@ exports.getMyReviews = async (req, res) => {
       reviews,
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    sendError(res, error);
   }
 };

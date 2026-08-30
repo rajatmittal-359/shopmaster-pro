@@ -26,7 +26,19 @@ const addressSchema = new mongoose.Schema(
     street: { type: String, required: true },
     city: { type: String, required: true },
     state: { type: String, required: true },
-    zipCode: { type: String, required: true },
+    zipCode: {
+      type: String,
+      required: [true, 'PIN code is required'],
+      trim: true,
+      validate: {
+        // Six digits, never starting at zero - no Indian PIN code does.
+        // Unchecked, a wrong PIN is not a typo the customer notices: the
+        // courier quote is computed for the wrong place, or refused outright,
+        // and the parcel goes nowhere.
+        validator: (v) => /^[1-9]\d{5}$/.test(v),
+        message: 'Enter a valid 6-digit PIN code',
+      },
+    },
     country: { type: String, default: 'India' },
     isDefault: {
       type: Boolean,

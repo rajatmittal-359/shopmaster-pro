@@ -1,4 +1,5 @@
 // backend/controllers/adminController.js
+const { sendError } = require('../utils/apiError');
 const mongoose = require('mongoose');
 const User = require('../models/User');
 const Seller = require('../models/Seller');
@@ -19,7 +20,7 @@ exports.getAllSellers = async (req, res) => {
     
     res.json({ count: allSellers.length, sellers: allSellers });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    sendError(res, error);
   }
 };
 
@@ -44,7 +45,7 @@ exports.approveSeller = async (req, res) => {
       seller,
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    sendError(res, error);
   }
 };
 
@@ -68,7 +69,7 @@ exports.rejectSeller = async (req, res) => {
       seller,
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    sendError(res, error);
   }
 };
 // Suspend seller
@@ -88,7 +89,7 @@ exports.suspendSeller = async (req, res) => {
 
     return res.json({ message: 'Seller suspended successfully', seller });
   } catch (error) {
-    return res.status(500).json({ message: error.message });
+    return sendError(res, error);
   }
 };
 
@@ -108,7 +109,7 @@ exports.activateSeller = async (req, res) => {
 
     return res.json({ message: 'Seller activated successfully', seller });
   } catch (error) {
-    return res.status(500).json({ message: error.message });
+    return sendError(res, error);
   }
 };
 
@@ -158,7 +159,7 @@ exports.createCategory = async (req, res) => {
     if (error.code === 11000) {
       return res.status(400).json({ message: 'Category already exists' });
     }
-    res.status(500).json({ message: error.message });
+    sendError(res, error);
   }
 };
 
@@ -182,7 +183,7 @@ exports.getCategories = async (req, res) => {
       categories,
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    sendError(res, error);
   }
 };
 
@@ -245,7 +246,7 @@ exports.updateCategory = async (req, res) => {
       category,
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    sendError(res, error);
   }
 };
 
@@ -282,7 +283,7 @@ exports.deleteCategory = async (req, res) => {
       message: 'Category deleted successfully',
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    sendError(res, error);
   }
 };
 
@@ -325,7 +326,7 @@ exports.getAllOrders = async (req, res) => {
       totalPages: Math.ceil(total / numericLimit),
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    sendError(res, error);
   }
 };
 
@@ -351,7 +352,7 @@ exports.getOrderById = async (req, res) => {
 
     res.json({ success: true, order });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    sendError(res, error);
   }
 };
 
@@ -488,6 +489,6 @@ exports.getAnalytics = async (req, res) => {
       lowStockGlobal,
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    sendError(res, error);
   }
 };

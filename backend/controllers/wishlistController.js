@@ -1,4 +1,5 @@
 // backend/controllers/wishlistController.js
+const { sendError } = require('../utils/apiError');
 const Wishlist = require('../models/Wishlist');
 const Product = require('../models/Product');
 
@@ -21,7 +22,7 @@ exports.getWishlist = async (req, res) => {
 
     res.json({ wishlist });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    sendError(res, error);
   }
 };
 
@@ -63,7 +64,7 @@ exports.addToWishlist = async (req, res) => {
       wishlist,
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    sendError(res, error);
   }
 };
 
@@ -90,7 +91,7 @@ exports.removeFromWishlist = async (req, res) => {
       wishlist,
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    sendError(res, error);
   }
 };
 
@@ -111,6 +112,6 @@ exports.clearWishlist = async (req, res) => {
       wishlist,
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    sendError(res, error);
   }
 };

@@ -1,11 +1,16 @@
 // backend/controllers/sellerController.js
+const { sendError } = require('../utils/apiError');
 const Product = require('../models/Product');
 const Order = require('../models/Order');
 const Seller = require('../models/Seller');
 const InventoryLog = require('../models/Inventory');
 const Category = require('../models/Category');
 const mongoose = require('mongoose');
-const { uploadImage, deleteImage } = require('../utils/cloudinary');
+// Held as a module object rather than destructured, so the upload can be
+// stood in for. Tests must be able to prove that nothing is uploaded before
+// the product has been checked, and a destructured copy cannot be replaced.
+const cloudinary = require('../utils/cloudinary');
+const { deleteImage } = cloudinary;
 
 /**
  * A seller's catalogue is their non-deleted products. deleteProduct() is a soft
@@ -114,7 +119,7 @@ exports.getMyProducts = async (req, res) => {
       products,
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    sendError(res, error);
   }
 };
 
@@ -141,40 +146,42 @@ exports.addProduct = async (req, res) => {
       return res.status(400).json({ message: categoryError });
     }
 
-    let imageUrls = [];
-
-    if (images && images.length > 0) {
-      for (const img of images) {
-        const uploaded = await uploadImage(img);
-        imageUrls.push(uploaded.url);
-      }
-    }
-
-    const product = await Product.create({
+    const product = new Product({
       name,
       description,
       category,
       price,
       stock,
-      lowStockThreshold:
-  typeof lowStockThreshold === 'number'
-    ? lowStockThreshold
-    : 10,
+      lowStockThreshold: typeof lowStockThreshold === 'number' ? lowStockThreshold : 10,
       // The seller chooses to absorb delivery on this product.
       freeShipping: freeShipping === true,
 
       sellerId: req.user._id,
       isActive: true,
-      images: imageUrls,
       brand,
       sku,
       mrp,
       tags,
     });
 
+    // Check the details BEFORE spending anything on the pictures. Uploading
+    // first meant every rejected product left its images sitting in Cloudinary
+    // for good: paid-for storage attached to a product that never existed.
+    const invalid = product.validateSync();
+    if (invalid) return sendError(res, invalid);
+
+    if (images && images.length > 0) {
+      for (const img of images) {
+        const uploaded = await cloudinary.uploadImage(img);
+        product.images.push(uploaded.url);
+      }
+    }
+
+    await product.save();
+
     res.status(201).json({ message: 'Product created', product });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    sendError(res, error);
   }
 };
 
@@ -248,7 +255,7 @@ exports.updateProduct = async (req, res) => {
 
       for (const img of incomingImages) {
         if (typeof img === "string" && img.startsWith("data:image/")) {
-          const uploaded = await uploadImage(img);
+          const uploaded = await cloudinary.uploadImage(img);
           finalImages.push(uploaded.url);
         } else if (typeof img === "string" && img.trim() !== "") {
           finalImages.push(img);
@@ -277,7 +284,7 @@ exports.updateProduct = async (req, res) => {
       product,
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    sendError(res, error);
   }
 };
 
@@ -299,7 +306,7 @@ exports.deleteProduct = async (req, res) => {
 
     res.json({ message: 'Product soft deleted successfully' });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    sendError(res, error);
   }
 };
 
@@ -346,7 +353,7 @@ exports.updateStock = async (req, res) => {
       lowStockAlert: product.stock <= product.lowStockThreshold,
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    sendError(res, error);
   }
 };
 
@@ -365,7 +372,7 @@ exports.getLowStockProducts = async (req, res) => {
       products: lowStockProducts,
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    sendError(res, error);
   }
 };
 
@@ -424,7 +431,7 @@ exports.getMyOrders = async (req, res) => {
 
     res.json({ count: sellerOrders.length, orders: sellerOrders });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    sendError(res, error);
   }
 };
 
@@ -471,7 +478,7 @@ exports.getOrderDetails = async (req, res) => {
 
     res.json({ success: true, order: orderData });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    sendError(res, error);
   }
 };
 
@@ -554,7 +561,7 @@ if (status === 'delivered') {
     await order.save();
     res.json({ message: 'Order status updated successfully', order });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    sendError(res, error);
   }
 };
 
@@ -601,7 +608,7 @@ exports.getSellerAnalytics = async (req, res) => {
       revenue: revenue[0]?.total || 0,
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    sendError(res, error);
   }
 };
 
