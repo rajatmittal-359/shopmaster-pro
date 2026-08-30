@@ -147,7 +147,7 @@ describe('the courier being unavailable never blocks checkout', () => {
     });
 
     const result = await calculateShipping([line(0.5, 1)], ADDRESS, false);
-    expect(result.shippingCharges).toBe(fallbackPrice(0.5));
+    expect(result.shippingCharges).toBe(fallbackPrice(0.5, ADDRESS.zipCode));
   });
 
   it('falls back when no courier serves the pincode', async () => {
@@ -156,10 +156,10 @@ describe('the courier being unavailable never blocks checkout', () => {
     }));
 
     const result = await calculateShipping([line(0.5, 1)], ADDRESS, false);
-    expect(result.shippingCharges).toBe(fallbackPrice(0.5));
+    expect(result.shippingCharges).toBe(fallbackPrice(0.5, ADDRESS.zipCode));
   });
 
-  it('the fallback is never below what the courier actually charges', async () => {
+  it('is never below what the courier actually charges out of town', async () => {
     shiprocket.getShippingRate = vi.fn(async () => {
       throw new Error('shiprocket down');
     });
@@ -175,10 +175,33 @@ describe('the courier being unavailable never blocks checkout', () => {
     }
   });
 
-  it('charges more for a heavier parcel', async () => {
+  it('charges a same-city delivery less than a national one', async () => {
+    shiprocket.getShippingRate = vi.fn(async () => {
+      throw new Error('shiprocket down');
+    });
+
+    // Delivering inside Jaipur genuinely costs about half. Charging the
+    // national rate there would overcharge a local customer during an outage.
+    const local = await calculateShipping([line(0.5, 1)], { zipCode: '302001' }, false);
+    const national = await calculateShipping([line(0.5, 1)], { zipCode: '560038' }, false);
+
+    expect(local.shippingCharges).toBeLessThan(national.shippingCharges);
+  });
+
+  it('still covers the real local rate', async () => {
+    // Cheaper than national, but never below what the courier charges locally.
+    const localWorst = [[0.5, 71], [1, 113], [2, 128], [5, 200]];
+    for (const [kg, real] of localWorst) {
+      expect(fallbackPrice(kg, '302001')).toBeGreaterThanOrEqual(real);
+    }
+  });
+
+  it('charges more for a heavier parcel, in both zones', async () => {
     // A flat rate cannot express this, which is why one lost money.
-    expect(fallbackPrice(2)).toBeGreaterThan(fallbackPrice(0.5));
-    expect(fallbackPrice(5)).toBeGreaterThan(fallbackPrice(2));
+    for (const pin of ['302001', '560038']) {
+      expect(fallbackPrice(2, pin)).toBeGreaterThan(fallbackPrice(0.5, pin));
+      expect(fallbackPrice(5, pin)).toBeGreaterThan(fallbackPrice(2, pin));
+    }
   });
 
   it('still delivers a free basket for zero even if the courier is down', async () => {

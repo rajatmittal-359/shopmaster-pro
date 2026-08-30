@@ -7,6 +7,7 @@ import { Link } from "react-router-dom";
 import { toastSuccess, toastError } from "../../utils/toast";
 
 import { orderRef } from '../../utils/orderRef';
+import { useConfirm } from '../../context/confirmContext';
 const statusColors = {
   pending: "bg-yellow-100 text-yellow-700",
   processing: "bg-blue-100 text-blue-700",
@@ -17,6 +18,7 @@ const statusColors = {
 };
 
 export default function MyOrdersPage() {
+  const confirm = useConfirm();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [cancellingItemId, setCancellingItemId] = useState(null); // ✅ NEW: Track cancelling state
@@ -40,7 +42,13 @@ export default function MyOrdersPage() {
 
   // ✅ EXISTING: Cancel item function (unchanged)
   const handleCancelItem = async (orderId, itemId, itemName) => {
-    if (!window.confirm(`Cancel "${itemName}" from this order?`)) {
+    const sure = await confirm({
+      title: `Cancel "${itemName}"?`,
+      message: 'It will be removed from this order and refunded if already paid.',
+      confirmLabel: 'Cancel this item',
+      cancelLabel: 'Keep it',
+    });
+    if (!sure) {
       return;
     }
     try {

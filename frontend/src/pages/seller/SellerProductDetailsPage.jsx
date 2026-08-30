@@ -12,7 +12,9 @@ import "swiper/css";
 import "swiper/css/navigation";
 import "swiper/css/pagination";
 
+import { useConfirm } from '../../context/confirmContext';
 export default function SellerProductDetailsPage() {
+  const confirm = useConfirm();
   const { id } = useParams();
   const navigate = useNavigate();
 
@@ -35,7 +37,12 @@ export default function SellerProductDetailsPage() {
   };
 
   const handleDelete = async () => {
-    if (!window.confirm("Delete this product permanently?")) return;
+    const sure = await confirm({
+      title: 'Delete this product permanently?',
+      message: 'It will be removed from your catalogue and the shop.',
+      confirmLabel: 'Delete permanently',
+    });
+    if (!sure) return;
 
     try {
       await deleteProduct(product._id);

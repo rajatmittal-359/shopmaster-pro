@@ -17,6 +17,7 @@ const Order = require('../models/Order');
 const InventoryLog = require('../models/Inventory');
 const Seller = require('../models/Seller');
 const shiprocket = require('../utils/shiprocketService');
+const { fallbackPrice } = require('../utils/shipping');
 
 const CUSTOMER_ID = new mongoose.Types.ObjectId();
 const PRODUCT_ID = new mongoose.Types.ObjectId();
@@ -26,6 +27,11 @@ const ADDRESS_ID = new mongoose.Types.ObjectId();
 const ITEM_PRICE = 160;
 const BASE_FREIGHT = 93;
 const COD_FEE = 59;
+
+// The fixture's customer is in Jaipur, the same city as the pickup warehouse,
+// so the fallback should quote the cheaper local band.
+const ADDRESS_PINCODE = '302019';
+const ITEM_WEIGHT_KG = 0.5;
 
 const token = () =>
   jwt.sign({ userId: CUSTOMER_ID.toString(), role: 'customer' }, process.env.JWT_SECRET, {
@@ -205,8 +211,8 @@ describe('COD checkout pricing consistency', () => {
     const quote = await preview('cod');
     await codCheckout();
 
-    expect(quote.body.shippingCharges).toBe(125);
-    expect(createdOrder.shippingCharges).toBe(125);
+    expect(quote.body.shippingCharges).toBe(fallbackPrice(ITEM_WEIGHT_KG, ADDRESS_PINCODE));
+    expect(createdOrder.shippingCharges).toBe(fallbackPrice(ITEM_WEIGHT_KG, ADDRESS_PINCODE));
     expect(createdOrder.totalAmount).toBe(quote.body.grandTotal);
   });
 });

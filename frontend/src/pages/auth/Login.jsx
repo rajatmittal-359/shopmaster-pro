@@ -1,13 +1,11 @@
 // src/pages/auth/Login.jsx
 import { useState } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { loginThunk, clearError } from '../../redux/slices/authSlice';
+import { useAuth } from '../../context/authContext';
 import { useNavigate, Link } from 'react-router-dom';
 
 export default function Login() {
-  const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { loading, error } = useSelector((state) => state.auth);
+  const { loading, error, login, clearError } = useAuth();
 
   const [form, setForm] = useState({
     email: '',
@@ -16,26 +14,24 @@ export default function Login() {
 
   const handleChange = (e) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
-    if (error) dispatch(clearError());
+    if (error) clearError();
   };
+
+/** Where each role lands after signing in. */
+const HOME_FOR_ROLE = {
+  customer: '/shop',
+  seller: '/seller/dashboard',
+  admin: '/admin/dashboard',
+};
 
 const handleSubmit = async (e) => {
   e.preventDefault();
-  const result = await dispatch(loginThunk(form));
-  
-  if (loginThunk.fulfilled.match(result)) {
-    const userRole = result.payload.role || result.payload.user?.role;
-    
-    if (userRole === 'customer') {
-      navigate('/shop');  // ✅ CHANGE THIS LINE
-    } else if (userRole === 'seller') {
-      navigate('/seller/dashboard');
-    } else if (userRole === 'admin') {
-      navigate('/admin/dashboard');
-    } else {
-      navigate('/');
-    }
-  }
+
+  const result = await login(form);
+  if (!result.ok) return; // the message is already on screen
+
+  const userRole = result.data.role || result.data.user?.role;
+  navigate(HOME_FOR_ROLE[userRole] || '/');
 };
 
 

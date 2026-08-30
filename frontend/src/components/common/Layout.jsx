@@ -1,16 +1,14 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { useDispatch, useSelector } from 'react-redux';
-import { logout } from '../../redux/slices/authSlice';
+import { useAuth } from '../../context/authContext';
+import { useConfirm } from '../../context/confirmContext';
 import { FiMenu, FiX, FiShoppingCart, FiHeart } from 'react-icons/fi';
 
 export default function Layout({ children, title = 'Dashboard' }) {
   const navigate = useNavigate();
   const location = useLocation();
-  const dispatch = useDispatch();
-
-  const { user, role } = useSelector((state) => state.auth);
-  const isLoggedIn = Boolean(user && role);
+  const { user, role, isLoggedIn, logout } = useAuth();
+  const confirm = useConfirm();
 
   // ✅ Desktop open, Mobile closed
   const [isSidebarOpen, setIsSidebarOpen] = useState(
@@ -24,8 +22,17 @@ export default function Layout({ children, title = 'Dashboard' }) {
     }
   }, [location.pathname]);
 
-  const handleLogout = () => {
-    dispatch(logout());
+  const handleLogout = async () => {
+    const sure = await confirm({
+      title: 'Sign out?',
+      message: 'Anything in your cart stays saved for next time.',
+      confirmLabel: 'Sign out',
+      cancelLabel: 'Stay signed in',
+      danger: false,
+    });
+    if (!sure) return;
+
+    logout();
     navigate('/login');
   };
 

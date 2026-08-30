@@ -1,7 +1,6 @@
 // frontend/src/pages/customer/ProductDetailsPage.jsx
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { useSelector } from "react-redux";
 
 import Layout from "../../components/common/Layout";
 import { getProductDetails } from "../../services/productService";
@@ -19,9 +18,12 @@ import {
 import { toastSuccess, toastError } from '../../utils/toast';
 import Seo, { productJsonLd } from '../../components/common/Seo';
 
+import { useAuth } from '../../context/authContext';
+import { useConfirm } from '../../context/confirmContext';
 export default function ProductDetailsPage() {
+  const confirm = useConfirm();
   const { productId } = useParams();
-  const { user, role } = useSelector((state) => state.auth);
+  const { user, role } = useAuth();
 
   const [product, setProduct] = useState(null);
   const [activeImage, setActiveImage] = useState("");
@@ -198,7 +200,11 @@ const toggleWishlist = async () => {
     const mine = reviews.find((r) => r.userId?._id === user._id);
     if (!mine) return;
 
-    if (!window.confirm("Delete your review?")) return;
+    const sure = await confirm({
+      title: 'Delete your review?',
+      confirmLabel: 'Delete review',
+    });
+    if (!sure) return;
 
     try {
       await deleteReview(mine._id);

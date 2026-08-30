@@ -6,7 +6,9 @@ import { getOrderDetails, cancelOrder, returnOrder, cancelOrderItem } from '../.
 import { toastSuccess, toastError } from '../../utils/toast';
 
 import { orderRef } from '../../utils/orderRef';
+import { useConfirm } from '../../context/confirmContext';
 export default function OrderDetailsPage() {
+  const confirm = useConfirm();
   const { orderId } = useParams();
   const navigate = useNavigate();
   const [order, setOrder] = useState(null);
@@ -32,7 +34,13 @@ export default function OrderDetailsPage() {
   }, [orderId]);
 
   const handleCancel = async () => {
-    if (!window.confirm('Cancel this entire order?')) return;
+    const sure = await confirm({
+      title: 'Cancel this entire order?',
+      message: 'Every item will be cancelled, and refunded if already paid.',
+      confirmLabel: 'Cancel order',
+      cancelLabel: 'Keep order',
+    });
+    if (!sure) return;
     try {
       setActionLoading(true);
       await cancelOrder(orderId);
@@ -46,7 +54,13 @@ export default function OrderDetailsPage() {
   };
 
   const handleReturn = async () => {
-    if (!window.confirm('Return this order?')) return;
+    const sure = await confirm({
+      title: 'Return this order?',
+      message: 'We will start a return and refund once the goods are collected.',
+      confirmLabel: 'Start return',
+      danger: false,
+    });
+    if (!sure) return;
     try {
       setActionLoading(true);
       await returnOrder(orderId);
@@ -61,7 +75,13 @@ export default function OrderDetailsPage() {
 
   // ✅ NEW: Cancel individual item
   const handleCancelItem = async (itemId, itemName) => {
-    if (!window.confirm(`Cancel "${itemName}" from this order?`)) return;
+    const sure = await confirm({
+      title: `Cancel "${itemName}"?`,
+      message: 'It will be removed from this order and refunded if already paid.',
+      confirmLabel: 'Cancel this item',
+      cancelLabel: 'Keep it',
+    });
+    if (!sure) return;
     try {
       setCancellingItemId(itemId);
       await cancelOrderItem(orderId, itemId);

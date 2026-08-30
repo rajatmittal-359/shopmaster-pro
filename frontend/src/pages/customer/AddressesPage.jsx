@@ -8,7 +8,9 @@ import {
 } from '../../services/addressService';
 import { toastSuccess, toastError } from '../../utils/toast';
 
+import { useConfirm } from '../../context/confirmContext';
 export default function AddressesPage() {
+  const confirm = useConfirm();
   const [addresses, setAddresses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -81,7 +83,11 @@ const handleSubmit = async (e) => {
   };
 
 const handleDelete = async (id) => {
-  if (!window.confirm('Delete this address?')) return;
+  const sure = await confirm({
+    title: 'Delete this address?',
+    confirmLabel: 'Delete address',
+  });
+  if (!sure) return;
   try {
     await deleteAddress(id);
     toastSuccess('Address deleted');

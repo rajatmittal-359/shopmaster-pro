@@ -3,7 +3,9 @@ import { Link, useNavigate } from 'react-router-dom';
 import Layout from '../../components/common/Layout';
 import api from '../../utils/api';
 
+import { useConfirm } from '../../context/confirmContext';
 export default function CartPage() {
+  const confirm = useConfirm();
   const [cart, setCart] = useState(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
@@ -44,7 +46,12 @@ export default function CartPage() {
   };
 
   const clearCart = async () => {
-    if (!window.confirm('Clear entire cart?')) return;
+    const sure = await confirm({
+      title: 'Empty your cart?',
+      message: 'Everything in it will be removed.',
+      confirmLabel: 'Empty cart',
+    });
+    if (!sure) return;
     try {
       await api.delete('/customer/cart');
       loadCart();

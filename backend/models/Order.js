@@ -220,8 +220,27 @@ const orderSchema = new mongoose.Schema(
     // 🚀 Shiprocket / external shipping integration (NEW FIELDS)
     shippingProvider: {
       type: String,
-      enum: ['none', 'shiprocket'],
+      enum: ['none', 'shiprocket', 'borzo'],
       default: 'none',
+    },
+
+    /**
+     * Which delivery speed the customer chose.
+     *
+     * 'same_day' orders go out by hyperlocal rider the same day and have a real
+     * arrival time; 'standard' goes by courier over two to three days. Recorded
+     * so the seller queue can show what was promised, not just what was paid.
+     */
+    deliveryOption: {
+      type: String,
+      enum: ['standard', 'same_day'],
+      default: 'standard',
+    },
+
+    /** What the same-day courier promised at checkout. Null for standard. */
+    deliveryPromisedBy: {
+      type: Date,
+      default: null,
     },
     shippingCharges: {
       type: Number,

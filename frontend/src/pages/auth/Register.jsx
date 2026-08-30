@@ -1,13 +1,11 @@
 // src/pages/auth/Register.jsx
 import { useState } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { registerThunk, setTempEmail, clearError } from '../../redux/slices/authSlice';
+import { useAuth } from '../../context/authContext';
 import { useNavigate, Link } from 'react-router-dom';
 
 export default function Register() {
-  const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { loading, error } = useSelector((state) => state.auth);
+  const { loading, error, register, clearError, setTempEmail } = useAuth();
 
   const [form, setForm] = useState({
     name: '',
@@ -19,18 +17,18 @@ export default function Register() {
 
   const handleChange = (e) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
-    if (error) dispatch(clearError());
+    if (error) clearError();
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const result = await dispatch(registerThunk(form));
-    console.log('register result:', result);
 
-    if (registerThunk.fulfilled.match(result)) {
-      dispatch(setTempEmail(form.email));
-      navigate('/verify-otp');
-    }
+    const result = await register(form);
+    if (!result.ok) return; // the message is already on screen
+
+    // The OTP screen needs to know which address the code went to.
+    setTempEmail(form.email);
+    navigate('/verify-otp');
   };
 
   return (

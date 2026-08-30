@@ -1,23 +1,22 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useSelector } from 'react-redux';
-import {
-  addToWishlist,
-  removeFromWishlist,
-  getWishlist,
-} from '../../services/wishlistService';
 import { addToCart, removeFromCart } from '../../services/cartService';
 import { toastSuccess, toastError } from '../../utils/toast';
 
+import { useAuth } from '../../context/authContext';
+import { useWishlist } from '../../context/wishlistContext';
 function stripHtml(html = '') {
   return html.replace(/<[^>]*>/g, '');
 }
 
 export default function ProductCard({ product }) {
-  const [liked, setLiked] = useState(false);
   const [inCart, setInCart] = useState(false);
 
-  const { token, role } = useSelector((state) => state.auth);
+  const { token, role } = useAuth();
+  const { isWishlisted, toggle: toggleWishlisted } = useWishlist();
+
+  // Read from the one shared list rather than fetching it per card.
+  const liked = isWishlisted(product._id);
 
   const image = product.images?.[0];
   const plainDesc = stripHtml(product.description);
@@ -28,23 +27,6 @@ export default function ProductCard({ product }) {
     typeof product.lowStockThreshold === 'number' &&
     product.stock <= product.lowStockThreshold;
 
-  // ✅ Wishlist status – only for logged-in customers
-  useEffect(() => {
-    const checkWishlist = async () => {
-      try {
-        if (!token || role !== 'customer') return;
-
-        const res = await getWishlist();
-        const items = res.data.wishlist?.items || [];
-        const found = items.some((i) => i.productId?._id === product._id);
-        setLiked(found);
-      } catch (err) {
-        console.error('Wishlist load error', err);
-      }
-    };
-
-    checkWishlist();
-  }, [product._id, token, role]);
 
   // ✅ Cart toggle – only for logged-in customers
   const handleCartToggle = async () => {
@@ -78,19 +60,12 @@ export default function ProductCard({ product }) {
       return;
     }
 
-    try {
-      if (liked) {
-        await removeFromWishlist(product._id);
-        setLiked(false);
-        toastSuccess('Removed from wishlist');
-      } else {
-        await addToWishlist(product._id);
-        setLiked(true);
-        toastSuccess('Added to wishlist');
-      }
-    } catch (err) {
-      toastError(err?.response?.data?.message || 'Failed to update wishlist');
+    const result = await toggleWishlisted(product._id);
+    if (!result.ok) {
+      toastError(result.message);
+      return;
     }
+    toastSuccess(result.wishlisted ? 'Added to wishlist' : 'Removed from wishlist');
   };
 
   return (

@@ -10,7 +10,7 @@ const InventoryLog = require("../models/Inventory");
 const Address = require("../models/Address");
 const sendSafeEmail = require("../utils/sendSafeEmail");
 const { orderConfirmedEmail } = require("../utils/emailTemplates");
-const { calculateShipping } = require('../utils/shipping');
+const { priceDeliveryOption } = require('../utils/shipping');
 const {
   reserveForItems,
   releaseReservation,
@@ -204,14 +204,17 @@ exports.createRazorpayOrder = async (req, res) => {
       });
     }
 
-    // Delivery is priced by the shared module so this path and the COD path
-    // can never diverge, and so free-shipping products are honoured here too.
-    // Razorpay orders are prepaid, hence isCOD = false.
-    const { shippingCharges, shippingCourier } = await calculateShipping(
-      cart.items,
-      address,
-      false
-    );
+    // Delivery is priced by the shared module so this path and the COD path can
+    // never diverge, and so free-shipping products are honoured here too.
+    // Razorpay orders are prepaid, hence isCOD = false. The option id comes
+    // from the browser but the PRICE is always re-quoted here.
+    const {
+      shippingCharges,
+      shippingCourier,
+      shippingProvider,
+      deliveryOption,
+      arrivalBy,
+    } = await priceDeliveryOption(cart.items, address, false, req.body.deliveryOption);
 
 
     // 4) Env check
@@ -266,8 +269,10 @@ exports.createRazorpayOrder = async (req, res) => {
           reservationStatus: 'held',
           reservationExpiresAt: reservation.expiresAt,
           shippingCharges,
-          shippingProvider: 'shiprocket',
+          shippingProvider,
           shippingCourierName: shippingCourier,
+          deliveryOption,
+          deliveryPromisedBy: arrivalBy,
         },
       ],
       { session }

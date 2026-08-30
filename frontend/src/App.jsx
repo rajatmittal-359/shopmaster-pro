@@ -1,6 +1,4 @@
 // src/App.jsx
-import { useEffect } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
 import { Routes, Route, Navigate } from 'react-router-dom';
 
 import CustomerDashboard from './pages/customer/CustomerDashboard';
@@ -29,18 +27,10 @@ import ErrorBoundary from './components/common/ErrorBoundary';
 import SellerOrderDetailsPage from "./pages/seller/SellerOrderDetailsPage";  // ✅ ADD THIS
 
 // 🔐 load user thunk
-import { loadUserThunk } from './redux/slices/authSlice';
 
 function App() {
-  const dispatch = useDispatch();
-  const { token } = useSelector((state) => state.auth);
-
-  // 🔁 refresh ke baad user details wapas le aao
-  useEffect(() => {
-    if (token) {
-      dispatch(loadUserThunk());
-    }
-  }, [token, dispatch]);
+  // Restoring the user after a refresh now lives in AuthProvider, which does it
+  // whenever the token changes and ends the session if the token has expired.
 
   return (
     <ErrorBoundary>

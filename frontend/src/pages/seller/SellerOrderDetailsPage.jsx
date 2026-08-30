@@ -5,6 +5,7 @@ import { getOrderDetails, updateOrderStatus, updateTracking } from '../../servic
 import { toastSuccess, toastError } from '../../utils/toast';
 
 import { orderRef } from '../../utils/orderRef';
+import { useConfirm } from '../../context/confirmContext';
 const statusFlow = ['processing', 'shipped', 'delivered'];
 
 const statusColors = {
@@ -23,6 +24,7 @@ const paymentColors = {
 };
 
 export default function SellerOrderDetailsPage() {
+  const confirm = useConfirm();
   const { orderId } = useParams();
   const navigate = useNavigate();
   const [order, setOrder] = useState(null);
@@ -54,7 +56,13 @@ export default function SellerOrderDetailsPage() {
   };
 
   const handleStatusUpdate = async (nextStatus) => {
-    if (!window.confirm(`Mark order as ${nextStatus}?`)) return;
+    const sure = await confirm({
+      title: `Mark this order as ${nextStatus}?`,
+      message: 'The customer is notified, and this cannot be undone.',
+      confirmLabel: `Mark ${nextStatus}`,
+      danger: false,
+    });
+    if (!sure) return;
 
     try {
       setUpdating(true);

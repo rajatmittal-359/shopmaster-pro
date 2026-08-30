@@ -1,7 +1,11 @@
 const Cart = require("../models/Cart");
 const Order = require("../models/Order");
 const { applyCommission } = require("../utils/commission");
-const { calculateShipping } = require("../utils/shipping");
+const {
+  calculateShipping,
+  getDeliveryOptions,
+  priceDeliveryOption,
+} = require("../utils/shipping");
 const { releaseReservation } = require("../utils/reservation");
 const Product = require("../models/Product");
 const mongoose = require('mongoose'); 
@@ -199,11 +203,15 @@ exports.checkout = async (req, res) => {
     // Shipping for the COD endpoint is always priced with COD logic.
     // It previously read req.body.paymentMethod, which the client never sends
     // to /checkout-cod, so isCOD was false and the COD fee was silently dropped.
-    const { shippingCharges, shippingCourier } = await calculateShipping(
-      cart.items,
-      address,
-      true
-    );
+    // The browser sends an option id, never a price - it is re-quoted here so a
+    // tampered request cannot choose what the customer pays for delivery.
+    const {
+      shippingCharges,
+      shippingCourier,
+      shippingProvider,
+      deliveryOption,
+      arrivalBy,
+    } = await priceDeliveryOption(cart.items, address, true, req.body.deliveryOption);
 
 
     // ✅ Create order
@@ -230,8 +238,10 @@ exports.checkout = async (req, res) => {
           paymentStatus: 'pending',
           paymentMethod: 'cod',
           shippingCharges,
-          shippingProvider: 'shiprocket',
+          shippingProvider,
           shippingCourierName: shippingCourier,
+          deliveryOption,
+          deliveryPromisedBy: arrivalBy,
         },
       ],
       { session }
@@ -783,22 +793,32 @@ exports.previewTotals = async (req, res) => {
     // total items amount
     const itemsTotal = cart.totalAmount;
 
-    // Same helper the COD checkout uses, so the quoted total and the charged
-    // total are computed by one code path and cannot diverge.
-    const { shippingCharges, shippingCourier } = await calculateShipping(
+    const isCOD = paymentMethod === "cod";
+
+    // Every option the address can actually have, so the customer can choose
+    // between waiting and paying more. Same-day only appears where a hyperlocal
+    // rider will genuinely take it.
+    const deliveryOptions = await getDeliveryOptions(cart.items, address, isCOD);
+
+    // Price the chosen one through the same helper checkout uses, so the quoted
+    // total and the charged total cannot diverge.
+    const priced = await priceDeliveryOption(
       cart.items,
       address,
-      paymentMethod === "cod"
+      isCOD,
+      req.body.deliveryOption
     );
 
-    const grandTotal = itemsTotal + shippingCharges;
+    const grandTotal = itemsTotal + priced.shippingCharges;
 
     return res.json({
       success: true,
       itemsTotal,
-      shippingCharges,
+      shippingCharges: priced.shippingCharges,
       grandTotal,
-      shippingCourier,
+      shippingCourier: priced.shippingCourier,
+      deliveryOption: priced.deliveryOption,
+      deliveryOptions,
     });
   } catch (err) {
     console.error("PREVIEW TOTAL ERROR:", err.message);

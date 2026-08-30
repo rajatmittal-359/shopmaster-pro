@@ -10,7 +10,9 @@ import {
 import { toastSuccess, toastError } from "../../utils/toast";
 import Loader from "../../components/common/Loader";
 
+import { useConfirm } from '../../context/confirmContext';
 export default function ManageSellersPage() {
+  const confirm = useConfirm();
   const [sellers, setSellers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all"); // all, pending, active, suspended
@@ -65,7 +67,13 @@ const loadSellers = async () => {
   };
 
   const handleActivate = async (id) => {
-    if (!window.confirm("Activate this seller?")) return;
+    const sure = await confirm({
+      title: 'Activate this seller?',
+      message: 'They will be able to list products and receive orders again.',
+      confirmLabel: 'Activate',
+      danger: false,
+    });
+    if (!sure) return;
     
     try {
       await activateSeller(id);

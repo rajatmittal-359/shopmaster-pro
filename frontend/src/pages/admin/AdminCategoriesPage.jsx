@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import Layout from '../../components/common/Layout';
 import api from '../../utils/api';
+import { useConfirm } from '../../context/confirmContext';
 import {toastSuccess,toastError} from '../../utils/toast'
 export default function AdminCategoriesPage() {
+  const confirm = useConfirm();
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -67,7 +69,12 @@ setForm({ name: '', description: '', parentCategory: '' });
   };
 
   const handleDelete = async (cat) => {
-    if (!window.confirm(`Delete "${cat.name}"?`)) return;
+    const sure = await confirm({
+      title: `Delete "${cat.name}"?`,
+      message: 'Products in this category will stop appearing in the shop.',
+      confirmLabel: 'Delete category',
+    });
+    if (!sure) return;
     try {
       await api.delete(`/admin/categories/${cat._id}`);
       loadCategories();

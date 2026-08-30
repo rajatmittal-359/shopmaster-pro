@@ -5,6 +5,7 @@ import { toastSuccess, toastError } from '../../utils/toast';
 import { Link } from 'react-router-dom';
 
 import { orderRef } from '../../utils/orderRef';
+import { useConfirm } from '../../context/confirmContext';
 const statusFlow = ['processing', 'shipped', 'delivered'];
 
 const statusColors = {
@@ -23,6 +24,7 @@ const paymentColors = {
 };
 
 export default function SellerOrdersPage() {
+  const confirm = useConfirm();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState(null);
@@ -70,7 +72,13 @@ export default function SellerOrdersPage() {
   };
 
   const handleStatusUpdate = async (orderId, nextStatus) => {
-    if (!window.confirm(`Mark order as ${nextStatus}?`)) return;
+    const sure = await confirm({
+      title: `Mark this order as ${nextStatus}?`,
+      message: 'The customer is notified, and this cannot be undone.',
+      confirmLabel: `Mark ${nextStatus}`,
+      danger: false,
+    });
+    if (!sure) return;
 
     try {
       setUpdatingId(orderId);

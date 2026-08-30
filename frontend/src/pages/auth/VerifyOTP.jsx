@@ -1,13 +1,11 @@
 // src/pages/auth/VerifyOTP.jsx
 import { useState, useEffect } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { verifyOtpThunk, clearError } from '../../redux/slices/authSlice';
+import { useAuth } from '../../context/authContext';
 import { useNavigate } from 'react-router-dom';
 
 export default function VerifyOTP() {
-  const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { loading, error, tempEmail } = useSelector((state) => state.auth);
+  const { loading, error, tempEmail, verifyOtp, clearError } = useAuth();
 
   const [otp, setOtp] = useState('');
 
@@ -19,20 +17,23 @@ export default function VerifyOTP() {
 
   const handleChange = (e) => {
     setOtp(e.target.value);
-    if (error) dispatch(clearError());
+    if (error) clearError();
+  };
+
+  /** Where each role lands once their email is verified. */
+  const HOME_FOR_ROLE = {
+    customer: '/customer/dashboard',
+    seller: '/seller/dashboard',
+    admin: '/admin/dashboard',
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const result = await dispatch(verifyOtpThunk({ email: tempEmail, otp }));
 
-    if (verifyOtpThunk.fulfilled.match(result)) {
-      const role = result.payload.role;
-      if (role === 'customer') navigate('/customer/dashboard');
-      else if (role === 'seller') navigate('/seller/dashboard');
-      else if (role === 'admin') navigate('/admin/dashboard');
-      else navigate('/');
-    }
+    const result = await verifyOtp({ email: tempEmail, otp });
+    if (!result.ok) return; // the message is already on screen
+
+    navigate(HOME_FOR_ROLE[result.data.role] || '/');
   };
 
   if (!tempEmail) return null;

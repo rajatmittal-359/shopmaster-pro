@@ -11,3 +11,6 @@ process.env.MONGO_URI = 'mongodb://127.0.0.1:27017/never-connected-in-tests';
 process.env.CLOUDINARY_CLOUD_NAME = 'test';
 process.env.CLOUDINARY_API_KEY = 'test';
 process.env.CLOUDINARY_API_SECRET = 'test';
+// The shipping fallback charges a same-city delivery less, and works that out
+// from the pickup pincode. Fixed here so the zone split is deterministic.
+process.env.SHIPROCKET_PICKUP_PINCODE = '302019';

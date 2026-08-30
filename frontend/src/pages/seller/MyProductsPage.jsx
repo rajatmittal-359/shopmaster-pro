@@ -16,7 +16,9 @@ import "swiper/css/pagination";
 import { toastSuccess, toastError } from "../../utils/toast";
 import { useNavigate } from "react-router-dom";
 
+import { useConfirm } from '../../context/confirmContext';
 export default function MyProductsPage() {
+  const confirm = useConfirm();
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [filtered, setFiltered] = useState([]);
@@ -306,7 +308,12 @@ export default function MyProductsPage() {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm("Delete this product?")) return;
+    const sure = await confirm({
+      title: 'Delete this product?',
+      message: 'It will be removed from your catalogue and the shop.',
+      confirmLabel: 'Delete product',
+    });
+    if (!sure) return;
     try {
       await deleteProduct(id);
       toastSuccess("Product deleted");

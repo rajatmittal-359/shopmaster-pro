@@ -3,14 +3,40 @@ const cors = require('cors');
 
 const app = express();
 
+/**
+ * Who may call this API from a browser.
+ *
+ * Production is an explicit list and nothing else. Development also accepts any
+ * localhost port, because Vite silently moves to 5174, 5175 and so on when its
+ * usual port is busy - and every request then failed CORS with a bare "Network
+ * Error" that says nothing about the real cause.
+ *
+ * The localhost allowance is guarded by NODE_ENV, so it can never widen the
+ * deployed API.
+ */
+const PRODUCTION_ORIGINS = [
+  'https://shopmaster-pro.onrender.com',
+  'https://shopmasterpro.in',
+  'https://www.shopmasterpro.in',
+];
+
+const isAllowedOrigin = (origin) => {
+  // Same-origin requests, curl and server-to-server calls send no Origin.
+  if (!origin) return true;
+  if (PRODUCTION_ORIGINS.includes(origin)) return true;
+
+  return (
+    process.env.NODE_ENV !== 'production' &&
+    /^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin)
+  );
+};
+
 app.use(
   cors({
-    origin: [
-      "http://localhost:5173",
-      "https://shopmaster-pro.onrender.com",
-      "https://shopmasterpro.in",
-      "https://www.shopmasterpro.in"
-    ],
+    origin: (origin, callback) =>
+      isAllowedOrigin(origin)
+        ? callback(null, true)
+        : callback(new Error(`Origin not allowed: ${origin}`)),
     credentials: false,
   })
 );
