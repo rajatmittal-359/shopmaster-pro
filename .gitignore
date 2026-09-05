@@ -38,3 +38,8 @@ npm-debug.log*
 OPS-AND-MANUAL-ACTIONS.md
 testcredentails.txt
 brevodomain.txt
+
+# Working analysis docs - local only, deleted once their findings are acted on
+ARCHITECTURE-GAP-ANALYSIS.md
+CODE-STRUCTURE-REVIEW.md
+UI-UX-GAP-ANALYSIS.md
