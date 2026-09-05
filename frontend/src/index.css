@@ -47,7 +47,15 @@
   Marigold is kept deliberately - it is already the brand, and it is Jaipur's
   own colour, which is where this shop actually is.
 */
-@theme {
+/*
+  `static` because Tailwind v4 tree-shakes theme variables that no utility
+  class references, and the hand-written rules below reach for them through
+  var(). Without it --color-brand-900 and the accent pair were simply absent
+  from the build: the rules still matched, `color` and `background-clip` still
+  applied, but the gradient resolved to an invalid value and silently vanished.
+  Verified against the built stylesheet, not assumed.
+*/
+@theme static {
   --color-brand-50: #fff7ed;
   --color-brand-100: #ffedd5;
   --color-brand-200: #fed7aa;
@@ -57,6 +65,22 @@
   --color-brand-600: #ea580c;
   --color-brand-700: #c2410c;
   --color-brand-800: #9a3412;
+  --color-brand-900: #7c2d12;
+
+  /*
+    Rani pink - the identity accent, and the only place a two-colour gradient
+    lives. Jaipur is the Pink City and this shop is in Devi Nagar, so pink here
+    is the city's own colour rather than a borrowed trend; it is also the pink
+    Indian jewellery has always been sold in.
+
+    -700 measures 6.04 on white and -800 7.88. NOT the #F72585 usually suggested
+    for this job, which measures 3.78 and cannot carry white button text.
+
+    Deliberately never used on a button. Two colours competing to be the primary
+    action is how a screen stops having one.
+  */
+  --color-accent-700: #be185d;
+  --color-accent-800: #9d174d;
 
   /*
     Status by what it MEANS, so a screen never has to remember which green.
@@ -109,8 +133,8 @@
 .brand-mark {
   background-image: linear-gradient(
     100deg,
-    var(--color-brand-600) 0%,
-    var(--color-brand-800) 100%
+    var(--color-brand-700) 0%,
+    var(--color-accent-700) 100%
   );
   -webkit-background-clip: text;
   background-clip: text;
