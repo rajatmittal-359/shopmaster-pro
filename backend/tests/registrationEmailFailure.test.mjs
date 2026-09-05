@@ -29,14 +29,17 @@ const User = require('../models/User');
 const Seller = require('../models/Seller');
 
 // Stubbed at the real boundary - the network call itself - rather than at our
-// own wrapper, so the wrapper's own behaviour is exercised too.
-const sgMail = require('@sendgrid/mail');
+// own wrapper, so the wrapper's own behaviour is exercised too. Since the move
+// to Brevo that boundary is `fetch`, not a provider SDK.
 
-/** What the mail provider does when the plan is out of credit. */
-const OUT_OF_CREDIT = Object.assign(new Error('Unauthorized'), {
-  code: 401,
-  response: { body: { errors: [{ message: 'Maximum credits exceeded' }] } },
-});
+/** Exactly what the provider returned while the plan was out of credit. */
+const OUT_OF_CREDIT = {
+  ok: false,
+  status: 401,
+  text: async () => '{"errors":[{"message":"Maximum credits exceeded"}]}',
+};
+
+const ACCEPTED = { ok: true, status: 201, text: async () => '{"messageId":"<t@brevo>"}' };
 
 const originals = {};
 let saved;
@@ -50,6 +53,7 @@ const NEW_ACCOUNT = {
 };
 
 beforeEach(async () => {
+  originals.fetch = global.fetch;
   originals.findOne = User.findOne;
   originals.save = User.prototype.save;
   originals.sellerCreate = Seller.create;
@@ -70,14 +74,17 @@ beforeEach(async () => {
 });
 
 afterEach(() => {
+  // fetch is replaced outright rather than spied on, so restoreAllMocks does
+  // not put it back - it has to be restored by hand.
+  global.fetch = originals.fetch;
   User.findOne = originals.findOne;
   User.prototype.save = originals.save;
   Seller.create = originals.sellerCreate;
   vi.restoreAllMocks();
 });
 
-const whenMailerFails = () => vi.spyOn(sgMail, 'send').mockRejectedValue(OUT_OF_CREDIT);
-const whenMailerWorks = () => vi.spyOn(sgMail, 'send').mockResolvedValue([{ statusCode: 202 }]);
+const whenMailerFails = () => (global.fetch = vi.fn(async () => OUT_OF_CREDIT));
+const whenMailerWorks = () => (global.fetch = vi.fn(async () => ACCEPTED));
 
 describe('the mail provider is out of credit', () => {
   it('still reports the account as created', async () => {
@@ -157,7 +164,7 @@ describe('asking for a new code', () => {
     const res = await resend();
 
     expect(res.status).toBe(200);
-    expect(sgMail.send).toHaveBeenCalledTimes(1);
+    expect(global.fetch).toHaveBeenCalledTimes(1);
   });
 
   it('sends a code that is genuinely new', async () => {
@@ -183,7 +190,7 @@ describe('asking for a new code', () => {
     // from an address the shop pays for.
     expect(res.status).toBe(429);
     expect(res.body.retryAfterSeconds).toBeGreaterThan(0);
-    expect(sgMail.send).not.toHaveBeenCalled();
+    expect(global.fetch).not.toHaveBeenCalled();
   });
 
   it('allows one again after the wait', async () => {
@@ -211,7 +218,7 @@ describe('asking for a new code', () => {
     const res = await resend();
 
     expect(res.status).toBe(200);
-    expect(sgMail.send).not.toHaveBeenCalled();
+    expect(global.fetch).not.toHaveBeenCalled();
   });
 
   it('answers an unknown address exactly the same way', async () => {

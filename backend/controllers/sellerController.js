@@ -21,6 +21,17 @@ const { deleteImage } = cloudinary;
 const sellerCatalogueFilter = (sellerId) => ({ sellerId, isActive: true });
 
 /**
+ * This seller's parcel within an order.
+ *
+ * Read paths hand back plain objects (`.lean()`, aggregation results, test
+ * doubles) which carry no model methods, so this does not use the document's
+ * own fulfilmentFor helper. Write paths, which always hold a real document,
+ * still use order.fulfilmentFor.
+ */
+const fulfilmentOf = (order, sellerId) =>
+  (order.fulfilments || []).find((f) => String(f.sellerId) === String(sellerId));
+
+/**
  * "Low stock" means at or below the seller's own alert threshold.
  * '<=' is the definition already used by admin analytics, the low-stock cron
  * job and the storefront badge. The seller dashboard previously used '<' and
@@ -414,6 +425,8 @@ exports.getMyOrders = async (req, res) => {
         0
       );
 
+      const fulfilment = fulfilmentOf(order, req.user._id);
+
       return {
         _id: order._id,
         // The readable reference the customer will quote on the phone.
@@ -422,7 +435,19 @@ exports.getMyOrders = async (req, res) => {
         items: sellerItems,
         sellerSubtotal,
         sellerEarning,
-        status: order.status,
+
+        /**
+         * What THIS seller still has to do. In a split order the order-level
+         * status reflects the least advanced seller, so showing that here would
+         * tell a seller who has already shipped that they have not.
+         */
+        status: fulfilment ? fulfilment.status : order.status,
+        deliveredAt: fulfilment ? fulfilment.deliveredAt : order.deliveredAt,
+
+        /** Where the whole basket has got to, for context only. */
+        orderStatus: order.status,
+        isSplitOrder: (order.fulfilments || []).length > 1,
+
         paymentStatus: order.paymentStatus,
         trackingInfo: order.trackingInfo,
         createdAt: order.createdAt,
@@ -483,83 +508,103 @@ exports.getOrderDetails = async (req, res) => {
 };
 
 
-// Update order status from seller side
-// Allowed forward-only transitions:
-// pending -> processing -> shipped -> delivered
-// delivered/cancelled/returned cannot be changed
+/**
+ * Move THIS seller's part of the order forward.
+ *
+ * A seller owns exactly one fulfilment in an order and may only ever move that
+ * one. Previously this wrote the order-level `status`, so in a two-seller order
+ * either seller could declare the whole thing shipped or delivered - setting
+ * the order's deliveredAt, starting the return window, and making the OTHER
+ * seller's lines payable for goods that had never been packed. On COD it also
+ * flipped the order to paid for money nobody had collected.
+ *
+ * The order's own status is derived from all the fulfilments on save, so the
+ * customer still sees one coherent status: the least advanced live part.
+ *
+ * Allowed, forward only: pending -> processing -> shipped -> delivered.
+ */
 exports.updateOrderStatus = async (req, res) => {
   try {
     const { orderId } = req.params;
     const { status } = req.body;
-    
+
     const validStatuses = ['processing', 'shipped', 'delivered'];
     if (!validStatuses.includes(status)) {
-      return res.status(400).json({ 
-        message: 'Invalid status. Valid values: processing, shipped, delivered' 
+      return res.status(400).json({
+        message: 'Invalid status. Valid values: processing, shipped, delivered',
       });
     }
-    
+
     const order = await Order.findById(orderId);
     if (!order) {
       return res.status(404).json({ message: 'Order not found' });
     }
-    
-    // Check order already cancelled/returned
-    if (['cancelled', 'returned'].includes(order.status)) {
-      return res.status(400).json({ 
-        message: `Order is already ${order.status} and cannot be updated` 
-      });
-    }
-    
-    // Ensure this seller is part of this order
-    const hasSellerItems = order.items.some(
-      item => item.sellerId.toString() === req.user._id.toString()
-    );
-    if (!hasSellerItems) {
-      return res.status(403).json({ 
-        message: 'You do not have permission to update this order' 
-      });
-    }
-    
-    // Enforce forward-only transitions
-    const allowedNext = {
-      'pending': ['processing'],
-      'processing': ['shipped'],
-      'shipped': ['delivered'],
-      'delivered': [],
-      'cancelled': [],
-      'returned': []
-    };
-    
-    const currentStatus = order.status;
-    const allowedForCurrent = allowedNext[currentStatus];
-    if (!allowedForCurrent.includes(status)) {
-      return res.status(400).json({ 
-        message: `Invalid status transition: ${currentStatus} -> ${status}` 
-      });
-    }
-     // ✅ ADD VALIDATION
-  // Block status change if payment pending AND method is online
-  if (order.paymentStatus === 'pending' && order.paymentMethod !== 'cod') {
-    return res.status(400).json({
-      message: 'Cannot process order - Payment not completed. Customer should retry payment or cancel order.'
-    });
-  }
-  
-    // Apply new status
-    order.status = status;
-    
-if (status === 'delivered') {
-  // COD: Mark payment as received when delivered
-  if (order.paymentMethod === 'cod' && order.paymentStatus === 'pending') {
-    order.paymentStatus = 'paid';
-  }
-  // Online: Already paid, no change needed
-}
 
-    
+    // Ensure this seller is actually part of this order.
+    const fulfilment = order.fulfilmentFor(req.user._id);
+    if (!fulfilment) {
+      return res.status(403).json({
+        message: 'You do not have permission to update this order',
+      });
+    }
+
+    if (['cancelled', 'returned'].includes(fulfilment.status)) {
+      return res.status(400).json({
+        message: `Your part of this order is already ${fulfilment.status} and cannot be updated`,
+      });
+    }
+
+    // Forward-only, one step at a time.
+    const allowedNext = {
+      pending: ['processing'],
+      processing: ['shipped'],
+      shipped: ['delivered'],
+      delivered: [],
+      cancelled: [],
+      returned: [],
+    };
+
+    if (!allowedNext[fulfilment.status].includes(status)) {
+      return res.status(400).json({
+        message: `Invalid status transition: ${fulfilment.status} -> ${status}`,
+      });
+    }
+
+    // An unpaid prepaid order is an abandoned checkout, not work to be done.
+    if (order.paymentStatus === 'pending' && order.paymentMethod !== 'cod') {
+      return res.status(400).json({
+        message:
+          'Cannot process order - Payment not completed. Customer should retry payment or cancel order.',
+      });
+    }
+
+    fulfilment.status = status;
+    if (status === 'shipped') fulfilment.shippedAt = new Date();
+    if (status === 'delivered') fulfilment.deliveredAt = new Date();
+
+    // COD money is only fully collected once every parcel in the basket has
+    // been handed over, so the order is marked paid when the LAST seller
+    // delivers - never by one seller acting alone. order.status is derived in
+    // the model's pre-validate hook, so it is already correct here.
+    const everyPartDelivered = order.fulfilments
+      .filter((f) => f.status !== 'cancelled')
+      .every((f) => ['delivered', 'returned'].includes(f.status));
+
+    if (
+      order.paymentMethod === 'cod' &&
+      order.paymentStatus === 'pending' &&
+      everyPartDelivered
+    ) {
+      order.paymentStatus = 'paid';
+    }
+
     await order.save();
-    res.json({ message: 'Order status updated successfully', order });
+    res.json({
+      message: 'Order status updated successfully',
+      fulfilmentStatus: fulfilment.status,
+      orderStatus: order.status,
+      order,
+    });
   } catch (error) {
     sendError(res, error);
   }
@@ -682,9 +727,19 @@ exports.updateTracking = async (req, res) => {
       shippedDate: new Date(),
     };
 
-    // Optionally auto-mark as shipped if still pending/processing
-    if (['pending', 'processing'].includes(order.status)) {
-      order.status = 'shipped';
+    // Record the courier against THIS seller's parcel. In a split order the two
+    // sellers ship separately, with different couriers and different AWBs.
+    const fulfilment = order.fulfilmentFor(req.user._id);
+    if (fulfilment) {
+      fulfilment.courierName = courierName;
+      fulfilment.awb = trackingNumber;
+
+      // Handing a parcel to a courier means this seller has shipped - but only
+      // their own part. The order's status follows from all the fulfilments.
+      if (['pending', 'processing'].includes(fulfilment.status)) {
+        fulfilment.status = 'shipped';
+        fulfilment.shippedAt = new Date();
+      }
     }
 
     await order.save();

@@ -10,6 +10,8 @@ const mongoose = require('mongoose');
 
 const app = require('../app');
 const Order = require('../models/Order');
+// The window the controller enforces, read from its single source of truth.
+const { RETURN_WINDOW_DAYS } = require('../utils/payout');
 const User = require('../models/User');
 const Product = require('../models/Product');
 const InventoryLog = require('../models/Inventory');
@@ -32,9 +34,17 @@ let orderDoc;
 let refundSpy;
 const razorpayPath = require.resolve('razorpay');
 
-/** Build an order document in a given payment state. */
-const makeOrder = (overrides = {}) =>
-  fakeOrderDoc({
+const SELLER_ID = new mongoose.Types.ObjectId();
+
+/**
+ * Build an order document in a given payment state.
+ *
+ * Fulfilments are built from the items the way the model's pre-validate hook
+ * does in production, and `fulfilmentFor` is provided because cancel and return
+ * both move this seller's part rather than the order's status directly.
+ */
+const makeOrder = (overrides = {}) => {
+  const base = {
     _id: ORDER_ID,
     customerId: CUSTOMER_ID,
     status: 'pending',
@@ -47,9 +57,31 @@ const makeOrder = (overrides = {}) =>
     refundStatus: null,
     refundAmount: null,
     refundedAt: null,
-    items: [{ productId: PRODUCT_ID, quantity: 1, price: ORIGINAL_TOTAL, status: 'active' }],
+    items: [
+      { productId: PRODUCT_ID, sellerId: SELLER_ID, quantity: 1, price: ORIGINAL_TOTAL, status: 'active' },
+    ],
     ...overrides,
-  });
+  };
+
+  // A delivered order needs a delivery date: the return window is measured
+  // from it, and a return is only allowed while that window is open.
+  if (base.status === 'delivered' && base.deliveredAt === undefined) {
+    base.deliveredAt = new Date();
+  }
+
+  const sellerIds = [...new Set(base.items.map((i) => String(i.sellerId)))];
+  base.fulfilments = base.fulfilments || sellerIds.map((sellerId) => ({
+    sellerId,
+    status: base.status,
+    deliveredAt: base.status === 'delivered' ? base.deliveredAt : null,
+    returnedAt: null,
+  }));
+
+  const doc = fakeOrderDoc(base);
+  doc.fulfilmentFor = (sellerId) =>
+    doc.fulfilments.find((f) => String(f.sellerId) === String(sellerId));
+  return doc;
+};
 
 beforeEach(() => {
   originals.userFindById = User.findById;
@@ -211,5 +243,42 @@ describe('returning a delivered prepaid order', () => {
     expect(res.status).toBe(200);
     expect(refundSpy).not.toHaveBeenCalled();
     expect(orderDoc.totalAmount).toBe(ORIGINAL_TOTAL);
+  });
+
+  it('is still allowed on the last day of the return window', async () => {
+    orderDoc = makeOrder({
+      status: 'delivered',
+      deliveredAt: new Date(Date.now() - (RETURN_WINDOW_DAYS - 1) * 86400000),
+    });
+    Order.findOne = vi.fn(() => chainableQuery(orderDoc));
+
+    const res = await returnOrder();
+
+    expect(res.status).toBe(200);
+    expect(orderDoc.status).toBe('returned');
+  });
+
+  /**
+   * The whole settlement design rests on this window actually closing.
+   * utils/payout.js releases a seller's money once their delivery is older than
+   * RETURN_WINDOW_DAYS, on the stated assumption that the goods can no longer
+   * come back. Without this guard an order delivered months ago could still be
+   * returned: the customer is refunded in full, the seller was paid long ago,
+   * there is no clawback anywhere, and the platform absorbs the entire loss.
+   */
+  it('refuses a return once the window has closed, and refunds nothing', async () => {
+    orderDoc = makeOrder({
+      status: 'delivered',
+      deliveredAt: new Date(Date.now() - (RETURN_WINDOW_DAYS + 23) * 86400000),
+    });
+    Order.findOne = vi.fn(() => chainableQuery(orderDoc));
+
+    const res = await returnOrder();
+
+    expect(res.status).toBe(400);
+    expect(res.body.message).toMatch(/return window/i);
+    expect(refundSpy).not.toHaveBeenCalled();
+    expect(orderDoc.status).toBe('delivered');
+    expect(orderDoc.paymentStatus).toBe('paid');
   });
 });

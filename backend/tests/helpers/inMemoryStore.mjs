@@ -65,6 +65,11 @@ const matchesCondition = (value, condition) => {
           case '$ne': return asId(value) !== asId(operand);
           case '$in': return operand.some((c) => asId(c) === asId(value));
           case '$exists': return (value !== undefined) === operand;
+          // Used by payout's payableOrderFilter to ask whether ANY ONE entry in
+          // an array satisfies several conditions at once - which is not the
+          // same as each condition being met by some entry.
+          case '$elemMatch':
+            return Array.isArray(value) && value.some((entry) => matchesFilter(entry, operand));
           default: return false;
         }
       });

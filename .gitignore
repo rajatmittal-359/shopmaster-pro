@@ -33,3 +33,8 @@ Thumbs.db
 npm-debug.log*
 .playwright-mcp/
 
+
+# Operational notes - account IDs and personal contact details, local only
+OPS-AND-MANUAL-ACTIONS.md
+testcredentails.txt
+brevodomain.txt

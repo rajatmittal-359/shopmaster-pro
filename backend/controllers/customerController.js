@@ -7,6 +7,9 @@ const {
   priceDeliveryOption,
 } = require("../utils/shipping");
 const { releaseReservation } = require("../utils/reservation");
+// The same constant payout settles against, so the promise made to the customer
+// and the moment a seller's money is released can never drift apart.
+const { RETURN_WINDOW_DAYS } = require("../utils/payout");
 const Product = require("../models/Product");
 const mongoose = require('mongoose'); 
 const Address = require('../models/Address'); 
@@ -401,7 +404,11 @@ exports.cancelOrder = async (req, res) => {
       });
     }
 
-    order.status = 'cancelled';
+    // Cancel every seller's part. order.status is DERIVED from these on save,
+    // so setting it directly here would simply be overwritten.
+    order.fulfilments.forEach((f) => {
+      if (!['delivered', 'returned'].includes(f.status)) f.status = 'cancelled';
+    });
 
     // Refund logic for captured prepaid payments.
     // Previously guarded on 'completed', which the schema does not allow, so no
@@ -562,8 +569,17 @@ exports.cancelOrderItem = async (req, res) => {
     order.totalAmount -= refundAmount;
     if (order.totalAmount < 0) order.totalAmount = 0;
     
-    const allCancelled = order.items.every(it => it.status === 'cancelled');
-    if (allCancelled) order.status = 'cancelled';
+    // A seller whose every line has been cancelled has nothing left to send,
+    // so their fulfilment is cancelled too. Once all of them are, the order
+    // derives to 'cancelled' on its own.
+    order.fulfilments.forEach((f) => {
+      const theirs = order.items.filter(
+        (it) => String(it.sellerId) === String(f.sellerId)
+      );
+      if (theirs.length && theirs.every((it) => it.status === 'cancelled')) {
+        f.status = 'cancelled';
+      }
+    });
     
     await order.save({ session });
     await session.commitTransaction();
@@ -609,7 +625,34 @@ exports.cancelOrderItem = async (req, res) => {
         });
       }
 
-      order.status = 'returned';
+      // The return window has to be enforced HERE, because the rest of the
+      // system is built on the promise that it closes. utils/payout.js pays a
+      // seller once their delivery is older than RETURN_WINDOW_DAYS, on the
+      // stated assumption that it can no longer come back. Without this check
+      // an order delivered six months ago could still be returned: the
+      // customer is refunded in full, the seller was paid long ago, no clawback
+      // exists, and the platform absorbs the whole loss.
+      const windowClosesAt = new Date(
+        new Date(order.deliveredAt || order.updatedAt).getTime() +
+          RETURN_WINDOW_DAYS * 24 * 60 * 60 * 1000
+      );
+      if (Date.now() > windowClosesAt.getTime()) {
+        return res.status(400).json({
+          message: `The ${RETURN_WINDOW_DAYS}-day return window for this order closed on ${windowClosesAt.toDateString()}.`,
+          returnWindowDays: RETURN_WINDOW_DAYS,
+          windowClosedAt: windowClosesAt,
+        });
+      }
+
+      // Mark every delivered part as returned; the order derives to 'returned'
+      // once they all are.
+      const returnedAt = new Date();
+      order.fulfilments.forEach((f) => {
+        if (f.status === 'delivered') {
+          f.status = 'returned';
+          f.returnedAt = returnedAt;
+        }
+      });
 
 // Initiate refund for returned prepaid orders.
 // Previously guarded on 'completed', which the paymentStatus enum does not

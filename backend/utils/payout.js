@@ -12,9 +12,15 @@
  *
  *     the order was paid for            paymentStatus === 'paid'
  *     the line was not cancelled        item.status !== 'cancelled'
- *     the goods reached the customer    status === 'delivered'
- *     the return window has closed      deliveredAt older than RETURN_WINDOW_DAYS
+ *     THIS SELLER'S parcel arrived      their fulfilment is 'delivered'
+ *     the return window has closed      that fulfilment's deliveredAt is older
+ *                                       than RETURN_WINDOW_DAYS
  *     it has not been paid already      item.payoutId === null
+ *
+ *   Delivery is read PER SELLER, from the order's fulfilments - never from the
+ *   order's own status. In a two-seller order one seller delivering says
+ *   nothing about the other, and paying on the order-level flag meant a seller
+ *   could be settled for a parcel they had not sent.
  *
  *   RETURN_WINDOW_DAYS matches the 7 days promised to customers in the
  *   product structured data. If that promise changes, this changes with it.
@@ -48,16 +54,38 @@ const settledBefore = () =>
  */
 const payableOrderFilter = () => ({
   paymentStatus: 'paid',
-  status: 'delivered',
-  deliveredAt: { $ne: null, $lte: settledBefore() },
+  // At least one seller's parcel is delivered and out of its return window.
+  // Which seller that is gets settled per line by isPayableLine below.
+  fulfilments: {
+    $elemMatch: { status: 'delivered', deliveredAt: { $ne: null, $lte: settledBefore() } },
+  },
   'items.payoutId': null,
 });
 
-/** True when this specific line is owed to its seller. */
-const isPayableLine = (item, sellerId) =>
+/** This seller's parcel in an order, if they have one. */
+const fulfilmentOf = (fulfilments, sellerId) =>
+  (fulfilments || []).find((f) => String(f.sellerId) === String(sellerId));
+
+/** When this seller's parcel cleared its return window, or null. */
+const settledDeliveryAt = (fulfilments, sellerId) => {
+  const f = fulfilmentOf(fulfilments, sellerId);
+  if (!f || f.status !== 'delivered' || !f.deliveredAt) return null;
+  return new Date(f.deliveredAt) <= settledBefore() ? new Date(f.deliveredAt) : null;
+};
+
+/**
+ * True when this specific line is owed to its seller.
+ *
+ * `fulfilments` is the parent order's fulfilment list: the line is only payable
+ * once ITS OWN seller has delivered and that delivery has cleared the return
+ * window. Passing no fulfilments means nothing is payable, which is the safe
+ * default - it under-pays rather than over-pays.
+ */
+const isPayableLine = (item, sellerId, fulfilments = []) =>
   item.status !== 'cancelled' &&
   item.payoutId == null &&
-  (!sellerId || String(item.sellerId) === String(sellerId));
+  (!sellerId || String(item.sellerId) === String(sellerId)) &&
+  settledDeliveryAt(fulfilments, item.sellerId) !== null;
 
 /**
  * What every seller is currently owed.
@@ -73,14 +101,18 @@ const getPayableSummary = async (sellerId) => {
   if (sellerId) filter['items.sellerId'] = sellerId;
 
   const orders = await Order.find(filter)
-    .select('items deliveredAt')
+    .select('items fulfilments')
     .lean();
 
   const bySeller = new Map();
 
   for (const order of orders) {
     for (const item of order.items) {
-      if (!isPayableLine(item, sellerId)) continue;
+      if (!isPayableLine(item, sellerId, order.fulfilments)) continue;
+
+      // The period is this seller's own delivery date, not the order's: in a
+      // split order the two sellers deliver on different days.
+      const deliveredAt = settledDeliveryAt(order.fulfilments, item.sellerId);
 
       const key = String(item.sellerId);
       if (!bySeller.has(key)) {
@@ -90,8 +122,8 @@ const getPayableSummary = async (sellerId) => {
           grossSales: 0,
           commission: 0,
           netPayable: 0,
-          periodFrom: order.deliveredAt,
-          periodTo: order.deliveredAt,
+          periodFrom: deliveredAt,
+          periodTo: deliveredAt,
         });
       }
 
@@ -100,8 +132,8 @@ const getPayableSummary = async (sellerId) => {
       row.grossSales += item.price * item.quantity;
       row.commission += item.commissionAmount || 0;
       row.netPayable += item.sellerEarning || 0;
-      if (order.deliveredAt < row.periodFrom) row.periodFrom = order.deliveredAt;
-      if (order.deliveredAt > row.periodTo) row.periodTo = order.deliveredAt;
+      if (deliveredAt < row.periodFrom) row.periodFrom = deliveredAt;
+      if (deliveredAt > row.periodTo) row.periodTo = deliveredAt;
     }
   }
 
@@ -169,9 +201,9 @@ const createPayoutForSeller = async (sellerId, adminId, session) => {
   }
 
   const filter = { ...payableOrderFilter(), 'items.sellerId': sellerId };
-  const candidates = await Order.find(filter).select('_id items deliveredAt').lean();
+  const candidates = await Order.find(filter).select('_id items fulfilments').lean();
   const orderIds = candidates
-    .filter((o) => o.items.some((i) => isPayableLine(i, sellerId)))
+    .filter((o) => o.items.some((i) => isPayableLine(i, sellerId, o.fulfilments)))
     .map((o) => o._id);
 
   if (orderIds.length === 0) return { ok: false, reason: 'Nothing is payable for this seller' };
@@ -212,7 +244,9 @@ const createPayoutForSeller = async (sellerId, adminId, session) => {
   );
 
   // 3. Total up what was actually claimed, not what was expected.
-  const claimedQuery = Order.find({ 'items.payoutId': payout._id }).select('items deliveredAt').lean();
+  const claimedQuery = Order.find({ 'items.payoutId': payout._id })
+    .select('items fulfilments')
+    .lean();
   if (session) claimedQuery.session(session);
   const claimed = await claimedQuery;
 
@@ -227,8 +261,10 @@ const createPayoutForSeller = async (sellerId, adminId, session) => {
       totals.grossSales += item.price * item.quantity;
       totals.commission += item.commissionAmount || 0;
       totals.netPayable += item.sellerEarning || 0;
-      if (!periodFrom || order.deliveredAt < periodFrom) periodFrom = order.deliveredAt;
-      if (!periodTo || order.deliveredAt > periodTo) periodTo = order.deliveredAt;
+      const deliveredAt =
+        settledDeliveryAt(order.fulfilments, item.sellerId) || order.deliveredAt;
+      if (!periodFrom || deliveredAt < periodFrom) periodFrom = deliveredAt;
+      if (!periodTo || deliveredAt > periodTo) periodTo = deliveredAt;
     }
   }
 

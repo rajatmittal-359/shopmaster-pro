@@ -1,4 +1,9 @@
 import { vi } from 'vitest';
+import { createRequire } from 'module';
+
+// The order status rule lives in the model; the double reuses it rather than
+// keeping a second copy that could quietly disagree.
+const Order = createRequire(import.meta.url)('../../models/Order');
 
 /**
  * Mongoose query objects are chainable and thenable. These helpers reproduce
@@ -39,8 +44,20 @@ export function fakeOrderDoc(fields) {
     ...fields,
     save: vi.fn(async function () {
       doc.__saveCount = (doc.__saveCount || 0) + 1;
+
+      // The real model derives `status` from the fulfilments in a pre-validate
+      // hook, so controllers move a seller's fulfilment and never the order's
+      // status. A double that skipped this would let a controller look correct
+      // here while doing nothing in production.
+      if (Array.isArray(doc.fulfilments) && doc.fulfilments.length) {
+        doc.status = Order.deriveStatus(doc.fulfilments);
+      }
       return doc;
     }),
   };
+
+  doc.fulfilmentFor = (sellerId) =>
+    (doc.fulfilments || []).find((f) => String(f.sellerId) === String(sellerId));
+
   return doc;
 }

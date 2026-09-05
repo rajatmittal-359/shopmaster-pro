@@ -64,15 +64,33 @@ const line = (sellerId, price, quantity, overrides = {}) => ({
   ...overrides,
 });
 
-const order = (items, overrides = {}) => ({
-  _id: new mongoose.Types.ObjectId(),
-  customerId: new mongoose.Types.ObjectId(),
-  items,
-  paymentStatus: 'paid',
-  status: 'delivered',
-  deliveredAt: SETTLED,
-  ...overrides,
-});
+/**
+ * An order, with one fulfilment per seller built from its lines - which is what
+ * the real model does in its pre-validate hook.
+ *
+ * `status` and `deliveredAt` overrides apply to every seller's fulfilment, so
+ * the single-seller cases below read exactly as they did before. A split order
+ * where the sellers are at DIFFERENT stages passes `fulfilments` explicitly.
+ */
+const order = (items, overrides = {}) => {
+  const { status = 'delivered', deliveredAt = SETTLED, fulfilments, ...rest } = overrides;
+
+  const bySeller = new Map();
+  items.forEach((i) => bySeller.set(String(i.sellerId), i.sellerId));
+
+  return {
+    _id: new mongoose.Types.ObjectId(),
+    customerId: new mongoose.Types.ObjectId(),
+    items,
+    paymentStatus: 'paid',
+    status,
+    deliveredAt,
+    fulfilments:
+      fulfilments ||
+      [...bySeller.values()].map((sellerId) => ({ sellerId, status, deliveredAt })),
+    ...rest,
+  };
+};
 
 beforeEach(() => {
   orders = new InMemoryCollection([]);

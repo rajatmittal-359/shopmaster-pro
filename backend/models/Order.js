@@ -68,6 +68,102 @@ const orderItemSchema = new mongoose.Schema({
   },
 });
 
+/**
+ * One seller's share of an order, and how far along it is.
+ *
+ * WHY THIS EXISTS
+ *   An order can contain items from several sellers, but the order carried a
+ *   single `status`. Any seller with an item in the basket could move that one
+ *   field, so one seller marking their parcel "delivered" declared the WHOLE
+ *   order delivered - including items another seller had not even packed. That
+ *   set the order's deliveredAt, which starts the return window, which is what
+ *   makes a line payable. A seller could therefore be paid for goods that had
+ *   never left the shelf, and on COD the order was marked paid for money nobody
+ *   had collected.
+ *
+ *   Each seller now owns exactly one fulfilment and can only ever move their
+ *   own. The order's `status` is DERIVED from these (see deriveStatus) and kept
+ *   stored, so everything that already reads order.status keeps working.
+ *
+ * Courier fields live here as well as on the order: in a split order the two
+ * sellers ship separately and have different AWBs. The order-level shipping
+ * fields are retained for single-seller orders and existing readers.
+ */
+const fulfilmentSchema = new mongoose.Schema(
+  {
+    sellerId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+    },
+
+    status: {
+      type: String,
+      enum: ['pending', 'processing', 'shipped', 'delivered', 'cancelled', 'returned'],
+      default: 'pending',
+    },
+
+    shippedAt: { type: Date, default: null },
+
+    /**
+     * When THIS seller's parcel reached the customer.
+     *
+     * The return window and therefore payout eligibility are measured from
+     * here, per seller - not from the order, which in a split order says
+     * nothing about when any particular seller delivered.
+     */
+    deliveredAt: { type: Date, default: null },
+
+    /** When the customer started a return for this seller's parcel. */
+    returnedAt: { type: Date, default: null },
+
+    // Courier details for this seller's parcel.
+    shippingProvider: {
+      type: String,
+      enum: ['none', 'shiprocket', 'borzo'],
+      default: 'none',
+    },
+    awb: { type: String, default: null },
+    courierName: { type: String, default: null },
+    shipmentId: { type: String, default: null },
+    shippingOrderId: { type: String, default: null },
+    trackingUrl: { type: String, default: null },
+  },
+  { _id: false }
+);
+
+/**
+ * How far along the whole order is, given its sellers' fulfilments.
+ *
+ * An order is only as advanced as its LEAST advanced live part: if one seller
+ * has delivered and another has not packed, the customer's order is still
+ * pending. Cancelled parts drop out of the reckoning; a returned part is
+ * treated as finished so it cannot hold the order back, but an order whose
+ * parts have ALL been returned is itself returned.
+ */
+const FULFILMENT_RANK = {
+  pending: 0,
+  processing: 1,
+  shipped: 2,
+  delivered: 3,
+  returned: 3,
+};
+const RANK_TO_STATUS = ['pending', 'processing', 'shipped', 'delivered'];
+
+const deriveStatus = (fulfilments = []) => {
+  if (!fulfilments.length) return 'pending';
+
+  const live = fulfilments.filter((f) => f.status !== 'cancelled');
+  if (!live.length) return 'cancelled';
+  if (live.every((f) => f.status === 'returned')) return 'returned';
+
+  const minRank = live.reduce(
+    (min, f) => Math.min(min, FULFILMENT_RANK[f.status] ?? 0),
+    Infinity
+  );
+  return RANK_TO_STATUS[minRank] || 'pending';
+};
+
 const orderSchema = new mongoose.Schema(
   {
     customerId: {
@@ -77,6 +173,12 @@ const orderSchema = new mongoose.Schema(
     },
 
     items: [orderItemSchema],
+
+    /**
+     * One entry per seller in this order, built automatically from `items`.
+     * See fulfilmentSchema above for why this exists.
+     */
+    fulfilments: [fulfilmentSchema],
 
     /**
      * Human-readable reference, e.g. SMP-260830-A3F19C.
@@ -96,7 +198,13 @@ const orderSchema = new mongoose.Schema(
       required: true
     },
 
-    // 📦 Order fulfilment status
+    /**
+     * How far the WHOLE order has got.
+     *
+     * DERIVED from `fulfilments` and written on every save - do not set it by
+     * hand. A seller moves their own fulfilment; this follows. It stays a real
+     * stored field so existing queries and screens keep working unchanged.
+     */
     status: {
       type: String,
       enum: [
@@ -289,11 +397,54 @@ orderSchema.pre('validate', function () {
   this.orderNumber = `SMP-${yy}${mm}${dd}-${String(this._id).slice(-6).toUpperCase()}`;
 });
 
+/**
+ * Give every seller in the basket exactly one fulfilment, and keep the order's
+ * own status in step with them.
+ *
+ * Done in a hook rather than at the two call sites, so both checkout paths -
+ * COD in customerController and prepaid in razorpayController - get this
+ * without either having to remember. A seller that already has a fulfilment is
+ * left untouched; only genuinely new sellers get one added.
+ */
+orderSchema.pre('validate', function () {
+  const sellerIds = [...new Set((this.items || []).map((i) => String(i.sellerId)))];
+  const existing = new Set((this.fulfilments || []).map((f) => String(f.sellerId)));
+
+  sellerIds
+    .filter((id) => !existing.has(id))
+    .forEach((id) => this.fulfilments.push({ sellerId: id, status: 'pending' }));
+
+  this.status = deriveStatus(this.fulfilments);
+
+  // The order as a whole counts as delivered only once every seller has
+  // delivered, so this is the moment the last parcel arrived.
+  if (this.status === 'delivered' && !this.deliveredAt) {
+    const times = this.fulfilments
+      .filter((f) => f.deliveredAt)
+      .map((f) => f.deliveredAt.getTime());
+    this.deliveredAt = times.length ? new Date(Math.max(...times)) : new Date();
+  }
+});
+
+/** This seller's slice of the order, or undefined if they are not in it. */
+orderSchema.methods.fulfilmentFor = function (sellerId) {
+  return this.fulfilments.find((f) => String(f.sellerId) === String(sellerId));
+};
+
+/** Exposed so payout and tests can reason about status without duplicating it. */
+orderSchema.statics.deriveStatus = deriveStatus;
+orderSchema.statics.FULFILMENT_RANK = FULFILMENT_RANK;
+
 // 📌 Indexes
 orderSchema.index({ customerId: 1 });
 orderSchema.index({ 'items.sellerId': 1 });
 orderSchema.index({ status: 1 });
 orderSchema.index({ paymentStatus: 1 });
+
+// Payout asks "which of this seller's parcels were delivered long enough ago",
+// which is a query over the fulfilment array, not the order's own status.
+orderSchema.index({ 'fulfilments.sellerId': 1, 'fulfilments.status': 1 });
+orderSchema.index({ 'fulfilments.deliveredAt': 1 });
 
 const Order = mongoose.model('Order', orderSchema);
 
