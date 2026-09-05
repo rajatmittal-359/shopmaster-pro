@@ -76,7 +76,7 @@ export default function WishlistPage() {
             <p className="mb-3">Your wishlist is empty ❤️</p>
             <button
               onClick={() => navigate("/shop")}  // public shop
-              className="px-4 py-2 bg-orange-500 text-white rounded-lg"
+              className="px-4 py-2 bg-brand-700 text-white rounded-lg"
             >
               Continue Shopping
             </button>
@@ -115,7 +115,7 @@ export default function WishlistPage() {
                     {p.name}
                   </h3>
 
-                  <p className="text-orange-600 font-bold mt-1">
+                  <p className="text-brand-700 font-bold mt-1">
                     ₹{p.price}
                   </p>
 
@@ -158,7 +158,7 @@ export default function WishlistPage() {
                   <div className="flex gap-2 mt-4">
                     <button
                       onClick={() => handleAddToCart(p._id)}
-                      className="flex-1 bg-orange-500 hover:bg-orange-600 text-white text-sm py-2 rounded-lg"
+                      className="flex-1 bg-brand-700 hover:bg-brand-700 text-white text-sm py-2 rounded-lg"
                     >
                       Add to Cart
                     </button>

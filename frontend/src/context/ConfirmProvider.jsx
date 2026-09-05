@@ -100,7 +100,7 @@ export function ConfirmProvider({ children }) {
                 className={`rounded-lg px-4 py-2 text-sm text-white ${
                   request.danger
                     ? 'bg-red-600 hover:bg-red-700'
-                    : 'bg-orange-600 hover:bg-orange-700'
+                    : 'bg-brand-700 hover:bg-brand-800'
                 }`}
               >
                 {request.confirmLabel}

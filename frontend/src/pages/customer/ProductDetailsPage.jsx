@@ -292,7 +292,7 @@ export default function ProductDetailsPage() {
               aria-pressed={liked}
               aria-label={liked ? 'Remove from wishlist' : 'Save to wishlist'}
               className="absolute top-3 right-3 bg-white p-2 rounded-full shadow hover:bg-gray-100
-                         focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-600"
+                         focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-700"
             >
               <Heart
                 size={18}
@@ -310,7 +310,7 @@ export default function ProductDetailsPage() {
                 src={img}
                 onClick={() => setActiveImage(img)}
                 className={`w-16 h-16 object-cover border rounded-lg cursor-pointer ${
-                  activeImage === img ? "border-orange-500" : ""
+                  activeImage === img ? "border-brand-600" : ""
                 }`}
               />
             ))}
@@ -326,7 +326,7 @@ export default function ProductDetailsPage() {
             {product.avgRating > 0 ? (
               <>
                 <div className="flex items-center gap-1">
-                  <span className="px-2 py-0.5 rounded-lg bg-green-600 text-white text-xs font-semibold">
+                  <span className="px-2 py-0.5 rounded-lg bg-positive text-white text-xs font-semibold">
                     {product.avgRating.toFixed(1)} ★
                   </span>
                   <span className="text-gray-600">
@@ -348,7 +348,7 @@ export default function ProductDetailsPage() {
             deciding. Same numbers in both places now.
           */}
           <div className="flex flex-wrap items-baseline gap-2">
-            <span className="text-2xl font-bold text-orange-600">
+            <span className="text-2xl font-bold text-brand-700">
               ₹{product.price}
             </span>
             {product.mrp > product.price && (
@@ -356,7 +356,7 @@ export default function ProductDetailsPage() {
                 <span className="text-base text-gray-400 line-through">
                   ₹{product.mrp}
                 </span>
-                <span className="text-sm font-medium text-green-700">
+                <span className="text-sm font-medium text-positive">
                   {Math.round(((product.mrp - product.price) / product.mrp) * 100)}% off
                 </span>
               </>
@@ -367,7 +367,7 @@ export default function ProductDetailsPage() {
             Stock:{" "}
             <span
               className={`font-semibold ${
-                product.stock > 0 ? "text-green-600" : "text-red-600"
+                product.stock > 0 ? "text-positive" : "text-red-600"
               }`}
             >
               {product.stock}
@@ -417,7 +417,7 @@ export default function ProductDetailsPage() {
           {inCart > 0 && (
             <p className="text-sm text-gray-600 mt-2">
               {inCart} already in your cart ·{' '}
-              <Link to="/customer/cart" className="text-orange-600 underline">
+              <Link to="/customer/cart" className="text-brand-700 underline">
                 View cart
               </Link>
             </p>
@@ -426,7 +426,7 @@ export default function ProductDetailsPage() {
           <button
             onClick={handleAddToCart}
             disabled={product.stock === 0 || inCart >= product.stock}
-            className="mt-3 w-full max-w-xs bg-orange-500 hover:bg-orange-600 text-white py-2
+            className="mt-3 w-full max-w-xs bg-brand-700 hover:bg-brand-700 text-white py-2
                        rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {product.stock === 0
@@ -525,7 +525,7 @@ export default function ProductDetailsPage() {
                   <p className="text-xs text-red-600">{reviewError}</p>
                 )}
                 {reviewMessage && (
-                  <p className="text-xs text-green-600">
+                  <p className="text-xs text-positive">
                     {reviewMessage}
                   </p>
                 )}
@@ -533,7 +533,7 @@ export default function ProductDetailsPage() {
                 <button
                   type="submit"
                   disabled={savingReview}
-                  className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white text-sm rounded-lg disabled:opacity-60"
+                  className="px-4 py-2 bg-brand-700 hover:bg-brand-700 text-white text-sm rounded-lg disabled:opacity-60"
                 >
                   {savingReview
                     ? "Saving..."
@@ -588,7 +588,7 @@ export default function ProductDetailsPage() {
                     </p>
                   )}
                   {user && rev.userId?._id === user._id && (
-                    <p className="text-[11px] text-green-600 mt-1">
+                    <p className="text-[11px] text-positive mt-1">
                       (Your review)
                     </p>
                   )}

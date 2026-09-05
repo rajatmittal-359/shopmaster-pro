@@ -187,16 +187,16 @@ export default function SellerOrdersPage() {
                   aria-hidden="true"
                   className={`w-2.5 h-2.5 rounded-full shrink-0 ${
                     done
-                      ? 'bg-green-600'
+                      ? 'bg-positive'
                       : current
-                      ? 'bg-orange-600 ring-4 ring-orange-100'
+                      ? 'bg-brand-700 ring-4 ring-brand-200'
                       : 'bg-gray-300'
                   }`}
                 />
                 <span
                   className={`text-xs capitalize ${
                     current
-                      ? 'text-orange-700 font-medium'
+                      ? 'text-brand-700 font-medium'
                       : done
                       ? 'text-gray-600'
                       : 'text-gray-400'
@@ -208,7 +208,7 @@ export default function SellerOrdersPage() {
               {idx !== statusFlow.length - 1 && (
                 <span
                   aria-hidden="true"
-                  className={`w-5 h-0.5 mx-1 ${done ? 'bg-green-600' : 'bg-gray-200'}`}
+                  className={`w-5 h-0.5 mx-1 ${done ? 'bg-positive' : 'bg-gray-200'}`}
                 />
               )}
             </li>
@@ -346,7 +346,7 @@ export default function SellerOrdersPage() {
                       there means collected, not received in advance.
                     */}
                     {order.paymentStatus === 'paid' && (
-                      <p className="text-xs text-green-700 font-semibold">
+                      <p className="text-xs text-positive font-semibold">
                         ✓ {order.paymentMethod === 'cod' ? 'Cash collected' : 'Payment received'}
                       </p>
                     )}

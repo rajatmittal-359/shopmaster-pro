@@ -21,11 +21,18 @@
  * why blue is fine on a "Shipped" badge and never on a button.
  */
 
+/*
+ * `action-primary` is the app's only gradient, defined in index.css. It marks
+ * the button that COMMITS - it is how the eye finds the main action without
+ * reading the label. White on the old flat orange-600 measured 3.56:1, under
+ * the 4.5 AA needs, so the gradient ends on -700 (5.18) and the border matches:
+ * the fix and the flourish are the same change.
+ */
 const VARIANTS = {
   primary:
-    'bg-orange-600 text-white border border-orange-600 ' +
-    'hover:bg-orange-700 hover:border-orange-700 ' +
-    'focus-visible:outline-orange-600',
+    'action-primary text-white border border-brand-700 ' +
+    'hover:border-brand-800 shadow-sm hover:shadow ' +
+    'focus-visible:outline-brand-700',
   secondary:
     'bg-white text-gray-800 border border-gray-300 ' +
     'hover:bg-gray-50 hover:border-gray-400 ' +
@@ -33,11 +40,11 @@ const VARIANTS = {
   destructive:
     'bg-white text-red-700 border border-red-300 ' +
     'hover:bg-red-50 hover:border-red-400 ' +
-    'focus-visible:outline-red-600',
+    'focus-visible:outline-negative',
   ghost:
     'bg-transparent text-gray-600 border border-transparent ' +
-    'hover:text-orange-700 hover:bg-orange-50 ' +
-    'focus-visible:outline-orange-600',
+    'hover:text-brand-700 hover:bg-brand-50 ' +
+    'focus-visible:outline-brand-700',
 };
 
 const SIZES = {
@@ -77,7 +84,7 @@ export default function Button({
       {...(isButton ? { disabled: disabled || loading } : {})}
       className={[
         'inline-flex items-center justify-center gap-2 rounded-lg font-medium',
-        'transition-colors duration-150',
+        'transition-[background-image,background-color,border-color,box-shadow] duration-150',
         // Keyboard users need to see where they are. The app had no visible
         // focus state anywhere.
         'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2',

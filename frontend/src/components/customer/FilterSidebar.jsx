@@ -92,7 +92,7 @@ console.log(
         <select
           value={selectedMain}
           onChange={handleMainChange}
-          className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+          className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-600 focus:border-transparent"
         >
           <option value="">All Categories</option>
           {mainCategories.map((cat) => (
@@ -111,7 +111,7 @@ console.log(
           value={selectedSub}
           onChange={handleSubChange}
           disabled={!selectedMain || subCategories.length === 0}
-          className={`w-full border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent ${
+          className={`w-full border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-600 focus:border-transparent ${
             !selectedMain || subCategories.length === 0
               ? 'bg-gray-100 cursor-not-allowed text-gray-500'
               : 'border-gray-300'
@@ -149,7 +149,7 @@ console.log(
             onChange={handleInput}
             placeholder="Min"
             min="0"
-            className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+            className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-600 focus:border-transparent"
           />
           <input
             type="number"
@@ -158,14 +158,14 @@ console.log(
             onChange={handleInput}
             placeholder="Max"
             min="0"
-            className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+            className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-600 focus:border-transparent"
           />
         </div>
       </div>
 
       {(filters.category || filters.minPrice || filters.maxPrice) && (
-        <div className="mb-3 p-2 bg-orange-50 border border-orange-200 rounded-md">
-          <p className="text-[11px] text-orange-800 font-medium">
+        <div className="mb-3 p-2 bg-brand-50 border border-brand-200 rounded-md">
+          <p className="text-[11px] text-brand-800 font-medium">
             ✓ Filters applied
           </p>
         </div>

@@ -226,7 +226,7 @@ export default function EarningsPage() {
                       setForm({ ...form, accountHolderName: e.target.value })
                     }
                     className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm
-                               focus:outline focus:outline-2 focus:outline-offset-0 focus:outline-orange-600"
+                               focus:outline focus:outline-2 focus:outline-offset-0 focus:outline-brand-700"
                     placeholder="As printed on your passbook"
                   />
                 </label>
@@ -239,7 +239,7 @@ export default function EarningsPage() {
                     value={form.accountNumber}
                     onChange={(e) => setForm({ ...form, accountNumber: e.target.value })}
                     className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm tabular-nums
-                               focus:outline focus:outline-2 focus:outline-offset-0 focus:outline-orange-600"
+                               focus:outline focus:outline-2 focus:outline-offset-0 focus:outline-brand-700"
                   />
                 </label>
 
@@ -250,7 +250,7 @@ export default function EarningsPage() {
                     value={form.ifscCode}
                     onChange={(e) => setForm({ ...form, ifscCode: e.target.value })}
                     className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm uppercase
-                               focus:outline focus:outline-2 focus:outline-offset-0 focus:outline-orange-600"
+                               focus:outline focus:outline-2 focus:outline-offset-0 focus:outline-brand-700"
                     placeholder="HDFC0001234"
                   />
                 </label>
@@ -263,7 +263,7 @@ export default function EarningsPage() {
                     value={form.gstNumber}
                     onChange={(e) => setForm({ ...form, gstNumber: e.target.value })}
                     className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm uppercase
-                               focus:outline focus:outline-2 focus:outline-offset-0 focus:outline-orange-600"
+                               focus:outline focus:outline-2 focus:outline-offset-0 focus:outline-brand-700"
                   />
                 </label>
               </div>

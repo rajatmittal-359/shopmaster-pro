@@ -13,15 +13,15 @@ const statusColors = {
   pending: 'bg-yellow-100 text-yellow-700',
   processing: 'bg-blue-100 text-blue-700',
   shipped: 'bg-purple-100 text-purple-700',
-  delivered: 'bg-green-100 text-green-700',
+  delivered: 'bg-green-100 text-positive',
   cancelled: 'bg-red-100 text-red-700',
   returned: 'bg-gray-100 text-gray-700',
 };
 
 const paymentColors = {
   pending: 'bg-yellow-100 text-yellow-700',
-  paid: 'bg-green-100 text-green-700',
-  completed: 'bg-green-100 text-green-700',
+  paid: 'bg-green-100 text-positive',
+  completed: 'bg-green-100 text-positive',
 };
 
 export default function SellerOrderDetailsPage() {
@@ -109,7 +109,7 @@ export default function SellerOrderDetailsPage() {
           <div key={idx} className="flex items-center gap-2">
             <div
               className={`w-4 h-4 rounded-full flex items-center justify-center text-xs text-white ${
-                statusFlow.indexOf(status) >= idx ? 'bg-green-500' : 'bg-gray-300'
+                statusFlow.indexOf(status) >= idx ? 'bg-positive' : 'bg-gray-300'
               }`}
             >
               {statusFlow.indexOf(status) >= idx && '✓'}
@@ -261,7 +261,7 @@ export default function SellerOrderDetailsPage() {
               {order.paymentMethod === 'cod' ? 'Cash on delivery' : 'Paid online'}
             </p>
             {order.paymentStatus === 'paid' && (
-              <p className="text-xs text-green-700 font-semibold">
+              <p className="text-xs text-positive font-semibold">
                 ✓ {order.paymentMethod === 'cod' ? 'Cash collected' : 'Payment received'}
               </p>
             )}
@@ -310,7 +310,7 @@ export default function SellerOrderDetailsPage() {
                 />
                 <button
                   onClick={handleTrackingUpdate}
-                  className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg"
+                  className="px-6 py-2 bg-positive hover:bg-positive-strong text-white rounded-lg"
                 >
                   Save Tracking
                 </button>
@@ -328,7 +328,7 @@ export default function SellerOrderDetailsPage() {
             <button
               onClick={() => handleStatusUpdate(nextStatus)}
               disabled={updating}
-              className="mt-4 w-full py-3 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-semibold disabled:opacity-50"
+              className="mt-4 w-full py-3 bg-brand-700 hover:bg-brand-700 text-white rounded-lg font-semibold disabled:opacity-50"
             >
               {updating ? 'Updating...' : `Mark as ${nextStatus}`}
             </button>

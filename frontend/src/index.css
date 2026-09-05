@@ -28,6 +28,106 @@
   --radius-2xl: 1.25rem;
 }
 
+/*
+  THE PALETTE
+
+  Colour was picked per file, so the same idea wore different clothes on every
+  screen: the brand was `orange-500` in 18 places and `orange-600` in 24, for
+  the same job. And three of the commonest pairings did not meet WCAG AA for
+  normal text (4.5:1), measured, not guessed:
+
+    bg-orange-600 + white   3.56   every primary button
+    text-orange-600         3.56   every price, 28 places
+    text-green-600          3.30   stock and money-in, 15 places
+
+  So the ramp below is split by JOB rather than by shade. -700 is the step that
+  carries text and solid fills because it is the first one that passes (5.18);
+  -500/-600 stay for decoration and gradients, where nothing has to be read.
+
+  Marigold is kept deliberately - it is already the brand, and it is Jaipur's
+  own colour, which is where this shop actually is.
+*/
+@theme {
+  --color-brand-50: #fff7ed;
+  --color-brand-100: #ffedd5;
+  --color-brand-200: #fed7aa;
+  --color-brand-300: #fdba74;
+  --color-brand-400: #fb923c;
+  --color-brand-500: #f97316;
+  --color-brand-600: #ea580c;
+  --color-brand-700: #c2410c;
+  --color-brand-800: #9a3412;
+
+  /*
+    Status by what it MEANS, so a screen never has to remember which green.
+    Each of these is the first step of its hue that passes AA on white.
+  */
+  --color-positive: #15803d;
+  /* For a green fill carrying white text: -500 measures 2.50 and -600 3.30. */
+  --color-positive-strong: #166534;
+  --color-negative: #dc2626;
+  --color-notice: #b45309;
+  --color-info: #1d4ed8;
+}
+
+/*
+  THE ONE GRADIENT
+
+  A gradient on every card is decoration, and it is the thing that makes a page
+  look generated. It earns its place in exactly two spots, and both carry
+  meaning rather than mood:
+
+    .action-primary  the single button on a screen that COMMITS - add to cart,
+                     place the order, book the courier. The gradient is how you
+                     find it without reading.
+    .brand-mark      the app's own name. Identity, not decoration.
+
+  Nowhere else. If a third use appears, one of these has stopped being special.
+*/
+/*
+  Both ENDS have to clear 4.5:1, not just the dark one - white sitting over the
+  light corner is still white text on that colour. -600 measures 3.56, so the
+  sweep starts at -700 (5.18) and runs to -800 (7.31). Marigold into rust: it
+  still reads as a gradient, and every pixel under the label is legible.
+*/
+.action-primary {
+  background-image: linear-gradient(
+    135deg,
+    var(--color-brand-700) 0%,
+    var(--color-brand-800) 100%
+  );
+}
+
+.action-primary:hover:not(:disabled) {
+  background-image: linear-gradient(
+    135deg,
+    var(--color-brand-800) 0%,
+    var(--color-brand-900) 100%
+  );
+}
+
+.brand-mark {
+  background-image: linear-gradient(
+    100deg,
+    var(--color-brand-600) 0%,
+    var(--color-brand-800) 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Someone who has asked their system for less movement gets less movement. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
 /* CKEditor + description HTML lists */
 .ck-content ul,
 .description-html ul {

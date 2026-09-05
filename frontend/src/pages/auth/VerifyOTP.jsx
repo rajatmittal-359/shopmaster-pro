@@ -70,7 +70,7 @@ export default function VerifyOTP() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
       <div className="w-full max-w-md bg-white shadow-md rounded-lg p-6">
-        <h2 className="text-2xl font-bold mb-4 text-center text-orange-600">
+        <h2 className="text-2xl font-bold mb-4 text-center text-brand-700">
           Verify OTP
         </h2>
 
@@ -91,7 +91,7 @@ export default function VerifyOTP() {
               type="text"
               value={otp}
               onChange={handleChange}
-              className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 tracking-widest text-center"
+              className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-600 tracking-widest text-center"
               maxLength={6}
               required
             />
@@ -100,7 +100,7 @@ export default function VerifyOTP() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2 rounded-lg transition disabled:opacity-60"
+            className="w-full bg-brand-700 hover:bg-brand-700 text-white font-semibold py-2 rounded-lg transition disabled:opacity-60"
           >
             {loading ? 'Verifying...' : 'Verify'}
           </button>
@@ -115,7 +115,7 @@ export default function VerifyOTP() {
             type="button"
             onClick={handleResend}
             disabled={resending || cooldown > 0}
-            className="text-orange-600 font-medium hover:underline disabled:text-gray-400 disabled:no-underline"
+            className="text-brand-700 font-medium hover:underline disabled:text-gray-400 disabled:no-underline"
           >
             {resending
               ? 'Sending...'

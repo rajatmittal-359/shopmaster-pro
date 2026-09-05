@@ -52,7 +52,7 @@ export default function Register() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
       <div className="w-full max-w-md bg-white shadow-md rounded-lg p-6">
-        <h2 className="text-2xl font-bold mb-4 text-center text-orange-600">
+        <h2 className="text-2xl font-bold mb-4 text-center text-brand-700">
           Create Account
         </h2>
 
@@ -72,7 +72,7 @@ export default function Register() {
               value={form.name}
               onChange={handleChange}
               className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 ${
-                errors.name ? 'border-red-400 focus:ring-red-400' : 'focus:ring-orange-400'
+                errors.name ? 'border-red-400 focus:ring-red-400' : 'focus:ring-brand-600'
               }`}
               required
             />
@@ -88,7 +88,7 @@ export default function Register() {
               value={form.email}
               onChange={handleChange}
               className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 ${
-                errors.email ? 'border-red-400 focus:ring-red-400' : 'focus:ring-orange-400'
+                errors.email ? 'border-red-400 focus:ring-red-400' : 'focus:ring-brand-600'
               }`}
               required
             />
@@ -104,7 +104,7 @@ export default function Register() {
               value={form.password}
               onChange={handleChange}
               className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 ${
-                errors.password ? 'border-red-400 focus:ring-red-400' : 'focus:ring-orange-400'
+                errors.password ? 'border-red-400 focus:ring-red-400' : 'focus:ring-brand-600'
               }`}
               required
             />
@@ -118,7 +118,7 @@ export default function Register() {
               name="role"
               value={form.role}
               onChange={handleChange}
-              className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+              className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-600"
             >
               <option value="customer">Customer</option>
               <option value="seller">Seller</option>
@@ -135,7 +135,7 @@ export default function Register() {
                 value={form.businessName}
                 onChange={handleChange}
                 className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 ${
-                  errors.businessName ? 'border-red-400 focus:ring-red-400' : 'focus:ring-orange-400'
+                  errors.businessName ? 'border-red-400 focus:ring-red-400' : 'focus:ring-brand-600'
                 }`}
                 required
               />
@@ -147,7 +147,7 @@ export default function Register() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2 rounded-lg transition disabled:opacity-60"
+            className="w-full bg-brand-700 hover:bg-brand-700 text-white font-semibold py-2 rounded-lg transition disabled:opacity-60"
           >
             {loading ? 'Creating account...' : 'Register'}
           </button>
@@ -155,7 +155,7 @@ export default function Register() {
 
         <p className="mt-4 text-center text-sm text-gray-600">
           Already have an account?{' '}
-          <Link to="/login" className="text-orange-600 font-medium">
+          <Link to="/login" className="text-brand-700 font-medium">
             Login
           </Link>
         </p>

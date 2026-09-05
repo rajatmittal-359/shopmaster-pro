@@ -104,7 +104,7 @@ export default function ProductCard({ product }) {
           aria-label={liked ? 'Remove from wishlist' : 'Save to wishlist'}
           className="absolute top-2 right-2 bg-white/95 backdrop-blur rounded-full p-1.5 shadow
                      hover:bg-gray-100 focus-visible:outline focus-visible:outline-2
-                     focus-visible:outline-orange-600"
+                     focus-visible:outline-brand-700"
         >
           <Heart
             size={16}
@@ -123,7 +123,7 @@ export default function ProductCard({ product }) {
 
       {/* Content */}
       <div className="flex-1 p-3 flex flex-col gap-1">
-        <h3 className="font-semibold text-sm line-clamp-2 group-hover:text-orange-600">
+        <h3 className="font-semibold text-sm line-clamp-2 group-hover:text-brand-700">
           {product.name}
         </h3>
         {shortDesc && (
@@ -144,7 +144,7 @@ export default function ProductCard({ product }) {
     </span>
   )}
 
-  <span className="text-base font-bold text-orange-600">
+  <span className="text-base font-bold text-brand-700">
     ₹{product.price}
   </span>
 </div>
@@ -170,13 +170,13 @@ export default function ProductCard({ product }) {
             Add to cart
           </Button>
         ) : (
-          <div className="flex items-center justify-between rounded-lg border border-orange-600 overflow-hidden">
+          <div className="flex items-center justify-between rounded-lg border border-brand-700 overflow-hidden">
             <button
               type="button"
               onClick={() => changeQty(qty - 1)}
               aria-label={qty === 1 ? 'Remove from cart' : 'One fewer'}
-              className="px-3 py-2 text-orange-700 hover:bg-orange-50
-                         focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-600"
+              className="px-3 py-2 text-brand-700 hover:bg-brand-50
+                         focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-700"
             >
               <Minus size={16} />
             </button>
@@ -191,9 +191,9 @@ export default function ProductCard({ product }) {
               disabled={qty >= product.stock}
               aria-label="One more"
               title={qty >= product.stock ? `Only ${product.stock} left` : undefined}
-              className="px-3 py-2 text-orange-700 hover:bg-orange-50 disabled:opacity-40
+              className="px-3 py-2 text-brand-700 hover:bg-brand-50 disabled:opacity-40
                          disabled:cursor-not-allowed
-                         focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-600"
+                         focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-700"
             >
               <Plus size={16} />
             </button>

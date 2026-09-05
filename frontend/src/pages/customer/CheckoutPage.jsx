@@ -322,7 +322,7 @@ export default function CheckoutPage() {
                 <button
                   type="button"
                   onClick={() => navigate("/customer/addresses")}
-                  className="text-xs text-orange-600 hover:underline font-semibold"
+                  className="text-xs text-brand-700 hover:underline font-semibold"
                 >
                   Manage addresses
                 </button>
@@ -354,7 +354,7 @@ export default function CheckoutPage() {
                       key={addr._id}
                       className={`block border rounded-lg p-3 cursor-pointer transition-all ${
                         selectedAddressId === addr._id
-                          ? "border-orange-500 bg-orange-50"
+                          ? "border-brand-600 bg-brand-50"
                           : "hover:border-gray-400"
                       }`}
                     >
@@ -371,7 +371,7 @@ export default function CheckoutPage() {
                       </span>
 
                       {addr.isDefault && (
-                        <span className="ml-2 text-[10px] bg-green-100 text-green-700 px-1 rounded-lg">
+                        <span className="ml-2 text-[10px] bg-green-100 text-positive px-1 rounded-lg">
                           Default
                         </span>
                       )}
@@ -408,7 +408,7 @@ export default function CheckoutPage() {
                   Calculating...
                 </span>
               ) : (
-                <span className="font-medium text-green-600">
+                <span className="font-medium text-positive">
                   {shippingCharges === 0 ? 'Free' : `₹${shippingCharges}`}
                 </span>
               )}
@@ -429,7 +429,7 @@ export default function CheckoutPage() {
                     key={option.id}
                     className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3 ${
                       deliveryOption === option.id
-                        ? 'border-orange-500 bg-orange-50'
+                        ? 'border-brand-600 bg-brand-50'
                         : 'border-gray-200 hover:bg-gray-50'
                     }`}
                   >
@@ -464,7 +464,7 @@ export default function CheckoutPage() {
 
           <div className="flex justify-between font-bold text-lg border-t pt-3 mt-3">
             <span>Order Total</span>
-            <span className="text-orange-600">₹{grandTotal}</span>
+            <span className="text-brand-700">₹{grandTotal}</span>
           </div>
 
           <p className="text-xs text-gray-500 mt-2">
@@ -508,7 +508,7 @@ export default function CheckoutPage() {
             disabled={
               placing || addresses.length === 0 || calculatingTotals
             }
-            className="w-full mt-4 bg-orange-500 hover:bg-orange-600 text-white py-3 rounded-lg font-semibold disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+            className="w-full mt-4 bg-brand-700 hover:bg-brand-700 text-white py-3 rounded-lg font-semibold disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
           >
             {placing
               ? paymentMethod === "online"

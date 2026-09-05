@@ -314,7 +314,7 @@ export default function PayoutsPage() {
                             onChange={(e) => setReference(e.target.value)}
                             placeholder="Bank reference / UTR"
                             className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm
-                                       focus:outline focus:outline-2 focus:outline-offset-0 focus:outline-orange-600"
+                                       focus:outline focus:outline-2 focus:outline-offset-0 focus:outline-brand-700"
                           />
                           <Button
                             variant="primary"

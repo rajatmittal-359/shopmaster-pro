@@ -125,7 +125,7 @@ export default function AdminDashboard() {
           <span
             className={`text-sm font-semibold ${
               netQtyChange > 0
-                ? "text-green-600"
+                ? "text-positive"
                 : netQtyChange < 0
                 ? "text-red-600"
                 : "text-gray-600"
@@ -185,7 +185,7 @@ export default function AdminDashboard() {
               {analytics.lowStockGlobal.map((prod) => (
                 <div
                   key={prod._id}
-                  className="flex justify-between items-center p-2 border rounded-lg bg-orange-50"
+                  className="flex justify-between items-center p-2 border rounded-lg bg-brand-50"
                 >
                   <div>
                     <p className="text-sm font-medium">{prod.name}</p>
@@ -232,7 +232,7 @@ export default function AdminDashboard() {
                     <span className="text-gray-600">
                       Items Sold: <span className="font-semibold">{seller.itemsSold}</span>
                     </span>
-                    <span className="text-green-600 font-semibold">
+                    <span className="text-positive font-semibold">
                       ₹{seller.revenue}
                     </span>
                   </div>

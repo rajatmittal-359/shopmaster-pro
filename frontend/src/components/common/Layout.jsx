@@ -64,7 +64,9 @@ export default function Layout({ children, title = 'Dashboard' }) {
           ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
         >
           <div className="h-16 flex items-center justify-between px-4 border-b">
-            <span className="font-bold text-xl text-orange-600">
+            {/* The app's own name - the second and last place a gradient
+                is allowed. See index.css. */}
+            <span className="brand-mark font-bold text-xl tracking-tight">
               ShopMaster Pro
             </span>
             <button
@@ -127,7 +129,7 @@ export default function Layout({ children, title = 'Dashboard' }) {
               onClick={handleLogout}
               className="w-full flex items-center gap-3 p-3 rounded-md text-sm text-gray-600
                          hover:bg-red-50 hover:text-red-700 transition-colors
-                         focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-600"
+                         focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-700"
             >
               <LogOut size={18} className="shrink-0" aria-hidden="true" />
               Sign out
@@ -172,7 +174,7 @@ export default function Layout({ children, title = 'Dashboard' }) {
         <header className="h-14 md:h-16 flex items-center gap-2 px-3 md:px-4 bg-white border-b border-gray-200">
           <button
             className="text-2xl text-gray-700 shrink-0 p-1 rounded-lg
-                       focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-600"
+                       focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-700"
             aria-label={isSidebarOpen ? 'Close menu' : 'Open menu'}
             onClick={() => setIsSidebarOpen((p) => !p)}
           >
@@ -194,14 +196,14 @@ export default function Layout({ children, title = 'Dashboard' }) {
                     aria-label={
                       cartCount > 0 ? `My cart, ${cartCount} item(s)` : 'My cart'
                     }
-                    className="relative p-2 rounded-lg text-xl text-gray-700 hover:text-orange-600 hover:bg-orange-50
-                               focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-600"
+                    className="relative p-2 rounded-lg text-xl text-gray-700 hover:text-brand-700 hover:bg-brand-50
+                               focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-700"
                   >
                     <FiShoppingCart />
                     {cartCount > 0 && (
                       <span
                         className="absolute -top-0.5 -right-0.5 min-w-4.5 h-4.5 px-1 rounded-full
-                                   bg-orange-600 text-white text-[11px] font-medium leading-none
+                                   bg-brand-700 text-white text-[11px] font-medium leading-none
                                    flex items-center justify-center"
                       >
                         {cartCount > 9 ? '9+' : cartCount}
@@ -211,15 +213,15 @@ export default function Layout({ children, title = 'Dashboard' }) {
                   <button
                     onClick={() => navigate('/customer/wishlist')}
                     aria-label="My wishlist"
-                    className="p-2 rounded-lg text-xl text-gray-700 hover:text-orange-600 hover:bg-orange-50
-                               focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-600"
+                    className="p-2 rounded-lg text-xl text-gray-700 hover:text-brand-700 hover:bg-brand-50
+                               focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-700"
                   >
                     <FiHeart />
                   </button>
                 </>
               )}
               <div
-                className="w-9 h-9 rounded-full bg-orange-500 text-white text-sm font-medium
+                className="w-9 h-9 rounded-full bg-brand-700 text-white text-sm font-medium
                            flex items-center justify-center shrink-0"
                 title={name}
               >
@@ -229,9 +231,9 @@ export default function Layout({ children, title = 'Dashboard' }) {
           ) : (
             <button
               onClick={() => navigate('/login')}
-              className="shrink-0 px-3 py-1.5 rounded-lg text-sm font-medium text-orange-700
-                         border border-orange-200 hover:bg-orange-50
-                         focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-600"
+              className="shrink-0 px-3 py-1.5 rounded-lg text-sm font-medium text-brand-700
+                         border border-brand-200 hover:bg-brand-50
+                         focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-700"
             >
               Log in
             </button>
@@ -254,9 +256,9 @@ function SidebarLink({ to, icon, text }) {
   return (
     <Link
       to={to}
-      className="flex items-center gap-3 p-3 rounded-md hover:bg-orange-50
-                 text-gray-700 hover:text-orange-700 transition-colors
-                 focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-600"
+      className="flex items-center gap-3 p-3 rounded-md hover:bg-brand-50
+                 text-gray-700 hover:text-brand-700 transition-colors
+                 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-700"
     >
       <span className="shrink-0" aria-hidden="true">
         {icon}

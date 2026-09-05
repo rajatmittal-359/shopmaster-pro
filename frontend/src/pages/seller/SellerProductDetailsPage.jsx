@@ -122,12 +122,12 @@ export default function SellerProductDetailsPage() {
               Category: <span className="font-medium">{product.category?.name}</span>
             </p>
 
-            <p className="text-2xl font-bold text-orange-600">₹{product.price}</p>
+            <p className="text-2xl font-bold text-brand-700">₹{product.price}</p>
 
             <p className="text-sm">
               Stock:{" "}
               <span className={`font-semibold ${
-                product.stock <= product.lowStockThreshold ? "text-red-600" : "text-green-600"
+                product.stock <= product.lowStockThreshold ? "text-red-600" : "text-positive"
               }`}>
                 {product.stock}
               </span>
@@ -137,7 +137,7 @@ export default function SellerProductDetailsPage() {
   Status:{" "}
   <span
     className={`font-semibold ${
-      product.isActive ? "text-green-600" : "text-gray-500"
+      product.isActive ? "text-positive" : "text-gray-500"
     }`}
   >
     {product.isActive ? "Active" : "Inactive"}

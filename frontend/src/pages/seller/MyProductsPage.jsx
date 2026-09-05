@@ -387,7 +387,7 @@ export default function MyProductsPage() {
               );
             }
           }}
-          className="px-5 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-sm font-semibold transition-colors"
+          className="px-5 py-2 bg-brand-700 hover:bg-brand-700 text-white rounded-lg text-sm font-semibold transition-colors"
         >
           {showForm ? "Close Form" : "+ Add Product"}
         </button>
@@ -397,13 +397,13 @@ export default function MyProductsPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
         <input
           placeholder="Search by name, brand, SKU or tag..."
-          className="border border-gray-300 px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+          className="border border-gray-300 px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-600 focus:border-transparent"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
 
         <select
-          className="border border-gray-300 px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+          className="border border-gray-300 px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-600 focus:border-transparent"
           value={sort}
           onChange={(e) => setSort(e.target.value)}
         >
@@ -431,7 +431,7 @@ export default function MyProductsPage() {
                 value={form.name}
                 onChange={handleChange}
                 placeholder="e.g. Men's Cotton Regular Fit T-Shirt"
-                className="w-full border border-gray-300 px-3 py-2 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                className="w-full border border-gray-300 px-3 py-2 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-brand-600 focus:border-transparent"
               />
               {errors.name && (
                 <p className="text-red-500 text-xs mt-1">{errors.name}</p>
@@ -449,7 +449,7 @@ export default function MyProductsPage() {
                 onChange={handleChange}
                 placeholder="Enter description (one point per line)"
                 rows={5}
-                className="w-full border border-gray-300 px-3 py-2 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                className="w-full border border-gray-300 px-3 py-2 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-brand-600 focus:border-transparent"
               />
               {errors.description && (
                 <p className="text-red-500 text-xs mt-1">
@@ -467,7 +467,7 @@ export default function MyProductsPage() {
                 <select
                   value={selectedMainCategory}
                   onChange={handleMainCategoryChange}
-                  className="w-full border border-gray-300 px-3 py-2 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                  className="w-full border border-gray-300 px-3 py-2 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-brand-600 focus:border-transparent"
                 >
                   <option value="">-- Select Main Category --</option>
                   {mainCategories.map((cat) => (
@@ -486,7 +486,7 @@ export default function MyProductsPage() {
                   value={selectedSubCategory}
                   onChange={handleSubCategoryChange}
                   disabled={!selectedMainCategory || subCategories.length === 0}
-                  className={`w-full border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent ${
+                  className={`w-full border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-600 focus:border-transparent ${
                     !selectedMainCategory || subCategories.length === 0
                       ? "bg-gray-100 cursor-not-allowed text-gray-500"
                       : "border-gray-300"
@@ -527,7 +527,7 @@ export default function MyProductsPage() {
                   value={form.brand}
                   onChange={handleChange}
                   placeholder="e.g. MetroLine"
-                  className="border border-gray-300 px-3 py-2 rounded-md text-sm w-full focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                  className="border border-gray-300 px-3 py-2 rounded-md text-sm w-full focus:outline-none focus:ring-2 focus:ring-brand-600 focus:border-transparent"
                 />
               </div>
               <div>
@@ -539,7 +539,7 @@ export default function MyProductsPage() {
                   value={form.sku}
                   onChange={handleChange}
                   placeholder="Seller internal code"
-                  className="border border-gray-300 px-3 py-2 rounded-md text-sm w-full focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                  className="border border-gray-300 px-3 py-2 rounded-md text-sm w-full focus:outline-none focus:ring-2 focus:ring-brand-600 focus:border-transparent"
                 />
               </div>
             </div>
@@ -556,7 +556,7 @@ export default function MyProductsPage() {
                   onChange={handleChange}
                   placeholder="MRP"
                   type="number"
-                  className="border border-gray-300 px-3 py-2 rounded-md text-sm w-full focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                  className="border border-gray-300 px-3 py-2 rounded-md text-sm w-full focus:outline-none focus:ring-2 focus:ring-brand-600 focus:border-transparent"
                 />
                 {errors.mrp && (
                   <p className="text-red-500 text-xs mt-1">{errors.mrp}</p>
@@ -572,7 +572,7 @@ export default function MyProductsPage() {
                   onChange={handleChange}
                   placeholder="Price"
                   type="number"
-                  className="border border-gray-300 px-3 py-2 rounded-md text-sm w-full focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                  className="border border-gray-300 px-3 py-2 rounded-md text-sm w-full focus:outline-none focus:ring-2 focus:ring-brand-600 focus:border-transparent"
                 />
                 {errors.price && (
                   <p className="text-red-500 text-xs mt-1">
@@ -590,7 +590,7 @@ export default function MyProductsPage() {
                   onChange={handleChange}
                   placeholder="Stock"
                   type="number"
-                  className="border border-gray-300 px-3 py-2 rounded-md text-sm w-full focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                  className="border border-gray-300 px-3 py-2 rounded-md text-sm w-full focus:outline-none focus:ring-2 focus:ring-brand-600 focus:border-transparent"
                 />
                 {errors.stock && (
                   <p className="text-red-500 text-xs mt-1">
@@ -609,7 +609,7 @@ export default function MyProductsPage() {
                   placeholder="e.g. 0.5"
                   type="number"
                   step="0.1"
-                  className="border border-gray-300 px-3 py-2 rounded-md text-sm w-full focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                  className="border border-gray-300 px-3 py-2 rounded-md text-sm w-full focus:outline-none focus:ring-2 focus:ring-brand-600 focus:border-transparent"
                 />
                 {errors.weight && (
                   <p className="text-red-500 text-xs mt-1">{errors.weight}</p>
@@ -628,7 +628,7 @@ export default function MyProductsPage() {
                 onChange={handleChange}
                 placeholder="10"
                 type="number"
-                className="border border-gray-300 px-3 py-2 rounded-md text-sm w-full focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                className="border border-gray-300 px-3 py-2 rounded-md text-sm w-full focus:outline-none focus:ring-2 focus:ring-brand-600 focus:border-transparent"
               />
             </div>
 
@@ -642,7 +642,7 @@ export default function MyProductsPage() {
                 value={form.tags}
                 onChange={handleChange}
                 placeholder="e.g. men,tshirt,cotton"
-                className="border border-gray-300 px-3 py-2 rounded-md text-sm w-full focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                className="border border-gray-300 px-3 py-2 rounded-md text-sm w-full focus:outline-none focus:ring-2 focus:ring-brand-600 focus:border-transparent"
               />
             </div>
 
@@ -722,7 +722,7 @@ export default function MyProductsPage() {
 
             <button
               type="submit"
-              className="w-full bg-orange-500 hover:bg-orange-600 text-white py-2.5 rounded-md text-sm font-semibold transition-colors"
+              className="w-full bg-brand-700 hover:bg-brand-700 text-white py-2.5 rounded-md text-sm font-semibold transition-colors"
             >
               {editingId ? "Update Product" : "Add Product"}
             </button>
@@ -783,7 +783,7 @@ export default function MyProductsPage() {
                         ₹{prod.mrp}
                       </span>
                     )}
-                    <span className="font-bold text-orange-600">
+                    <span className="font-bold text-brand-700">
                       ₹{prod.price}
                     </span>
                   </div>
@@ -791,7 +791,7 @@ export default function MyProductsPage() {
                     className={`text-xs font-semibold ${
                       prod.stock <= prod.lowStockThreshold
                         ? "text-red-600"
-                        : "text-green-600"
+                        : "text-positive"
                     }`}
                   >
                     Stock: {prod.stock}
@@ -803,7 +803,7 @@ export default function MyProductsPage() {
                     onClick={() =>
                       navigate(`/seller/products/${prod._id}`)
                     }
-                    className="flex-1 border border-orange-500 text-orange-600 text-xs py-1.5 rounded-lg hover:bg-orange-50 transition-colors font-medium"
+                    className="flex-1 border border-brand-600 text-brand-700 text-xs py-1.5 rounded-lg hover:bg-brand-50 transition-colors font-medium"
                   >
                     View
                   </button>

@@ -51,7 +51,7 @@ import Modal from '../../components/ui/Modal';
 
 const FIELD =
   'border border-gray-300 rounded-lg px-3 py-1.5 text-sm ' +
-  'focus:outline focus:outline-2 focus:outline-offset-0 focus:outline-orange-600';
+  'focus:outline focus:outline-2 focus:outline-offset-0 focus:outline-brand-700';
 
 const ACTIONS =
   'flex items-center gap-0.5 justify-end shrink-0 ' +
@@ -371,8 +371,8 @@ export default function AdminCategoriesPage() {
                                   alone is enough for a quiet affordance.
                                 */
                                 className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs
-                                           text-gray-500 hover:text-orange-700 transition-colors
-                                           focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-600"
+                                           text-gray-500 hover:text-brand-700 transition-colors
+                                           focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-700"
                               >
                                 <Plus size={14} /> Add subcategory
                               </button>
@@ -432,7 +432,7 @@ export default function AdminCategoriesPage() {
                             onClick={() => setCollapsed({ ...collapsed, [cat._id]: open })}
                             aria-expanded={open}
                             className="flex items-center gap-2 text-left font-semibold py-1 rounded-lg
-                                       focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-600"
+                                       focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-700"
                           >
                             <ChevronRight
                               aria-hidden="true"
@@ -476,7 +476,7 @@ export default function AdminCategoriesPage() {
                           <span className="inline-flex items-center gap-1.5 text-xs text-gray-500">
                             <span
                               aria-hidden="true"
-                              className="w-1.5 h-1.5 rounded-full bg-green-500"
+                              className="w-1.5 h-1.5 rounded-full bg-positive"
                             />
                             Live
                           </span>
@@ -573,8 +573,8 @@ export default function AdminCategoriesPage() {
                 type="button"
                 onClick={() => setMainSubs([...mainSubs, ''])}
                 className="inline-flex items-center gap-1.5 mt-2 px-2 py-1 -ml-2 rounded-lg text-xs
-                           text-gray-500 hover:text-orange-700 transition-colors
-                           focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-600"
+                           text-gray-500 hover:text-brand-700 transition-colors
+                           focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-700"
               >
                 <Plus size={14} /> Add another
               </button>

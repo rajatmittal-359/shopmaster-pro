@@ -16,10 +16,10 @@
 
 const ACCENTS = {
   neutral: 'text-gray-900',
-  brand: 'text-orange-600',
+  brand: 'text-brand-700',
   info: 'text-blue-600',
   warning: 'text-amber-600',
-  success: 'text-green-600',
+  success: 'text-positive',
   danger: 'text-red-600',
 };
 

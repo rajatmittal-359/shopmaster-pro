@@ -83,7 +83,7 @@ export default function InventoryLogsPage() {
     if (type === "return") {
       return (
         <span
-          className={`${base} bg-green-50 text-green-700 border border-green-200`}
+          className={`${base} bg-green-50 text-positive border border-green-200`}
         >
           Return
         </span>
@@ -116,7 +116,7 @@ export default function InventoryLogsPage() {
 
   const getQtyColor = (type) => {
     if (type === "sale") return "text-red-600";
-    if (type === "return" || type === "restock") return "text-green-600";
+    if (type === "return" || type === "restock") return "text-positive";
     return "text-gray-800";
   };
 
@@ -141,7 +141,7 @@ export default function InventoryLogsPage() {
               <span
                 className={
                   netQty > 0
-                    ? "text-green-600 font-semibold"
+                    ? "text-positive font-semibold"
                     : netQty < 0
                     ? "text-red-600 font-semibold"
                     : "font-semibold"

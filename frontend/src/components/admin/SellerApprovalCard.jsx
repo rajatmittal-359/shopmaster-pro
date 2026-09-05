@@ -14,7 +14,7 @@ export default function SellerApprovalCard({ seller, onApprove, onReject }) {
       <div className="space-x-2">
         <button
           onClick={() => onApprove(_id)}
-          className="px-3 py-1 text-sm bg-green-500 text-white rounded-lg"
+          className="px-3 py-1 text-sm bg-positive text-white rounded-lg"
         >
           Approve
         </button>

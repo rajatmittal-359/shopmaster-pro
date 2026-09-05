@@ -228,7 +228,7 @@ const getSortedProducts = () => {
                  box refused to give way and pushed the whole row - and so the
                  page - wider than the phone. */
               className="flex-1 min-w-0 md:w-56 border border-gray-300 rounded-lg px-3 py-2 text-sm
-                         focus:outline focus:outline-2 focus:outline-offset-0 focus:outline-orange-600"
+                         focus:outline focus:outline-2 focus:outline-offset-0 focus:outline-brand-700"
             />
 
             <select
@@ -236,7 +236,7 @@ const getSortedProducts = () => {
               onChange={(e) => handleFilterChange('sortBy', e.target.value)}
               aria-label="Sort products"
               className="shrink-0 border border-gray-300 rounded-lg px-2 md:px-3 py-2 text-sm w-28 sm:w-44
-                         focus:outline focus:outline-2 focus:outline-offset-0 focus:outline-orange-600"
+                         focus:outline focus:outline-2 focus:outline-offset-0 focus:outline-brand-700"
             >
               <option value="newest">Newest</option>
               <option value="price_low_high">Price: low to high</option>
@@ -250,12 +250,12 @@ const getSortedProducts = () => {
               onClick={() => setFiltersOpen(true)}
               className="md:hidden shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm
                          border border-gray-300 hover:bg-gray-50
-                         focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-600"
+                         focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-700"
             >
               <SlidersHorizontal size={16} />
               Filters
               {activeFilterCount > 0 && (
-                <span className="ml-0.5 min-w-5 h-5 px-1.5 rounded-full bg-orange-600 text-white text-xs
+                <span className="ml-0.5 min-w-5 h-5 px-1.5 rounded-full bg-brand-700 text-white text-xs
                                  inline-flex items-center justify-center">
                   {activeFilterCount}
                 </span>
@@ -352,7 +352,7 @@ const getSortedProducts = () => {
                 onClick={() => setFiltersOpen(false)}
                 aria-label="Close filters"
                 className="p-2 -mr-2 rounded-lg text-gray-500 hover:text-gray-800
-                           focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-600"
+                           focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-700"
               >
                 <X size={18} />
               </button>
@@ -373,9 +373,9 @@ const getSortedProducts = () => {
               <button
                 type="button"
                 onClick={() => setFiltersOpen(false)}
-                className="w-full py-2.5 rounded-lg bg-orange-600 text-white font-medium
-                           hover:bg-orange-700
-                           focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-600"
+                className="w-full py-2.5 rounded-lg bg-brand-700 text-white font-medium
+                           hover:bg-brand-800
+                           focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-700"
               >
                 Show {meta.total} product{meta.total === 1 ? '' : 's'}
               </button>

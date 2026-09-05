@@ -188,12 +188,12 @@ export default function OrderDetailsPage() {
             {order.shippingCharges > 0 && (
               <div className="flex justify-between">
                 <span className="text-gray-600">Shipping</span>
-                <span className="text-green-600">₹{order.shippingCharges}</span>
+                <span className="text-positive">₹{order.shippingCharges}</span>
               </div>
             )}
             <div className="flex justify-between font-bold text-lg border-t pt-2">
               <span>Grand Total</span>
-              <span className="text-orange-600">₹{order.totalAmount}</span>
+              <span className="text-brand-700">₹{order.totalAmount}</span>
             </div>
           </div>
         </div>
@@ -284,7 +284,7 @@ export default function OrderDetailsPage() {
             <button
               onClick={handleReturn}
               disabled={actionLoading}
-              className="flex-1 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50"
+              className="flex-1 px-4 py-2 bg-brand-700 text-white rounded-lg hover:bg-brand-800 disabled:opacity-50"
             >
               {actionLoading ? 'Returning...' : 'Return Order'}
             </button>
