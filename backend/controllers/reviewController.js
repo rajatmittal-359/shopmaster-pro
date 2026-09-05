@@ -1,15 +1,47 @@
 // backend/controllers/reviewController.js
+const mongoose = require('mongoose');
 const { sendError } = require('../utils/apiError');
 const Review = require('../models/Review');
 const Order = require('../models/Order');
 const Product = require('../models/Product');
+
+/**
+ * Resolve the :productId route param, which may be the SEO slug or the raw
+ * ObjectId.
+ *
+ * THE BUG THIS FIXES
+ *   Product URLs are canonical on the slug - /products/kundan-chandbali-
+ *   earrings-6d5643 - and that is what the sitemap lists and what Google sends
+ *   people to. The product endpoint already accepted either form, but these
+ *   handlers passed the raw param straight into a query on _id. Mongoose could
+ *   not cast a slug to an ObjectId, so reading reviews returned 400 and posting
+ *   one failed outright: on every product page reached from search, the reviews
+ *   simply were not there. The verified-buyer check compared an order line's
+ *   ObjectId against the slug too, so it could never have matched anyway.
+ *
+ * Returns the product document, or null.
+ */
+const findProduct = (productId, extra = {}) => {
+  const identity = mongoose.isValidObjectId(productId)
+    ? { $or: [{ slug: productId }, { _id: productId }] }
+    : { slug: productId };
+
+  return Product.findOne({ ...identity, ...extra });
+};
 
 // ✅ PUBLIC: Get reviews for a product
 exports.getProductReviews = async (req, res) => {
   try {
     const { productId } = req.params;
 
-    const reviews = await Review.find({ productId })
+    // Reviews are stored against the product's _id, so a slug has to be
+    // resolved first rather than queried with.
+    const product = await findProduct(productId).select('_id').lean();
+    if (!product) {
+      return res.status(404).json({ message: 'Product not found' });
+    }
+
+    const reviews = await Review.find({ productId: product._id })
       .populate('userId', 'name')
       .sort({ createdAt: -1 });
 
@@ -35,8 +67,7 @@ exports.createOrUpdateReview = async (req, res) => {
     }
 
     // Check product exists & active
-    const product = await Product.findOne({
-      _id: productId,
+    const product = await findProduct(productId, {
       isActive: true,
       stock: { $gt: 0 },
     });
@@ -54,7 +85,7 @@ const order = await Order.findOne({
 // ✅ Verify specific item was delivered & not cancelled
 const purchasedItem = order?.items.find(
   (item) =>
-    item.productId.toString() === productId &&
+    item.productId.toString() === String(product._id) &&
     item.status === 'active' // Only active items (not cancelled)
 );
 
@@ -66,7 +97,7 @@ if (!purchasedItem) {
 
     // ✅ Create / Update single review per product
     let review = await Review.findOne({
-      productId,
+      productId: product._id,
       userId: req.user._id,
     });
 
@@ -80,7 +111,7 @@ if (!purchasedItem) {
     } else {
       // Create
       review = await Review.create({
-        productId,
+        productId: product._id,
         userId: req.user._id,
         orderId: order._id,
         rating,
@@ -90,7 +121,7 @@ if (!purchasedItem) {
     }
 
     // ✅ Recalculate product rating
-    await Review.recalculateProductRating(productId);
+    await Review.recalculateProductRating(product._id);
 
     res.status(201).json({
       message: 'Review saved successfully',

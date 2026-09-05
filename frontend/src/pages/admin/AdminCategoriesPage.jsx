@@ -1,51 +1,90 @@
 /**
  * The shop's category tree.
  *
- * WHAT WAS WRONG WITH THE OLD SCREEN
- *   Forty categories rendered as one flat alphabetical list, so a subcategory
- *   sat above its own parent and the only clue about the hierarchy was buried
- *   in the description text ("Backpacks - part of Bags & Luggage"). There was
- *   no way to rename anything, no product counts, so Delete was a guess - and
- *   the helper text was written in Hinglish.
+ * WHY IT LOOKS LIKE THIS, after two attempts that did not work
  *
- * THE SHAPE OF THE THING, which the form now follows
- *   Products are listed in subcategories, never in a main category (see
- *   sellerController.validateLeafCategory). A main category is therefore a
- *   container, and one created on its own is a heading nothing can go under.
- *   So creating a main category asks for its subcategories in the same breath,
- *   and the server refuses a main category with none.
+ *   The first was a collapsible tree widget. The "2 subcategories" toggle sat
+ *   ABOVE the name, so you read a count before knowing whose it was, and every
+ *   row carried three visible buttons - a hundred and twenty across forty
+ *   categories. A table with indentation replaced it: forty rows fit at once,
+ *   columns let counts and status line up so the eye can scan down them, and
+ *   the hierarchy reads from the indent with no widget at all.
+ *
+ *   The second kept a permanent form beside the tree with a "parent category"
+ *   dropdown, and that is what this file now does differently. A child belongs
+ *   to whichever parent you are looking at, so the parent should come from
+ *   where you clicked - not from a select box that makes you find the same row
+ *   a second time. "Add subcategory" therefore sits on the parent's own row,
+ *   at the end of its children, where the new one will appear. It also matters
+ *   more than adding a main category, which is the rarer act.
+ *
+ *   The two creation flows are deliberately different shapes, because the two
+ *   tasks are. A subcategory is one field with its parent already decided by
+ *   where you clicked, so it opens inline and stays open - adding one usually
+ *   means adding a few. A main category is several fields with no home in the
+ *   list, and opening it inline pushed the whole table down and lost your
+ *   place, so it opens in a dialog.
+ *
+ * THE RULES THE SHAPE FOLLOWS
+ *   Products are listed in subcategories, never in a main category, so a main
+ *   category is a container. Its "Products" figure is a rollup of everything
+ *   beneath it - the number wanted before deciding whether to touch it. And a
+ *   main category cannot be created empty, so that form asks for its first
+ *   subcategories in the same breath.
+ *
+ * Row actions appear on hover on a pointer device, stay put on touch where
+ * there is no hover, and are revealed by keyboard focus so tabbing never lands
+ * on something invisible. They keep their space while hidden, so a row never
+ * jumps as the pointer crosses it.
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Layout from '../../components/common/Layout';
 import api from '../../utils/api';
 import { useConfirm } from '../../context/confirmContext';
 import { toastSuccess, toastError } from '../../utils/toast';
+import { ChevronRight, Search, Plus } from 'lucide-react';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
 import EmptyState from '../../components/ui/EmptyState';
+import Modal from '../../components/ui/Modal';
 
 const FIELD =
-  'w-full border border-gray-300 rounded px-3 py-2 text-sm ' +
+  'border border-gray-300 rounded px-3 py-1.5 text-sm ' +
   'focus:outline focus:outline-2 focus:outline-offset-0 focus:outline-orange-600';
+
+const ACTIONS =
+  'flex items-center gap-0.5 justify-end shrink-0 ' +
+  'md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 ' +
+  'transition-opacity';
+
+/** Small enough that forty rows do not become a scroll. */
+const ACTION_BTN = 'px-2 py-1 text-xs';
+
+/** The gutter line that groups children under their parent. */
+const Gutter = () => (
+  <span aria-hidden="true" className="w-px self-stretch bg-gray-200 ml-2 mr-4" />
+);
 
 export default function AdminCategoriesPage() {
   const confirm = useConfirm();
 
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [query, setQuery] = useState('');
+  const [collapsed, setCollapsed] = useState({});
 
-  /** 'main' asks for subcategories; 'sub' asks for a parent. */
-  const [kind, setKind] = useState('main');
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  const [parentCategory, setParentCategory] = useState('');
-  const [subNames, setSubNames] = useState(['']);
-
-  const [expanded, setExpanded] = useState({});
   const [renaming, setRenaming] = useState(null);
   const [renameValue, setRenameValue] = useState('');
+
+  /** Which main category is having a subcategory added under it. */
+  const [addingUnder, setAddingUnder] = useState(null);
+  const [subName, setSubName] = useState('');
+
+  const [creatingMain, setCreatingMain] = useState(false);
+  const [mainName, setMainName] = useState('');
+  const [mainSubs, setMainSubs] = useState(['', '']);
 
   const loadCategories = async () => {
     try {
@@ -64,50 +103,91 @@ export default function AdminCategoriesPage() {
     loadCategories();
   }, []);
 
-  const mains = categories.filter((c) => !c.parentCategory);
-  const childrenOf = (id) =>
-    categories.filter((c) => c.parentCategory && c.parentCategory._id === id);
+  const mains = useMemo(() => categories.filter((c) => !c.parentCategory), [categories]);
 
-  const resetForm = () => {
-    setName('');
-    setDescription('');
-    setParentCategory('');
-    setSubNames(['']);
+  /**
+   * Rows in reading order. Searching keeps a main category visible when one of
+   * its children matches, because a result with no parent above it is a result
+   * you cannot place.
+   */
+  const rows = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const out = [];
+
+    for (const main of mains) {
+      const kids = categories.filter(
+        (c) => c.parentCategory && c.parentCategory._id === main._id
+      );
+      const rollup =
+        (main.productCount || 0) + kids.reduce((n, k) => n + (k.productCount || 0), 0);
+
+      const mainHit = !q || main.name.toLowerCase().includes(q);
+      const hits = q ? kids.filter((k) => k.name.toLowerCase().includes(q)) : kids;
+      if (q && !mainHit && hits.length === 0) continue;
+
+      out.push({ cat: main, isMain: true, kids, products: rollup });
+
+      const open = q ? true : !collapsed[main._id];
+      if (open) {
+        for (const kid of mainHit ? kids : hits) {
+          out.push({ cat: kid, isMain: false, kids: [], products: kid.productCount || 0 });
+        }
+        // Hidden while searching: the list is filtered, so this row would land
+        // somewhere the eye does not expect.
+        if (!q) out.push({ addUnder: main });
+      }
+    }
+    return out;
+  }, [categories, mains, query, collapsed]);
+
+  const handleAddSub = async (main) => {
+    const name = subName.trim();
+    if (!name) return setAddingUnder(null);
+
+    try {
+      setBusy(true);
+      await api.post('/admin/categories', { name, parentCategory: main._id });
+      toastSuccess(`Added "${name}" under ${main.name}`);
+      setSubName('');
+      // Stays open: adding one subcategory usually means adding a few.
+      await loadCategories();
+    } catch (err) {
+      toastError(err.response?.data?.message || 'Could not add it');
+    } finally {
+      setBusy(false);
+    }
   };
 
-  const handleSubmit = async (e) => {
+  const handleCreateMain = async (e) => {
     e.preventDefault();
+    const subs = mainSubs.map((s) => s.trim()).filter(Boolean);
 
-    const subs = subNames.map((s) => s.trim()).filter(Boolean);
-    if (kind === 'main' && subs.length === 0) {
-      toastError('Add at least one subcategory - products are listed in those, not in the main category');
+    if (subs.length === 0) {
+      toastError('Add at least one subcategory - products are listed in those');
       return;
     }
 
     try {
-      setSaving(true);
+      setBusy(true);
       const res = await api.post('/admin/categories', {
-        name: name.trim(),
-        description: description.trim(),
-        parentCategory: kind === 'sub' ? parentCategory : null,
-        ...(kind === 'main' ? { subcategories: subs } : {}),
+        name: mainName.trim(),
+        subcategories: subs,
       });
       toastSuccess(res.data.message || 'Category created');
-      resetForm();
+      setMainName('');
+      setMainSubs(['', '']);
+      setCreatingMain(false);
       await loadCategories();
     } catch (err) {
       toastError(err.response?.data?.message || 'Could not create the category');
     } finally {
-      setSaving(false);
+      setBusy(false);
     }
   };
 
   const handleRename = async (cat) => {
     const next = renameValue.trim();
-    if (!next || next === cat.name) {
-      setRenaming(null);
-      return;
-    }
+    if (!next || next === cat.name) return setRenaming(null);
     try {
       await api.patch(`/admin/categories/${cat._id}`, { name: next });
       toastSuccess('Renamed');
@@ -118,20 +198,16 @@ export default function AdminCategoriesPage() {
     }
   };
 
-  const toggleActive = async (cat) => {
-    // Switching off a main category hides everything beneath it, which is not
-    // obvious from a toggle. Say so before it happens.
-    const kids = childrenOf(cat._id);
+  const toggleActive = async (cat, kids) => {
     if (cat.isActive && kids.length > 0) {
       const sure = await confirm({
         title: `Hide "${cat.name}" and everything under it?`,
-        message: `${kids.length} subcategor${kids.length === 1 ? 'y' : 'ies'} and their products will stop appearing in the shop.`,
+        message: `${kids.length} subcategor${kids.length === 1 ? 'y' : 'ies'} and their products stop appearing in the shop.`,
         confirmLabel: 'Hide it',
         cancelLabel: 'Leave it on',
       });
       if (!sure) return;
     }
-
     try {
       await api.patch(`/admin/categories/${cat._id}`, { isActive: !cat.isActive });
       await loadCategories();
@@ -143,313 +219,377 @@ export default function AdminCategoriesPage() {
   const handleDelete = async (cat) => {
     const sure = await confirm({
       title: `Delete "${cat.name}"?`,
-      message: 'This cannot be undone. Deactivate it instead if you only want it out of the shop for now.',
+      message:
+        'This cannot be undone. Hide it instead if you only want it out of the shop for now.',
       confirmLabel: 'Delete category',
       cancelLabel: 'Keep it',
       danger: true,
     });
     if (!sure) return;
-
     try {
       await api.delete(`/admin/categories/${cat._id}`);
       toastSuccess('Category deleted');
       await loadCategories();
     } catch (err) {
-      // The server refuses while products or subcategories are still inside.
       toastError(err.response?.data?.message || 'Could not delete it');
     }
   };
 
-  /** One row, used for both levels. */
-  const CategoryRow = ({ cat, isMain }) => {
-    const kids = isMain ? childrenOf(cat._id) : [];
-    const blocked =
-      cat.productCount > 0
-        ? `${cat.productCount} product(s) inside`
-        : kids.length > 0
-        ? `${kids.length} subcategor${kids.length === 1 ? 'y' : 'ies'} inside`
-        : null;
-
-    return (
-      <div className={isMain ? '' : 'pl-6 border-l-2 border-gray-100 ml-2'}>
-        <div className="flex flex-wrap items-center gap-3 py-2.5">
-          <div className="flex-1 min-w-0">
-            {renaming === cat._id ? (
-              <div className="flex gap-2">
-                <input
-                  autoFocus
-                  value={renameValue}
-                  onChange={(e) => setRenameValue(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') handleRename(cat);
-                    if (e.key === 'Escape') setRenaming(null);
-                  }}
-                  className={FIELD + ' max-w-xs'}
-                />
-                <Button size="sm" variant="primary" onClick={() => handleRename(cat)}>
-                  Save
-                </Button>
-                <Button size="sm" variant="ghost" onClick={() => setRenaming(null)}>
-                  Cancel
-                </Button>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2 flex-wrap">
-                <span
-                  className={`${isMain ? 'font-semibold' : ''} ${
-                    cat.isActive ? 'text-gray-900' : 'text-gray-400'
-                  }`}
-                >
-                  {cat.name}
-                </span>
-
-                {!cat.isActive && <Badge tone="neutral">Hidden</Badge>}
-
-                <span className="text-xs text-gray-500">
-                  {cat.productCount === 0
-                    ? isMain
-                      ? ''
-                      : 'no products'
-                    : `${cat.productCount} product${cat.productCount === 1 ? '' : 's'}`}
-                </span>
-
-                {/* A main category with nothing under it is a dead end. */}
-                {isMain && kids.length === 0 && (
-                  <Badge tone="warning">Needs a subcategory</Badge>
-                )}
-              </div>
-            )}
-          </div>
-
-          {renaming !== cat._id && (
-            <div className="flex items-center gap-1 shrink-0">
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => {
-                  setRenaming(cat._id);
-                  setRenameValue(cat.name);
-                }}
-              >
-                Rename
-              </Button>
-              <Button size="sm" variant="ghost" onClick={() => toggleActive(cat)}>
-                {cat.isActive ? 'Hide' : 'Show'}
-              </Button>
-              <Button
-                size="sm"
-                variant="destructive"
-                disabled={!!blocked}
-                title={blocked ? `Cannot delete: ${blocked}` : undefined}
-                onClick={() => handleDelete(cat)}
-              >
-                Delete
-              </Button>
-            </div>
-          )}
-        </div>
-
-        {isMain && expanded[cat._id] && (
-          <div className="pb-2">
-            {kids.length === 0 ? (
-              <p className="pl-6 py-2 text-sm text-gray-500">
-                Nothing can be listed here until this has a subcategory.
-              </p>
-            ) : (
-              kids.map((kid) => <CategoryRow key={kid._id} cat={kid} isMain={false} />)
-            )}
-          </div>
-        )}
-      </div>
-    );
-  };
-
   return (
     <Layout title="Manage Categories">
-      <div className="space-y-6">
-        <div>
-          <h2 className="text-2xl font-bold">Categories</h2>
-          <p className="text-sm text-gray-600 mt-1">
-            Products are listed in subcategories. A main category groups them and holds
-            nothing itself.
-          </p>
+      <div className="max-w-4xl space-y-5">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <h2 className="text-2xl font-bold">Categories</h2>
+            <p className="text-sm text-gray-600 mt-1">
+              Sellers list products in subcategories. A main category groups them and
+              holds nothing itself.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <div className="relative">
+              <Search
+                aria-hidden="true"
+                size={15}
+                className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+              />
+              <input
+                type="search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Find a category"
+                aria-label="Find a category"
+                className={`${FIELD} pl-8 w-48`}
+              />
+            </div>
+            <Button variant="secondary" onClick={() => setCreatingMain((v) => !v)}>
+              New main category
+            </Button>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-          {/* ------------------------------------------------------- create */}
-          <Card title="Add a category" className="lg:col-span-1">
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  size="sm"
-                  variant={kind === 'main' ? 'primary' : 'secondary'}
-                  onClick={() => setKind('main')}
-                >
-                  Main category
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant={kind === 'sub' ? 'primary' : 'secondary'}
-                  onClick={() => setKind('sub')}
-                >
-                  Subcategory
-                </Button>
-              </div>
-
-              <label className="block">
-                <span className="text-sm text-gray-700">Name</span>
-                <input
-                  required
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className={`mt-1 ${FIELD}`}
-                  placeholder={kind === 'main' ? 'Jewellery' : 'Earrings'}
-                />
-              </label>
-
-              {kind === 'sub' && (
-                <label className="block">
-                  <span className="text-sm text-gray-700">Goes under</span>
-                  <select
-                    required
-                    value={parentCategory}
-                    onChange={(e) => setParentCategory(e.target.value)}
-                    className={`mt-1 ${FIELD}`}
-                  >
-                    <option value="">Choose a main category</option>
-                    {mains.map((m) => (
-                      <option key={m._id} value={m._id}>
-                        {m.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              )}
-
-              {kind === 'main' && (
-                <div>
-                  <span className="text-sm text-gray-700">Subcategories</span>
-                  <p className="text-xs text-gray-500 mt-0.5 mb-2">
-                    At least one. Sellers list their products in these.
-                  </p>
-                  <div className="space-y-2">
-                    {subNames.map((value, i) => (
-                      <input
-                        key={i}
-                        value={value}
-                        onChange={(e) => {
-                          const next = [...subNames];
-                          next[i] = e.target.value;
-                          setSubNames(next);
-                        }}
-                        className={FIELD}
-                        placeholder={i === 0 ? 'Rings' : 'Another subcategory'}
-                      />
-                    ))}
-                  </div>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="ghost"
-                    className="mt-2"
-                    onClick={() => setSubNames([...subNames, ''])}
-                  >
-                    Add another
+        <Card
+          title="All categories"
+          hint={`${mains.length} main · ${categories.length - mains.length} sub`}
+        >
+          {loading ? (
+            <div className="space-y-1 animate-pulse">
+              {[...Array(8)].map((_, i) => (
+                <div key={i} className="h-8 bg-gray-100 rounded" />
+              ))}
+            </div>
+          ) : rows.length === 0 ? (
+            <EmptyState
+              title={query ? `Nothing matches "${query}"` : 'No categories yet'}
+              hint={
+                query
+                  ? 'Try a shorter word.'
+                  : 'Create a main category with its subcategories to get started.'
+              }
+              action={
+                query ? (
+                  <Button variant="secondary" onClick={() => setQuery('')}>
+                    Clear search
                   </Button>
-                </div>
-              )}
+                ) : (
+                  <Button variant="primary" onClick={() => setCreatingMain(true)}>
+                    New main category
+                  </Button>
+                )
+              }
+            />
+          ) : (
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-gray-500 border-b border-gray-200">
+                  <th className="py-2 font-medium">Category</th>
+                  <th className="py-2 px-3 font-medium text-right w-24">Products</th>
+                  <th className="py-2 px-3 font-medium w-24">Status</th>
+                  <th className="py-2 w-36" />
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((row) => {
+                  if (row.addUnder) {
+                    const main = row.addUnder;
+                    const open = addingUnder === main._id;
 
-              <label className="block">
-                <span className="text-sm text-gray-700">
-                  Description <span className="text-gray-400">(optional)</span>
-                </span>
-                <textarea
-                  rows={2}
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  className={`mt-1 ${FIELD}`}
-                />
-              </label>
+                    return (
+                      <tr key={`add-${main._id}`} className="border-b border-gray-100">
+                        <td colSpan={4} className="py-1">
+                          {open ? (
+                            <span className="flex items-center">
+                              <Gutter />
+                              <input
+                                autoFocus
+                                value={subName}
+                                onChange={(e) => setSubName(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') handleAddSub(main);
+                                  if (e.key === 'Escape') {
+                                    setAddingUnder(null);
+                                    setSubName('');
+                                  }
+                                }}
+                                placeholder={`New subcategory under ${main.name}`}
+                                className={`${FIELD} w-64`}
+                              />
+                              <Button
+                                variant="primary"
+                                className={`${ACTION_BTN} ml-2`}
+                                loading={busy}
+                                onClick={() => handleAddSub(main)}
+                              >
+                                Add
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                className={ACTION_BTN}
+                                onClick={() => {
+                                  setAddingUnder(null);
+                                  setSubName('');
+                                }}
+                              >
+                                Done
+                              </Button>
+                            </span>
+                          ) : (
+                            <span className="flex items-center">
+                              <Gutter />
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setAddingUnder(main._id);
+                                  setSubName('');
+                                }}
+                                /*
+                                  Deliberately not the ghost Button: its orange
+                                  hover background stacked on top of the row's
+                                  own hover, and the doubled block read as a
+                                  selected row rather than a hovered one. Colour
+                                  alone is enough for a quiet affordance.
+                                */
+                                className="inline-flex items-center gap-1.5 px-2 py-1 rounded text-xs
+                                           text-gray-500 hover:text-orange-700 transition-colors
+                                           focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-600"
+                              >
+                                <Plus size={14} /> Add subcategory
+                              </button>
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  }
 
-              <Button
-                type="submit"
-                variant="primary"
-                fullWidth
-                loading={saving}
-                loadingText="Creating…"
-              >
-                {kind === 'main' ? 'Create category and subcategories' : 'Create subcategory'}
-              </Button>
-            </form>
-          </Card>
-
-          {/* --------------------------------------------------------- tree */}
-          <Card
-            title="Category tree"
-            hint={`${mains.length} main, ${categories.length - mains.length} sub`}
-            className="lg:col-span-2"
-            actions={
-              <Button
-                size="sm"
-                variant="secondary"
-                onClick={() =>
-                  setExpanded(
-                    Object.keys(expanded).length === mains.length
-                      ? {}
-                      : Object.fromEntries(mains.map((m) => [m._id, true]))
-                  )
-                }
-              >
-                {Object.keys(expanded).length === mains.length ? 'Collapse all' : 'Expand all'}
-              </Button>
-            }
-          >
-            {loading ? (
-              <div className="space-y-2 animate-pulse">
-                {[...Array(5)].map((_, i) => (
-                  <div key={i} className="h-10 bg-gray-100 rounded" />
-                ))}
-              </div>
-            ) : mains.length === 0 ? (
-              <EmptyState
-                title="No categories yet"
-                hint="Create a main category with its subcategories to get started."
-              />
-            ) : (
-              <div className="divide-y divide-gray-100">
-                {mains.map((m) => {
-                  const kids = childrenOf(m._id);
-                  const open = !!expanded[m._id];
+                  const { cat, isMain, kids, products } = row;
+                  const open = !collapsed[cat._id];
+                  const blocked =
+                    cat.productCount > 0
+                      ? `${cat.productCount} product(s) inside`
+                      : kids.length > 0
+                      ? `${kids.length} subcategor${kids.length === 1 ? 'y' : 'ies'} inside`
+                      : null;
 
                   return (
-                    <div key={m._id}>
-                      <button
-                        type="button"
-                        onClick={() => setExpanded({ ...expanded, [m._id]: !open })}
-                        className="w-full flex items-center gap-2 pt-3 text-left
-                                   focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-600"
-                        aria-expanded={open}
-                      >
-                        <span
-                          aria-hidden="true"
-                          className={`text-gray-400 transition-transform ${open ? 'rotate-90' : ''}`}
-                        >
-                          ▸
-                        </span>
-                        <span className="text-xs text-gray-500">
-                          {kids.length} subcategor{kids.length === 1 ? 'y' : 'ies'}
-                        </span>
-                      </button>
-                      <CategoryRow cat={m} isMain />
-                    </div>
+                    <tr
+                      key={cat._id}
+                      className="group border-b border-gray-100 hover:bg-gray-50/70"
+                    >
+                      <td className="py-1">
+                        {renaming === cat._id ? (
+                          <span className="flex items-center">
+                            {!isMain && <Gutter />}
+                            <input
+                              autoFocus
+                              value={renameValue}
+                              onChange={(e) => setRenameValue(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') handleRename(cat);
+                                if (e.key === 'Escape') setRenaming(null);
+                              }}
+                              className={`${FIELD} w-64`}
+                            />
+                            <Button
+                              variant="primary"
+                              className={`${ACTION_BTN} ml-2`}
+                              onClick={() => handleRename(cat)}
+                            >
+                              Save
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              className={ACTION_BTN}
+                              onClick={() => setRenaming(null)}
+                            >
+                              Cancel
+                            </Button>
+                          </span>
+                        ) : isMain ? (
+                          <button
+                            type="button"
+                            onClick={() => setCollapsed({ ...collapsed, [cat._id]: open })}
+                            aria-expanded={open}
+                            className="flex items-center gap-2 text-left font-semibold py-1 rounded
+                                       focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-600"
+                          >
+                            <ChevronRight
+                              aria-hidden="true"
+                              size={16}
+                              className={`text-gray-400 shrink-0 transition-transform duration-150 ${
+                                open ? 'rotate-90' : ''
+                              }`}
+                            />
+                            <span className={cat.isActive ? 'text-gray-900' : 'text-gray-400'}>
+                              {cat.name}
+                            </span>
+                            <span className="font-normal text-xs text-gray-500">
+                              {kids.length} sub
+                            </span>
+                            {kids.length === 0 && (
+                              <Badge tone="warning">Needs a subcategory</Badge>
+                            )}
+                          </button>
+                        ) : (
+                          <span className="flex items-center py-1">
+                            <Gutter />
+                            <span className={cat.isActive ? 'text-gray-700' : 'text-gray-400'}>
+                              {cat.name}
+                            </span>
+                          </span>
+                        )}
+                      </td>
+
+                      <td className="py-1 px-3 text-right tabular-nums text-gray-600">
+                        {products || <span className="text-gray-300">0</span>}
+                      </td>
+
+                      <td className="py-1 px-3">
+                        {/*
+                          Live is the normal state, so it says so quietly with a
+                          dot. Hidden is the exception and the only thing that
+                          earns a badge - otherwise forty rows of pills become
+                          wallpaper and neither state stands out.
+                        */}
+                        {cat.isActive ? (
+                          <span className="inline-flex items-center gap-1.5 text-xs text-gray-500">
+                            <span
+                              aria-hidden="true"
+                              className="w-1.5 h-1.5 rounded-full bg-green-500"
+                            />
+                            Live
+                          </span>
+                        ) : (
+                          <Badge tone="neutral">Hidden</Badge>
+                        )}
+                      </td>
+
+                      <td className="py-1">
+                        {renaming !== cat._id && (
+                          <div className={ACTIONS}>
+                            <Button
+                              variant="ghost"
+                              className={ACTION_BTN}
+                              onClick={() => {
+                                setRenaming(cat._id);
+                                setRenameValue(cat.name);
+                              }}
+                            >
+                              Rename
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              className={ACTION_BTN}
+                              onClick={() => toggleActive(cat, kids)}
+                            >
+                              {cat.isActive ? 'Hide' : 'Show'}
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              disabled={!!blocked}
+                              title={blocked ? `Cannot delete: ${blocked}` : undefined}
+                              className={`${ACTION_BTN} ${
+                                blocked ? '' : 'hover:text-red-700 hover:bg-red-50'
+                              }`}
+                              onClick={() => handleDelete(cat)}
+                            >
+                              Delete
+                            </Button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
                   );
                 })}
+              </tbody>
+            </table>
+          )}
+        </Card>
+
+        {/*
+          A dialog rather than an inline panel: this form has several fields
+          and no natural home in the list, and opening it inline pushed the
+          whole table down. Adding a SUBcategory stays inline, because there
+          the parent row is the context.
+        */}
+        <Modal
+          open={creatingMain}
+          title="New main category"
+          hint="Products go in its subcategories, so it needs at least one."
+          onClose={() => setCreatingMain(false)}
+        >
+          <form onSubmit={handleCreateMain} className="space-y-4">
+            <label className="block">
+              <span className="text-sm font-medium text-gray-700">Name</span>
+              <input
+                autoFocus
+                required
+                value={mainName}
+                onChange={(e) => setMainName(e.target.value)}
+                placeholder="Jewellery"
+                className={`mt-1 ${FIELD} w-full`}
+              />
+            </label>
+
+            <div>
+              <span className="text-sm font-medium text-gray-700">Subcategories</span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
+                {mainSubs.map((value, i) => (
+                  <input
+                    key={i}
+                    value={value}
+                    onChange={(e) => {
+                      const next = [...mainSubs];
+                      next[i] = e.target.value;
+                      setMainSubs(next);
+                    }}
+                    placeholder={i === 0 ? 'Rings' : 'Earrings'}
+                    className={FIELD}
+                  />
+                ))}
               </div>
-            )}
-          </Card>
-        </div>
+              <button
+                type="button"
+                onClick={() => setMainSubs([...mainSubs, ''])}
+                className="inline-flex items-center gap-1.5 mt-2 px-2 py-1 -ml-2 rounded text-xs
+                           text-gray-500 hover:text-orange-700 transition-colors
+                           focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-600"
+              >
+                <Plus size={14} /> Add another
+              </button>
+            </div>
+
+            <div className="flex gap-2 pt-1">
+              <Button type="submit" variant="primary" loading={busy} loadingText="Creating…">
+                Create category
+              </Button>
+              <Button type="button" variant="ghost" onClick={() => setCreatingMain(false)}>
+                Cancel
+              </Button>
+            </div>
+          </form>
+        </Modal>
       </div>
     </Layout>
   );

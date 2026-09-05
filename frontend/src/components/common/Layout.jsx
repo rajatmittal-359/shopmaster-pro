@@ -96,6 +96,22 @@ export default function Layout({ children, title = 'Dashboard' }) {
               </>
             )}
           </nav>
+
+          {/*
+            Signing out is a rare, deliberate act. It sat in the header in
+            extrabold red, where it was the most prominent control on a shop.
+          */}
+          <div className="absolute bottom-0 inset-x-0 border-t border-gray-100 p-2">
+            <button
+              onClick={handleLogout}
+              className="w-full flex items-center gap-3 p-3 rounded-md text-sm text-gray-600
+                         hover:bg-red-50 hover:text-red-700 transition-colors
+                         focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-600"
+            >
+              <span className="w-5 mr-0" aria-hidden="true">↪</span>
+              Sign out
+            </button>
+          </div>
         </aside>
       )}
 
@@ -113,43 +129,73 @@ export default function Layout({ children, title = 'Dashboard' }) {
           isLoggedIn && isSidebarOpen ? 'md:ml-64' : 'md:ml-0'
         }`}
       >
-        <header className="h-16 flex items-center justify-between px-4 bg-white shadow-sm">
+        {/*
+          HEADER, sized for the smallest screen first.
+
+          At 390px the old one overflowed and pushed the cart and wishlist
+          icons clean off the screen, so a shopper on a phone - which is where
+          nearly all of them are - had no way to reach their own basket. What
+          was left was a hamburger, the page title, and "Logout" set in
+          extrabold red: the loudest thing on a shopping site was the way out
+          of it.
+
+          Logout now lives at the bottom of the sidebar, where a rare action
+          belongs. The cart is what stays in the header.
+        */}
+        <header className="h-14 md:h-16 flex items-center gap-2 px-3 md:px-4 bg-white border-b border-gray-200">
           <button
-            className="text-2xl text-gray-700"
+            className="text-2xl text-gray-700 shrink-0 p-1 rounded
+                       focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-600"
+            aria-label={isSidebarOpen ? 'Close menu' : 'Open menu'}
             onClick={() => setIsSidebarOpen((p) => !p)}
           >
             {isSidebarOpen ? <FiX /> : <FiMenu />}
           </button>
 
-          <h1 className="font-semibold text-lg">{title}</h1>
+          {/* Truncates rather than wrapping: a long product name used to push
+              the header to two lines and shove everything else out. */}
+          <h1 className="font-semibold text-base md:text-lg truncate flex-1 min-w-0">
+            {title}
+          </h1>
 
           {isLoggedIn ? (
-            <div className="flex items-center gap-7">
+            <div className="flex items-center gap-1 md:gap-3 shrink-0">
               {role === 'customer' && (
                 <>
-                  <FiShoppingCart
+                  <button
                     onClick={() => navigate('/customer/cart')}
-                    className="cursor-pointer text-2xl"
-                  />
-                  <FiHeart
+                    aria-label="My cart"
+                    className="p-2 rounded text-xl text-gray-700 hover:text-orange-600 hover:bg-orange-50
+                               focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-600"
+                  >
+                    <FiShoppingCart />
+                  </button>
+                  <button
                     onClick={() => navigate('/customer/wishlist')}
-                    className="cursor-pointer text-2xl"
-                  />
+                    aria-label="My wishlist"
+                    className="p-2 rounded text-xl text-gray-700 hover:text-orange-600 hover:bg-orange-50
+                               focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-600"
+                  >
+                    <FiHeart />
+                  </button>
                 </>
               )}
-              <button onClick={handleLogout} className="text-xl font-extrabold text-red-600 cursor-pointer">
-                Logout
-              </button>
-              <div className="w-12 h-12 rounded-full bg-orange-500 text-white text-xl flex items-center justify-center">
+              <div
+                className="w-9 h-9 rounded-full bg-orange-500 text-white text-sm font-medium
+                           flex items-center justify-center shrink-0"
+                title={name}
+              >
                 {initial}
               </div>
             </div>
           ) : (
             <button
               onClick={() => navigate('/login')}
-              className="text-xl font-extrabold cursor-pointer text-orange-600"
+              className="shrink-0 px-3 py-1.5 rounded text-sm font-medium text-orange-700
+                         border border-orange-200 hover:bg-orange-50
+                         focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-600"
             >
-              Login
+              Log in
             </button>
           )}
         </header>

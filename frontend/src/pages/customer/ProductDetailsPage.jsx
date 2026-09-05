@@ -55,13 +55,17 @@ export default function ProductDetailsPage() {
         setActiveImage(p.images?.[0] || "");
 
         // ✅ WISHLIST STATUS
-        try {
-          const wishRes = await getWishlist();
-          const items = wishRes.data.wishlist?.items || [];
-          const found = items.some((item) => item.productId?._id === p._id);
-          setLiked(found);
-        } catch (err) {
-          console.error("Error loading wishlist:", err);
+        // Only a customer has one. An admin or seller viewing the page used to
+        // fetch it anyway and take a 403 on every load, which buried the real
+        // errors in the console under noise that was never a problem.
+        if (user && role === 'customer') {
+          try {
+            const wishRes = await getWishlist();
+            const items = wishRes.data.wishlist?.items || [];
+            setLiked(items.some((item) => item.productId?._id === p._id));
+          } catch (err) {
+            console.error("Error loading wishlist:", err);
+          }
         }
 
         // ✅ REVIEWS LOAD
