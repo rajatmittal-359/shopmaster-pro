@@ -247,7 +247,7 @@ export default function CheckoutPage() {
   if (!cart || !cart.items || cart.items.length === 0) {
     return (
       <Layout title="Checkout">
-        <div className="bg-white p-6 rounded shadow max-w-xl">
+        <div className="bg-white p-6 rounded-lg shadow max-w-xl">
           <h2 className="text-lg font-semibold mb-2">Your cart is empty</h2>
           <p className="text-sm text-gray-600 mb-4">
             Add some products to your cart before checking out.
@@ -263,7 +263,7 @@ export default function CheckoutPage() {
         {/* LEFT SECTION */}
         <div className="lg:col-span-2 space-y-6">
           {/* REVIEW ITEMS */}
-          <div className="bg-white p-5 rounded shadow">
+          <div className="bg-white p-5 rounded-lg shadow">
             <h2 className="text-lg font-semibold mb-4">
               1. Review Your Items
             </h2>
@@ -278,7 +278,7 @@ export default function CheckoutPage() {
                     <img
                       src={item.productId.images?.[0]}
                       alt={item.productId.name}
-                      className="w-16 h-16 rounded object-cover border"
+                      className="w-16 h-16 rounded-lg object-cover border"
                     />
                     <div>
                       <p className="text-sm font-medium">
@@ -304,7 +304,7 @@ export default function CheckoutPage() {
           </div>
 
           {/* SHIPPING ADDRESS */}
-          <div className="bg-white p-5 rounded shadow">
+          <div className="bg-white p-5 rounded-lg shadow">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold">2. Delivery Address</h2>
 
@@ -352,7 +352,7 @@ export default function CheckoutPage() {
                   {addresses.map((addr) => (
                     <label
                       key={addr._id}
-                      className={`block border rounded p-3 cursor-pointer transition-all ${
+                      className={`block border rounded-lg p-3 cursor-pointer transition-all ${
                         selectedAddressId === addr._id
                           ? "border-orange-500 bg-orange-50"
                           : "hover:border-gray-400"
@@ -371,7 +371,7 @@ export default function CheckoutPage() {
                       </span>
 
                       {addr.isDefault && (
-                        <span className="ml-2 text-[10px] bg-green-100 text-green-700 px-1 rounded">
+                        <span className="ml-2 text-[10px] bg-green-100 text-green-700 px-1 rounded-lg">
                           Default
                         </span>
                       )}
@@ -392,7 +392,7 @@ export default function CheckoutPage() {
         </div>
 
         {/* RIGHT SUMMARY */}
-        <div className="bg-white p-5 rounded shadow h-fit sticky top-20">
+        <div className="bg-white p-5 rounded-lg shadow h-fit sticky top-20">
           <h2 className="text-lg font-semibold mb-4">3. Order Summary</h2>
 
           <div className="space-y-2 text-sm">
@@ -427,7 +427,7 @@ export default function CheckoutPage() {
                 {deliveryOptions.map((option) => (
                   <label
                     key={option.id}
-                    className={`flex cursor-pointer items-start gap-3 rounded border p-3 ${
+                    className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3 ${
                       deliveryOption === option.id
                         ? 'border-orange-500 bg-orange-50'
                         : 'border-gray-200 hover:bg-gray-50'
@@ -476,7 +476,7 @@ export default function CheckoutPage() {
           <div className="mt-4 mb-3">
             <h3 className="text-sm font-semibold mb-2">Payment Method</h3>
 
-            <label className="flex items-center gap-2 mb-2 cursor-pointer p-2 border rounded hover:bg-gray-50">
+            <label className="flex items-center gap-2 mb-2 cursor-pointer p-2 border rounded-lg hover:bg-gray-50">
               <input
                 type="radio"
                 name="payment"
@@ -488,7 +488,7 @@ export default function CheckoutPage() {
               <span className="text-sm">Cash on Delivery</span>
             </label>
 
-            <label className="flex items-center gap-2 cursor-pointer p-2 border rounded hover:bg-gray-50">
+            <label className="flex items-center gap-2 cursor-pointer p-2 border rounded-lg hover:bg-gray-50">
               <input
                 type="radio"
                 name="payment"
@@ -508,7 +508,7 @@ export default function CheckoutPage() {
             disabled={
               placing || addresses.length === 0 || calculatingTotals
             }
-            className="w-full mt-4 bg-orange-500 hover:bg-orange-600 text-white py-3 rounded font-semibold disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+            className="w-full mt-4 bg-orange-500 hover:bg-orange-600 text-white py-3 rounded-lg font-semibold disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
           >
             {placing
               ? paymentMethod === "online"

@@ -38,13 +38,13 @@ export default function SellerDashboard() {
     return (
       <Layout title="Seller Dashboard">
         <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-gray-200 rounded w-1/3" />
+          <div className="h-8 bg-gray-200 rounded-lg w-1/3" />
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="h-24 bg-gray-200 rounded" />
+              <div key={i} className="h-24 bg-gray-200 rounded-lg" />
             ))}
           </div>
-          <div className="h-40 bg-gray-200 rounded" />
+          <div className="h-40 bg-gray-200 rounded-lg" />
         </div>
       </Layout>
     );
@@ -63,7 +63,7 @@ export default function SellerDashboard() {
   if (!profile.isApproved) {
     return (
       <Layout title="Seller Dashboard">
-        <div className="mt-4 p-4 border border-yellow-300 bg-yellow-50 rounded">
+        <div className="mt-4 p-4 border border-yellow-300 bg-yellow-50 rounded-lg">
           <h2 className="font-semibold mb-1">Account under review</h2>
           <p className="text-sm text-gray-700">
             Your seller application is pending admin approval. You will be able
@@ -164,7 +164,7 @@ export default function SellerDashboard() {
         </Card>
 
         {/* Info / notes */}
-        <div className="bg-blue-50 border border-blue-200 rounded p-4 text-xs text-blue-900">
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-xs text-blue-900">
           <h3 className="text-sm font-semibold mb-2">Dashboard Notes</h3>
           <ul className="list-disc pl-4 space-y-1">
             <li>Revenue counts only completed orders linked to your products.</li>

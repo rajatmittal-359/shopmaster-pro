@@ -76,7 +76,7 @@ export default function Button({
       // this wrong. Anything that is not a <button> takes no disabled attribute.
       {...(isButton ? { disabled: disabled || loading } : {})}
       className={[
-        'inline-flex items-center justify-center gap-2 rounded font-medium',
+        'inline-flex items-center justify-center gap-2 rounded-lg font-medium',
         'transition-colors duration-150',
         // Keyboard users need to see where they are. The app had no visible
         // focus state anywhere.

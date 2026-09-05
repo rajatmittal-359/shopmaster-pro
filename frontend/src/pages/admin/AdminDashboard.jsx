@@ -38,10 +38,10 @@ export default function AdminDashboard() {
     return (
       <Layout title="Admin Dashboard">
         <div className="space-y-4 animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-1/3" />
+          <div className="h-8 bg-gray-200 rounded-lg w-1/3" />
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             {[...Array(4)].map((_, i) => (
-              <div key={i} className="h-24 bg-gray-200 rounded" />
+              <div key={i} className="h-24 bg-gray-200 rounded-lg" />
             ))}
           </div>
         </div>
@@ -114,7 +114,7 @@ export default function AdminDashboard() {
       </div>
 
       {/* Last 7 Days Revenue Chart */}
-      <div className="bg-white rounded shadow p-5 mb-6">
+      <div className="bg-white rounded-xl shadow p-5 mb-6">
         <div className="flex justify-between items-start mb-4">
           <div>
             <h3 className="text-lg font-semibold">Last 7 Days Revenue</h3>
@@ -174,7 +174,7 @@ export default function AdminDashboard() {
       {/* Low Stock Alert + Top Sellers */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         {/* Low Stock (Global) */}
-        <div className="bg-white rounded shadow p-5">
+        <div className="bg-white rounded-xl shadow p-5">
           <h3 className="text-lg font-semibold mb-3">Low Stock (Global)</h3>
           <p className="text-xs text-gray-500 mb-3">
             Products below alert threshold across all sellers and categories
@@ -185,7 +185,7 @@ export default function AdminDashboard() {
               {analytics.lowStockGlobal.map((prod) => (
                 <div
                   key={prod._id}
-                  className="flex justify-between items-center p-2 border rounded bg-orange-50"
+                  className="flex justify-between items-center p-2 border rounded-lg bg-orange-50"
                 >
                   <div>
                     <p className="text-sm font-medium">{prod.name}</p>
@@ -208,7 +208,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Top Sellers */}
-        <div className="bg-white rounded shadow p-5">
+        <div className="bg-white rounded-xl shadow p-5">
           <h3 className="text-lg font-semibold mb-3">Top Sellers</h3>
           <p className="text-xs text-gray-500 mb-3">
             Based on revenue from completed orders (all time)
@@ -217,7 +217,7 @@ export default function AdminDashboard() {
           {analytics.topSellers && analytics.topSellers.length > 0 ? (
             <div className="space-y-2">
               {analytics.topSellers.map((seller, idx) => (
-                <div key={seller._id} className="border rounded p-3 bg-gray-50">
+                <div key={seller._id} className="border rounded-lg p-3 bg-gray-50">
                   <div className="flex justify-between items-start">
                     <div>
                       <p className="text-sm font-medium">
@@ -248,7 +248,7 @@ export default function AdminDashboard() {
       </div>
 
       {/* Footer note */}
-      <div className="bg-blue-50 border border-blue-200 rounded p-4">
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
         <p className="text-xs text-blue-800">
           <strong>Dashboard Notes:</strong> Stats reflect real-time data. Revenue calculations include completed orders only. Low stock alerts are based on product thresholds. Stripe/payment settlement will be calculated separately.
         </p>

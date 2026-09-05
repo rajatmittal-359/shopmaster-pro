@@ -276,7 +276,7 @@ export default function ProductDetailsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 p-4">
         {/* ✅ LEFT: IMAGE GALLERY */}
         <div>
-          <div className="relative h-[420px] bg-gray-100 rounded flex items-center justify-center mb-4">
+          <div className="relative h-[420px] bg-gray-100 rounded-lg flex items-center justify-center mb-4">
             {activeImage ? (
               <img
                 src={activeImage}
@@ -309,7 +309,7 @@ export default function ProductDetailsPage() {
                 key={i}
                 src={img}
                 onClick={() => setActiveImage(img)}
-                className={`w-16 h-16 object-cover border rounded cursor-pointer ${
+                className={`w-16 h-16 object-cover border rounded-lg cursor-pointer ${
                   activeImage === img ? "border-orange-500" : ""
                 }`}
               />
@@ -326,7 +326,7 @@ export default function ProductDetailsPage() {
             {product.avgRating > 0 ? (
               <>
                 <div className="flex items-center gap-1">
-                  <span className="px-2 py-0.5 rounded bg-green-600 text-white text-xs font-semibold">
+                  <span className="px-2 py-0.5 rounded-lg bg-green-600 text-white text-xs font-semibold">
                     {product.avgRating.toFixed(1)} ★
                   </span>
                   <span className="text-gray-600">
@@ -389,7 +389,7 @@ export default function ProductDetailsPage() {
           */}
           <div className="flex items-center gap-3 mt-4">
             <span className="text-sm text-gray-600">Quantity</span>
-            <div className="flex items-center rounded border">
+            <div className="flex items-center rounded-lg border">
               <button
                 onClick={() => setQty(Math.max(1, qty - 1))}
                 disabled={qty <= 1}
@@ -427,7 +427,7 @@ export default function ProductDetailsPage() {
             onClick={handleAddToCart}
             disabled={product.stock === 0 || inCart >= product.stock}
             className="mt-3 w-full max-w-xs bg-orange-500 hover:bg-orange-600 text-white py-2
-                       rounded font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                       rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {product.stock === 0
               ? 'Out of stock'
@@ -437,7 +437,7 @@ export default function ProductDetailsPage() {
           </button>
 
           {/* TRUST INFO */}
-          <div className="border rounded p-4 mt-4 text-sm text-gray-600 bg-gray-50">
+          <div className="border rounded-lg p-4 mt-4 text-sm text-gray-600 bg-gray-50">
             ✅ 7 Days Replacement <br />
             ✅ Cash on Delivery Available <br />
             ✅ Secure Payments
@@ -465,7 +465,7 @@ export default function ProductDetailsPage() {
         </h2>
 
         {/* Review form (customer only) */}
-        <div className="bg-white rounded shadow p-4 mb-6">
+        <div className="bg-white rounded-xl shadow p-4 mb-6">
           {user && role === "customer" ? (
             <>
               <div className="flex items-center justify-between mb-2">
@@ -507,7 +507,7 @@ export default function ProductDetailsPage() {
                     value={reviewForm.title}
                     onChange={handleReviewChange}
                     placeholder="Review title (optional)"
-                    className="w-full border rounded px-3 py-2 text-sm"
+                    className="w-full border rounded-lg px-3 py-2 text-sm"
                   />
                 </div>
                 <div>
@@ -517,7 +517,7 @@ export default function ProductDetailsPage() {
                     onChange={handleReviewChange}
                     rows={3}
                     placeholder="Share your experience with this product"
-                    className="w-full border rounded px-3 py-2 text-sm"
+                    className="w-full border rounded-lg px-3 py-2 text-sm"
                   />
                 </div>
 
@@ -533,7 +533,7 @@ export default function ProductDetailsPage() {
                 <button
                   type="submit"
                   disabled={savingReview}
-                  className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white text-sm rounded disabled:opacity-60"
+                  className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white text-sm rounded-lg disabled:opacity-60"
                 >
                   {savingReview
                     ? "Saving..."
@@ -551,7 +551,7 @@ export default function ProductDetailsPage() {
         </div>
 
         {/* Reviews list */}
-        <div className="bg-white rounded shadow p-4">
+        <div className="bg-white rounded-xl shadow p-4">
           {reviews.length === 0 ? (
             <p className="text-sm text-gray-500">
               No reviews yet. Be the first to review this product.

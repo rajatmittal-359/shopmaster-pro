@@ -137,14 +137,14 @@ const handleDelete = async (id) => {
           <h2 className="text-2xl font-bold">My Addresses</h2>
           <button
             onClick={() => setShowForm((p) => !p)}
-            className="px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600 text-sm"
+            className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 text-sm"
           >
             {showForm ? 'Cancel' : '+ Add Address'}
           </button>
         </div>
 
         {showForm && (
-          <div className="bg-white p-4 rounded shadow mb-6">
+          <div className="bg-white p-4 rounded-lg shadow mb-6">
             <h3 className="text-lg font-semibold mb-3">
               {editingId ? 'Edit Address' : 'Add New Address'}
             </h3>
@@ -155,7 +155,7 @@ const handleDelete = async (id) => {
                   name="label"
                   value={form.label}
                   onChange={handleChange}
-                  className="w-full border rounded px-3 py-2 text-sm"
+                  className="w-full border rounded-lg px-3 py-2 text-sm"
                 >
                   <option value="Home">Home</option>
                   <option value="Office">Office</option>
@@ -172,7 +172,7 @@ const handleDelete = async (id) => {
     required
     maxLength="10"
     placeholder="9876543210"
-    className={`w-full border rounded px-3 py-2 text-sm ${
+    className={`w-full border rounded-lg px-3 py-2 text-sm ${
       errors.phoneNumber ? 'border-red-400' : ''
     }`}
   />
@@ -187,7 +187,7 @@ const handleDelete = async (id) => {
                   value={form.street}
                   onChange={handleChange}
                   required
-                  className={`w-full border rounded px-3 py-2 text-sm ${
+                  className={`w-full border rounded-lg px-3 py-2 text-sm ${
                     errors.street ? 'border-red-400' : ''
                   }`}
                 />
@@ -203,7 +203,7 @@ const handleDelete = async (id) => {
                     value={form.city}
                     onChange={handleChange}
                     required
-                    className={`w-full border rounded px-3 py-2 text-sm ${
+                    className={`w-full border rounded-lg px-3 py-2 text-sm ${
                       errors.city ? 'border-red-400' : ''
                     }`}
                   />
@@ -217,7 +217,7 @@ const handleDelete = async (id) => {
                     value={form.state}
                     onChange={handleChange}
                     required
-                    className={`w-full border rounded px-3 py-2 text-sm ${
+                    className={`w-full border rounded-lg px-3 py-2 text-sm ${
                       errors.state ? 'border-red-400' : ''
                     }`}
                   />
@@ -237,7 +237,7 @@ const handleDelete = async (id) => {
                     value={form.zipCode}
                     onChange={handleChange}
                     required
-                    className={`w-full border rounded px-3 py-2 text-sm ${
+                    className={`w-full border rounded-lg px-3 py-2 text-sm ${
                       errors.zipCode ? 'border-red-400' : ''
                     }`}
                   />
@@ -250,7 +250,7 @@ const handleDelete = async (id) => {
                     name="country"
                     value={form.country}
                     onChange={handleChange}
-                    className="w-full border rounded px-3 py-2 text-sm"
+                    className="w-full border rounded-lg px-3 py-2 text-sm"
                   />
                 </div>
               </div>
@@ -267,7 +267,7 @@ const handleDelete = async (id) => {
 
               <button
                 type="submit"
-                className="w-full bg-orange-500 text-white py-2 rounded text-sm hover:bg-orange-600"
+                className="w-full bg-orange-500 text-white py-2 rounded-lg text-sm hover:bg-orange-600"
               >
                 {editingId ? 'Update Address' : 'Add Address'}
               </button>
@@ -285,13 +285,13 @@ const handleDelete = async (id) => {
             {addresses.map((addr) => (
               <div
                 key={addr._id}
-                className="bg-white p-4 rounded shadow flex justify-between items-start"
+                className="bg-white p-4 rounded-lg shadow flex justify-between items-start"
               >
                 <div>
                   <div className="flex items-center gap-2 mb-1">
                     <span className="font-semibold text-sm">{addr.label}</span>
                     {addr.isDefault && (
-                      <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">
+                      <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-lg">
                         Default
                       </span>
                     )}

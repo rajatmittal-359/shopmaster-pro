@@ -130,8 +130,8 @@ export default function SellerOrderDetailsPage() {
     return (
       <Layout title="Order Details">
         <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-gray-200 rounded w-1/3"></div>
-          <div className="h-64 bg-gray-200 rounded"></div>
+          <div className="h-8 bg-gray-200 rounded-lg w-1/3"></div>
+          <div className="h-64 bg-gray-200 rounded-lg"></div>
         </div>
       </Layout>
     );
@@ -160,14 +160,14 @@ export default function SellerOrderDetailsPage() {
           </div>
           <div className="flex items-center gap-2">
             <span
-              className={`px-3 py-1 rounded text-sm font-medium capitalize ${
+              className={`px-3 py-1 rounded-lg text-sm font-medium capitalize ${
                 statusColors[order.status] || 'bg-gray-100 text-gray-700'
               }`}
             >
               {order.status}
             </span>
             <span
-              className={`px-3 py-1 rounded text-sm font-medium capitalize ${
+              className={`px-3 py-1 rounded-lg text-sm font-medium capitalize ${
                 paymentColors[order.paymentStatus] || 'bg-gray-100 text-gray-700'
               }`}
             >
@@ -177,7 +177,7 @@ export default function SellerOrderDetailsPage() {
         </div>
 
         {/* Customer Info */}
-        <div className="bg-white p-5 rounded shadow">
+        <div className="bg-white p-5 rounded-lg shadow">
           <h3 className="font-semibold text-lg mb-3">Customer Information</h3>
           <div className="space-y-2 text-sm">
             <p>
@@ -191,7 +191,7 @@ export default function SellerOrderDetailsPage() {
 
         {/* Shipping Address */}
         {order.shippingAddressId && (
-          <div className="bg-white p-5 rounded shadow">
+          <div className="bg-white p-5 rounded-lg shadow">
             <h3 className="font-semibold text-lg mb-3">Shipping Address</h3>
             <div className="text-sm space-y-1">
               <p>{order.shippingAddressId.street}</p>
@@ -206,7 +206,7 @@ export default function SellerOrderDetailsPage() {
         )}
 
         {/* Items */}
-        <div className="bg-white p-5 rounded shadow">
+        <div className="bg-white p-5 rounded-lg shadow">
           <h3 className="font-semibold text-lg mb-3">Order Items</h3>
           <div className="space-y-3">
             {order.items.map((item) => (
@@ -222,7 +222,7 @@ export default function SellerOrderDetailsPage() {
                     ₹{item.price} × {item.quantity}
                   </p>
                   {item.status === 'cancelled' && (
-                    <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded">
+                    <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-lg">
                       Cancelled
                     </span>
                   )}
@@ -233,7 +233,7 @@ export default function SellerOrderDetailsPage() {
           </div>
 
           {/* Revenue Summary */}
-          <div className="mt-4 pt-4 border-t bg-blue-50 p-3 rounded">
+          <div className="mt-4 pt-4 border-t bg-blue-50 p-3 rounded-lg">
             <div className="flex justify-between text-lg font-bold">
               <span>Your Revenue:</span>
               <span className="text-blue-700">₹{sellerRevenue}</span>
@@ -248,7 +248,7 @@ export default function SellerOrderDetailsPage() {
         </div>
 
         {/* Tracking */}
-        <div className="bg-white p-5 rounded shadow">
+        <div className="bg-white p-5 rounded-lg shadow">
           <h3 className="font-semibold text-lg mb-3">Tracking Information</h3>
           {order.trackingInfo?.courierName ? (
             <div className="space-y-2 text-sm">
@@ -275,18 +275,18 @@ export default function SellerOrderDetailsPage() {
                   placeholder="Courier Name (e.g., Blue Dart)"
                   value={courierName}
                   onChange={(e) => setCourierName(e.target.value)}
-                  className="flex-1 px-3 py-2 border rounded"
+                  className="flex-1 px-3 py-2 border rounded-lg"
                 />
                 <input
                   type="text"
                   placeholder="Tracking Number"
                   value={trackingNumber}
                   onChange={(e) => setTrackingNumber(e.target.value)}
-                  className="flex-1 px-3 py-2 border rounded"
+                  className="flex-1 px-3 py-2 border rounded-lg"
                 />
                 <button
                   onClick={handleTrackingUpdate}
-                  className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded"
+                  className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg"
                 >
                   Save Tracking
                 </button>
@@ -296,7 +296,7 @@ export default function SellerOrderDetailsPage() {
         </div>
 
         {/* Status Timeline */}
-        <div className="bg-white p-5 rounded shadow">
+        <div className="bg-white p-5 rounded-lg shadow">
           <h3 className="font-semibold text-lg mb-2">Order Status</h3>
           {renderTimeline(order.status)}
 
@@ -304,7 +304,7 @@ export default function SellerOrderDetailsPage() {
             <button
               onClick={() => handleStatusUpdate(nextStatus)}
               disabled={updating}
-              className="mt-4 w-full py-3 bg-orange-500 hover:bg-orange-600 text-white rounded font-semibold disabled:opacity-50"
+              className="mt-4 w-full py-3 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-semibold disabled:opacity-50"
             >
               {updating ? 'Updating...' : `Mark as ${nextStatus}`}
             </button>
@@ -314,7 +314,7 @@ export default function SellerOrderDetailsPage() {
         {/* Back Button */}
         <button
           onClick={() => navigate('/seller/orders')}
-          className="w-full py-2 border border-gray-300 rounded hover:bg-gray-50"
+          className="w-full py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
         >
           Back to Orders
         </button>

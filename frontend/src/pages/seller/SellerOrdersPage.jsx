@@ -225,9 +225,9 @@ export default function SellerOrdersPage() {
     return (
       <Layout title="Seller Orders">
         <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-gray-200 rounded w-1/3"></div>
-          <div className="h-32 bg-gray-200 rounded"></div>
-          <div className="h-32 bg-gray-200 rounded"></div>
+          <div className="h-8 bg-gray-200 rounded-lg w-1/3"></div>
+          <div className="h-32 bg-gray-200 rounded-lg"></div>
+          <div className="h-32 bg-gray-200 rounded-lg"></div>
         </div>
       </Layout>
     );
@@ -247,7 +247,7 @@ export default function SellerOrdersPage() {
               const sellerRevenue = calculateSellerRevenue(order);
 
               return (
-                <div key={order._id} className="bg-white p-5 rounded shadow border space-y-4">
+                <div key={order._id} className="bg-white p-5 rounded-lg shadow border space-y-4">
                   {/* ✅ HEADER */}
                   <div className="flex flex-col md:flex-row md:justify-between gap-3 pb-3 border-b">
                     <div>
@@ -279,7 +279,7 @@ export default function SellerOrdersPage() {
                     {order.items.map((item) => (
                       <div
                         key={item._id}
-                        className="flex justify-between items-center text-xs bg-gray-50 p-2 rounded"
+                        className="flex justify-between items-center text-xs bg-gray-50 p-2 rounded-lg"
                       >
                         <div>
                           <p className="font-medium">{item.name}</p>
@@ -296,7 +296,7 @@ export default function SellerOrdersPage() {
                   </div>
 
                   {/* ✅ REVENUE BREAKDOWN */}
-                  <div className="bg-blue-50 border border-blue-200 rounded p-3 text-sm space-y-1">
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm space-y-1">
                     <div className="flex justify-between">
                       <span className="text-gray-700">Your Revenue (Items):</span>
                       <span className="font-bold text-blue-700">₹{sellerRevenue}</span>
@@ -316,7 +316,7 @@ export default function SellerOrdersPage() {
 
                   {/* ✅ TRACKING INFO */}
                   {order.trackingInfo?.courierName && (
-                    <div className="bg-purple-50 border border-purple-200 rounded p-3 text-xs">
+                    <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 text-xs">
                       <p className="font-semibold mb-1">Tracking Information:</p>
                       <p>
                         <strong>Courier:</strong> {order.trackingInfo.courierName}
@@ -406,7 +406,7 @@ export default function SellerOrdersPage() {
                   {/* ✅ ADD TRACKING (if not added) */}
                   {['processing', 'shipped'].includes(order.status) &&
                     !order.trackingInfo?.courierName && (
-                      <div className="bg-yellow-50 border border-yellow-200 rounded p-3">
+                      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
                         <p className="text-xs font-semibold mb-2">Add Tracking Info:</p>
                         <div className="flex flex-col md:flex-row gap-2">
                           <input
@@ -416,7 +416,7 @@ export default function SellerOrdersPage() {
                             onChange={(e) =>
                               updateTrackingField(order._id, 'courierName', e.target.value)
                             }
-                            className="flex-1 px-3 py-2 border rounded text-sm"
+                            className="flex-1 px-3 py-2 border rounded-lg text-sm"
                           />
                           <input
                             type="text"
@@ -425,7 +425,7 @@ export default function SellerOrdersPage() {
                             onChange={(e) =>
                               updateTrackingField(order._id, 'trackingNumber', e.target.value)
                             }
-                            className="flex-1 px-3 py-2 border rounded text-sm"
+                            className="flex-1 px-3 py-2 border rounded-lg text-sm"
                           />
                           <Button
                             variant="secondary"

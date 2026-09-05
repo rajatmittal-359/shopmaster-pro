@@ -69,9 +69,9 @@ export default function MyOrdersPage() {
     return (
       <Layout title="My Orders">
         <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-gray-200 rounded w-1/3"></div>
-          <div className="h-32 bg-gray-200 rounded"></div>
-          <div className="h-32 bg-gray-200 rounded"></div>
+          <div className="h-8 bg-gray-200 rounded-lg w-1/3"></div>
+          <div className="h-32 bg-gray-200 rounded-lg"></div>
+          <div className="h-32 bg-gray-200 rounded-lg"></div>
         </div>
       </Layout>
     );
@@ -83,13 +83,13 @@ export default function MyOrdersPage() {
         <h1 className="text-2xl font-bold mb-4">My Orders ({orders.length})</h1>
 
         {orders.length === 0 ? (
-          <div className="bg-white border rounded p-8 text-center">
+          <div className="bg-white border rounded-lg p-8 text-center">
             <p className="text-gray-600 mb-4">
               You have not placed any orders yet.
             </p>
             <Link
               to="/shop"
-              className="inline-block px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600"
+              className="inline-block px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600"
             >
               Start Shopping
             </Link>
@@ -104,7 +104,7 @@ export default function MyOrdersPage() {
               return (
                 <div
                   key={order._id}
-                  className="bg-white border rounded p-4 shadow-sm space-y-3"
+                  className="bg-white border rounded-lg p-4 shadow-sm space-y-3"
                 >
                   {/* Top summary row */}
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b">
@@ -131,7 +131,7 @@ export default function MyOrdersPage() {
                             ₹{shippingCharges}
                           </span>
                           {order.shippingCourierName && (
-                            <span className="ml-1 text-[10px] bg-blue-50 text-blue-600 px-1 rounded">
+                            <span className="ml-1 text-[10px] bg-blue-50 text-blue-600 px-1 rounded-lg">
                               via {order.shippingCourierName}
                             </span>
                           )}
@@ -154,7 +154,7 @@ export default function MyOrdersPage() {
                       {/* Payment method badge */}
                       <div className="mt-2">
                         <span
-                          className={`text-xs px-2 py-1 rounded ${
+                          className={`text-xs px-2 py-1 rounded-lg ${
                             order.paymentMethod === "cod"
                               ? "bg-amber-50 text-amber-700"
                               : "bg-green-50 text-green-700"
@@ -195,7 +195,7 @@ export default function MyOrdersPage() {
                           item.status === "cancelled" ? "opacity-50" : ""
                         }`}
                       >
-                        <div className="w-12 h-12 bg-gray-100 rounded flex-shrink-0 flex items-center justify-center text-xs text-gray-400">
+                        <div className="w-12 h-12 bg-gray-100 rounded-lg flex-shrink-0 flex items-center justify-center text-xs text-gray-400">
                           📦
                         </div>
                         <div className="flex-1">

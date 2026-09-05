@@ -50,7 +50,7 @@ import EmptyState from '../../components/ui/EmptyState';
 import Modal from '../../components/ui/Modal';
 
 const FIELD =
-  'border border-gray-300 rounded px-3 py-1.5 text-sm ' +
+  'border border-gray-300 rounded-lg px-3 py-1.5 text-sm ' +
   'focus:outline focus:outline-2 focus:outline-offset-0 focus:outline-orange-600';
 
 const ACTIONS =
@@ -276,7 +276,7 @@ export default function AdminCategoriesPage() {
           {loading ? (
             <div className="space-y-1 animate-pulse">
               {[...Array(8)].map((_, i) => (
-                <div key={i} className="h-8 bg-gray-100 rounded" />
+                <div key={i} className="h-8 bg-gray-100 rounded-lg" />
               ))}
             </div>
           ) : rows.length === 0 ? (
@@ -370,7 +370,7 @@ export default function AdminCategoriesPage() {
                                   selected row rather than a hovered one. Colour
                                   alone is enough for a quiet affordance.
                                 */
-                                className="inline-flex items-center gap-1.5 px-2 py-1 rounded text-xs
+                                className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs
                                            text-gray-500 hover:text-orange-700 transition-colors
                                            focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-600"
                               >
@@ -431,7 +431,7 @@ export default function AdminCategoriesPage() {
                             type="button"
                             onClick={() => setCollapsed({ ...collapsed, [cat._id]: open })}
                             aria-expanded={open}
-                            className="flex items-center gap-2 text-left font-semibold py-1 rounded
+                            className="flex items-center gap-2 text-left font-semibold py-1 rounded-lg
                                        focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-600"
                           >
                             <ChevronRight
@@ -572,7 +572,7 @@ export default function AdminCategoriesPage() {
               <button
                 type="button"
                 onClick={() => setMainSubs([...mainSubs, ''])}
-                className="inline-flex items-center gap-1.5 mt-2 px-2 py-1 -ml-2 rounded text-xs
+                className="inline-flex items-center gap-1.5 mt-2 px-2 py-1 -ml-2 rounded-lg text-xs
                            text-gray-500 hover:text-orange-700 transition-colors
                            focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-600"
               >

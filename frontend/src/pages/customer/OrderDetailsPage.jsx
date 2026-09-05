@@ -118,7 +118,7 @@ export default function OrderDetailsPage() {
     <Layout title="Order Details">
       <div className="max-w-4xl mx-auto p-4 space-y-6">
         {/* ORDER HEADER */}
-        <div className="bg-white p-4 rounded shadow">
+        <div className="bg-white p-4 rounded-lg shadow">
           <p className="text-sm font-semibold">Order {orderRef(order)}</p>
           <p className="text-xs text-gray-500">{new Date(order.createdAt).toLocaleString()}</p>
           <p className="text-sm mt-2">
@@ -130,7 +130,7 @@ export default function OrderDetailsPage() {
         </div>
 
         {/* ITEMS */}
-        <div className="bg-white p-4 rounded shadow">
+        <div className="bg-white p-4 rounded-lg shadow">
           <h2 className="font-semibold mb-3">Items</h2>
           <div className="space-y-3">
             {order.items.map(item => (
@@ -145,14 +145,14 @@ export default function OrderDetailsPage() {
                     <img
                       src={item.productId.images[0]}
                       alt={item.name}
-                      className="w-16 h-16 object-cover border rounded"
+                      className="w-16 h-16 object-cover border rounded-lg"
                     />
                   )}
                   <div className="flex-1">
                     <p className="text-sm font-medium">{item.name}</p>
                     <p className="text-xs text-gray-500">₹{item.price} × {item.quantity}</p>
                     {item.status === 'cancelled' && (
-                      <span className="inline-block mt-1 text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded">
+                      <span className="inline-block mt-1 text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-lg">
                         Cancelled
                       </span>
                     )}
@@ -199,7 +199,7 @@ export default function OrderDetailsPage() {
         </div>
 
         {/* SHIPPING ADDRESS - ✅ FIXED */}
-        <div className="bg-white p-4 rounded shadow">
+        <div className="bg-white p-4 rounded-lg shadow">
           <h2 className="font-semibold mb-2">Shipping Address</h2>
           {addr ? (
             <div className="text-sm text-gray-700 space-y-1">
@@ -216,7 +216,7 @@ export default function OrderDetailsPage() {
 
         {/* TRACKING INFO - ✅ IMPROVED */}
         {order.trackingInfo && order.trackingInfo.courierName && (
-          <div className="bg-blue-50 border border-blue-200 rounded p-4">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
             <h2 className="font-semibold mb-3 text-sm">Track Your Shipment</h2>
             <div className="space-y-2 text-sm">
               <p><strong>Courier:</strong> {order.trackingInfo.courierName}</p>
@@ -228,14 +228,14 @@ export default function OrderDetailsPage() {
                       type="text"
                       value={order.trackingInfo.trackingNumber}
                       readOnly
-                      className="flex-1 px-3 py-2 bg-white border rounded text-sm font-mono"
+                      className="flex-1 px-3 py-2 bg-white border rounded-lg text-sm font-mono"
                     />
                     <button
                       onClick={() => {
                         navigator.clipboard.writeText(order.trackingInfo.trackingNumber);
                         toastSuccess('Tracking number copied!');
                       }}
-                      className="px-4 py-2 text-xs bg-gray-200 hover:bg-gray-300 rounded"
+                      className="px-4 py-2 text-xs bg-gray-200 hover:bg-gray-300 rounded-lg"
                     >
                       Copy
                     </button>
@@ -252,7 +252,7 @@ export default function OrderDetailsPage() {
                   href="https://www.shiprocket.in/shipment-tracking"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-block mt-2 px-4 py-2 bg-blue-500 text-white text-sm rounded hover:bg-blue-600"
+                  className="inline-block mt-2 px-4 py-2 bg-blue-500 text-white text-sm rounded-lg hover:bg-blue-600"
                 >
                   Track on Shiprocket →
                 </a>
@@ -265,7 +265,7 @@ export default function OrderDetailsPage() {
         <div className="flex flex-col sm:flex-row gap-3">
           <button
             onClick={() => navigate('/customer/orders')}
-            className="flex-1 px-4 py-2 border border-gray-300 rounded hover:bg-gray-50"
+            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
           >
             Back to Orders
           </button>
@@ -274,7 +274,7 @@ export default function OrderDetailsPage() {
             <button
               onClick={handleCancel}
               disabled={actionLoading}
-              className="flex-1 px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 disabled:opacity-50"
+              className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:opacity-50"
             >
               {actionLoading ? 'Cancelling...' : 'Cancel Entire Order'}
             </button>
@@ -284,7 +284,7 @@ export default function OrderDetailsPage() {
             <button
               onClick={handleReturn}
               disabled={actionLoading}
-              className="flex-1 px-4 py-2 bg-orange-600 text-white rounded hover:bg-orange-700 disabled:opacity-50"
+              className="flex-1 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50"
             >
               {actionLoading ? 'Returning...' : 'Return Order'}
             </button>

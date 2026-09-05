@@ -20,7 +20,7 @@ export default function Card({
   return (
     <section
       className={[
-        'bg-white rounded-lg border border-gray-200',
+        'bg-white rounded-xl border border-gray-200',
         className,
       ]
         .filter(Boolean)

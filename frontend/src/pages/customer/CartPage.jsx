@@ -76,9 +76,9 @@ export default function CartPage() {
     return (
       <Layout title="My Cart">
         <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-gray-200 rounded w-1/4" />
-          <div className="h-32 bg-gray-200 rounded" />
-          <div className="h-32 bg-gray-200 rounded" />
+          <div className="h-8 bg-gray-200 rounded-lg w-1/4" />
+          <div className="h-32 bg-gray-200 rounded-lg" />
+          <div className="h-32 bg-gray-200 rounded-lg" />
         </div>
       </Layout>
     );
@@ -86,11 +86,11 @@ export default function CartPage() {
   if (!cart || cart.items.length === 0) {
     return (
       <Layout title="My Cart">
-        <div className="bg-white rounded shadow p-8 text-center">
+        <div className="bg-white rounded-xl shadow p-8 text-center">
           <p className="text-gray-600 mb-4">Your cart is empty</p>
           <Link
             to="/shop"   // ✅ public shop
-            className="inline-block px-6 py-2 bg-orange-500 text-white rounded hover:bg-orange-600"
+            className="inline-block px-6 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600"
           >
             Continue Shopping
           </Link>
@@ -117,7 +117,7 @@ export default function CartPage() {
         {/* Cart Items */}
         <div className="lg:col-span-2 space-y-3">
           {cart.items.map((item) => (
-            <div key={item.productId._id} className="bg-white rounded shadow p-3 sm:p-4">
+            <div key={item.productId._id} className="bg-white rounded-xl shadow p-3 sm:p-4">
               {/*
                 On a phone this was one unbroken row: a fixed image, a fixed
                 quantity box, and the name left to fit in what remained, which
@@ -127,12 +127,12 @@ export default function CartPage() {
               */}
               <div className="flex gap-3 sm:gap-4">
                 {/* Product Image */}
-                <div className="w-20 h-20 sm:w-24 sm:h-24 bg-gray-200 rounded flex-shrink-0">
+                <div className="w-20 h-20 sm:w-24 sm:h-24 bg-gray-200 rounded-lg flex-shrink-0">
                   {item.productId.images?.[0] ? (
                     <img
                       src={item.productId.images[0]}
                       alt={item.productId.name}
-                      className="w-full h-full object-cover rounded"
+                      className="w-full h-full object-cover rounded-lg"
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-xs text-gray-400">
@@ -167,7 +167,7 @@ export default function CartPage() {
                     Remove
                   </button>
 
-                  <div className="flex items-center gap-2 border rounded">
+                  <div className="flex items-center gap-2 border rounded-lg">
                     <button
                       onClick={() =>
                         updateQuantity(item.productId._id, item.quantity - 1)
@@ -209,7 +209,7 @@ export default function CartPage() {
 
         {/* Cart Summary */}
         <div className="lg:col-span-1">
-          <div className="bg-white rounded shadow p-4 sticky top-4">
+          <div className="bg-white rounded-xl shadow p-4 sticky top-4">
             <h3 className="font-semibold text-lg mb-3">Order Summary</h3>
 
 <div className="space-y-2 text-sm mb-4">
@@ -234,7 +234,7 @@ export default function CartPage() {
 
             <button
               onClick={() => navigate('/customer/checkout')}
-              className="w-full bg-orange-500 text-white py-3 rounded font-semibold hover:bg-orange-600"
+              className="w-full bg-orange-500 text-white py-3 rounded-lg font-semibold hover:bg-orange-600"
             >
               Proceed to Checkout
             </button>

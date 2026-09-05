@@ -122,18 +122,18 @@ export default function SellerInventoryLogsPage() {
       <h2 className="text-2xl font-bold mb-4">Inventory Logs</h2>
 
       {/* Filters */}
-      <div className="bg-white p-4 rounded shadow mb-4">
+      <div className="bg-white p-4 rounded-lg shadow mb-4">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <input
             type="text"
             placeholder="Search by product name..."
-            className="border px-3 py-2 rounded text-sm"
+            className="border px-3 py-2 rounded-lg text-sm"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
 
           <select
-            className="border px-3 py-2 rounded text-sm"
+            className="border px-3 py-2 rounded-lg text-sm"
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value)}
           >
@@ -145,7 +145,7 @@ export default function SellerInventoryLogsPage() {
           </select>
 
           <select
-            className="border px-3 py-2 rounded text-sm"
+            className="border px-3 py-2 rounded-lg text-sm"
             value={dateFilter}
             onChange={(e) => setDateFilter(e.target.value)}
           >
@@ -173,7 +173,7 @@ export default function SellerInventoryLogsPage() {
           {filteredLogs.map((log) => (
             <div
               key={log._id}
-              className="bg-white p-4 rounded shadow border text-sm"
+              className="bg-white p-4 rounded-lg shadow border text-sm"
             >
               {/* Header: type + order + time */}
               <div className="flex justify-between mb-2">

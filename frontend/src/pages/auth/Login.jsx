@@ -43,7 +43,7 @@ const handleSubmit = async (e) => {
         </h2>
 
         {error && (
-          <div className="mb-3 text-sm text-red-600 bg-red-50 border border-red-200 px-3 py-2 rounded">
+          <div className="mb-3 text-sm text-red-600 bg-red-50 border border-red-200 px-3 py-2 rounded-lg">
             {error}
           </div>
         )}
@@ -56,7 +56,7 @@ const handleSubmit = async (e) => {
               name="email"
               value={form.email}
               onChange={handleChange}
-              className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+              className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
               required
             />
           </div>
@@ -68,7 +68,7 @@ const handleSubmit = async (e) => {
               name="password"
               value={form.password}
               onChange={handleChange}
-              className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+              className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
               required
             />
           </div>
@@ -76,7 +76,7 @@ const handleSubmit = async (e) => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2 rounded transition disabled:opacity-60"
+            className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2 rounded-lg transition disabled:opacity-60"
           >
             {loading ? 'Logging in...' : 'Login'}
           </button>

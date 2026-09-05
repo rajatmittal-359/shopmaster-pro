@@ -171,7 +171,7 @@ export default function Layout({ children, title = 'Dashboard' }) {
         */}
         <header className="h-14 md:h-16 flex items-center gap-2 px-3 md:px-4 bg-white border-b border-gray-200">
           <button
-            className="text-2xl text-gray-700 shrink-0 p-1 rounded
+            className="text-2xl text-gray-700 shrink-0 p-1 rounded-lg
                        focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-600"
             aria-label={isSidebarOpen ? 'Close menu' : 'Open menu'}
             onClick={() => setIsSidebarOpen((p) => !p)}
@@ -194,7 +194,7 @@ export default function Layout({ children, title = 'Dashboard' }) {
                     aria-label={
                       cartCount > 0 ? `My cart, ${cartCount} item(s)` : 'My cart'
                     }
-                    className="relative p-2 rounded text-xl text-gray-700 hover:text-orange-600 hover:bg-orange-50
+                    className="relative p-2 rounded-lg text-xl text-gray-700 hover:text-orange-600 hover:bg-orange-50
                                focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-600"
                   >
                     <FiShoppingCart />
@@ -211,7 +211,7 @@ export default function Layout({ children, title = 'Dashboard' }) {
                   <button
                     onClick={() => navigate('/customer/wishlist')}
                     aria-label="My wishlist"
-                    className="p-2 rounded text-xl text-gray-700 hover:text-orange-600 hover:bg-orange-50
+                    className="p-2 rounded-lg text-xl text-gray-700 hover:text-orange-600 hover:bg-orange-50
                                focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-600"
                   >
                     <FiHeart />
@@ -229,7 +229,7 @@ export default function Layout({ children, title = 'Dashboard' }) {
           ) : (
             <button
               onClick={() => navigate('/login')}
-              className="shrink-0 px-3 py-1.5 rounded text-sm font-medium text-orange-700
+              className="shrink-0 px-3 py-1.5 rounded-lg text-sm font-medium text-orange-700
                          border border-orange-200 hover:bg-orange-50
                          focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-600"
             >

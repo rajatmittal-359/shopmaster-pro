@@ -79,7 +79,7 @@ export default function VerifyOTP() {
         </p>
 
         {error && (
-          <div className="mb-3 text-sm text-red-600 bg-red-50 border border-red-200 px-3 py-2 rounded">
+          <div className="mb-3 text-sm text-red-600 bg-red-50 border border-red-200 px-3 py-2 rounded-lg">
             {error}
           </div>
         )}
@@ -91,7 +91,7 @@ export default function VerifyOTP() {
               type="text"
               value={otp}
               onChange={handleChange}
-              className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 tracking-widest text-center"
+              className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 tracking-widest text-center"
               maxLength={6}
               required
             />
@@ -100,7 +100,7 @@ export default function VerifyOTP() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2 rounded transition disabled:opacity-60"
+            className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2 rounded-lg transition disabled:opacity-60"
           >
             {loading ? 'Verifying...' : 'Verify'}
           </button>

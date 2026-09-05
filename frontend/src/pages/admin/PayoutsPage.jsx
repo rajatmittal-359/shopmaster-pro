@@ -150,9 +150,9 @@ export default function PayoutsPage() {
     return (
       <Layout title="Payouts">
         <div className="space-y-4 animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-1/3" />
-          <div className="h-24 bg-gray-200 rounded" />
-          <div className="h-40 bg-gray-200 rounded" />
+          <div className="h-8 bg-gray-200 rounded-lg w-1/3" />
+          <div className="h-24 bg-gray-200 rounded-lg" />
+          <div className="h-40 bg-gray-200 rounded-lg" />
         </div>
       </Layout>
     );
@@ -313,7 +313,7 @@ export default function PayoutsPage() {
                             value={reference}
                             onChange={(e) => setReference(e.target.value)}
                             placeholder="Bank reference / UTR"
-                            className="flex-1 border border-gray-300 rounded px-3 py-2 text-sm
+                            className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm
                                        focus:outline focus:outline-2 focus:outline-offset-0 focus:outline-orange-600"
                           />
                           <Button

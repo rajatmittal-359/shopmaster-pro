@@ -80,7 +80,7 @@ export default function SellerProductDetailsPage() {
             navigation
             pagination={{ clickable: true }}
             slidesPerView={1}
-            className="w-full h-[350px] rounded border bg-white"
+            className="w-full h-[350px] rounded-lg border bg-white"
           >
             {product.images.map((img, i) => (
               <SwiperSlide key={i}>
@@ -98,21 +98,21 @@ export default function SellerProductDetailsPage() {
         <div className="flex justify-end gap-3">
           <button
             onClick={() => navigate(`/seller/products?edit=${product._id}`)}
-            className="px-4 py-2 border border-blue-500 text-blue-600 rounded hover:bg-blue-50 text-sm"
+            className="px-4 py-2 border border-blue-500 text-blue-600 rounded-lg hover:bg-blue-50 text-sm"
           >
             Edit
           </button>
 
           <button
             onClick={handleDelete}
-            className="px-4 py-2 border border-red-500 text-red-600 rounded hover:bg-red-50 text-sm"
+            className="px-4 py-2 border border-red-500 text-red-600 rounded-lg hover:bg-red-50 text-sm"
           >
             Delete
           </button>
         </div>
 
         {/* ✅ MAIN INFO GRID */}
-        <div className="bg-white rounded border p-5 grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="bg-white rounded-xl border p-5 grid grid-cols-1 md:grid-cols-2 gap-6">
 
           {/* LEFT */}
           <div className="space-y-3">
@@ -148,24 +148,24 @@ export default function SellerProductDetailsPage() {
 
           {/* RIGHT */}
           <div className="grid grid-cols-2 gap-4 text-sm">
-            <div className="border p-3 rounded">
+            <div className="border p-3 rounded-lg">
               <p className="text-gray-500">Low Stock Alert</p>
               <p className="font-semibold">{product.lowStockThreshold}</p>
             </div>
 
-            <div className="border p-3 rounded">
+            <div className="border p-3 rounded-lg">
               <p className="text-gray-500">Total Orders</p>
               <p className="font-semibold">—</p>
             </div>
 
-            <div className="border p-3 rounded col-span-2">
+            <div className="border p-3 rounded-lg col-span-2">
               <p className="text-gray-500">Created At</p>
               <p className="font-semibold">
                 {new Date(product.createdAt).toLocaleString()}
               </p>
             </div>
 
-            <div className="border p-3 rounded col-span-2">
+            <div className="border p-3 rounded-lg col-span-2">
               <p className="text-gray-500">Last Updated</p>
               <p className="font-semibold">
                 {new Date(product.updatedAt).toLocaleString()}
@@ -175,7 +175,7 @@ export default function SellerProductDetailsPage() {
         </div>
 
         {/* ✅ DESCRIPTION WITH BULLET SUPPORT */}
-        <div className="bg-white rounded border p-5">
+        <div className="bg-white rounded-xl border p-5">
           <h3 className="font-semibold mb-2">Description</h3>
 
           <div

@@ -76,7 +76,7 @@ export default function WishlistPage() {
             <p className="mb-3">Your wishlist is empty ❤️</p>
             <button
               onClick={() => navigate("/shop")}  // public shop
-              className="px-4 py-2 bg-orange-500 text-white rounded"
+              className="px-4 py-2 bg-orange-500 text-white rounded-lg"
             >
               Continue Shopping
             </button>
@@ -97,7 +97,7 @@ export default function WishlistPage() {
                   {/* IMAGE */}
                   <div
                     onClick={() => navigate(`/products/${p._id}`)} // public product details
-                    className="h-48 bg-gray-100 flex items-center justify-center rounded cursor-pointer"
+                    className="h-48 bg-gray-100 flex items-center justify-center rounded-lg cursor-pointer"
                   >
                     {p.images?.[0] ? (
                       <img
@@ -132,7 +132,7 @@ export default function WishlistPage() {
                           [p._id]: Math.max(1, (prev[p._id] || 1) - 1),
                         }))
                       }
-                      className="px-3 py-1 border rounded"
+                      className="px-3 py-1 border rounded-lg"
                     >
                       −
                     </button>
@@ -148,7 +148,7 @@ export default function WishlistPage() {
                           [p._id]: (prev[p._id] || 1) + 1,
                         }))
                       }
-                      className="px-3 py-1 border rounded"
+                      className="px-3 py-1 border rounded-lg"
                     >
                       +
                     </button>
@@ -158,14 +158,14 @@ export default function WishlistPage() {
                   <div className="flex gap-2 mt-4">
                     <button
                       onClick={() => handleAddToCart(p._id)}
-                      className="flex-1 bg-orange-500 hover:bg-orange-600 text-white text-sm py-2 rounded"
+                      className="flex-1 bg-orange-500 hover:bg-orange-600 text-white text-sm py-2 rounded-lg"
                     >
                       Add to Cart
                     </button>
 
                     <button
                       onClick={() => handleRemove(p._id)}
-                      className="px-3 text-red-600 border border-red-500 rounded text-sm"
+                      className="px-3 text-red-600 border border-red-500 rounded-lg text-sm"
                     >
                       ✕
                     </button>

@@ -1,5 +1,33 @@
 @import "tailwindcss";
 
+/*
+  THE CORNER SCALE
+
+  Every corner in the app came from one of four places and agreed with none of
+  the others: 196 uses of a bare `rounded` (a 4px corner Tailwind hardcodes, so
+  no theme could reach it), plus scattered -md, -lg and -full. A card, the
+  button inside it and the input beside it each rounded by a different amount,
+  which is what made the screens feel unfinished rather than sharp.
+
+  There are now three steps, and they mean something:
+
+    md  8px   things INSIDE a control - thumbnails, chips, small tags
+    lg  10px  the controls themselves - buttons, inputs, selects, steppers
+    xl  14px  the surfaces they sit on - cards, panels, dialogs
+
+  A container is always rounder than what it contains. That is the whole rule,
+  and it is what reads as "modern" - not any single number.
+
+  These are the Tailwind variables, so changing a value here changes it
+  everywhere at once. Do not go back to writing raw pixel corners.
+*/
+@theme {
+  --radius-md: 0.5rem;
+  --radius-lg: 0.625rem;
+  --radius-xl: 0.875rem;
+  --radius-2xl: 1.25rem;
+}
+
 /* CKEditor + description HTML lists */
 .ck-content ul,
 .description-html ul {

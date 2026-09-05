@@ -352,12 +352,12 @@ export default function MyProductsPage() {
     return (
       <Layout title="My Products">
         <div className="space-y-4 animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-1/3" />
-          <div className="h-10 bg-gray-200 rounded" />
+          <div className="h-8 bg-gray-200 rounded-lg w-1/3" />
+          <div className="h-10 bg-gray-200 rounded-lg" />
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            <div className="h-64 bg-gray-200 rounded" />
-            <div className="h-64 bg-gray-200 rounded" />
-            <div className="h-64 bg-gray-200 rounded" />
+            <div className="h-64 bg-gray-200 rounded-lg" />
+            <div className="h-64 bg-gray-200 rounded-lg" />
+            <div className="h-64 bg-gray-200 rounded-lg" />
           </div>
         </div>
       </Layout>
@@ -387,7 +387,7 @@ export default function MyProductsPage() {
               );
             }
           }}
-          className="px-5 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded text-sm font-semibold transition-colors"
+          className="px-5 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-sm font-semibold transition-colors"
         >
           {showForm ? "Close Form" : "+ Add Product"}
         </button>
@@ -397,13 +397,13 @@ export default function MyProductsPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
         <input
           placeholder="Search by name, brand, SKU or tag..."
-          className="border border-gray-300 px-3 py-2 rounded text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+          className="border border-gray-300 px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
 
         <select
-          className="border border-gray-300 px-3 py-2 rounded text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+          className="border border-gray-300 px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
           value={sort}
           onChange={(e) => setSort(e.target.value)}
         >
@@ -732,7 +732,7 @@ export default function MyProductsPage() {
 
       {/* Empty state */}
       {!loading && filtered.length === 0 && (
-        <div className="bg-white rounded-lg shadow-sm p-8 text-center text-sm text-gray-600">
+        <div className="bg-white rounded-xl shadow-sm p-8 text-center text-sm text-gray-600">
           No products found. Try changing search or filters.
         </div>
       )}
@@ -803,19 +803,19 @@ export default function MyProductsPage() {
                     onClick={() =>
                       navigate(`/seller/products/${prod._id}`)
                     }
-                    className="flex-1 border border-orange-500 text-orange-600 text-xs py-1.5 rounded hover:bg-orange-50 transition-colors font-medium"
+                    className="flex-1 border border-orange-500 text-orange-600 text-xs py-1.5 rounded-lg hover:bg-orange-50 transition-colors font-medium"
                   >
                     View
                   </button>
                   <button
                     onClick={() => handleEdit(prod)}
-                    className="flex-1 border border-blue-500 text-blue-600 text-xs py-1.5 rounded hover:bg-blue-50 transition-colors font-medium"
+                    className="flex-1 border border-blue-500 text-blue-600 text-xs py-1.5 rounded-lg hover:bg-blue-50 transition-colors font-medium"
                   >
                     Edit
                   </button>
                   <button
                     onClick={() => handleDelete(prod._id)}
-                    className="flex-1 border border-red-500 text-red-600 text-xs py-1.5 rounded hover:bg-red-50 transition-colors font-medium"
+                    className="flex-1 border border-red-500 text-red-600 text-xs py-1.5 rounded-lg hover:bg-red-50 transition-colors font-medium"
                   >
                     Delete
                   </button>

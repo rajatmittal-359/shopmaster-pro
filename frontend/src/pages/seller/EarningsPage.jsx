@@ -110,10 +110,10 @@ export default function EarningsPage() {
     return (
       <Layout title="Earnings">
         <div className="space-y-4 animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-1/3" />
+          <div className="h-8 bg-gray-200 rounded-lg w-1/3" />
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             {[...Array(4)].map((_, i) => (
-              <div key={i} className="h-24 bg-gray-200 rounded" />
+              <div key={i} className="h-24 bg-gray-200 rounded-lg" />
             ))}
           </div>
         </div>
@@ -225,7 +225,7 @@ export default function EarningsPage() {
                     onChange={(e) =>
                       setForm({ ...form, accountHolderName: e.target.value })
                     }
-                    className="mt-1 w-full border border-gray-300 rounded px-3 py-2 text-sm
+                    className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm
                                focus:outline focus:outline-2 focus:outline-offset-0 focus:outline-orange-600"
                     placeholder="As printed on your passbook"
                   />
@@ -238,7 +238,7 @@ export default function EarningsPage() {
                     inputMode="numeric"
                     value={form.accountNumber}
                     onChange={(e) => setForm({ ...form, accountNumber: e.target.value })}
-                    className="mt-1 w-full border border-gray-300 rounded px-3 py-2 text-sm tabular-nums
+                    className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm tabular-nums
                                focus:outline focus:outline-2 focus:outline-offset-0 focus:outline-orange-600"
                   />
                 </label>
@@ -249,7 +249,7 @@ export default function EarningsPage() {
                     required
                     value={form.ifscCode}
                     onChange={(e) => setForm({ ...form, ifscCode: e.target.value })}
-                    className="mt-1 w-full border border-gray-300 rounded px-3 py-2 text-sm uppercase
+                    className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm uppercase
                                focus:outline focus:outline-2 focus:outline-offset-0 focus:outline-orange-600"
                     placeholder="HDFC0001234"
                   />
@@ -262,7 +262,7 @@ export default function EarningsPage() {
                   <input
                     value={form.gstNumber}
                     onChange={(e) => setForm({ ...form, gstNumber: e.target.value })}
-                    className="mt-1 w-full border border-gray-300 rounded px-3 py-2 text-sm uppercase
+                    className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm uppercase
                                focus:outline focus:outline-2 focus:outline-offset-0 focus:outline-orange-600"
                   />
                 </label>

@@ -89,7 +89,7 @@ export function ConfirmProvider({ children }) {
               <button
                 type="button"
                 onClick={() => settle(false)}
-                className="rounded border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                className="rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
               >
                 {request.cancelLabel}
               </button>
@@ -97,7 +97,7 @@ export function ConfirmProvider({ children }) {
                 type="button"
                 autoFocus
                 onClick={() => settle(true)}
-                className={`rounded px-4 py-2 text-sm text-white ${
+                className={`rounded-lg px-4 py-2 text-sm text-white ${
                   request.danger
                     ? 'bg-red-600 hover:bg-red-700'
                     : 'bg-orange-600 hover:bg-orange-700'

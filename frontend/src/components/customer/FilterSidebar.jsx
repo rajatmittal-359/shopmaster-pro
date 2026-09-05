@@ -80,7 +80,7 @@ console.log(
   return (
     <aside
       className={
-        bare ? '' : 'bg-white rounded-lg shadow-sm p-4 h-fit border'
+        bare ? '' : 'bg-white rounded-xl shadow-sm p-4 h-fit border'
       }
     >
       {!bare && <h3 className="text-sm font-semibold mb-3">Filters</h3>}

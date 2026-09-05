@@ -150,7 +150,7 @@ const loadSellers = async () => {
           {filteredSellers.map((seller) => (
             <div
               key={seller._id}
-              className="bg-white border rounded p-4 flex justify-between items-center"
+              className="bg-white border rounded-lg p-4 flex justify-between items-center"
             >
               <div>
                 <p className="font-semibold">{seller.businessName}</p>
@@ -159,7 +159,7 @@ const loadSellers = async () => {
                 </p>
                 <div className="flex gap-2 mt-1">
                   <span
-                    className={`text-xs px-2 py-0.5 rounded ${
+                    className={`text-xs px-2 py-0.5 rounded-lg ${
                       seller.isApproved
                         ? "bg-green-100 text-green-700"
                         : "bg-yellow-100 text-yellow-700"
@@ -168,7 +168,7 @@ const loadSellers = async () => {
                     {seller.isApproved ? "Approved" : "Pending"}
                   </span>
                   <span
-                    className={`text-xs px-2 py-0.5 rounded ${
+                    className={`text-xs px-2 py-0.5 rounded-lg ${
                       seller.status === "active"
                         ? "bg-blue-100 text-blue-700"
                         : "bg-red-100 text-red-700"
@@ -191,13 +191,13 @@ const loadSellers = async () => {
                   <>
                     <button
                       onClick={() => handleApprove(seller._id)}
-                      className="px-3 py-1 text-sm bg-green-500 text-white rounded hover:bg-green-600"
+                      className="px-3 py-1 text-sm bg-green-500 text-white rounded-lg hover:bg-green-600"
                     >
                       Approve
                     </button>
                     <button
                       onClick={() => handleReject(seller._id)}
-                      className="px-3 py-1 text-sm bg-red-500 text-white rounded hover:bg-red-600"
+                      className="px-3 py-1 text-sm bg-red-500 text-white rounded-lg hover:bg-red-600"
                     >
                       Reject
                     </button>
@@ -208,7 +208,7 @@ const loadSellers = async () => {
                 {seller.isApproved && seller.status === "active" && (
                   <button
                     onClick={() => handleSuspend(seller._id)}
-                    className="px-3 py-1 text-sm bg-orange-500 text-white rounded hover:bg-orange-600"
+                    className="px-3 py-1 text-sm bg-orange-500 text-white rounded-lg hover:bg-orange-600"
                   >
                     Suspend
                   </button>
@@ -218,7 +218,7 @@ const loadSellers = async () => {
                 {seller.status === "suspended" && (
                   <button
                     onClick={() => handleActivate(seller._id)}
-                    className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600"
+                    className="px-3 py-1 text-sm bg-blue-500 text-white rounded-lg hover:bg-blue-600"
                   >
                     Activate
                   </button>

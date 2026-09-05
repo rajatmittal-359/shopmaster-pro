@@ -227,7 +227,7 @@ const getSortedProducts = () => {
                  flex item will not shrink below it. Without this the search
                  box refused to give way and pushed the whole row - and so the
                  page - wider than the phone. */
-              className="flex-1 min-w-0 md:w-56 border border-gray-300 rounded px-3 py-2 text-sm
+              className="flex-1 min-w-0 md:w-56 border border-gray-300 rounded-lg px-3 py-2 text-sm
                          focus:outline focus:outline-2 focus:outline-offset-0 focus:outline-orange-600"
             />
 
@@ -235,7 +235,7 @@ const getSortedProducts = () => {
               value={filters.sortBy}
               onChange={(e) => handleFilterChange('sortBy', e.target.value)}
               aria-label="Sort products"
-              className="shrink-0 border border-gray-300 rounded px-2 md:px-3 py-2 text-sm w-28 sm:w-44
+              className="shrink-0 border border-gray-300 rounded-lg px-2 md:px-3 py-2 text-sm w-28 sm:w-44
                          focus:outline focus:outline-2 focus:outline-offset-0 focus:outline-orange-600"
             >
               <option value="newest">Newest</option>
@@ -248,7 +248,7 @@ const getSortedProducts = () => {
             <button
               type="button"
               onClick={() => setFiltersOpen(true)}
-              className="md:hidden shrink-0 flex items-center gap-1.5 px-3 py-2 rounded text-sm
+              className="md:hidden shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm
                          border border-gray-300 hover:bg-gray-50
                          focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-600"
             >
@@ -284,7 +284,7 @@ const getSortedProducts = () => {
             )}
 
             {!loading && sortedProducts.length === 0 && (
-              <div className="bg-white rounded shadow p-8 text-center text-sm text-gray-600">
+              <div className="bg-white rounded-xl shadow p-8 text-center text-sm text-gray-600">
                 No products match your filters. Try adjusting filters or search.
               </div>
             )}
@@ -303,7 +303,7 @@ const getSortedProducts = () => {
                   <button
                     onClick={() => handlePageChange('prev')}
                     disabled={meta.page <= 1}
-                    className="px-3 py-1 border rounded disabled:opacity-50 hover:bg-gray-50"
+                    className="px-3 py-1 border rounded-lg disabled:opacity-50 hover:bg-gray-50"
                   >
                     ← Previous
                   </button>
@@ -313,7 +313,7 @@ const getSortedProducts = () => {
                   <button
                     onClick={() => handlePageChange('next')}
                     disabled={meta.page >= meta.totalPages}
-                    className="px-3 py-1 border rounded disabled:opacity-50 hover:bg-gray-50"
+                    className="px-3 py-1 border rounded-lg disabled:opacity-50 hover:bg-gray-50"
                   >
                     Next →
                   </button>
@@ -351,7 +351,7 @@ const getSortedProducts = () => {
                 type="button"
                 onClick={() => setFiltersOpen(false)}
                 aria-label="Close filters"
-                className="p-2 -mr-2 rounded text-gray-500 hover:text-gray-800
+                className="p-2 -mr-2 rounded-lg text-gray-500 hover:text-gray-800
                            focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-600"
               >
                 <X size={18} />
@@ -373,7 +373,7 @@ const getSortedProducts = () => {
               <button
                 type="button"
                 onClick={() => setFiltersOpen(false)}
-                className="w-full py-2.5 rounded bg-orange-600 text-white font-medium
+                className="w-full py-2.5 rounded-lg bg-orange-600 text-white font-medium
                            hover:bg-orange-700
                            focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-600"
               >

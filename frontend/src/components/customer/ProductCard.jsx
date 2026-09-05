@@ -73,9 +73,9 @@ export default function ProductCard({ product }) {
   };
 
   return (
-    <div className="group bg-white rounded-lg shadow-sm hover:shadow-md transition border flex flex-col">
+    <div className="group bg-white rounded-xl shadow-sm hover:shadow-md transition border flex flex-col">
       {/* Image */}
-      <div className="relative aspect-4/3 w-full overflow-hidden rounded-t-lg bg-gray-100">
+      <div className="relative aspect-4/3 w-full overflow-hidden rounded-t-xl bg-gray-100">
         {/* Canonical, same as View details - not the _id URL. */}
         <Link to={`/products/${product.slug || product._id}`}>
           {image ? (
@@ -170,7 +170,7 @@ export default function ProductCard({ product }) {
             Add to cart
           </Button>
         ) : (
-          <div className="flex items-center justify-between rounded border border-orange-600 overflow-hidden">
+          <div className="flex items-center justify-between rounded-lg border border-orange-600 overflow-hidden">
             <button
               type="button"
               onClick={() => changeQty(qty - 1)}

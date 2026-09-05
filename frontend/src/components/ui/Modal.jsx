@@ -60,7 +60,7 @@ export default function Modal({ open, title, hint, onClose, children }) {
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="bg-white rounded-lg shadow-xl w-full max-w-lg outline-none"
+        className="bg-white rounded-xl shadow-xl w-full max-w-lg outline-none"
       >
         <header className="flex items-start justify-between gap-4 px-5 pt-4 pb-3 border-b border-gray-100">
           <div>
