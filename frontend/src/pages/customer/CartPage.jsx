@@ -4,9 +4,16 @@ import Layout from '../../components/common/Layout';
 import api from '../../utils/api';
 
 import { useConfirm } from '../../context/confirmContext';
+import { useCart } from '../../context/cartContext';
 import { toastError } from '../../utils/toast';
+
+const stripHtml = (html = '') => html.replace(/<[^>]*>/g, '');
+
 export default function CartPage() {
   const confirm = useConfirm();
+  // This page writes to the cart directly, so the shared count has to be told
+  // or the badge in the header keeps showing the number from before.
+  const { refresh: refreshCart } = useCart();
   const [cart, setCart] = useState(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
@@ -33,6 +40,7 @@ export default function CartPage() {
     try {
       await api.patch('/customer/cart', { productId, quantity });
       loadCart();
+      refreshCart();
     } catch (err) {
       toastError(err.response?.data?.message || 'Could not update the quantity');
     }
@@ -42,6 +50,7 @@ export default function CartPage() {
     try {
       await api.delete(`/customer/cart/${productId}`);
       loadCart();
+      refreshCart();
     } catch (err) {
       toastError(err.response?.data?.message || 'Could not remove that item');
     }
@@ -57,6 +66,7 @@ export default function CartPage() {
     try {
       await api.delete('/customer/cart');
       loadCart();
+      refreshCart();
     } catch (err) {
       toastError(err.response?.data?.message || 'Could not empty your cart');
     }
@@ -107,10 +117,17 @@ export default function CartPage() {
         {/* Cart Items */}
         <div className="lg:col-span-2 space-y-3">
           {cart.items.map((item) => (
-            <div key={item.productId._id} className="bg-white rounded shadow p-4">
-              <div className="flex gap-4">
+            <div key={item.productId._id} className="bg-white rounded shadow p-3 sm:p-4">
+              {/*
+                On a phone this was one unbroken row: a fixed image, a fixed
+                quantity box, and the name left to fit in what remained, which
+                was a sliver - "Marble / Ganesha / Showpiece" down three lines
+                with the description shaved to nothing beside it. The controls
+                drop below the name at small widths and sit beside it from sm up.
+              */}
+              <div className="flex gap-3 sm:gap-4">
                 {/* Product Image */}
-                <div className="w-24 h-24 bg-gray-200 rounded flex-shrink-0">
+                <div className="w-20 h-20 sm:w-24 sm:h-24 bg-gray-200 rounded flex-shrink-0">
                   {item.productId.images?.[0] ? (
                     <img
                       src={item.productId.images[0]}
@@ -124,11 +141,16 @@ export default function CartPage() {
                   )}
                 </div>
 
+                <div className="flex-1 min-w-0 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 {/* Product Info */}
-                <div className="flex-1">
+                <div className="min-w-0">
                   <h3 className="font-semibold">{item.productId.name}</h3>
-                  <p className="text-sm text-gray-600 mt-1">
-                    {item.productId.description?.substring(0, 80)}...
+                  {/*
+                    Descriptions are stored as HTML, and this printed the raw
+                    tags - "<p>Marble Ganesha..." - straight onto the page.
+                  */}
+                  <p className="text-sm text-gray-600 mt-1 line-clamp-2">
+                    {stripHtml(item.productId.description)}
                   </p>
                   <p className="text-sm text-gray-500 mt-1">
                     Price: ₹{item.price}
@@ -136,7 +158,8 @@ export default function CartPage() {
                 </div>
 
                 {/* Quantity + Remove */}
-                <div className="flex flex-col items-end gap-2">
+                <div className="flex items-center justify-between gap-3 shrink-0
+                                sm:flex-col sm:items-end sm:justify-start sm:gap-2">
                   <button
                     onClick={() => removeItem(item.productId._id)}
                     className="text-xs text-red-600 hover:underline"
@@ -155,11 +178,20 @@ export default function CartPage() {
                       -
                     </button>
                     <span className="px-3 py-1 text-sm">{item.quantity}</span>
+                    {/* Stops at what the seller actually has, rather than
+                        letting the customer count up and be refused. */}
                     <button
                       onClick={() =>
                         updateQuantity(item.productId._id, item.quantity + 1)
                       }
-                      className="px-2 py-1 hover:bg-gray-100"
+                      className="px-2 py-1 hover:bg-gray-100 disabled:opacity-40
+                                 disabled:cursor-not-allowed"
+                      disabled={item.quantity >= item.productId.stock}
+                      title={
+                        item.quantity >= item.productId.stock
+                          ? `Only ${item.productId.stock} left`
+                          : undefined
+                      }
                     >
                       +
                     </button>
@@ -168,6 +200,7 @@ export default function CartPage() {
                   <p className="font-bold text-orange-600">
                     ₹{item.price * item.quantity}
                   </p>
+                </div>
                 </div>
               </div>
             </div>

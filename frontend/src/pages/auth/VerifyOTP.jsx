@@ -34,7 +34,8 @@ export default function VerifyOTP() {
 
   /** Where each role lands once their email is verified. */
   const HOME_FOR_ROLE = {
-    customer: '/customer/dashboard',
+    // Someone who has just signed up came here to buy something.
+    customer: '/shop',
     seller: '/seller/dashboard',
     admin: '/admin/dashboard',
   };

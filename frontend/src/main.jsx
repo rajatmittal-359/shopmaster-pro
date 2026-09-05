@@ -7,11 +7,13 @@ import './index.css';
 import App from './App';
 import { AuthProvider } from './context/AuthProvider';
 import { WishlistProvider } from './context/WishlistProvider';
+import { CartProvider } from './context/CartProvider';
 import { ConfirmProvider } from './context/ConfirmProvider';
 
 /**
  * Provider order matters:
  *   AuthProvider     - everything else needs to know who is signed in
+ *   CartProvider     - reads auth, and fetches the cart once for the app
  *   WishlistProvider - reads auth, and fetches the wishlist once for the app
  *   ConfirmProvider  - owns the confirmation dialog, outside the router so a
  *                      route change cannot unmount an open dialog
@@ -19,13 +21,14 @@ import { ConfirmProvider } from './context/ConfirmProvider';
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <AuthProvider>
+      <CartProvider>
       <WishlistProvider>
         <ConfirmProvider>
           <BrowserRouter>
             <App />
 
             <Toaster
-              position="top-right"
+              position="bottom-center"
               toastOptions={{
                 duration: 2500,
                 style: {
@@ -38,6 +41,7 @@ createRoot(document.getElementById('root')).render(
           </BrowserRouter>
         </ConfirmProvider>
       </WishlistProvider>
+      </CartProvider>
     </AuthProvider>
   </StrictMode>
 );

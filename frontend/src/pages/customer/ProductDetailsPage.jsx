@@ -1,15 +1,12 @@
 // frontend/src/pages/customer/ProductDetailsPage.jsx
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
+import { Heart, Minus, Plus } from "lucide-react";
 
 import Layout from "../../components/common/Layout";
 import { getProductDetails } from "../../services/productService";
-import { addToCart } from "../../services/cartService";
-import {
-  addToWishlist,
-  removeFromWishlist,
-  getWishlist,
-} from "../../services/wishlistService";
+import { useCart } from "../../context/cartContext";
+import { useWishlist } from "../../context/wishlistContext";
 import {
   getProductReviews,
   createOrUpdateReview,
@@ -30,7 +27,20 @@ export default function ProductDetailsPage() {
   const [loading, setLoading] = useState(true);
 
   const [qty, setQty] = useState(1);
-  const [liked, setLiked] = useState(false);
+
+  /*
+   * The cart and the wishlist come from the shared providers now.
+   *
+   * This page kept its own copy of both, and passed the URL parameter - which
+   * is the SLUG on every canonical link - straight to the API as a productId.
+   * The backend does Product.findById on it, so Add to Cart and the heart
+   * threw on exactly the URLs the shop links to. Everything below sends
+   * product._id, and the badge in the header moves because the state is shared.
+   */
+  const { quantityOf, setQuantity } = useCart();
+  const { isWishlisted, toggle: toggleWishlisted } = useWishlist();
+  const liked = product ? isWishlisted(product._id) : false;
+  const inCart = product ? quantityOf(product._id) : 0;
 
   // ✅ Reviews state
   const [reviews, setReviews] = useState([]);
@@ -53,20 +63,6 @@ export default function ProductDetailsPage() {
         const p = res.data.product;
         setProduct(p);
         setActiveImage(p.images?.[0] || "");
-
-        // ✅ WISHLIST STATUS
-        // Only a customer has one. An admin or seller viewing the page used to
-        // fetch it anyway and take a 403 on every load, which buried the real
-        // errors in the console under noise that was never a problem.
-        if (user && role === 'customer') {
-          try {
-            const wishRes = await getWishlist();
-            const items = wishRes.data.wishlist?.items || [];
-            setLiked(items.some((item) => item.productId?._id === p._id));
-          } catch (err) {
-            console.error("Error loading wishlist:", err);
-          }
-        }
 
         // ✅ REVIEWS LOAD
         try {
@@ -101,36 +97,40 @@ export default function ProductDetailsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [productId]);
 
-  // ✅ CART
-const handleAddToCart = async () => {
-  try {
-    if (product.stock < qty) {
-  toastError(`Only ${product.stock} items available`);
-  return;
-}
-await addToCart({ productId, quantity: qty });
-toastSuccess(`${qty} item(s) added to cart 🛒`);
-  } catch (err) {
-    toastError(err?.response?.data?.message || 'Failed to add to cart');
-  }
-};
-
-  // ✅ WISHLIST
-const toggleWishlist = async () => {
-  try {
-    if (liked) {
-      await removeFromWishlist(productId);
-      setLiked(false);
-      toastSuccess('Removed from wishlist');
-    } else {
-      await addToWishlist(productId);
-      setLiked(true);
-      toastSuccess('Added to wishlist');
+  /**
+   * Adds the chosen quantity to whatever is already in the cart.
+   *
+   * The selector above says how many MORE to put in, so it has to be added to
+   * the existing line rather than replacing it - press Add twice for one each
+   * and you meant two.
+   */
+  const handleAddToCart = async () => {
+    const wanted = inCart + qty;
+    if (wanted > product.stock) {
+      toastError(
+        inCart
+          ? `Only ${product.stock} available and ${inCart} already in your cart`
+          : `Only ${product.stock} items available`
+      );
+      return;
     }
-  } catch (err) {
-    toastError(err?.response?.data?.message || 'Failed to update wishlist');
-  }
-};
+
+    const result = await setQuantity(product._id, wanted);
+    if (!result.ok) {
+      toastError(result.message);
+      return;
+    }
+    toastSuccess(`${wanted} in your cart`);
+  };
+
+  const toggleWishlist = async () => {
+    const result = await toggleWishlisted(product._id);
+    if (!result.ok) {
+      toastError(result.message);
+      return;
+    }
+    toastSuccess(result.wishlisted ? 'Added to wishlist' : 'Removed from wishlist');
+  };
 
   // ✅ REVIEW: rating select
   const handleRatingClick = (value) => {
@@ -287,12 +287,18 @@ const toggleWishlist = async () => {
               "No Image"
             )}
 
-            {/* Wishlist Heart */}
             <button
               onClick={toggleWishlist}
-              className="absolute top-3 right-3 bg-white p-2 rounded-full shadow"
+              aria-pressed={liked}
+              aria-label={liked ? 'Remove from wishlist' : 'Save to wishlist'}
+              className="absolute top-3 right-3 bg-white p-2 rounded-full shadow hover:bg-gray-100
+                         focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-600"
             >
-              {liked ? "❤️" : "🤍"}
+              <Heart
+                size={18}
+                className={liked ? 'text-red-500' : 'text-gray-500'}
+                fill={liked ? 'currentColor' : 'none'}
+              />
             </button>
           </div>
 
@@ -336,9 +342,26 @@ const toggleWishlist = async () => {
             )}
           </div>
 
-          <p className="text-2xl font-bold text-orange-600">
-            ₹{product.price}
-          </p>
+          {/*
+            The shop card showed "₹2900 ₹1999" and this page showed "₹1999"
+            alone, so the saving disappeared at the moment the customer was
+            deciding. Same numbers in both places now.
+          */}
+          <div className="flex flex-wrap items-baseline gap-2">
+            <span className="text-2xl font-bold text-orange-600">
+              ₹{product.price}
+            </span>
+            {product.mrp > product.price && (
+              <>
+                <span className="text-base text-gray-400 line-through">
+                  ₹{product.mrp}
+                </span>
+                <span className="text-sm font-medium text-green-700">
+                  {Math.round(((product.mrp - product.price) / product.mrp) * 100)}% off
+                </span>
+              </>
+            )}
+          </div>
 
           <p className="text-sm">
             Stock:{" "}
@@ -359,31 +382,58 @@ const toggleWishlist = async () => {
             Category: {product.category?.name || "N/A"}
           </p>
 
-          {/* Quantity Selector */}
+          {/*
+            The + used to count past the stock, so the only way to find out
+            the shop could not supply that many was to press Add and be told.
+            It stops at what is left, minus whatever is already in the cart.
+          */}
           <div className="flex items-center gap-3 mt-4">
-            <button
-              onClick={() => qty > 1 && setQty(qty - 1)}
-              className="px-3 py-1 border rounded"
-            >
-              −
-            </button>
+            <span className="text-sm text-gray-600">Quantity</span>
+            <div className="flex items-center rounded border">
+              <button
+                onClick={() => setQty(Math.max(1, qty - 1))}
+                disabled={qty <= 1}
+                aria-label="One fewer"
+                className="px-3 py-1 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <Minus size={16} />
+              </button>
 
-            <span className="font-semibold">{qty}</span>
+              <span className="px-3 font-semibold tabular-nums" aria-live="polite">
+                {qty}
+              </span>
 
-            <button
-              onClick={() => setQty(qty + 1)}
-              className="px-3 py-1 border rounded"
-            >
-              +
-            </button>
+              <button
+                onClick={() => setQty(qty + 1)}
+                disabled={inCart + qty >= product.stock}
+                aria-label="One more"
+                className="px-3 py-1 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <Plus size={16} />
+              </button>
+            </div>
           </div>
 
-          {/* Add to Cart */}
+          {inCart > 0 && (
+            <p className="text-sm text-gray-600 mt-2">
+              {inCart} already in your cart ·{' '}
+              <Link to="/customer/cart" className="text-orange-600 underline">
+                View cart
+              </Link>
+            </p>
+          )}
+
           <button
             onClick={handleAddToCart}
-            className="mt-3 w-full max-w-xs bg-orange-500 hover:bg-orange-600 text-white py-2 rounded font-semibold"
+            disabled={product.stock === 0 || inCart >= product.stock}
+            className="mt-3 w-full max-w-xs bg-orange-500 hover:bg-orange-600 text-white py-2
+                       rounded font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Add to Cart
+            {product.stock === 0
+              ? 'Out of stock'
+              : inCart >= product.stock
+                ? 'All available stock is in your cart'
+                : 'Add to Cart'}
           </button>
 
           {/* TRUST INFO */}

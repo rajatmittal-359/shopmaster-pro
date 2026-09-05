@@ -5,10 +5,13 @@ import Layout from "../../components/common/Layout";
 import { getCart } from "../../services/cartService";
 import { getAddresses } from "../../services/addressService";
 import { useNavigate } from "react-router-dom";
+import { useCart } from "../../context/cartContext";
 import { toastSuccess, toastError } from "../../utils/toast";
 import api from "../../utils/api";
 
 export default function CheckoutPage() {
+  // Checkout empties the cart on the server; the badge has to follow.
+  const { refresh: refreshCart } = useCart();
   const [cart, setCart] = useState(null);
   const [addresses, setAddresses] = useState([]);
   const [selectedAddressId, setSelectedAddressId] = useState("");
@@ -166,7 +169,8 @@ export default function CheckoutPage() {
 
               if (verifyRes.data.success) {
                 toastSuccess("Order placed successfully!");
-                navigate("/customer/orders");
+                refreshCart();
+              navigate("/customer/orders");
               } else {
                 toastError(
                   verifyRes.data.message ||
@@ -219,7 +223,8 @@ export default function CheckoutPage() {
 
       if (res.data.success && res.data.order?._id) {
         toastSuccess("Order placed successfully!");
-        navigate("/customer/orders");
+        refreshCart();
+              navigate("/customer/orders");
       } else {
         toastError("Order placed but response invalid");
       }

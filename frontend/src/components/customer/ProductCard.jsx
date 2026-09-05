@@ -1,18 +1,29 @@
-import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { addToCart, removeFromCart } from '../../services/cartService';
+import { Heart, Minus, Plus } from 'lucide-react';
 import { toastSuccess, toastError } from '../../utils/toast';
 
 import { useAuth } from '../../context/authContext';
 import { useWishlist } from '../../context/wishlistContext';
+import { useCart } from '../../context/cartContext';
+import Button from '../ui/Button';
 function stripHtml(html = '') {
   return html.replace(/<[^>]*>/g, '');
 }
 
 export default function ProductCard({ product }) {
-  const [inCart, setInCart] = useState(false);
-
   const { token, role } = useAuth();
+  const { quantityOf, setQuantity } = useCart();
+
+  /**
+   * How many of this product are in the cart, read from the one shared cart
+   * rather than guessed per card.
+   *
+   * Each card used to hold its own `useState(false)`, initialised from
+   * nothing: reload the shop with a full cart and every card claimed the
+   * product was not in it, and pressing Add again quietly compounded the
+   * quantity on the server while the card showed no sign of it.
+   */
+  const qty = quantityOf(product._id);
   const { isWishlisted, toggle: toggleWishlisted } = useWishlist();
 
   // Read from the one shared list rather than fetching it per card.
@@ -28,26 +39,19 @@ export default function ProductCard({ product }) {
     product.stock <= product.lowStockThreshold;
 
 
-  // ✅ Cart toggle – only for logged-in customers
-  const handleCartToggle = async () => {
+  /** Change how many of this product are in the cart. 0 removes it. */
+  const changeQty = async (next) => {
     if (!token || role !== 'customer') {
-      toastError('Please login as a customer to use cart');
+      toastError('Please log in as a customer to use the cart');
+      return;
+    }
+    if (next > product.stock) {
+      toastError(`Only ${product.stock} left`);
       return;
     }
 
-    try {
-      if (!inCart) {
-        await addToCart({ productId: product._id, quantity: 1 });
-        setInCart(true);
-        toastSuccess('Added to cart');
-      } else {
-        await removeFromCart(product._id);
-        setInCart(false);
-        toastSuccess('Removed from cart');
-      }
-    } catch (err) {
-      toastError(err?.response?.data?.message || 'Failed to update cart');
-    }
+    const result = await setQuantity(product._id, next);
+    if (!result.ok) toastError(result.message);
   };
 
   // ✅ Wishlist toggle – only for logged-in customers
@@ -72,7 +76,8 @@ export default function ProductCard({ product }) {
     <div className="group bg-white rounded-lg shadow-sm hover:shadow-md transition border flex flex-col">
       {/* Image */}
       <div className="relative aspect-4/3 w-full overflow-hidden rounded-t-lg bg-gray-100">
-        <Link to={`/products/${product._id}`}>
+        {/* Canonical, same as View details - not the _id URL. */}
+        <Link to={`/products/${product.slug || product._id}`}>
           {image ? (
             <img
               src={image}
@@ -87,11 +92,25 @@ export default function ProductCard({ product }) {
         </Link>
 
         {/* Wishlist */}
+        {/*
+          An emoji here rendered as a different picture on every platform and
+          announced as "white heart" to a screen reader, which is not what the
+          control does. The rest of the app moved to lucide; this is the last
+          card that had not.
+        */}
         <button
           onClick={toggleWishlist}
-          className="absolute top-2 right-2 bg-white/95 backdrop-blur rounded-full p-1 shadow hover:bg-gray-100"
+          aria-pressed={liked}
+          aria-label={liked ? 'Remove from wishlist' : 'Save to wishlist'}
+          className="absolute top-2 right-2 bg-white/95 backdrop-blur rounded-full p-1.5 shadow
+                     hover:bg-gray-100 focus-visible:outline focus-visible:outline-2
+                     focus-visible:outline-orange-600"
         >
-          {liked ? '❤️' : '🤍'}
+          <Heart
+            size={16}
+            className={liked ? 'text-red-500' : 'text-gray-500'}
+            fill={liked ? 'currentColor' : 'none'}
+          />
         </button>
 
         {/* Low Stock */}
@@ -136,25 +155,57 @@ export default function ProductCard({ product }) {
         </div>
       </div>
 
-      {/* Actions */}
-      <div className="flex items-center gap-2 mt-3 px-3 pb-3">
-        <button
-          type="button"
-          onClick={handleCartToggle}
-          className={`w-full px-3 py-1.5 text-white text-sm rounded transition ${
-            inCart ? 'bg-red-500 hover:bg-red-600' : 'bg-orange-500 hover:bg-orange-600'
-          }`}
-        >
-          {inCart ? 'Remove from Cart' : 'Add to Cart'}
-        </button>
-      </div>
+      {/*
+        ACTIONS
 
-      <Link
-        to={`/products/${product._id}`}
-        className="mx-3 mb-3 w-auto text-center border border-orange-500 text-orange-600 text-xs font-semibold py-1.5 rounded hover:bg-orange-500 hover:text-white transition"
-      >
-        View Details
-      </Link>
+        Once something is in the cart the button becomes a stepper rather than
+        a red "Remove from Cart". Red means destroying something, and taking an
+        item back out of a basket is neither destructive nor final - it is the
+        adjustment a shopper makes most often. The cart page has had this
+        stepper all along; the card is where the decision is actually made.
+      */}
+      <div className="mt-3 px-3 pb-3 flex flex-col gap-2">
+        {qty === 0 ? (
+          <Button variant="primary" fullWidth onClick={() => changeQty(1)}>
+            Add to cart
+          </Button>
+        ) : (
+          <div className="flex items-center justify-between rounded border border-orange-600 overflow-hidden">
+            <button
+              type="button"
+              onClick={() => changeQty(qty - 1)}
+              aria-label={qty === 1 ? 'Remove from cart' : 'One fewer'}
+              className="px-3 py-2 text-orange-700 hover:bg-orange-50
+                         focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-600"
+            >
+              <Minus size={16} />
+            </button>
+
+            <span className="text-sm font-medium tabular-nums" aria-live="polite">
+              {qty} in cart
+            </span>
+
+            <button
+              type="button"
+              onClick={() => changeQty(qty + 1)}
+              disabled={qty >= product.stock}
+              aria-label="One more"
+              title={qty >= product.stock ? `Only ${product.stock} left` : undefined}
+              className="px-3 py-2 text-orange-700 hover:bg-orange-50 disabled:opacity-40
+                         disabled:cursor-not-allowed
+                         focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-600"
+            >
+              <Plus size={16} />
+            </button>
+          </div>
+        )}
+
+        {/* The canonical URL. This linked by _id, so every internal link
+            pointed somewhere other than the address in the sitemap. */}
+        <Button as={Link} to={`/products/${product.slug || product._id}`} variant="secondary" fullWidth>
+          View details
+        </Button>
+      </div>
     </div>
   );
 }

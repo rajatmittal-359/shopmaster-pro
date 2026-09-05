@@ -3,12 +3,27 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/authContext';
 import { useConfirm } from '../../context/confirmContext';
 import { FiMenu, FiX, FiShoppingCart, FiHeart } from 'react-icons/fi';
+import {
+  Store,
+  Package,
+  Heart,
+  MapPin,
+  LayoutDashboard,
+  ClipboardList,
+  Wallet,
+  LineChart,
+  Users,
+  FolderTree,
+  LogOut,
+} from 'lucide-react';
+import { useCart } from '../../context/cartContext';
 
 export default function Layout({ children, title = 'Dashboard' }) {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, role, isLoggedIn, logout } = useAuth();
   const confirm = useConfirm();
+  const { count: cartCount } = useCart();
 
   // ✅ Desktop open, Mobile closed
   const [isSidebarOpen, setIsSidebarOpen] = useState(
@@ -62,37 +77,43 @@ export default function Layout({ children, title = 'Dashboard' }) {
 
           <nav className="mt-4 px-2 space-y-1 text-sm">
             {/* CUSTOMER */}
+            {/*
+              A shop has no "customer dashboard" - that is a seller and admin
+              idea. The one that was here counted orders, active orders and
+              cart items, which is My Orders and the cart badge said twice.
+
+              "Checkout" is gone too: it is a step inside the cart, not a
+              destination, and with an empty cart it led nowhere. The cart
+              itself lives in the header, where its count is visible.
+            */}
             {role === 'customer' && (
               <>
-                <SidebarLink to="/customer/dashboard" icon="📊" text="Customer Dashboard" />
-                <SidebarLink to="/shop" icon="🛍️" text="Shop" />
-                <SidebarLink to="/customer/cart" icon="🛒" text="My Cart" />
-                <SidebarLink to="/customer/wishlist" icon="❤️" text="My Wishlist" />
-                <SidebarLink to="/customer/addresses" icon="📍" text="My Addresses" />
-                <SidebarLink to="/customer/orders" icon="📦" text="My Orders" />
-                <SidebarLink to="/customer/checkout" icon="💳" text="Checkout" />
+                <SidebarLink to="/shop" icon={<Store size={18} />} text="Shop" />
+                <SidebarLink to="/customer/orders" icon={<Package size={18} />} text="My orders" />
+                <SidebarLink to="/customer/wishlist" icon={<Heart size={18} />} text="My wishlist" />
+                <SidebarLink to="/customer/addresses" icon={<MapPin size={18} />} text="My addresses" />
               </>
             )}
 
             {/* SELLER */}
             {role === 'seller' && (
               <>
-                <SidebarLink to="/seller/dashboard" icon="📊" text="Seller Dashboard" />
-                <SidebarLink to="/seller/products" icon="📦" text="My Products" />
-                <SidebarLink to="/seller/orders" icon="📋" text="My Orders" />
-                <SidebarLink to="/seller/earnings" icon="💰" text="Earnings" />
-                <SidebarLink to="/seller/inventory-logs" icon="📈" text="Inventory Logs" />
+                <SidebarLink to="/seller/dashboard" icon={<LayoutDashboard size={18} />} text="Dashboard" />
+                <SidebarLink to="/seller/products" icon={<Package size={18} />} text="My products" />
+                <SidebarLink to="/seller/orders" icon={<ClipboardList size={18} />} text="My orders" />
+                <SidebarLink to="/seller/earnings" icon={<Wallet size={18} />} text="Earnings" />
+                <SidebarLink to="/seller/inventory-logs" icon={<LineChart size={18} />} text="Inventory logs" />
               </>
             )}
 
             {/* ADMIN */}
             {role === 'admin' && (
               <>
-                <SidebarLink to="/admin/dashboard" icon="📊" text="Admin Dashboard" />
-                <SidebarLink to="/admin/manage-sellers" icon="👥" text="Manage Sellers" />
-                <SidebarLink to="/admin/categories" icon="📂" text="Manage Categories" />
-                <SidebarLink to="/admin/payouts" icon="💰" text="Payouts" />
-                <SidebarLink to="/admin/inventory-logs" icon="📈" text="Inventory Logs" />
+                <SidebarLink to="/admin/dashboard" icon={<LayoutDashboard size={18} />} text="Dashboard" />
+                <SidebarLink to="/admin/manage-sellers" icon={<Users size={18} />} text="Sellers" />
+                <SidebarLink to="/admin/categories" icon={<FolderTree size={18} />} text="Categories" />
+                <SidebarLink to="/admin/payouts" icon={<Wallet size={18} />} text="Payouts" />
+                <SidebarLink to="/admin/inventory-logs" icon={<LineChart size={18} />} text="Inventory logs" />
               </>
             )}
           </nav>
@@ -108,7 +129,7 @@ export default function Layout({ children, title = 'Dashboard' }) {
                          hover:bg-red-50 hover:text-red-700 transition-colors
                          focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-600"
             >
-              <span className="w-5 mr-0" aria-hidden="true">↪</span>
+              <LogOut size={18} className="shrink-0" aria-hidden="true" />
               Sign out
             </button>
           </div>
@@ -170,11 +191,22 @@ export default function Layout({ children, title = 'Dashboard' }) {
                 <>
                   <button
                     onClick={() => navigate('/customer/cart')}
-                    aria-label="My cart"
-                    className="p-2 rounded text-xl text-gray-700 hover:text-orange-600 hover:bg-orange-50
+                    aria-label={
+                      cartCount > 0 ? `My cart, ${cartCount} item(s)` : 'My cart'
+                    }
+                    className="relative p-2 rounded text-xl text-gray-700 hover:text-orange-600 hover:bg-orange-50
                                focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-600"
                   >
                     <FiShoppingCart />
+                    {cartCount > 0 && (
+                      <span
+                        className="absolute -top-0.5 -right-0.5 min-w-4.5 h-4.5 px-1 rounded-full
+                                   bg-orange-600 text-white text-[11px] font-medium leading-none
+                                   flex items-center justify-center"
+                      >
+                        {cartCount > 9 ? '9+' : cartCount}
+                      </span>
+                    )}
                   </button>
                   <button
                     onClick={() => navigate('/customer/wishlist')}
@@ -213,14 +245,22 @@ export default function Layout({ children, title = 'Dashboard' }) {
 }
 
 /* ================= Sidebar Link Component ================= */
+/**
+ * Emoji used to stand in for icons here. They render differently on every
+ * operating system, sit on the text baseline rather than aligning with it, and
+ * cannot take the colour of the row they are in.
+ */
 function SidebarLink({ to, icon, text }) {
   return (
     <Link
       to={to}
-      className="flex items-center p-3 rounded-md hover:bg-orange-100
-                 text-gray-700 hover:text-orange-600 transition-all duration-200 block"
+      className="flex items-center gap-3 p-3 rounded-md hover:bg-orange-50
+                 text-gray-700 hover:text-orange-700 transition-colors
+                 focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-600"
     >
-      <span className="w-5 mr-3">{icon}</span>
+      <span className="shrink-0" aria-hidden="true">
+        {icon}
+      </span>
       {text}
     </Link>
   );

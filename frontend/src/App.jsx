@@ -28,7 +28,6 @@ import Register from './pages/auth/Register';
 import VerifyOTP from './pages/auth/VerifyOTP';
 
 // Signed-in customer areas.
-const CustomerDashboard = lazy(() => import('./pages/customer/CustomerDashboard'));
 const AddressesPage = lazy(() => import('./pages/customer/AddressesPage'));
 const CheckoutPage = lazy(() => import('./pages/customer/CheckoutPage'));
 const MyOrdersPage = lazy(() => import('./pages/customer/MyOrdersPage'));
@@ -82,7 +81,15 @@ function App() {
 
           {/* Customer */}
           <Route element={<ProtectedRoute allowedRoles={['customer']} />}>
-            <Route path="/customer/dashboard" element={<CustomerDashboard />} />
+            {/*
+              A shop has no customer dashboard. The page counted orders,
+              active orders and cart items - which is My Orders, and the cart
+              badge, said a second time. Old links still resolve.
+            */}
+            <Route
+              path="/customer/dashboard"
+              element={<Navigate to="/customer/orders" replace />}
+            />
             <Route path="/customer/addresses" element={<AddressesPage />} />
             <Route path="/customer/checkout" element={<CheckoutPage />} />
             <Route path="/customer/orders" element={<MyOrdersPage />} />
