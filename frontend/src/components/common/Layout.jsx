@@ -124,8 +124,14 @@ export default function Layout({ children, title = 'Dashboard' }) {
       )}
 
       {/* ================= MAIN ================= */}
+      {/*
+        min-w-0 is load-bearing. A flex item's minimum width defaults to its
+        content, so without it this column refused to shrink below whatever the
+        widest thing inside it wanted - and the whole page scrolled sideways on
+        a phone, cutting the right edge off every product card.
+      */}
       <div
-        className={`flex-1 flex flex-col transition-all duration-200 ${
+        className={`flex-1 min-w-0 flex flex-col transition-all duration-200 ${
           isLoggedIn && isSidebarOpen ? 'md:ml-64' : 'md:ml-0'
         }`}
       >

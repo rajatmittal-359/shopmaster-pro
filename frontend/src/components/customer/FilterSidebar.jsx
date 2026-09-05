@@ -1,7 +1,13 @@
 // frontend/src/components/customer/FilterSidebar.jsx
 import { useState, useEffect } from 'react';
 
+/**
+ * @param {boolean} [bare]  drop the card and the heading. Inside the phone's
+ *   filter sheet the sheet already provides both, and repeating them put the
+ *   word "Filters" on the screen twice inside a box within a box.
+ */
 export default function FilterSidebar({
+  bare = false,
   filters,
   onChange,
   onClear,
@@ -72,8 +78,12 @@ console.log(
   };
 
   return (
-    <aside className="bg-white rounded-lg shadow-sm p-4 h-fit border">
-      <h3 className="text-sm font-semibold mb-3">Filters</h3>
+    <aside
+      className={
+        bare ? '' : 'bg-white rounded-lg shadow-sm p-4 h-fit border'
+      }
+    >
+      {!bare && <h3 className="text-sm font-semibold mb-3">Filters</h3>}
 
       <div className="mb-3">
         <label className="block text-xs font-medium text-gray-700 mb-1.5">
