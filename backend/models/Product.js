@@ -136,9 +136,38 @@ const productSchema = new mongoose.Schema(
         message: 'Maximum 5 images allowed',
       },
     },
+    /**
+     * Whether this product is on sale right now.
+     *
+     * The seller's own switch: turning it off takes the product out of the shop
+     * without destroying it. Every "can this be bought" check in the codebase
+     * reads this, and a deleted product is also marked inactive, so those
+     * checks stay correct for both cases.
+     */
     isActive: {
       type: Boolean,
       default: true,
+    },
+
+    /**
+     * The seller removed this product.
+     *
+     * WHY THIS IS SEPARATE FROM isActive
+     *   Both meanings used to live on isActive: deleteProduct set it to false,
+     *   and so did the seller's own hide switch. Because the seller's product
+     *   list only showed isActive products, hiding one made it vanish from the
+     *   seller's own screen with no way to bring it back - identical, from
+     *   where they were sitting, to having deleted it. It also made the
+     *   dashboard's "Total products" and "Active products" the same query, so
+     *   the two cards could never disagree.
+     *
+     *   Deleting still sets isActive false as well, so nothing that asks
+     *   "is this on sale?" had to change.
+     */
+    isDeleted: {
+      type: Boolean,
+      default: false,
+      index: true,
     },
     lowStockThreshold: {
       type: Number,

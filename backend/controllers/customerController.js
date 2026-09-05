@@ -9,7 +9,7 @@ const {
 const { releaseReservation } = require("../utils/reservation");
 // The same constant payout settles against, so the promise made to the customer
 // and the moment a seller's money is released can never drift apart.
-const { RETURN_WINDOW_DAYS } = require("../utils/payout");
+const { RETURN_WINDOW_DAYS, returnWindowFor } = require("../utils/payout");
 const Product = require("../models/Product");
 const mongoose = require('mongoose'); 
 const Address = require('../models/Address'); 
@@ -369,7 +369,18 @@ exports.getOrderDetails = async (req, res) => {
       return res.status(404).json({ message: "Order not found" });
     }
 
-    res.json({ success: true, order });
+    // The order page needs to know whether to offer a Return at all. Sending
+    // this rather than letting the client re-derive it keeps one answer: the
+    // button and the endpoint that serves it can no longer disagree.
+    const { canReturn, returnWindowClosesAt, returnWindowDays } = returnWindowFor(order);
+
+    res.json({
+      success: true,
+      order,
+      canReturn,
+      returnWindowClosesAt,
+      returnWindowDays,
+    });
   } catch (err) {
     console.error("GET ORDER DETAILS ERROR", err.message);
     res.status(500).json({ message: err.message });
@@ -632,15 +643,12 @@ exports.cancelOrderItem = async (req, res) => {
       // an order delivered six months ago could still be returned: the
       // customer is refunded in full, the seller was paid long ago, no clawback
       // exists, and the platform absorbs the whole loss.
-      const windowClosesAt = new Date(
-        new Date(order.deliveredAt || order.updatedAt).getTime() +
-          RETURN_WINDOW_DAYS * 24 * 60 * 60 * 1000
-      );
-      if (Date.now() > windowClosesAt.getTime()) {
+      const { canReturn, returnWindowClosesAt } = returnWindowFor(order);
+      if (!canReturn) {
         return res.status(400).json({
-          message: `The ${RETURN_WINDOW_DAYS}-day return window for this order closed on ${windowClosesAt.toDateString()}.`,
+          message: `The ${RETURN_WINDOW_DAYS}-day return window for this order closed on ${returnWindowClosesAt.toDateString()}.`,
           returnWindowDays: RETURN_WINDOW_DAYS,
-          windowClosedAt: windowClosesAt,
+          windowClosedAt: returnWindowClosesAt,
         });
       }
 

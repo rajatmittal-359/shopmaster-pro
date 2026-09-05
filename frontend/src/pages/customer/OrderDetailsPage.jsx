@@ -12,6 +12,15 @@ export default function OrderDetailsPage() {
   const { orderId } = useParams();
   const navigate = useNavigate();
   const [order, setOrder] = useState(null);
+  /**
+   * Whether a return is still possible, straight from the API.
+   *
+   * Not derived here. The page used to show the Return button for any
+   * delivered order, so once the 7-day window had passed the customer clicked
+   * it and got a bare error toast. The server owns the rule; this just renders
+   * the answer.
+   */
+  const [returnWindow, setReturnWindow] = useState({ canReturn: false });
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [cancellingItemId, setCancellingItemId] = useState(null); // ✅ NEW
@@ -21,6 +30,11 @@ export default function OrderDetailsPage() {
       setLoading(true);
       const res = await getOrderDetails(orderId);
       setOrder(res.data.order);
+      setReturnWindow({
+        canReturn: res.data.canReturn,
+        closesAt: res.data.returnWindowClosesAt,
+        days: res.data.returnWindowDays,
+      });
     } catch (err) {
       console.error(err);
       toastError('Could not load this order');
@@ -266,14 +280,28 @@ export default function OrderDetailsPage() {
             </button>
           )}
 
-          {order.status === 'delivered' && (
+          {order.status === 'delivered' && returnWindow.canReturn && (
             <button
               onClick={handleReturn}
               disabled={actionLoading}
-              className="flex-1 px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600 disabled:opacity-50"
+              className="flex-1 px-4 py-2 bg-orange-600 text-white rounded hover:bg-orange-700 disabled:opacity-50"
             >
               {actionLoading ? 'Returning...' : 'Return Order'}
             </button>
+          )}
+
+          {order.status === 'delivered' && !returnWindow.canReturn && (
+            <p className="flex-1 px-4 py-2 text-sm text-gray-500 text-center">
+              The {returnWindow.days}-day return window closed
+              {returnWindow.closesAt
+                ? ` on ${new Date(returnWindow.closesAt).toLocaleDateString('en-IN', {
+                    day: 'numeric',
+                    month: 'short',
+                    year: 'numeric',
+                  })}`
+                : ''}
+              .
+            </p>
           )}
         </div>
       </div>

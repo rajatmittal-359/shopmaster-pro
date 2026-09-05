@@ -48,6 +48,47 @@ const settledBefore = () =>
   new Date(Date.now() - RETURN_WINDOW_DAYS * 24 * 60 * 60 * 1000);
 
 /**
+ * Whether this order can still be returned, and when the window shuts.
+ *
+ * Deliberately lives beside RETURN_WINDOW_DAYS. Three things have to agree:
+ * the promise shown to the customer, the guard inside returnOrder, and the
+ * moment a seller's money is released. They were separate once, and the order
+ * page offered a Return button on an order the API would refuse with a 400 -
+ * the customer saw only a red error and no explanation.
+ *
+ * Answers for the order as a whole, which is what the customer acts on. Split
+ * orders deliver per seller, so an order is only returnable once every part has
+ * arrived - which is exactly when `status` becomes 'delivered'.
+ *
+ * @param {object} order
+ * @returns {{canReturn: boolean, returnWindowClosesAt: Date|null, returnWindowDays: number}}
+ */
+const returnWindowFor = (order) => {
+  const base = { returnWindowDays: RETURN_WINDOW_DAYS };
+
+  if (!order || order.status !== 'delivered') {
+    return { ...base, canReturn: false, returnWindowClosesAt: null };
+  }
+
+  // deliveredAt is set the moment the last parcel arrives. Falling back to
+  // updatedAt keeps pre-migration orders answerable rather than throwing.
+  const deliveredAt = order.deliveredAt || order.updatedAt;
+  if (!deliveredAt) {
+    return { ...base, canReturn: false, returnWindowClosesAt: null };
+  }
+
+  const closesAt = new Date(
+    new Date(deliveredAt).getTime() + RETURN_WINDOW_DAYS * 24 * 60 * 60 * 1000
+  );
+
+  return {
+    ...base,
+    canReturn: Date.now() <= closesAt.getTime(),
+    returnWindowClosesAt: closesAt,
+  };
+};
+
+/**
  * Matches orders that may contain payable lines.
  * The per-LINE conditions still have to be applied afterwards, because an
  * order matches if ANY of its lines does.
@@ -348,4 +389,5 @@ module.exports = {
   settledBefore,
   payableOrderFilter,
   isPayableLine,
+  returnWindowFor,
 };

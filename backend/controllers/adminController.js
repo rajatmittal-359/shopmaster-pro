@@ -363,28 +363,50 @@ exports.getOrderById = async (req, res) => {
 exports.getAnalytics = async (req, res) => {
   try {
     // ---------- BASIC COUNTS ----------
-    const [totalSellers, pendingSellers, totalProducts, totalOrders] = await Promise.all([
-      Seller.countDocuments({ isApproved: true }),
-      Seller.countDocuments({ isApproved: false }),
-      Product.countDocuments(),
-      Order.countDocuments(),
-    ]);
+    // `ordersToday` really is today. The dashboard used to label the all-time
+    // order count "Orders Today / Last 24 hours", which was simply false - it
+    // read 10 while the newest order was a week old.
+    const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+    const [approvedSellers, pendingSellers, totalProducts, totalOrders, ordersToday] =
+      await Promise.all([
+        Seller.countDocuments({ isApproved: true }),
+        Seller.countDocuments({ isApproved: false }),
+        Product.countDocuments({ isDeleted: { $ne: true } }),
+        Order.countDocuments(),
+        Order.countDocuments({ createdAt: { $gte: dayAgo } }),
+      ]);
     
-    // ✅ FIXED: Now works because seller sets paymentStatus='completed' on delivery
-    const totalRevenueAgg = await Order.aggregate([
-        { 
-    $match: { 
-      paymentStatus: { $in: ['paid', 'completed'] }   // ← change yaha
-    }
-  }, // ✅ Includes COD after delivery
-      { 
-        $group: { 
-          _id: null, 
-          total: { $sum: '$totalAmount' }
-        }
-      },
+    /**
+     * Two different numbers, and the dashboard was showing the wrong one.
+     *
+     *   grossSales  everything customers paid - other sellers' money included
+     *   revenue     the platform's own take, which is the commission
+     *
+     * "Platform Revenue: Rs18,496" was gross sales. The platform's actual
+     * earnings on that are the commission alone - and Rs0 of it on the family
+     * shop's own sales, which are set to 0%. Reading one as the other
+     * overstates what the business earns by an order of magnitude.
+     *
+     * Commission is summed from the snapshot already on each order line
+     * (utils/commission.js); nothing is recalculated here. Cancelled lines are
+     * excluded because they were refunded.
+     */
+    const [grossAgg, commissionAgg] = await Promise.all([
+      Order.aggregate([
+        { $match: { paymentStatus: 'paid' } },
+        { $group: { _id: null, total: { $sum: '$totalAmount' } } },
+      ]),
+      Order.aggregate([
+        { $match: { paymentStatus: 'paid' } },
+        { $unwind: '$items' },
+        { $match: { 'items.status': { $ne: 'cancelled' } } },
+        { $group: { _id: null, total: { $sum: '$items.commissionAmount' } } },
+      ]),
     ]);
-    const totalRevenue = totalRevenueAgg[0]?.total || 0;
+
+    const grossSales = grossAgg[0]?.total || 0;
+    const commissionEarned = Math.round((commissionAgg[0]?.total || 0) * 100) / 100;
     
     // ---------- REVENUE BY DAY (LAST 7 DAYS) ----------
     const now = new Date();
@@ -476,12 +498,20 @@ exports.getAnalytics = async (req, res) => {
     res.json({
       // old structure (AdminDashboard.jsx already use karta hai)
       sellers: {
-        total: totalSellers,
+        // Every seller on the platform, plus the two states separately. `total`
+        // used to be the approved count alone, so the dashboard read 4 while
+        // Manage Sellers listed 5.
+        total: approvedSellers + pendingSellers,
+        approved: approvedSellers,
         pending: pendingSellers,
       },
       products: totalProducts,
       orders: totalOrders,
-      revenue: totalRevenue, // ✅ Now includes COD orders
+      ordersToday,
+
+      // What the platform actually earns: commission, not what customers spent.
+      revenue: commissionEarned,
+      grossSales,
       
       // new advanced analytics (future UI use ke liye ready)
       revenueByDay, // ✅ Now includes COD

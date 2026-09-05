@@ -30,6 +30,7 @@ const {
   createPayoutForSeller,
   markPayoutPaid,
   markPayoutFailed,
+  returnWindowFor,
   RETURN_WINDOW_DAYS,
 } = require('../utils/payout');
 
@@ -422,5 +423,54 @@ describe('settling a payout', () => {
     const result = await markPayoutPaid(payout._id, { reference: 'UTR9', adminId: ADMIN });
 
     expect(result.ok).toBe(false);
+  });
+});
+
+/**
+ * The customer-facing half of the same window.
+ *
+ * The order page decides whether to offer a Return from this, and returnOrder
+ * enforces it from this. When they were separate the button appeared on orders
+ * the API would refuse, and the customer saw only an error toast.
+ */
+describe('whether a customer can still return an order', () => {
+  it('says yes inside the window', () => {
+    const r = returnWindowFor({ status: 'delivered', deliveredAt: daysAgo(1) });
+    expect(r.canReturn).toBe(true);
+    expect(r.returnWindowDays).toBe(RETURN_WINDOW_DAYS);
+  });
+
+  it('says no once the window has closed', () => {
+    const r = returnWindowFor({
+      status: 'delivered',
+      deliveredAt: daysAgo(RETURN_WINDOW_DAYS + 1),
+    });
+    expect(r.canReturn).toBe(false);
+    expect(r.returnWindowClosesAt).toBeInstanceOf(Date);
+  });
+
+  it('closes the window exactly RETURN_WINDOW_DAYS after delivery', () => {
+    const deliveredAt = daysAgo(2);
+    const { returnWindowClosesAt } = returnWindowFor({ status: 'delivered', deliveredAt });
+    const expected = new Date(deliveredAt.getTime() + RETURN_WINDOW_DAYS * 86400000);
+    expect(returnWindowClosesAt.getTime()).toBe(expected.getTime());
+  });
+
+  it('says no for an order that has not been delivered', () => {
+    for (const status of ['pending', 'processing', 'shipped', 'cancelled', 'returned']) {
+      expect(returnWindowFor({ status, deliveredAt: daysAgo(1) }).canReturn).toBe(false);
+    }
+  });
+
+  /**
+   * The payable side must never open while the customer side is still open,
+   * or a seller is paid for goods that can still come back.
+   */
+  it('never overlaps with the moment a seller becomes payable', () => {
+    const justSettled = daysAgo(RETURN_WINDOW_DAYS + 0.01);
+    expect(returnWindowFor({ status: 'delivered', deliveredAt: justSettled }).canReturn).toBe(false);
+
+    const stillReturnable = daysAgo(RETURN_WINDOW_DAYS - 0.01);
+    expect(returnWindowFor({ status: 'delivered', deliveredAt: stillReturnable }).canReturn).toBe(true);
   });
 });

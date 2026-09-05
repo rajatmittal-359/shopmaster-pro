@@ -76,7 +76,9 @@ export default function AdminDashboard() {
           <p className="text-3xl font-bold text-blue-600 mt-2">
             {analytics.sellers?.total || 0}
           </p>
-          <p className="text-xs text-gray-500 mt-1">Active on platform</p>
+          <p className="text-xs text-gray-500 mt-1">
+            {analytics.sellers?.approved ?? 0} approved, {analytics.sellers?.pending ?? 0} pending
+          </p>
         </div>
 
         {/* Pending Sellers */}
@@ -94,16 +96,18 @@ export default function AdminDashboard() {
           <p className="text-3xl font-bold text-green-600 mt-2">
             {analytics.products || 0}
           </p>
-          <p className="text-xs text-gray-500 mt-1">Across all sellers</p>
+          <p className="text-xs text-gray-500 mt-1">Live across all sellers</p>
         </div>
 
         {/* Orders Today */}
         <div className="bg-white rounded shadow p-4 border-l-4 border-purple-500">
           <p className="text-sm text-gray-600 font-medium">Orders Today</p>
           <p className="text-3xl font-bold text-purple-600 mt-2">
-            {analytics.orders || 0}
+            {analytics.ordersToday ?? 0}
           </p>
-          <p className="text-xs text-gray-500 mt-1">Last 24 hours</p>
+          <p className="text-xs text-gray-500 mt-1">
+            Last 24 hours &middot; {analytics.orders || 0} all time
+          </p>
         </div>
       </div>
 
@@ -113,12 +117,22 @@ export default function AdminDashboard() {
           <div>
             <h3 className="text-lg font-semibold">Platform Revenue</h3>
             <p className="text-xs text-gray-500 mt-0.5">
-              From completed orders (all time)
+              Commission earned on paid orders (all time)
             </p>
           </div>
-          <span className="text-2xl font-bold text-orange-600">
-            ₹{analytics.revenue || 0}
-          </span>
+          <div className="text-right">
+            <span className="block text-2xl font-bold text-orange-600">
+              ₹{analytics.revenue ?? 0}
+            </span>
+            {/*
+              Gross sales is most of what customers paid, and it belongs to the
+              sellers. Showing it beside the commission stops the big number
+              being mistaken for the platform's own earnings.
+            */}
+            <span className="block text-xs text-gray-500 mt-0.5">
+              of ₹{analytics.grossSales ?? 0} gross sales
+            </span>
+          </div>
         </div>
       </div>
 
@@ -192,7 +206,7 @@ export default function AdminDashboard() {
             <div className="space-y-2 max-h-64 overflow-y-auto">
               {analytics.lowStockGlobal.map((prod) => (
                 <div
-                  key={prod.id}
+                  key={prod._id}
                   className="flex justify-between items-center p-2 border rounded bg-orange-50"
                 >
                   <div>

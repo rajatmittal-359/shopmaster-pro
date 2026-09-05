@@ -22,26 +22,46 @@ const token = () =>
   });
 
 /**
- * Catalogue fixture that exercises both historical inconsistencies:
- *  - one soft-deleted product (isActive: false)
+ * Catalogue fixture covering every case the two flags now express:
+ *  - deleted     (isDeleted true)  gone from the seller's catalogue entirely
+ *  - hidden      (isActive false)  still theirs, just not on sale
+ *  - on sale     (both clear)
  *  - one product exactly AT its threshold (the '<' vs '<=' boundary)
+ *
+ * Deleting and hiding used to write the same flag, so a hidden product vanished
+ * from the seller's own list with no way back, and "total" and "active" were
+ * the same query.
  */
 const PRODUCTS = [
-  { name: 'healthy',        stock: 50, lowStockThreshold: 10, isActive: true },
-  { name: 'below-threshold', stock: 3, lowStockThreshold: 10, isActive: true },
-  { name: 'at-threshold',   stock: 10, lowStockThreshold: 10, isActive: true },
-  { name: 'deleted-and-low', stock: 0, lowStockThreshold: 10, isActive: false },
+  { name: 'healthy',         stock: 50, lowStockThreshold: 10, isActive: true,  isDeleted: false },
+  { name: 'below-threshold', stock: 3,  lowStockThreshold: 10, isActive: true,  isDeleted: false },
+  { name: 'at-threshold',    stock: 10, lowStockThreshold: 10, isActive: true,  isDeleted: false },
+  { name: 'hidden-and-low',  stock: 2,  lowStockThreshold: 10, isActive: false, isDeleted: false },
+  { name: 'deleted-and-low', stock: 0,  lowStockThreshold: 10, isActive: false, isDeleted: true  },
 ];
 
-const ACTIVE = PRODUCTS.filter((p) => p.isActive);
-const EXPECTED_CATALOGUE = ACTIVE.length;                                  // 3
-const EXPECTED_LOW = ACTIVE.filter((p) => p.stock <= p.lowStockThreshold).length; // 2
+/** What the seller can see and manage: everything not deleted. */
+const CATALOGUE = PRODUCTS.filter((p) => !p.isDeleted);
+/** Of that, what customers can actually buy. */
+const ON_SALE = CATALOGUE.filter((p) => p.isActive);
+
+const EXPECTED_CATALOGUE = CATALOGUE.length;                                    // 4
+const EXPECTED_ACTIVE = ON_SALE.length;                                         // 3
+const EXPECTED_LOW = ON_SALE.filter((p) => p.stock <= p.lowStockThreshold).length; // 2
 
 const originals = {};
 
-/** Honour the filter the controller passes, so the test measures real scoping. */
+/**
+ * Honour the filter the controller passes, so the test measures real scoping
+ * rather than assuming it. Mirrors `{ isDeleted: { $ne: true } }` and the
+ * optional `isActive` narrowing.
+ */
 const applyFilter = (filter = {}) =>
-  PRODUCTS.filter((p) => (filter.isActive === undefined ? true : p.isActive === filter.isActive));
+  PRODUCTS.filter((p) => {
+    if (filter.isDeleted && filter.isDeleted.$ne === true && p.isDeleted) return false;
+    if (filter.isActive !== undefined && p.isActive !== filter.isActive) return false;
+    return true;
+  });
 
 beforeEach(() => {
   originals.userFindById = User.findById;
@@ -90,12 +110,31 @@ describe('seller dashboard matches the seller product listing', () => {
     expect(analytics.body.products.total).toBe(list.body.count);
   });
 
-  it('excludes soft-deleted products from the dashboard total', async () => {
+  it('excludes deleted products from the dashboard total, but keeps hidden ones', async () => {
     const analytics = await get('/api/seller/analytics');
 
-    // 4 products exist; one is soft-deleted and the seller cannot inspect it.
-    expect(PRODUCTS).toHaveLength(4);
-    expect(analytics.body.products.total).toBe(3);
+    // 5 products exist. One is deleted and gone; the hidden one is still the
+    // seller's and must stay countable, or they can never bring it back.
+    expect(PRODUCTS).toHaveLength(5);
+    expect(analytics.body.products.total).toBe(EXPECTED_CATALOGUE); // 4
+  });
+
+  it('reports "active" as a genuinely different number from "total"', async () => {
+    const analytics = await get('/api/seller/analytics');
+
+    // Both cards ran the same query before, so they could never disagree and
+    // the seller had no way to see that something was hidden.
+    expect(analytics.body.products.total).toBe(EXPECTED_CATALOGUE); // 4
+    expect(analytics.body.products.active).toBe(EXPECTED_ACTIVE);   // 3
+    expect(analytics.body.products.active).not.toBe(analytics.body.products.total);
+  });
+
+  it('keeps a hidden product in the seller list so it can be unhidden', async () => {
+    const list = await get('/api/seller/products');
+
+    const names = list.body.products.map((p) => p.name);
+    expect(names).toContain('hidden-and-low');
+    expect(names).not.toContain('deleted-and-low');
   });
 
   it('dashboard low-stock count equals the low-stock list length', async () => {
@@ -117,11 +156,13 @@ describe('seller dashboard matches the seller product listing', () => {
     expect(names).toContain('below-threshold');
   });
 
-  it('excludes soft-deleted products from the low-stock list', async () => {
+  it('leaves deleted and hidden products out of the low-stock list', async () => {
     const lowList = await get('/api/seller/products/low-stock');
 
     const names = lowList.body.products.map((p) => p.name);
     expect(names).not.toContain('deleted-and-low');
+    // Restocking something that is not on sale is not work the seller has to do.
+    expect(names).not.toContain('hidden-and-low');
   });
 
   it('all three seller product endpoints agree on catalogue scope', async () => {
@@ -133,6 +174,8 @@ describe('seller dashboard matches the seller product listing', () => {
     const listNames = list.body.products.map((p) => p.name);
     lowList.body.products.forEach((p) => expect(listNames).toContain(p.name));
     expect(analytics.body.products.total).toBe(listNames.length);
-    expect(analytics.body.products.active).toBe(listNames.length);
+    // 'active' counts the on-sale subset, so it is the one number that is
+    // legitimately smaller than the list.
+    expect(analytics.body.products.active).toBe(EXPECTED_ACTIVE);
   });
 });

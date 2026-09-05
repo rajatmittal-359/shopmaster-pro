@@ -13,12 +13,18 @@ const cloudinary = require('../utils/cloudinary');
 const { deleteImage } = cloudinary;
 
 /**
- * A seller's catalogue is their non-deleted products. deleteProduct() is a soft
- * delete and there is no seller-facing way to view or restore removed products,
- * so every count shown on the dashboard is scoped to what the seller can
- * actually inspect in their product list.
+ * A seller's catalogue: everything they have not deleted, whether it is
+ * currently on sale or not.
+ *
+ * This used to filter on isActive, which also happens to be the flag the
+ * seller's own hide switch writes - so hiding a product removed it from the
+ * seller's list entirely and left them no way to put it back. A hidden product
+ * is still theirs; only a deleted one leaves.
  */
-const sellerCatalogueFilter = (sellerId) => ({ sellerId, isActive: true });
+const sellerCatalogueFilter = (sellerId) => ({ sellerId, isDeleted: { $ne: true } });
+
+/** Of that catalogue, the ones customers can actually see and buy. */
+const sellerActiveFilter = (sellerId) => ({ ...sellerCatalogueFilter(sellerId), isActive: true });
 
 /**
  * This seller's parcel within an order.
@@ -218,9 +224,13 @@ exports.updateProduct = async (req, res) => {
       freeShipping,
     } = req.body;
 
+    // Scoped to the catalogue: a deleted product must not be editable. It
+    // accepts isActive from the body, so without this a seller could set
+    // isActive true on something they had deleted and put it back in the shop
+    // while it stayed invisible in their own list.
     const product = await Product.findOne({
+      ...sellerCatalogueFilter(req.user.id),
       _id: productId,
-      sellerId: req.user.id,
     });
 
     if (!product) {
@@ -304,14 +314,18 @@ exports.updateProduct = async (req, res) => {
 exports.deleteProduct = async (req, res) => {
   try {
     const product = await Product.findOne({
+      ...sellerCatalogueFilter(req.user._id),
       _id: req.params.productId,
-      sellerId: req.user._id,
     });
 
     if (!product) {
       return res.status(404).json({ message: 'Product not found' });
     }
 
+    // Both flags: isDeleted removes it from the seller's catalogue, isActive
+    // keeps every existing "is this on sale" check correct without touching one
+    // of them.
+    product.isDeleted = true;
     product.isActive = false;
     await product.save();
 
@@ -332,10 +346,11 @@ exports.updateStock = async (req, res) => {
       return res.status(400).json({ message: parsed.message });
     }
 
-    // Ownership scope preserved from the previous findOneAndUpdate filter.
+    // Ownership scope preserved from the previous findOneAndUpdate filter,
+    // narrowed to the catalogue so a deleted product cannot be restocked.
     const product = await Product.findOne({
+      ...sellerCatalogueFilter(req.user._id),
       _id: productId,
-      sellerId: req.user._id,
     });
 
     if (!product) {
@@ -371,9 +386,12 @@ exports.updateStock = async (req, res) => {
 // Get low stock products
 exports.getLowStockProducts = async (req, res) => {
   try {
-    // Same catalogue scope and same threshold predicate as the dashboard count.
+    // Same scope and same threshold predicate as the dashboard's low-stock
+    // count: products actually on sale. A hidden product running low is not
+    // something the seller has to restock today, and counting it would send
+    // them hunting for something that is not in the shop.
     const products = await Product.find(
-      sellerCatalogueFilter(req.user._id)
+      sellerActiveFilter(req.user._id)
     ).populate('category', 'name');
 
     const lowStockProducts = products.filter(isLowStock);
@@ -622,10 +640,15 @@ exports.getSellerAnalytics = async (req, res) => {
     const catalogue = sellerCatalogueFilter(req.user._id);
 
     const totalProducts = await Product.countDocuments(catalogue);
-    const activeProducts = await Product.countDocuments(catalogue);
+    // A real second number now: the seller can hide a product without deleting
+    // it, so these two legitimately differ.
+    const activeProducts = await Product.countDocuments(sellerActiveFilter(req.user._id));
 
-    const catalogueProducts = await Product.find(catalogue);
-    const lowStockCount = catalogueProducts.filter(isLowStock).length;
+    // Low stock only counts what is actually on sale. A hidden product running
+    // low is not something the seller has to act on today, and counting it
+    // would send them looking for a product that is not in the shop.
+    const onSale = await Product.find(sellerActiveFilter(req.user._id));
+    const lowStockCount = onSale.filter(isLowStock).length;
     
     // ✅ FIXED: Revenue from completed orders (both COD delivered + Razorpay paid)
     const revenue = await Order.aggregate([
@@ -678,8 +701,8 @@ exports.getSellerProfile = async (req, res) => {
 exports.getProductById = async (req, res) => {
   try {
     const product = await Product.findOne({
+      ...sellerCatalogueFilter(req.user._id),
       _id: req.params.id,
-      sellerId: req.user._id,
     }).populate('category', 'name');
 
     if (!product) {
