@@ -28,8 +28,8 @@ import {
   updatePayoutDetails,
 } from '../../services/sellerService';
 import { toastSuccess, toastError } from '../../utils/toast';
+import { money } from '../../utils/money';
 
-const money = (n) => `₹${Number(n || 0).toLocaleString('en-IN')}`;
 
 const onDate = (value) =>
   value

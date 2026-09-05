@@ -38,6 +38,50 @@ const fulfilmentOf = (order, sellerId) =>
   (order.fulfilments || []).find((f) => String(f.sellerId) === String(sellerId));
 
 /**
+ * What one seller's lines in an order are worth, in the three numbers that
+ * matter to them.
+ *
+ * WHY THIS IS COMPUTED HERE AND NOT IN THE UI
+ *   Both seller screens worked this out themselves as `price * quantity` and
+ *   called the result "Your Revenue". That is the GROSS - what the customer
+ *   paid - and it is not the seller's revenue at all. A seller on the default
+ *   8% saw ₹1000 on the order and ₹920 in their payout, with nothing on the
+ *   screen to explain the gap. The platform's own store is on 0%, so the two
+ *   numbers matched there and the bug stayed invisible while only it was
+ *   selling.
+ *
+ *   The same client-side sum also counted CANCELLED lines, which the seller is
+ *   owed nothing for.
+ *
+ *   Commission is a snapshot taken when the order was placed (see
+ *   utils/commission.js). Recomputing it from today's rate would rewrite
+ *   history, so this only ever adds up what was stamped on the line.
+ */
+const sellerMoneyFor = (order, sellerId) => {
+  const live = (order.items || []).filter(
+    (item) =>
+      String(item.sellerId) === String(sellerId) && item.status !== 'cancelled'
+  );
+
+  const round2 = (n) => Math.round(n * 100) / 100;
+
+  return {
+    /** What the customer paid for these lines. */
+    sellerSubtotal: round2(
+      live.reduce((sum, i) => sum + i.price * i.quantity, 0)
+    ),
+    /** The platform's cut, as stamped at the time of sale. */
+    sellerCommission: round2(
+      live.reduce((sum, i) => sum + (i.commissionAmount || 0), 0)
+    ),
+    /** What actually reaches the seller. This is the number they care about. */
+    sellerEarning: round2(
+      live.reduce((sum, i) => sum + (i.sellerEarning || 0), 0)
+    ),
+  };
+};
+
+/**
  * "Low stock" means at or below the seller's own alert threshold.
  * '<=' is the definition already used by admin analytics, the low-stock cron
  * job and the storefront badge. The seller dashboard previously used '<' and
@@ -434,14 +478,7 @@ exports.getMyOrders = async (req, res) => {
       // What this seller is owed for their own lines. The order's totalAmount
       // belongs to the whole basket, which in a multi-seller order is other
       // sellers' money too - showing it here would overstate their earnings.
-      const sellerSubtotal = sellerItems.reduce(
-        (sum, item) => (item.status === 'cancelled' ? sum : sum + item.price * item.quantity),
-        0
-      );
-      const sellerEarning = sellerItems.reduce(
-        (sum, item) => (item.status === 'cancelled' ? sum : sum + (item.sellerEarning || 0)),
-        0
-      );
+      const money = sellerMoneyFor(order, req.user._id);
 
       const fulfilment = fulfilmentOf(order, req.user._id);
 
@@ -451,8 +488,7 @@ exports.getMyOrders = async (req, res) => {
         orderNumber: order.orderNumber,
         customerId: order.customerId,
         items: sellerItems,
-        sellerSubtotal,
-        sellerEarning,
+        ...money,
 
         /**
          * What THIS seller still has to do. In a split order the order-level
@@ -467,6 +503,10 @@ exports.getMyOrders = async (req, res) => {
         isSplitOrder: (order.fulfilments || []).length > 1,
 
         paymentStatus: order.paymentStatus,
+        // Never sent before, so the page's `paymentMethod === 'cod'` test was
+        // always false and EVERY order claimed to be paid online - including
+        // the COD ones, where the seller has to collect cash at the door.
+        paymentMethod: order.paymentMethod,
         trackingInfo: order.trackingInfo,
         createdAt: order.createdAt,
       };
@@ -506,13 +546,34 @@ exports.getOrderDetails = async (req, res) => {
       (item) => item.sellerId.toString() === sellerId.toString()
     );
 
+    const fulfilment = fulfilmentOf(order, sellerId);
+
     const orderData = {
       _id: order._id,
       orderNumber: order.orderNumber,
       customerId: order.customerId,
       items: sellerItems,
-      status: order.status,
+
+      // The money, worked out server-side from the commission snapshot rather
+      // than re-derived by the page. See sellerMoneyFor.
+      ...sellerMoneyFor(order, sellerId),
+
+      /**
+       * How far THIS seller's parcel has got. This used to send the order-level
+       * status, which in a split order reflects the least advanced seller - so
+       * a seller who had already shipped was told on this very page that they
+       * had not. The list page was fixed for this; the details page it links to
+       * was still wrong.
+       */
+      status: fulfilment ? fulfilment.status : order.status,
+      deliveredAt: fulfilment ? fulfilment.deliveredAt : order.deliveredAt,
+
+      /** Where the whole basket has got to, for context only. */
+      orderStatus: order.status,
+      isSplitOrder: (order.fulfilments || []).length > 1,
+
       paymentStatus: order.paymentStatus,
+      paymentMethod: order.paymentMethod,
       shippingAddressId: order.shippingAddressId,
       trackingInfo: order.trackingInfo,
       createdAt: order.createdAt,

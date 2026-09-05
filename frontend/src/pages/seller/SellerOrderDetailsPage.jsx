@@ -6,6 +6,7 @@ import { toastSuccess, toastError } from '../../utils/toast';
 
 import { orderRef } from '../../utils/orderRef';
 import { useConfirm } from '../../context/confirmContext';
+import { money } from '../../utils/money';
 const statusFlow = ['processing', 'shipped', 'delivered'];
 
 const statusColors = {
@@ -99,11 +100,6 @@ export default function SellerOrderDetailsPage() {
     return null;
   };
 
-  const calculateSellerRevenue = () => {
-    if (!order) return 0;
-    return order.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  };
-
   const renderTimeline = (status) => {
     if (['cancelled', 'returned'].includes(status)) return null;
 
@@ -146,8 +142,6 @@ export default function SellerOrderDetailsPage() {
   }
 
   const nextStatus = getNextStatus(order.status);
-  const sellerRevenue = calculateSellerRevenue();
-
   return (
     <Layout title="Order Details">
       <div className="max-w-5xl mx-auto space-y-6">
@@ -232,17 +226,47 @@ export default function SellerOrderDetailsPage() {
             ))}
           </div>
 
-          {/* Revenue Summary */}
-          <div className="mt-4 pt-4 border-t bg-blue-50 p-3 rounded-lg">
-            <div className="flex justify-between text-lg font-bold">
-              <span>Your Revenue:</span>
-              <span className="text-blue-700">₹{sellerRevenue}</span>
+          {/*
+            The same breakdown as the orders list, and for the same reason: the
+            bold number has to be what the seller is actually paid, not what the
+            customer paid. See sellerMoneyFor in sellerController.
+          */}
+          <div className="mt-4 pt-4 border-t bg-blue-50 p-3 rounded-lg space-y-1 text-sm">
+            <div className="flex justify-between text-gray-700">
+              <span>Item total</span>
+              <span className="tabular-nums">{money(order.sellerSubtotal)}</span>
             </div>
-            <p className="text-xs text-gray-600 mt-1">
-              Payment: {order.paymentMethod === 'cod' ? 'Cash on Delivery' : 'Online Payment'}
+
+            {order.sellerCommission > 0 && (
+              <div className="flex justify-between text-gray-600">
+                <span>
+                  Platform commission
+                  {order.items?.[0]?.commissionRate
+                    ? ` (${order.items[0].commissionRate}%)`
+                    : ''}
+                </span>
+                <span className="tabular-nums">−{money(order.sellerCommission)}</span>
+              </div>
+            )}
+
+            <div className="flex justify-between pt-1 border-t border-blue-200 text-lg font-bold">
+              <span>You earn</span>
+              <span className="text-blue-700 tabular-nums">
+                {money(order.sellerEarning)}
+              </span>
+            </div>
+
+            <p className="text-xs text-gray-600 pt-1">
+              Payment:{' '}
+              {order.paymentMethod === 'cod' ? 'Cash on delivery' : 'Paid online'}
             </p>
-            {order.paymentStatus === 'completed' && (
-              <p className="text-xs text-green-700 font-semibold mt-1">✓ Payment Collected</p>
+            {order.paymentStatus === 'paid' && (
+              <p className="text-xs text-green-700 font-semibold">
+                ✓ {order.paymentMethod === 'cod' ? 'Cash collected' : 'Payment received'}
+              </p>
+            )}
+            {order.paymentStatus === 'refunded' && (
+              <p className="text-xs text-red-700 font-semibold">Refunded</p>
             )}
           </div>
         </div>

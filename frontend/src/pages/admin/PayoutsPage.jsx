@@ -33,8 +33,8 @@ import {
 } from '../../services/adminService';
 import { toastSuccess, toastError } from '../../utils/toast';
 import { useConfirm } from '../../context/confirmContext';
+import { money } from '../../utils/money';
 
-const money = (n) => `₹${Number(n || 0).toLocaleString('en-IN')}`;
 
 const onDate = (value) =>
   value

@@ -14,6 +14,7 @@ import { orderRef } from '../../utils/orderRef';
 import { useConfirm } from '../../context/confirmContext';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
+import { money } from '../../utils/money';
 /**
  * The stages this seller's parcel moves through.
  *
@@ -165,10 +166,6 @@ export default function SellerOrdersPage() {
   };
 
   // ✅ Calculate seller-specific revenue
-  const calculateSellerRevenue = (order) => {
-    return order.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  };
-
   const renderTimeline = (status) => {
     if (['cancelled', 'returned'].includes(status)) return null;
 
@@ -244,8 +241,6 @@ export default function SellerOrdersPage() {
           <div className="space-y-5">
             {orders.map((order) => {
               const nextStatus = getNextStatus(order.status);
-              const sellerRevenue = calculateSellerRevenue(order);
-
               return (
                 <div key={order._id} className="bg-white p-5 rounded-lg shadow border space-y-4">
                   {/* ✅ HEADER */}
@@ -295,22 +290,68 @@ export default function SellerOrdersPage() {
                     ))}
                   </div>
 
-                  {/* ✅ REVENUE BREAKDOWN */}
+                  {/*
+                    WHAT THE SELLER ACTUALLY GETS
+
+                    This said "Your Revenue" and showed the GROSS - what the
+                    customer paid. A seller on the default 8% saw ₹1000 here and
+                    ₹920 in their payout, with nothing on screen explaining the
+                    gap. The commission is now a line of its own, and the number
+                    in bold is the one that reaches them.
+
+                    All three come from the server, computed from the commission
+                    SNAPSHOT taken when the order was placed - so an old order
+                    keeps showing the rate it was actually sold under.
+                  */}
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm space-y-1">
-                    <div className="flex justify-between">
-                      <span className="text-gray-700">Your Revenue (Items):</span>
-                      <span className="font-bold text-blue-700">₹{sellerRevenue}</span>
+                    <div className="flex justify-between text-gray-700">
+                      <span>Item total</span>
+                      <span className="tabular-nums">{money(order.sellerSubtotal)}</span>
                     </div>
-                    <div className="flex justify-between text-xs text-gray-600">
-                      <span>Payment Method:</span>
-                      <span className="font-medium capitalize">
-                        {order.paymentMethod === 'cod' ? 'Cash on Delivery' : 'Online'}
+
+                    {order.sellerCommission > 0 && (
+                      <div className="flex justify-between text-gray-600">
+                        <span>
+                          Platform commission
+                          {order.items?.[0]?.commissionRate
+                            ? ` (${order.items[0].commissionRate}%)`
+                            : ''}
+                        </span>
+                        <span className="tabular-nums">
+                          −{money(order.sellerCommission)}
+                        </span>
+                      </div>
+                    )}
+
+                    <div className="flex justify-between pt-1 border-t border-blue-200">
+                      <span className="font-medium text-gray-800">You earn</span>
+                      <span className="font-bold text-blue-700 tabular-nums">
+                        {money(order.sellerEarning)}
                       </span>
                     </div>
-                    {order.paymentStatus === 'completed' && (
+
+                    <div className="flex justify-between text-xs text-gray-600 pt-1">
+                      <span>Payment</span>
+                      <span className="font-medium">
+                        {order.paymentMethod === 'cod'
+                          ? 'Cash on delivery'
+                          : 'Paid online'}
+                      </span>
+                    </div>
+
+                    {/*
+                      This tested for 'completed', which is not one of the four
+                      values paymentStatus can hold, so it never once appeared.
+                      COD is money the seller collects at the door, so "paid"
+                      there means collected, not received in advance.
+                    */}
+                    {order.paymentStatus === 'paid' && (
                       <p className="text-xs text-green-700 font-semibold">
-                        ✓ Payment Collected
+                        ✓ {order.paymentMethod === 'cod' ? 'Cash collected' : 'Payment received'}
                       </p>
+                    )}
+                    {order.paymentStatus === 'refunded' && (
+                      <p className="text-xs text-red-700 font-semibold">Refunded</p>
                     )}
                   </div>
 
