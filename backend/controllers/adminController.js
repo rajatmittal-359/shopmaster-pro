@@ -117,28 +117,69 @@ exports.activateSeller = async (req, res) => {
  * CATEGORY MANAGEMENT
  */
 
-// Create category
-// Create category (with optional parent support)
+/**
+ * Create a category.
+ *
+ * TWO RULES, both of them about a category being a place products can live.
+ *
+ * 1. A MAIN CATEGORY IS A CONTAINER, NOT A SHELF.
+ *    Products must sit on a leaf (see sellerController.validateLeafCategory),
+ *    so a main category with no subcategories is a dead end: it shows up in the
+ *    shop filter and nothing can ever be listed under it. Creating one now
+ *    takes its subcategories with it, in the same request.
+ *
+ * 2. A CATEGORY HOLDING PRODUCTS CANNOT BECOME A PARENT.
+ *    Nothing used to stop this. Give a subcategory to a category that already
+ *    has products and those products are instantly sitting on a non-leaf - the
+ *    exact state the leaf rule exists to prevent - and the seller cannot save
+ *    an edit to them any more without moving them first. Move the products,
+ *    then add the subcategory.
+ */
 exports.createCategory = async (req, res) => {
   try {
     const { name, description, parentCategory } = req.body;
+
+    // Names of the subcategories to create alongside a new main category.
+    const subcategories = Array.isArray(req.body.subcategories)
+      ? req.body.subcategories.map((n) => String(n).trim()).filter(Boolean)
+      : [];
 
     if (!name) {
       return res.status(400).json({ message: 'Category name is required' });
     }
 
-    // ✅ Validate parent category if provided
     if (parentCategory) {
       const parentExists = await Category.findById(parentCategory);
       if (!parentExists) {
         return res.status(400).json({ message: 'Invalid parent category' });
       }
-      // ✅ Prevent creating subcategory under another subcategory (max 2 levels)
+
+      // Max 2 levels.
       if (parentExists.parentCategory) {
-        return res.status(400).json({ 
-          message: 'Cannot create subcategory under another subcategory. Maximum 2 levels allowed.' 
+        return res.status(400).json({
+          message: 'Cannot create subcategory under another subcategory. Maximum 2 levels allowed.',
         });
       }
+
+      // Rule 2.
+      const held = await Product.countDocuments({
+        category: parentCategory,
+        isDeleted: { $ne: true },
+      });
+      if (held > 0) {
+        return res.status(400).json({
+          message:
+            `"${parentExists.name}" already has ${held} product(s) listed directly in it. ` +
+            'Move them into a subcategory first, then add subcategories here.',
+        });
+      }
+    } else if (subcategories.length === 0) {
+      // Rule 1.
+      return res.status(400).json({
+        message:
+          'A main category needs at least one subcategory. Products are listed in subcategories, ' +
+          'so a main category on its own is a heading nothing can go under.',
+      });
     }
 
     const category = await Category.create({
@@ -148,12 +189,35 @@ exports.createCategory = async (req, res) => {
       createdBy: req.user._id,
     });
 
-    // ✅ Populate parent in response
+    // Children are created after the parent so they inherit the right
+    // ancestors. One that collides with an existing name is reported rather
+    // than silently dropped.
+    const created = [];
+    const skipped = [];
+
+    for (const childName of subcategories) {
+      try {
+        const child = await Category.create({
+          name: childName,
+          parentCategory: category._id,
+          createdBy: req.user._id,
+        });
+        created.push(child);
+      } catch (err) {
+        skipped.push(childName);
+        if (err.code !== 11000) throw err;
+      }
+    }
+
     await category.populate('parentCategory', 'name');
 
     res.status(201).json({
-      message: 'Category created successfully',
+      message: skipped.length
+        ? `Category created. These already existed and were skipped: ${skipped.join(', ')}`
+        : 'Category created successfully',
       category,
+      subcategories: created,
+      skipped,
     });
   } catch (error) {
     if (error.code === 11000) {
@@ -163,24 +227,36 @@ exports.createCategory = async (req, res) => {
   }
 };
 
-
-// Get all categories (with parent info and hierarchy stats)
 exports.getCategories = async (req, res) => {
   try {
     const categories = await Category.find()
       .populate('createdBy', 'name')
       .populate('parentCategory', 'name')
-      .sort({ name: 1 });
+      .sort({ name: 1 })
+      .lean();
 
-    // ✅ Calculate hierarchy stats
-    const mainCategories = categories.filter(c => !c.parentCategory);
-    const subCategories = categories.filter(c => c.parentCategory);
+    // How many products sit in each one, counted in a single pass. Without
+    // this the admin is asked to delete a category with no idea what is in it,
+    // and an empty branch is invisible.
+    const counts = await Product.aggregate([
+      { $match: { isDeleted: { $ne: true } } },
+      { $group: { _id: '$category', n: { $sum: 1 } } },
+    ]);
+    const productCount = new Map(counts.map((c) => [String(c._id), c.n]));
+
+    const withCounts = categories.map((c) => ({
+      ...c,
+      productCount: productCount.get(String(c._id)) || 0,
+    }));
+
+    const mainCategories = withCounts.filter((c) => !c.parentCategory);
+    const subCategories = withCounts.filter((c) => c.parentCategory);
 
     res.json({
-      count: categories.length,
+      count: withCounts.length,
       mainCategories: mainCategories.length,
       subCategories: subCategories.length,
-      categories,
+      categories: withCounts,
     });
   } catch (error) {
     sendError(res, error);
