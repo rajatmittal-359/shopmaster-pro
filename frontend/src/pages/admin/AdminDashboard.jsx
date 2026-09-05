@@ -4,6 +4,9 @@ import { getAdminAnalytics } from "../../services/adminService";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from "recharts";
 
 import { toastError } from '../../utils/toast';
+import Button from '../../components/ui/Button';
+import StatCard from '../../components/ui/StatCard';
+import EmptyState from '../../components/ui/EmptyState';
 export default function AdminDashboard() {
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -59,81 +62,55 @@ export default function AdminDashboard() {
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-3xl font-bold">Admin Dashboard</h2>
-        <button
-          onClick={loadAnalytics}
-          className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded text-sm"
-        >
+        <Button variant="secondary" onClick={loadAnalytics}>
           Refresh
-        </button>
+        </Button>
       </div>
 
       {/* Stats Cards - Top 4 KPIs */}
-            {/* Stats Cards - Top 4 KPIs */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        {/* Total Sellers */}
-        <div className="bg-white rounded shadow p-4 border-l-4 border-blue-500">
-          <p className="text-sm text-gray-600 font-medium">Total Sellers</p>
-          <p className="text-3xl font-bold text-blue-600 mt-2">
-            {analytics.sellers?.total || 0}
-          </p>
-          <p className="text-xs text-gray-500 mt-1">
-            {analytics.sellers?.approved ?? 0} approved, {analytics.sellers?.pending ?? 0} pending
-          </p>
-        </div>
-
-        {/* Pending Sellers */}
-        <div className="bg-white rounded shadow p-4 border-l-4 border-yellow-500">
-          <p className="text-sm text-gray-600 font-medium">Pending Sellers</p>
-          <p className="text-3xl font-bold text-yellow-600 mt-2">
-            {analytics.sellers?.pending || 0}
-          </p>
-          <p className="text-xs text-gray-500 mt-1">Awaiting KYC approval</p>
-        </div>
-
-        {/* Total Products */}
-        <div className="bg-white rounded shadow p-4 border-l-4 border-green-500">
-          <p className="text-sm text-gray-600 font-medium">Total Products</p>
-          <p className="text-3xl font-bold text-green-600 mt-2">
-            {analytics.products || 0}
-          </p>
-          <p className="text-xs text-gray-500 mt-1">Live across all sellers</p>
-        </div>
-
-        {/* Orders Today */}
-        <div className="bg-white rounded shadow p-4 border-l-4 border-purple-500">
-          <p className="text-sm text-gray-600 font-medium">Orders Today</p>
-          <p className="text-3xl font-bold text-purple-600 mt-2">
-            {analytics.ordersToday ?? 0}
-          </p>
-          <p className="text-xs text-gray-500 mt-1">
-            Last 24 hours &middot; {analytics.orders || 0} all time
-          </p>
-        </div>
+        <StatCard
+          label="Sellers"
+          value={analytics.sellers?.total ?? 0}
+          accent="info"
+          hint={`${analytics.sellers?.approved ?? 0} approved, ${
+            analytics.sellers?.pending ?? 0
+          } awaiting approval`}
+        />
+        <StatCard
+          label="Awaiting approval"
+          value={analytics.sellers?.pending ?? 0}
+          accent={analytics.sellers?.pending > 0 ? 'warning' : 'neutral'}
+          hint="Sellers who cannot list anything until you review them."
+        />
+        <StatCard
+          label="Products"
+          value={analytics.products ?? 0}
+          accent="success"
+          hint="Live across all sellers."
+        />
+        <StatCard
+          label="Orders today"
+          value={analytics.ordersToday ?? 0}
+          hint={`Last 24 hours. ${analytics.orders ?? 0} since the shop opened.`}
+        />
       </div>
 
-      {/* Revenue Card */}
-      <div className="bg-white rounded shadow p-5 mb-6 border-t-4 border-orange-500">
-        <div className="flex justify-between items-start mb-3">
-          <div>
-            <h3 className="text-lg font-semibold">Platform Revenue</h3>
-            <p className="text-xs text-gray-500 mt-0.5">
-              Commission earned on paid orders (all time)
-            </p>
-          </div>
-          <div className="text-right">
-            <span className="block text-2xl font-bold text-orange-600">
-              ₹{analytics.revenue ?? 0}
-            </span>
-            {/*
-              Gross sales is most of what customers paid, and it belongs to the
-              sellers. Showing it beside the commission stops the big number
-              being mistaken for the platform's own earnings.
-            */}
-            <span className="block text-xs text-gray-500 mt-0.5">
-              of ₹{analytics.grossSales ?? 0} gross sales
-            </span>
-          </div>
-        </div>
+      {/* Revenue */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        <StatCard
+          label="Platform revenue"
+          value={`₹${analytics.revenue ?? 0}`}
+          accent="brand"
+          secondary={`of ₹${analytics.grossSales ?? 0} gross sales`}
+          hint="Commission on paid orders. Your own shop is on 0%, so its sales earn nothing here."
+        />
+        <StatCard
+          label="Gross sales"
+          value={`₹${analytics.grossSales ?? 0}`}
+          secondary="Mostly the sellers' money"
+          hint="Everything customers paid on orders that went through."
+        />
       </div>
 
       {/* Last 7 Days Revenue Chart */}
@@ -187,9 +164,10 @@ export default function AdminDashboard() {
             </AreaChart>
           </ResponsiveContainer>
         ) : (
-          <div className="h-72 flex items-center justify-center text-gray-400 text-sm">
-            No revenue data for last 7 days
-          </div>
+          <EmptyState
+            title="No sales in the last 7 days"
+            hint="The chart fills in as orders are paid for."
+          />
         )}
       </div>
 
@@ -222,9 +200,10 @@ export default function AdminDashboard() {
               ))}
             </div>
           ) : (
-            <p className="text-sm text-gray-600 py-8 text-center">
-              No low stock products 🎉
-            </p>
+            <EmptyState
+              title="Nothing is running low"
+              hint="Products appear here once they reach their alert threshold."
+            />
           )}
         </div>
 

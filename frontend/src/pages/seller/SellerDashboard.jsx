@@ -4,6 +4,11 @@ import Layout from "../../components/common/Layout";
 import { getSellerProfile, getSellerAnalytics } from "../../services/sellerService";
 
 import { toastError } from '../../utils/toast';
+import { Link } from 'react-router-dom';
+import Button from '../../components/ui/Button';
+import Badge from '../../components/ui/Badge';
+import Card from '../../components/ui/Card';
+import StatCard from '../../components/ui/StatCard';
 export default function SellerDashboard() {
   const [profile, setProfile] = useState(null);
   const [analytics, setAnalytics] = useState(null);
@@ -70,12 +75,13 @@ export default function SellerDashboard() {
   }
 
   const kycLabel = profile.kycStatus === "verified" ? "Verified" : profile.kycStatus || "Pending";
-  const kycColor =
+  // Badge owns the colours; this only says which meaning applies.
+  const kycTone =
     profile.kycStatus === "verified"
-      ? "bg-green-100 text-green-700"
+      ? "success"
       : profile.kycStatus === "rejected"
-      ? "bg-red-100 text-red-700"
-      : "bg-yellow-100 text-yellow-700";
+      ? "danger"
+      : "warning";
 
   const stats = {
     totalProducts: analytics?.products?.total || 0,
@@ -95,114 +101,67 @@ export default function SellerDashboard() {
           </p>
         </div>
 
-        <div className="flex flex-wrap gap-2 text-xs">
-          <span className={`px-3 py-1 rounded-full font-medium ${kycColor}`}>
-            KYC: {kycLabel}
-          </span>
-          <span
-            className={`px-3 py-1 rounded-full font-medium ${
-              profile.status === "active"
-                ? "bg-emerald-100 text-emerald-700"
-                : "bg-red-100 text-red-700"
-            }`}
-          >
+        <div className="flex flex-wrap gap-2">
+          <Badge tone={kycTone}>KYC: {kycLabel}</Badge>
+          <Badge status={profile.status}>
             Account: {profile.status === "active" ? "Active" : "Suspended"}
-          </span>
+          </Badge>
         </div>
       </div>
 
       {/* Top stats row */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        {/* Total products */}
-        <div className="bg-white rounded shadow p-4 border-l-4 border-blue-500 flex flex-col justify-between">
-          <div>
-            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-              Total Products
-            </p>
-            <p className="text-3xl font-bold text-blue-600 mt-1">
-              {stats.totalProducts}
-            </p>
-          </div>
-          <p className="text-11px text-gray-500 mt-1">
-            All products created under your store.
-          </p>
-        </div>
-
-        {/* Active products */}
-        <div className="bg-white rounded shadow p-4 border-l-4 border-emerald-500 flex flex-col justify-between">
-          <div>
-            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-              Active Products
-            </p>
-            <p className="text-3xl font-bold text-emerald-600 mt-1">
-              {stats.activeProducts}
-            </p>
-          </div>
-          <p className="text-11px text-gray-500 mt-1">
-            Currently visible to customers in the shop.
-          </p>
-        </div>
-
-        {/* Low stock */}
-        <div className="bg-white rounded shadow p-4 border-l-4 border-red-500 flex flex-col justify-between">
-          <div>
-            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-              Low Stock
-            </p>
-            <p className="text-3xl font-bold text-red-600 mt-1">
-              {stats.lowStock}
-            </p>
-          </div>
-          <p className="text-11px text-gray-500 mt-1">
-            Products at or below your alert threshold.
-          </p>
-        </div>
-
-        {/* Revenue */}
-        <div className="bg-white rounded shadow p-4 border-l-4 border-orange-500 flex flex-col justify-between">
-          <div>
-            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-              Revenue
-            </p>
-            <p className="text-3xl font-bold text-orange-600 mt-1">
-              ₹{stats.revenue}
-            </p>
-          </div>
-          <p className="text-11px text-gray-500 mt-1">
-            From completed orders across all time.
-          </p>
-        </div>
+        <StatCard
+          label="Products"
+          value={stats.totalProducts}
+          hint="Everything in your store that you have not deleted."
+        />
+        <StatCard
+          label="On sale"
+          value={stats.activeProducts}
+          accent="success"
+          hint="Visible to customers right now. The rest are hidden."
+        />
+        <StatCard
+          label="Low stock"
+          value={stats.lowStock}
+          accent={stats.lowStock > 0 ? 'danger' : 'neutral'}
+          hint="On sale and at or below your alert threshold."
+        />
+        <StatCard
+          label="Sales"
+          value={`₹${stats.revenue}`}
+          accent="brand"
+          hint="Item value on paid orders, before platform commission."
+        />
       </div>
 
       {/* Quick actions + info */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* Quick actions */}
-        <div className="bg-white rounded shadow p-4 lg:col-span-2">
-          <h3 className="text-sm font-semibold mb-3">Quick Actions</h3>
-          <p className="text-xs text-gray-600 mb-3">
-            Manage your catalog, orders, and inventory from these shortcuts.
-          </p>
+        <Card
+          title="Quick actions"
+          hint="Your catalogue, orders and stock history."
+          className="lg:col-span-2"
+        >
+          {/*
+            These were three colours - orange, blue and near-black - which read
+            as three different kinds of thing. They are all just navigation, so
+            one leads and the rest follow. They were also plain <a href>, which
+            reloads the whole app on every click instead of routing.
+          */}
           <div className="flex flex-wrap gap-3">
-            <a
-              href="/seller/products"
-              className="px-4 py-2 rounded text-xs font-semibold bg-orange-500 text-white hover:bg-orange-600"
-            >
-              Manage Products
-            </a>
-            <a
-              href="/seller/orders"
-              className="px-4 py-2 rounded text-xs font-semibold bg-blue-500 text-white hover:bg-blue-600"
-            >
-              View Orders
-            </a>
-            <a
-              href="/seller/inventory-logs"
-              className="px-4 py-2 rounded text-xs font-semibold bg-gray-800 text-white hover:bg-gray-900"
-            >
-              Inventory Logs
-            </a>
+            <Button as={Link} to="/seller/products" variant="primary">
+              Manage products
+            </Button>
+            <Button as={Link} to="/seller/orders" variant="secondary">
+              View orders
+            </Button>
+            <Button as={Link} to="/seller/inventory-logs" variant="secondary">
+              Inventory logs
+            </Button>
           </div>
-        </div>
+        </Card>
 
         {/* Info / notes */}
         <div className="bg-blue-50 border border-blue-200 rounded p-4 text-xs text-blue-900">

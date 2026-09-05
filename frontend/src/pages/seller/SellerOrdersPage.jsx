@@ -12,22 +12,16 @@ import { Link } from 'react-router-dom';
 
 import { orderRef } from '../../utils/orderRef';
 import { useConfirm } from '../../context/confirmContext';
-const statusFlow = ['processing', 'shipped', 'delivered'];
-
-const statusColors = {
-  pending: 'bg-yellow-100 text-yellow-700',
-  processing: 'bg-blue-100 text-blue-700',
-  shipped: 'bg-purple-100 text-purple-700',
-  delivered: 'bg-green-100 text-green-700',
-  cancelled: 'bg-red-100 text-red-700',
-  returned: 'bg-gray-100 text-gray-700',
-};
-
-const paymentColors = {
-  pending: 'bg-yellow-100 text-yellow-700',
-  paid: 'bg-green-100 text-green-700',
-  completed: 'bg-green-100 text-green-700',
-};
+import Button from '../../components/ui/Button';
+import Badge from '../../components/ui/Badge';
+/**
+ * The stages this seller's parcel moves through.
+ *
+ * 'pending' used to be missing, so indexOf() returned -1 for it and every dot
+ * rendered grey - on the one status most orders are actually sitting in. The
+ * progress row said nothing at exactly the moment the seller needed to act.
+ */
+const statusFlow = ['pending', 'processing', 'shipped', 'delivered'];
 
 export default function SellerOrdersPage() {
   const confirm = useConfirm();
@@ -178,19 +172,52 @@ export default function SellerOrdersPage() {
   const renderTimeline = (status) => {
     if (['cancelled', 'returned'].includes(status)) return null;
 
+    const reached = statusFlow.indexOf(status);
+
     return (
-      <div className="flex items-center gap-2 mt-2">
-        {statusFlow.map((step, idx) => (
-          <div key={idx} className="flex items-center gap-2">
-            <div
-              className={`w-3 h-3 rounded-full ${
-                statusFlow.indexOf(status) >= idx ? 'bg-green-500' : 'bg-gray-300'
-              }`}
-            ></div>
-            {idx !== statusFlow.length - 1 && <div className="w-8 h-0.5 bg-gray-300"></div>}
-          </div>
-        ))}
-      </div>
+      // Named steps, because four unlabelled dots communicate nothing even when
+      // they are coloured correctly. Orange marks where the seller is now -
+      // the step that still wants something from them.
+      <ol className="flex items-center gap-1 mt-3" aria-label="Order progress">
+        {statusFlow.map((step, idx) => {
+          const done = idx < reached;
+          const current = idx === reached;
+
+          return (
+            <li key={step} className="flex items-center gap-1">
+              <div className="flex items-center gap-1.5">
+                <span
+                  aria-hidden="true"
+                  className={`w-2.5 h-2.5 rounded-full shrink-0 ${
+                    done
+                      ? 'bg-green-600'
+                      : current
+                      ? 'bg-orange-600 ring-4 ring-orange-100'
+                      : 'bg-gray-300'
+                  }`}
+                />
+                <span
+                  className={`text-xs capitalize ${
+                    current
+                      ? 'text-orange-700 font-medium'
+                      : done
+                      ? 'text-gray-600'
+                      : 'text-gray-400'
+                  }`}
+                >
+                  {step}
+                </span>
+              </div>
+              {idx !== statusFlow.length - 1 && (
+                <span
+                  aria-hidden="true"
+                  className={`w-5 h-0.5 mx-1 ${done ? 'bg-green-600' : 'bg-gray-200'}`}
+                />
+              )}
+            </li>
+          );
+        })}
+      </ol>
     );
   };
 
@@ -232,20 +259,8 @@ export default function SellerOrdersPage() {
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span
-                        className={`px-3 py-1 rounded text-xs font-medium capitalize ${
-                          statusColors[order.status] || 'bg-gray-100 text-gray-700'
-                        }`}
-                      >
-                        {order.status}
-                      </span>
-                      <span
-                        className={`px-3 py-1 rounded text-xs font-medium capitalize ${
-                          paymentColors[order.paymentStatus] || 'bg-gray-100 text-gray-700'
-                        }`}
-                      >
-                        {order.paymentStatus}
-                      </span>
+                      <Badge status={order.status} />
+                      <Badge status={order.paymentStatus} />
                     </div>
                   </div>
 
@@ -317,54 +332,76 @@ export default function SellerOrdersPage() {
                     </div>
                   )}
 
-                  {/* ✅ ACTIONS */}
-                  <div className="flex flex-col md:flex-row gap-3">
-                    {/* View Details */}
-                    <Link
-                      to={`/seller/orders/${order._id}`}
-                      className="flex-1 text-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded"
-                    >
-                      View Full Details
-                    </Link>
+                  {/*
+                    ACTIONS
 
-                    {/* Book the courier, once the parcel is packed. Shown only
-                        while nothing has been booked yet. */}
-                    {!order.shippingAwb && !['cancelled', 'delivered', 'returned'].includes(order.status) && (
-                      <button
-                        onClick={() => handleShip(order)}
-                        disabled={updatingId === order._id}
-                        className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm rounded disabled:opacity-50"
-                      >
-                        {updatingId === order._id
-                          ? 'Booking...'
-                          : order.deliveryOption === 'same_day'
-                          ? 'Book same-day rider'
-                          : 'Book courier & ship'}
-                      </button>
-                    )}
+                    One primary per card, and it is whatever moves this order
+                    forward: booking the courier while nothing is booked, and
+                    after that marking the next status. Everything else is
+                    secondary. These were three different colours before - blue,
+                    green and orange - which told the seller nothing about which
+                    to press.
+                  */}
+                  {(() => {
+                    const canBook =
+                      !order.shippingAwb &&
+                      !['cancelled', 'delivered', 'returned'].includes(order.status);
 
-                    {/* Call it off, while that is still possible. */}
-                    {order.shippingAwb && order.status === 'shipped' && (
-                      <button
-                        onClick={() => handleCancelShipment(order)}
-                        disabled={updatingId === order._id}
-                        className="flex-1 px-4 py-2 border border-red-300 text-red-700 hover:bg-red-50 text-sm rounded disabled:opacity-50"
-                      >
-                        Cancel shipment
-                      </button>
-                    )}
+                    return (
+                      <div className="flex flex-col md:flex-row gap-3">
+                        {canBook && (
+                          <Button
+                            variant="primary"
+                            fullWidth
+                            onClick={() => handleShip(order)}
+                            loading={updatingId === order._id}
+                            loadingText="Booking…"
+                            className="md:flex-1"
+                          >
+                            {order.deliveryOption === 'same_day'
+                              ? 'Book same-day rider'
+                              : 'Book courier & ship'}
+                          </Button>
+                        )}
 
-                    {/* Update Status */}
-                    {nextStatus && (
-                      <button
-                        onClick={() => handleStatusUpdate(order._id, nextStatus)}
-                        disabled={updatingId === order._id}
-                        className="flex-1 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white text-sm rounded disabled:opacity-50"
-                      >
-                        {updatingId === order._id ? 'Updating...' : `Mark as ${nextStatus}`}
-                      </button>
-                    )}
-                  </div>
+                        {nextStatus && (
+                          <Button
+                            // Primary only when there is nothing more urgent.
+                            variant={canBook ? 'secondary' : 'primary'}
+                            fullWidth
+                            onClick={() => handleStatusUpdate(order._id, nextStatus)}
+                            loading={updatingId === order._id}
+                            loadingText="Updating…"
+                            className="md:flex-1"
+                          >
+                            Mark as {nextStatus}
+                          </Button>
+                        )}
+
+                        <Button
+                          as={Link}
+                          to={`/seller/orders/${order._id}`}
+                          variant="secondary"
+                          fullWidth
+                          className="md:flex-1"
+                        >
+                          View full details
+                        </Button>
+
+                        {order.shippingAwb && order.status === 'shipped' && (
+                          <Button
+                            variant="destructive"
+                            fullWidth
+                            onClick={() => handleCancelShipment(order)}
+                            disabled={updatingId === order._id}
+                            className="md:flex-1"
+                          >
+                            Cancel shipment
+                          </Button>
+                        )}
+                      </div>
+                    );
+                  })()}
 
                   {/* ✅ ADD TRACKING (if not added) */}
                   {['processing', 'shipped'].includes(order.status) &&
@@ -390,12 +427,12 @@ export default function SellerOrdersPage() {
                             }
                             className="flex-1 px-3 py-2 border rounded text-sm"
                           />
-                          <button
+                          <Button
+                            variant="secondary"
                             onClick={() => handleTrackingUpdate(order._id)}
-                            className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm rounded"
                           >
-                            Save
-                          </button>
+                            Save tracking
+                          </Button>
                         </div>
                       </div>
                     )}
