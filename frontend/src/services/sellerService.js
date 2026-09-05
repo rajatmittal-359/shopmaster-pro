@@ -29,3 +29,22 @@ export const shipOrder = (orderId) => api.post(`/seller/orders/${orderId}/ship`)
 
 /** Calls the courier off, while it has not collected yet. */
 export const cancelShipment = (orderId) => api.post(`/seller/orders/${orderId}/ship/cancel`);
+
+/**
+ * MONEY
+ *
+ * These endpoints existed on the server from the start but nothing ever called
+ * them, so a seller had no way to see what they had earned and no way to give
+ * the shop an account to pay it into - which also meant no seller could ever
+ * be paid, because a payout is refused without bank details.
+ */
+
+/** What this seller has earned, is owed, and has already been sent. */
+export const getMyEarnings = () => api.get('/seller/earnings');
+
+/** Bank details on file. The account number comes back masked. */
+export const getPayoutDetails = () => api.get('/seller/payout-details');
+
+/** @param {{accountNumber, ifscCode, accountHolderName, gstNumber?}} details */
+export const updatePayoutDetails = (details) =>
+  api.patch('/seller/payout-details', details);

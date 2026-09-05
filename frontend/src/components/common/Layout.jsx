@@ -80,6 +80,7 @@ export default function Layout({ children, title = 'Dashboard' }) {
                 <SidebarLink to="/seller/dashboard" icon="📊" text="Seller Dashboard" />
                 <SidebarLink to="/seller/products" icon="📦" text="My Products" />
                 <SidebarLink to="/seller/orders" icon="📋" text="My Orders" />
+                <SidebarLink to="/seller/earnings" icon="💰" text="Earnings" />
                 <SidebarLink to="/seller/inventory-logs" icon="📈" text="Inventory Logs" />
               </>
             )}
@@ -90,6 +91,7 @@ export default function Layout({ children, title = 'Dashboard' }) {
                 <SidebarLink to="/admin/dashboard" icon="📊" text="Admin Dashboard" />
                 <SidebarLink to="/admin/manage-sellers" icon="👥" text="Manage Sellers" />
                 <SidebarLink to="/admin/categories" icon="📂" text="Manage Categories" />
+                <SidebarLink to="/admin/payouts" icon="💰" text="Payouts" />
                 <SidebarLink to="/admin/inventory-logs" icon="📈" text="Inventory Logs" />
               </>
             )}

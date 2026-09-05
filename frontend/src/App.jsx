@@ -43,12 +43,14 @@ const SellerOrdersPage = lazy(() => import('./pages/seller/SellerOrdersPage'));
 const SellerOrderDetailsPage = lazy(() => import('./pages/seller/SellerOrderDetailsPage'));
 const SellerProductDetailsPage = lazy(() => import('./pages/seller/SellerProductDetailsPage'));
 const SellerInventoryLogsPage = lazy(() => import('./pages/seller/InventoryLogsPage'));
+const EarningsPage = lazy(() => import('./pages/seller/EarningsPage'));
 
 // Admin - the smallest audience and the heaviest page (recharts).
 const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
 const ManageSellersPage = lazy(() => import('./pages/admin/ManageSellersPage'));
 const AdminCategoriesPage = lazy(() => import('./pages/admin/AdminCategoriesPage'));
 const InventoryLogsPage = lazy(() => import('./pages/admin/InventoryLogsPage'));
+const PayoutsPage = lazy(() => import('./pages/admin/PayoutsPage'));
 
 /** Shown for the moment a lazily loaded page is being fetched. */
 function PageLoading() {
@@ -97,6 +99,7 @@ function App() {
             <Route path="/seller/orders" element={<SellerOrdersPage />} />
             <Route path="/seller/orders/:orderId" element={<SellerOrderDetailsPage />} />
             <Route path="/seller/inventory-logs" element={<SellerInventoryLogsPage />} />
+            <Route path="/seller/earnings" element={<EarningsPage />} />
           </Route>
 
           {/* Admin */}
@@ -105,6 +108,7 @@ function App() {
             <Route path="/admin/manage-sellers" element={<ManageSellersPage />} />
             <Route path="/admin/categories" element={<AdminCategoriesPage />} />
             <Route path="/admin/inventory-logs" element={<InventoryLogsPage />} />
+            <Route path="/admin/payouts" element={<PayoutsPage />} />
           </Route>
         </Routes>
       </Suspense>

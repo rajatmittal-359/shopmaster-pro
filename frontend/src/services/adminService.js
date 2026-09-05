@@ -20,3 +20,27 @@ export const suspendSeller = (sellerId, reason) =>
 
 export const activateSeller = (sellerId) => 
   api.patch(`/admin/sellers/${sellerId}/activate`);
+
+/**
+ * PAYOUTS
+ *
+ * The whole settlement feature - five endpoints, fully tested - had no UI at
+ * all, which is why no payout had ever been created.
+ */
+
+/** Every seller currently owed money, and the total. */
+export const getPayableSellers = () => api.get('/admin/payouts/payable');
+
+/** Past and pending payouts. @param {{sellerId?, status?}} [params] */
+export const listPayouts = (params = {}) => api.get('/admin/payouts', { params });
+
+/** Settles everything currently owed to one seller into a single payout. */
+export const createPayout = (sellerId) => api.post('/admin/payouts', { sellerId });
+
+/** Records that the bank transfer went through. `reference` is the UTR. */
+export const markPayoutPaid = (payoutId, { reference, notes }) =>
+  api.patch(`/admin/payouts/${payoutId}/paid`, { reference, notes });
+
+/** Records a failed transfer; its sales return to the payable pool. */
+export const markPayoutFailed = (payoutId, reason) =>
+  api.patch(`/admin/payouts/${payoutId}/failed`, { reason });
