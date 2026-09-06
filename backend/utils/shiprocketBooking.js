@@ -169,12 +169,55 @@ const bookShipment = async (order, address, weightKg) => {
       shipmentId: String(created.shipment_id),
     };
 
+    /*
+     * WHICH COURIER CARRIES IT.
+     *
+     * This used to send only the shipment_id, which leaves the choice to
+     * Shiprocket - and Shiprocket does not choose the cheapest. Measured on a
+     * real booking, 302019 to 302019: the customer had been quoted ₹71.36
+     * (Xpressbees, the cheapest serviceable courier), and Shiprocket assigned
+     * DTDC Surface and charged ₹98.90. Nearly 40% more, on every order, with
+     * nothing on any screen to show it.
+     *
+     * The quote and the booking have to agree, so the cheapest serviceable
+     * courier is looked up and its id is sent. If that lookup fails the old
+     * behaviour stands - a shipment on a dearer courier still beats no
+     * shipment at all - but the normal path now books what was quoted.
+     */
+    let preferredCourierId = null;
+    try {
+      const { data: rates } = await axios.get(
+        `${BASE_URL}/courier/serviceability`,
+        {
+          headers: authHeaders(token),
+          timeout: 20000,
+          params: {
+            pickup_postcode: process.env.SHIPROCKET_PICKUP_PINCODE,
+            delivery_postcode: address.zipCode,
+            weight: Math.max(weightKg, MIN_WEIGHT_KG),
+            cod: order.paymentMethod === 'cod' ? 1 : 0,
+          },
+        }
+      );
+
+      const couriers = rates?.data?.available_courier_companies || [];
+      const cheapest = couriers
+        .filter((c) => c.courier_company_id && Number.isFinite(Number(c.rate)))
+        .sort((a, b) => Number(a.rate) - Number(b.rate))[0];
+
+      if (cheapest) preferredCourierId = cheapest.courier_company_id;
+    } catch {
+      // Leave it to Shiprocket rather than fail the booking over a price check.
+    }
+
     let awb = null;
     let courierName = null;
     try {
       const { data: assigned } = await axios.post(
         `${BASE_URL}/courier/assign/awb`,
-        { shipment_id: created.shipment_id },
+        preferredCourierId
+          ? { shipment_id: created.shipment_id, courier_id: preferredCourierId }
+          : { shipment_id: created.shipment_id },
         { headers: authHeaders(token), timeout: 20000 }
       );
       const res = assigned?.response?.data || {};
