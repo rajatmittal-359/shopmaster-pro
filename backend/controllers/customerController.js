@@ -14,7 +14,7 @@ const Product = require("../models/Product");
 const mongoose = require('mongoose'); 
 const Address = require('../models/Address'); 
 const { applyInventoryChange } = require("./inventoryController");
-const { cancelOrderFor } = require('../utils/cancelOrder');
+const { cancelOrderFor, CANCELLABLE } = require('../utils/cancelOrder');
 const refunds = require('../utils/refund');
 const InventoryLog = require("../models/Inventory");
 
@@ -377,12 +377,26 @@ exports.getOrderDetails = async (req, res) => {
     // button and the endpoint that serves it can no longer disagree.
     const { canReturn, returnWindowClosesAt, returnWindowDays } = returnWindowFor(order);
 
+    /*
+     * Whether cancelling is still possible, decided HERE rather than by the
+     * page re-deriving it.
+     *
+     * The order page was offering "Cancel Item" on a shipped parcel: the server
+     * refuses it (CANCELLABLE is pending/processing only), so the button did
+     * nothing but promise something impossible. Same reasoning as canReturn -
+     * one answer, so the button and the endpoint cannot disagree.
+     */
+    const canCancel =
+      CANCELLABLE.includes(order.status) &&
+      !(order.paymentMethod === 'cod' && order.paymentStatus === 'paid');
+
     res.json({
       success: true,
       order,
       canReturn,
       returnWindowClosesAt,
       returnWindowDays,
+      canCancel,
     });
   } catch (err) {
     console.error("GET ORDER DETAILS ERROR", err.message);

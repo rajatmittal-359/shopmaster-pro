@@ -83,6 +83,18 @@ const readPayload = (body = {}) => {
     // "2021-07-02 16:41:59" - not ISO. Date.parse reads it as local time, which
     // is right: these are Indian courier timestamps.
     at: pick('current_timestamp', 'status_update_time', 'timestamp', 'date'),
+
+    /** When the courier expects to deliver. The one thing a waiting customer wants. */
+    etd: pick('etd', 'expected_delivery_date', 'edd'),
+
+    /** Every stop the parcel has made, newest first in their payload. */
+    scans: scans
+      .map((sc) => ({
+        at: sc.date && !Number.isNaN(Date.parse(sc.date)) ? new Date(sc.date) : null,
+        activity: sc.activity ? String(sc.activity) : null,
+        location: sc.location ? String(sc.location) : null,
+      }))
+      .filter((sc) => sc.activity),
   };
 };
 
@@ -105,7 +117,7 @@ exports.courierUpdate = async (req, res) => {
       return acknowledge();
     }
 
-    const { awb, orderRef, status, statusId, reason, at } = readPayload(req.body);
+    const { awb, orderRef, status, statusId, reason, at, etd, scans } = readPayload(req.body);
 
     // Their own code wins for the one status that releases money; the wording
     // is the fallback for everything else.
@@ -151,6 +163,18 @@ exports.courierUpdate = async (req, res) => {
 
     fulfilment.courierStatus = status;
     fulfilment.courierStatusAt = when;
+
+    if (etd && !Number.isNaN(Date.parse(etd))) {
+      // Couriers revise this as the parcel moves, so the latest word wins.
+      fulfilment.expectedDeliveryAt = new Date(etd);
+    }
+
+    if (scans.length) {
+      // Replace rather than append: each event carries the WHOLE history, so
+      // appending would duplicate every earlier stop on every update. Capped at
+      // 30 - older scans stop being interesting once a parcel has arrived.
+      fulfilment.scans = scans.slice(0, 30);
+    }
 
     if (mapped === 'ndr') {
       fulfilment.ndrReason = reason || status;

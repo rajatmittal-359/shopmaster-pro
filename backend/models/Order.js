@@ -144,6 +144,35 @@ const fulfilmentSchema = new mongoose.Schema(
      */
     ndrReason: { type: String, default: null },
     ndrAt: { type: Date, default: null },
+
+    /**
+     * When the courier expects to deliver it.
+     *
+     * Shiprocket sends this as `etd` on every tracking event and it was being
+     * thrown away. It is the single thing a waiting customer most wants: "where
+     * is it" is really "when will it come", and a page that answers only
+     * "Shipped" answers neither.
+     */
+    expectedDeliveryAt: { type: Date, default: null },
+
+    /**
+     * The journey, as the courier recorded it.
+     *
+     * Also thrown away - the webhook carries a `scans` array of every stop.
+     * Without it the customer sees one word and no sense of movement, which is
+     * exactly when people start telephoning to ask.
+     *
+     * Newest first, capped: a long parcel can collect dozens of scans and the
+     * older ones stop being interesting once it has arrived.
+     */
+    scans: [
+      {
+        _id: false,
+        at: { type: Date },
+        activity: { type: String },
+        location: { type: String },
+      },
+    ],
     shipmentId: { type: String, default: null },
     shippingOrderId: { type: String, default: null },
     trackingUrl: { type: String, default: null },
