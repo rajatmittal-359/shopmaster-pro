@@ -424,40 +424,76 @@ export default function CheckoutPage() {
               </p>
 
               <div className="space-y-2">
-                {deliveryOptions.map((option) => (
-                  <label
-                    key={option.id}
-                    className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3 ${
-                      deliveryOption === option.id
-                        ? 'border-brand-600 bg-brand-50'
-                        : 'border-gray-200 hover:bg-gray-50'
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="deliveryOption"
-                      className="mt-1"
-                      value={option.id}
-                      checked={deliveryOption === option.id}
-                      onChange={() => setDeliveryOption(option.id)}
-                      disabled={calculatingTotals || placing}
-                    />
-                    <span className="flex-1">
-                      <span className="flex justify-between">
-                        <span className="font-medium text-gray-800">
-                          {option.label}
+                {deliveryOptions.map((option) => {
+                  /*
+                    A speed we intend to offer but cannot yet. It is announced
+                    rather than hidden - a Jaipur customer learns this shop
+                    means to deliver locally - but it is not a choice, so it
+                    carries no radio, no price and no cursor. The server refuses
+                    it independently; this is only the half a customer sees.
+
+                    The row comes from the API, so the day same-day goes live it
+                    is replaced by the real option and nobody has to remember to
+                    take a promise down.
+                  */
+                  if (option.available === false) {
+                    return (
+                      <div
+                        key={option.id}
+                        aria-disabled="true"
+                        className="flex items-start gap-3 rounded-lg border border-dashed
+                                   border-gray-300 bg-gray-50 p-3"
+                      >
+                        <span className="flex-1">
+                          <span className="flex flex-wrap items-baseline justify-between gap-2">
+                            <span className="font-medium text-gray-500">
+                              {option.label}
+                            </span>
+                            <span className="text-xs font-medium text-gray-500
+                                             bg-gray-200 rounded-full px-2 py-0.5">
+                              {option.note || 'Coming soon'}
+                            </span>
+                          </span>
                         </span>
-                        <span className="font-medium text-gray-900">
-                          {option.price === 0 ? 'Free' : `₹${option.price}`}
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <label
+                      key={option.id}
+                      className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3 ${
+                        deliveryOption === option.id
+                          ? 'border-brand-600 bg-brand-50'
+                          : 'border-gray-200 hover:bg-gray-50'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="deliveryOption"
+                        className="mt-1"
+                        value={option.id}
+                        checked={deliveryOption === option.id}
+                        onChange={() => setDeliveryOption(option.id)}
+                        disabled={calculatingTotals || placing}
+                      />
+                      <span className="flex-1">
+                        <span className="flex justify-between">
+                          <span className="font-medium text-gray-800">
+                            {option.label}
+                          </span>
+                          <span className="font-medium text-gray-900">
+                            {option.price === 0 ? 'Free' : `₹${option.price}`}
+                          </span>
+                        </span>
+                        <span className="block text-xs text-gray-500">
+                          {option.etaText}
+                          {option.courier ? ` · ${option.courier}` : ''}
                         </span>
                       </span>
-                      <span className="block text-xs text-gray-500">
-                        {option.etaText}
-                        {option.courier ? ` · ${option.courier}` : ''}
-                      </span>
-                    </span>
-                  </label>
-                ))}
+                    </label>
+                  );
+                })}
               </div>
             </div>
           )}

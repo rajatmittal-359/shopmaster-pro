@@ -233,7 +233,34 @@ const getDeliveryOptions = async (cartItems, address, isCOD) => {
 
   const billableWeight = cartItems.reduce((sum, item) => sum + weightOf(item), 0);
   const sameDay = await borzo.quoteSameDay(address, billableWeight);
-  if (!sameDay) return options;
+
+  if (!sameDay) {
+    /*
+     * Same-day is set up but pointed at the simulator, so it is coming rather
+     * than gone. Saying so is more useful than silence - it tells a Jaipur
+     * customer this shop intends to deliver locally - as long as it cannot be
+     * BOUGHT. Hence `available: false`, a distinct id, and the filter in
+     * priceDeliveryOption: three separate reasons a request naming it cannot
+     * turn into an order.
+     *
+     * It removes itself. The day BORZO_ENV becomes production this branch is
+     * not reached, the real option appears, and nobody has to remember to
+     * delete a hardcoded promise.
+     */
+    if (borzo.isPending()) {
+      options.push({
+        id: 'same_day_soon',
+        label: 'Same-day delivery',
+        note: 'Coming soon in Jaipur',
+        price: null,
+        courier: null,
+        etaText: null,
+        arrivalBy: null,
+        available: false,
+      });
+    }
+    return options;
+  }
 
   options.push({
     id: 'same_day',
@@ -255,7 +282,11 @@ const getDeliveryOptions = async (cartItems, address, isCOD) => {
  */
 const priceDeliveryOption = async (cartItems, address, isCOD, optionId) => {
   const options = await getDeliveryOptions(cartItems, address, isCOD);
-  const chosen = options.find((o) => o.id === optionId) || options[0];
+
+  // Only options that can actually be delivered are priceable. A display-only
+  // row must never become a shipping provider, whatever a request claims.
+  const sellable = options.filter((o) => o.available !== false);
+  const chosen = sellable.find((o) => o.id === optionId) || sellable[0];
 
   return {
     shippingCharges: chosen.price,

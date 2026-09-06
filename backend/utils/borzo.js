@@ -67,6 +67,13 @@ const baseUrl = () => HOSTS[isLive() ? 'production' : 'test'];
 const isConfigured = () => !!process.env.BORZO_API_TOKEN && isLive();
 
 /**
+ * Set up, but pointed at the simulator - so same-day is coming rather than
+ * gone. This is what lets checkout say "coming soon" honestly, and what makes
+ * that message disappear by itself the day BORZO_ENV becomes production.
+ */
+const isPending = () => !!process.env.BORZO_API_TOKEN && !isLive();
+
+/**
  * Asks Borzo what it would charge to take this basket to this address.
  *
  * @param {object} address   delivery address (street, city, state, zipCode, phoneNumber)
@@ -240,6 +247,7 @@ const cancelSameDay = async (externalOrderId) => {
 };
 
 module.exports = {
+  isPending,
   quoteSameDay,
   bookSameDay,
   cancelSameDay,
