@@ -1,57 +1,210 @@
 // Order emails
 // backend/utils/emailTemplates.js
 
-// Order confirmation email
-exports.orderConfirmedEmail = (order, customer) => ({
-  subject: `Order Confirmed #${order._id.toString().slice(-6)} - ShopMaster Pro`,
-  text: `Hi ${customer.name}, your order has been confirmed. Order total: ₹${order.totalAmount}. Payment: ${order.paymentStatus}.`,
-  html: `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <h2>✅ Order Confirmation</h2>
-      <p>Hi ${customer.name},</p>
-      <p>Your order has been confirmed!</p>
+const { orderUrl } = require('./appUrl');
 
-      <div style="background: #f5f5f5; padding: 15px; margin: 20px 0;">
-        <strong>Order ID:</strong> ${order._id}<br>
-        <strong>Total:</strong> ₹${order.totalAmount}<br>
-        <strong>Payment:</strong> ${order.paymentStatus.toUpperCase()}
+/**
+ * The shell every mail shares: one type size, one width, one voice.
+ *
+ * The old mails set their own fonts and mostly landed on 13px grey, which on a
+ * phone is smaller than everything else in the inbox. Base is 16px here.
+ */
+const wrap = (inner) => `
+    <div style="font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+                max-width:600px;margin:0 auto;padding:8px 4px;
+                font-size:16px;line-height:1.6;color:#1f2937">${inner}</div>`;
+
+/** The one button in a mail. Inline styles only - email strips <style>. */
+const cta = (href, label) => `
+      <p style="margin:0 0 20px 0">
+        <a href="${href}"
+           style="display:inline-block;padding:13px 22px;background:#2563eb;
+                  color:#ffffff;text-decoration:none;border-radius:9px;
+                  font-weight:600;font-size:16px">${label}</a>
+      </p>`;
+
+/** A labelled fact block, so the reference and the numbers are scannable. */
+const facts = (rows) => `
+      <div style="background:#f3f4f6;border-radius:10px;padding:16px;margin:0 0 20px 0">
+        ${rows
+          .filter(([, value]) => value)
+          .map(
+            ([label, value], i) => `
+        <div style="font-size:14px;color:#6b7280;margin:${i ? '12px' : '0'} 0 2px 0">${label}</div>
+        <div style="font-size:17px;font-weight:600;color:#111827">${value}</div>`
+          )
+          .join('')}
+      </div>`;
+
+/** The human reference, falling back for orders written before numbers existed. */
+const refOf = (order) =>
+  order.orderNumber || `#${order._id.toString().slice(-6)}`;
+
+
+/**
+ * How the order was paid for, in words a customer uses.
+ *
+ * The old mail printed the raw enum in capitals - "Payment: PENDING" - on an
+ * order that had been paid. PENDING in shouting capitals reads as "your money
+ * did not go through", which is alarming and, on a prepaid order, wrong.
+ */
+const paymentLine = (order) => {
+  const amount = `₹${order.totalAmount}`;
+
+  if (order.paymentStatus === 'paid') {
+    return order.paymentMethod === 'cod'
+      ? `${amount} — cash collected on delivery`
+      : `${amount} — paid online`;
+  }
+  if (order.paymentStatus === 'refunded') return `${amount} — refunded`;
+  if (order.paymentStatus === 'failed') return `${amount} — payment failed`;
+
+  return order.paymentMethod === 'cod'
+    ? `${amount} — pay cash when it arrives`
+    : `${amount} — awaiting payment`;
+};
+
+/**
+ * Order confirmation.
+ *
+ * WHAT CHANGED AND WHY
+ *   The body was 13px grey on a phone, which is smaller than anything else in
+ *   an inbox. Base text is 16px now, small print 14px, and the line height is
+ *   loose enough to read at arm's length.
+ *
+ *   It led with the Mongo _id - "6a9c6bba12826b817dc23215" - which nobody can
+ *   read out on a phone call. The order NUMBER is the reference the seller
+ *   screen shows and the customer would actually quote.
+ *
+ *   And it had no link. "We'll email you tracking" left the customer waiting
+ *   for a message instead of giving them the page that already exists and
+ *   shows where the parcel is.
+ */
+exports.orderConfirmedEmail = (order, customer) => {
+  const ref = order.orderNumber || `#${order._id.toString().slice(-6)}`;
+  const link = orderUrl(order._id);
+
+  return {
+    subject: `Order confirmed · ${ref} · ShopMaster Pro`,
+    text:
+      `Hi ${customer.name},
+
+` +
+      `Your order ${ref} is confirmed.
+` +
+      `Payment: ${paymentLine(order)}
+
+` +
+      `Track it here: ${link}
+
+` +
+      `Shipped in 1-3 working days, delivered in about 3-7 after that.
+`,
+    html: `
+    <div style="font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+                max-width:600px;margin:0 auto;padding:8px 4px;
+                font-size:16px;line-height:1.6;color:#1f2937">
+
+      <h2 style="font-size:22px;margin:0 0 16px 0;color:#111827">
+        Your order is confirmed
+      </h2>
+
+      <p style="margin:0 0 16px 0">Hi ${customer.name},</p>
+
+      <div style="background:#f3f4f6;border-radius:10px;padding:16px;margin:0 0 20px 0">
+        <div style="font-size:14px;color:#6b7280;margin-bottom:2px">Order</div>
+        <div style="font-size:18px;font-weight:700;color:#111827;margin-bottom:12px">
+          ${ref}
+        </div>
+        <div style="font-size:14px;color:#6b7280;margin-bottom:2px">Payment</div>
+        <div style="font-size:17px;font-weight:600;color:#111827">
+          ${paymentLine(order)}
+        </div>
       </div>
 
-      <p style="margin: 0 0 8px 0;">
-        We'll send your tracking details by email as soon as the seller ships your order.
+      <!-- The tracking the customer already has, rather than a promise of an
+           email later. This page shows every stage the parcel reaches. -->
+      <p style="margin:0 0 20px 0">
+        <a href="${link}"
+           style="display:inline-block;padding:13px 22px;background:#2563eb;
+                  color:#ffffff;text-decoration:none;border-radius:9px;
+                  font-weight:600;font-size:16px">Track your order</a>
       </p>
 
-      <p style="font-size: 13px; color: #555; margin: 12px 0 4px 0;">
-        <strong>Key information:</strong>
-      </p>
-      <ul style="font-size: 13px; color: #555; padding-left: 18px; margin: 0 0 10px 0;">
-        <li>Orders are usually shipped within 1–3 business days after confirmation.</li>
-        <li>Delivery time depends on your pincode and courier partner (typically 3–7 business days after dispatch).</li>
-        <li>Cash on Delivery (COD), if selected, is paid directly to the delivery partner at the time of delivery.</li>
-      </ul>
-
-      <p style="font-size: 13px; color: #555; margin: 0 0 10px 0;">
-        <strong>Returns & refunds:</strong><br/>
-        Eligible orders can be cancelled before they are shipped from the “My Orders” section in your account.
-        For delivered orders, returns are processed as per the seller’s return policy and any eligible refund
-        (for prepaid orders) will be issued back to the original payment method.
+      <p style="margin:0 0 20px 0;font-size:15px;color:#374151">
+        You will also get an email with the courier and tracking number the
+        moment the seller hands your parcel over.
       </p>
 
-      <p style="margin-top: 16px;">
-        Thanks for shopping with <strong>ShopMaster Pro</strong>!
+      <div style="border-top:1px solid #e5e7eb;padding-top:16px;
+                  font-size:14px;line-height:1.6;color:#4b5563">
+        <p style="margin:0 0 8px 0;font-weight:600;color:#374151">
+          What happens next
+        </p>
+        <ul style="padding-left:20px;margin:0 0 16px 0">
+          <li style="margin-bottom:5px">Shipped within 1&ndash;3 working days.</li>
+          <li style="margin-bottom:5px">Delivery usually 3&ndash;7 days after that, depending on your pincode.</li>
+          <li>Cancel any time before it ships, from the link above.</li>
+        </ul>
+
+        <p style="margin:0 0 8px 0;font-weight:600;color:#374151">
+          Returns and refunds
+        </p>
+        <p style="margin:0 0 16px 0">
+          Once delivered, returns follow the seller&rsquo;s policy. Any refund on a
+          prepaid order goes back to the way you paid.
+        </p>
+      </div>
+
+      <p style="margin:0;font-size:15px;color:#6b7280">
+        Thanks for shopping with <strong style="color:#374151">ShopMaster Pro</strong>.
       </p>
     </div>
   `,
-});
+  };
+};
 
+exports.orderStatusEmail = (order, customer, status) => {
+  const ref = refOf(order);
+  const link = orderUrl(order._id);
 
-exports.orderStatusEmail = (order, customer, status) => ({
-  subject: `Order ${status} - ShopMaster Pro`,
-  html: `
-    <h3>Hi ${customer.name},</h3>
-    <p>Your order #${order._id} is now <b>${status}</b>.</p>
-  `
-});
+  // What each step actually means for the person waiting, rather than the enum.
+  const meaning = {
+    processing: 'The seller is packing it now.',
+    shipped: 'It has left the seller and is with the courier.',
+    delivered: 'It has been delivered. Anything wrong? Open the order and tell us.',
+    cancelled: 'This order has been cancelled. Any payment made goes back the way it came.',
+    returned: 'The return is complete.',
+  }[status];
+
+  return {
+    subject: `${ref} is now ${status} · ShopMaster Pro`,
+    text: `Hi ${customer.name},
+
+Order ${ref} is now ${status}.
+${meaning || ''}
+
+${link}
+`,
+    html: wrap(`
+      <h2 style="font-size:22px;margin:0 0 16px 0;color:#111827">
+        Your order is ${status}
+      </h2>
+
+      <p style="margin:0 0 16px 0">Hi ${customer.name},</p>
+
+      ${facts([['Order', ref], ['Status', status]])}
+
+      ${meaning ? `<p style="margin:0 0 20px 0">${meaning}</p>` : ''}
+
+      ${cta(link, 'Open your order')}
+
+      <p style="margin:0;font-size:15px;color:#6b7280">
+        Thanks for shopping with <strong style="color:#374151">ShopMaster Pro</strong>.
+      </p>
+    `),
+  };
+};
 
 /**
  * The password reset mail.
@@ -114,64 +267,65 @@ exports.newOrderEmail = (order, seller) => ({
 
 // backend/utils/emailTemplates.js
 
-exports.shippingNotificationEmail = (order, customer, trackingInfo) => ({
-  subject: `Order Shipped #${order._id.toString().slice(-6)} - ShopMaster Pro`,
-  text: `Hi ${customer.name}, your order has been shipped! Tracking: ${trackingInfo.trackingNumber}`,
-  html: `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <h2>🚚 Your Order is on the Way!</h2>
-      <p>Hi ${customer.name},</p>
-      <p>Great news! Your order has been shipped.</p>
-      
-      <div style="background: #f5f5f5; padding: 15px; margin: 20px 0;">
-        <strong>Order ID:</strong> ${order._id}<br>
-        <strong>Courier:</strong> ${trackingInfo.courierName}<br>
-        <strong>Tracking Number:</strong> ${trackingInfo.trackingNumber}<br>
-        <strong>Shipped Date:</strong> ${new Date(
+exports.shippingNotificationEmail = (order, customer, trackingInfo) => {
+  const ref = refOf(order);
+  const link = orderUrl(order._id);
+
+  return {
+    subject: `On its way · ${ref} · ShopMaster Pro`,
+    text:
+      `Hi ${customer.name},
+
+` +
+      `Order ${ref} has been shipped.
+` +
+      `Courier: ${trackingInfo.courierName}
+` +
+      `Tracking number: ${trackingInfo.trackingNumber}
+
+` +
+      `Follow it here: ${link}
+`,
+    html: wrap(`
+      <h2 style="font-size:22px;margin:0 0 16px 0;color:#111827">
+        Your order is on its way
+      </h2>
+
+      <p style="margin:0 0 16px 0">Hi ${customer.name},</p>
+
+      ${facts([
+        ['Order', ref],
+        ['Courier', trackingInfo.courierName],
+        ['Tracking number', trackingInfo.trackingNumber],
+        [
+          'Shipped',
           trackingInfo.shippedDate
-        ).toLocaleDateString()}
-      </div>
+            ? new Date(trackingInfo.shippedDate).toLocaleDateString('en-IN', {
+                day: 'numeric',
+                month: 'short',
+                year: 'numeric',
+              })
+            : null,
+        ],
+      ])}
 
-      <p style="margin: 0 0 8px 0;">
-        Track your order using the tracking number above.
+      <!--
+        This used to send the customer to the courier's own site and ask them to
+        COPY THE TRACKING NUMBER IN BY HAND - and only when the courier happened
+        to be called "shiprocket"; for every other courier there was no link at
+        all. The order page shows the courier, the number and the progress
+        already, so that is where they go: our own tracking, one tap, always
+        there whoever is carrying the parcel.
+      -->
+      ${cta(link, 'See where it is')}
+
+      <p style="margin:0 0 20px 0;font-size:15px;color:#374151">
+        Usually 3&ndash;7 days from here, depending on your pincode.
       </p>
 
-      <p style="font-size: 13px; color: #555; margin: 0 0 12px 0;">
-        <strong>How to track your order:</strong><br/>
-        1) Click the “Track on Shiprocket” button below.<br/>
-        2) If asked, paste this tracking number: 
-        <strong>${trackingInfo.trackingNumber}</strong>.<br/>
-        3) You will see the current status and expected delivery date.
+      <p style="margin:0;font-size:15px;color:#6b7280">
+        Thanks for shopping with <strong style="color:#374151">ShopMaster Pro</strong>.
       </p>
-
-      <p style="margin: 0 0 16px 0;">
-        Expected delivery: 3-5 business days.
-      </p>
-
-      ${
-        trackingInfo.courierName &&
-        trackingInfo.courierName.toLowerCase() === "shiprocket"
-          ? `
-        <p style="margin: 0;">
-          <a
-            href="https://www.shiprocket.in/shipment-tracking/"
-            target="_blank"
-            style="
-              display: inline-block;
-              padding: 10px 16px;
-              background-color: #2563eb;
-              color: #ffffff;
-              text-decoration: none;
-              border-radius: 4px;
-              font-size: 13px;
-            "
-          >
-            Track on Shiprocket
-          </a>
-        </p>
-      `
-          : ""
-      }
-    </div>
-  `,
-});
+    `),
+  };
+};

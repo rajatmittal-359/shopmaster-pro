@@ -480,12 +480,17 @@ exports.verifyRazorpayPayment = async (req, res) => {
     // 9) Order confirmation email (non‑blocking)
     try {
       const customerId = order.customerId;
-      const { subject, html } = orderConfirmedEmail(order, { name: "Customer" });
+      // Looked up rather than hardcoded: the mail opens "Hi {name}", and this
+      // path was greeting every customer as "Hi Customer".
+      const User = require('../models/User');
+      const customer = (await User.findById(customerId)) || { name: 'there' };
+      const { subject, html, text } = orderConfirmedEmail(order, customer);
 
       await sendSafeEmail({
         toUserId: customerId,
         subject,
         html,
+        text,
       });
     } catch (e) {
       console.error("Order confirmation email failed:", e.message);
@@ -634,15 +639,30 @@ exports.handleRazorpayWebhook = async (req, res) => {
         
         await session.commitTransaction();
         
-        // ✅ Send order confirmation email (non-blocking)
+        /*
+         * The confirmation email.
+         *
+         * `order` was loaded BEFORE the claim above, and that claim was an
+         * updateOne - it changed the database, not this object. So the copy
+         * held here still said paymentStatus 'pending', and the mail went out
+         * announcing "Payment: PENDING" for an order that had just been paid
+         * for. A customer who has been charged reads that as their money
+         * having failed.
+         *
+         * The order is re-read so the mail describes what was actually stored.
+         */
         setImmediate(async () => {
           try {
             const User = require('../models/User');
             const customer = await User.findById(order.customerId);
+            const fresh = await Order.findById(order._id);
             const { orderConfirmedEmail } = require('../utils/emailTemplates');
-            const { subject, html } = orderConfirmedEmail(order, customer);
+            const { subject, html, text } = orderConfirmedEmail(
+              fresh || order,
+              customer
+            );
             const sendSafeEmail = require('../utils/sendSafeEmail');
-            await sendSafeEmail({ toUserId: customer._id, subject, html });
+            await sendSafeEmail({ toUserId: customer._id, subject, html, text });
           } catch (e) {
             console.error('Webhook order email failed:', e.message);
           }

@@ -316,13 +316,14 @@ exports.checkout = async (req, res) => {
     setImmediate(async () => {
       try {
         const customer = req.user;
-        const { subject, html } = orderConfirmedEmail(order[0], customer);
+        const { subject, html, text } = orderConfirmedEmail(order[0], customer);
 
         await sendSafeEmail({
           toUserId: customer._id,
           toEmail: customer.email,
           subject,
           html,
+          text,
         });
       } catch (emailErr) {
         console.error('COD order email failed:', emailErr.message);
