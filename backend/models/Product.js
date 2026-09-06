@@ -1,5 +1,6 @@
 // backend/models/Product.js
 const mongoose = require('mongoose');
+const { checkDescriptionHtml } = require('../utils/safeHtml');
 
 /** URL-safe slug from a product name. Same rules as Category.slugify. */
 const slugify = (name = '') =>
@@ -43,12 +44,40 @@ const productSchema = new mongoose.Schema(
       minlength: [3, 'Product name must be at least 3 characters'],
       maxlength: [100, 'Product name cannot exceed 100 characters'],
     },
+    /**
+     * Shown to the shopper as HTML.
+     *
+     * WHY IT IS VALIDATED HERE AND NOT IN A pre('validate') HOOK
+     *   It was, first - and the hook was silently useless. Four places write
+     *   this field, and sellerController checks a new product with
+     *   `product.validateSync()` BEFORE uploading its images, deliberately, so
+     *   a rejected product does not leave paid-for Cloudinary storage behind.
+     *   validateSync does not run async middleware, so the hook was skipped
+     *   exactly there: a description carrying a <script> passed the early
+     *   check, the images and the video were uploaded and paid for, and only
+     *   then did save() refuse.
+     *
+     *   A path validator runs in BOTH validateSync and save, so the check
+     *   happens where the controller expects it to.
+     *
+     *   The rule itself is in utils/safeHtml.js, along with why it refuses
+     *   rather than cleans. The short version: the product page renders this
+     *   with dangerouslySetInnerHTML and does not sanitise it, so whatever is
+     *   in here runs in the shopper's browser - which stopped being a
+     *   theoretical problem the day this became a marketplace with sellers
+     *   other than us.
+     */
     description: {
       type: String,
       required: [true, 'Product description is required'],
       trim: true,
       minlength: [10, 'Description must be at least 10 characters'],
       maxlength: [1000, 'Description cannot exceed 1000 characters'],
+      validate: {
+        validator: (value) => checkDescriptionHtml(value).ok,
+        // Named, so a seller can fix it rather than guess.
+        message: (props) => checkDescriptionHtml(props.value).reason,
+      },
     },
     category: {
       type: mongoose.Schema.Types.ObjectId,

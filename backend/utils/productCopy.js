@@ -1,4 +1,5 @@
 const { generate } = require('./gemini');
+const { checkDescriptionHtml } = require('./safeHtml');
 
 /**
  * Writing a product description that is worth indexing and is not a lie.
@@ -31,23 +32,6 @@ const { generate } = require('./gemini');
 /** Words that would turn imitation jewellery into a claim about real metal. */
 const PURITY_CLAIMS =
   /\b(hallmark|hallmarked|916|22\s*(k|ct|carat)|18\s*(k|ct|carat)|14\s*(k|ct|carat)|solid gold|pure gold|real gold|genuine gold|sterling silver|925|pure silver|real silver|solid silver|real diamond|genuine diamond|natural diamond|real emerald|genuine emerald|natural ruby|precious stone)\b/i;
-
-/**
- * Tags a description may contain.
- *
- * The product page renders this field with dangerouslySetInnerHTML and does not
- * sanitise it, so anything that reaches the field runs in the customer's
- * browser. That is a pre-existing hole and a separate fix; this function simply
- * refuses to be the thing that walks through it.
- */
-const ALLOWED_TAGS = /^(p|br|ul|ol|li|strong|em)$/i;
-
-const hasOnlySafeTags = (html) => {
-  const tags = [...String(html).matchAll(/<\s*\/?\s*([a-zA-Z0-9-]+)[^>]*>/g)].map((m) => m[1]);
-  return tags.every((t) => ALLOWED_TAGS.test(t));
-};
-
-const hasAttributes = (html) => /<\s*[a-zA-Z0-9-]+\s+[^>]*>/.test(html);
 
 /** Roughly how long a description should be to be worth indexing at all. */
 const MIN_WORDS = 45;
@@ -175,11 +159,15 @@ const draftDescription = async (product) => {
       reason: `Rejected - it claims real precious metal or stones: "${html.match(PURITY_CLAIMS)[0]}"`,
     };
   }
-  if (!hasOnlySafeTags(html)) {
-    return { ok: false, reason: 'Rejected - it used HTML tags that are not allowed' };
-  }
-  if (hasAttributes(html)) {
-    return { ok: false, reason: 'Rejected - it put attributes on a tag' };
+  /*
+   * The same check the Product model applies on save - deliberately the same
+   * function and not a second opinion, because a drafter that permits what the
+   * model refuses produces copy that cannot be stored, and one that permits
+   * MORE is a hole with extra steps.
+   */
+  const safe = checkDescriptionHtml(html);
+  if (!safe.ok) {
+    return { ok: false, reason: `Rejected - unsafe HTML: ${safe.reason}` };
   }
   if (wordCount(html) < MIN_WORDS) {
     return { ok: false, reason: `Rejected - only ${wordCount(html)} words, too thin to index` };
@@ -207,8 +195,6 @@ module.exports = {
   PURITY_CLAIMS,
   STATES_A_WEIGHT,
   mentionsBrand,
-  hasOnlySafeTags,
-  hasAttributes,
   wordCount,
   MIN_WORDS,
 };

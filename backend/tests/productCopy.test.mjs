@@ -31,8 +31,6 @@ const {
   PURITY_CLAIMS,
   STATES_A_WEIGHT,
   mentionsBrand,
-  hasOnlySafeTags,
-  hasAttributes,
   wordCount,
   MIN_WORDS,
 } = require('../utils/productCopy');
@@ -142,24 +140,6 @@ describe('advertising the shop inside its own product copy', () => {
   it('ignores a brand too short to match safely', () => {
     // A two-letter brand would match inside half the words in the language.
     expect(mentionsBrand('<p>An oxidised ring.</p>', 'CJ')).toBe(false);
-  });
-});
-
-describe('HTML that reaches a shopper unsanitised', () => {
-  it('allows the handful of tags a description needs', () => {
-    expect(hasOnlySafeTags('<p>A ring.</p><p>With <strong>detail</strong>.</p>')).toBe(true);
-    expect(hasOnlySafeTags('<ul><li>One</li><li>Two</li></ul>')).toBe(true);
-  });
-
-  it('refuses anything that can execute', () => {
-    expect(hasOnlySafeTags('<p>Nice</p><script>steal()</script>')).toBe(false);
-    expect(hasOnlySafeTags('<iframe src="x"></iframe>')).toBe(false);
-    expect(hasOnlySafeTags('<img src=x>')).toBe(false);
-  });
-
-  it('refuses attributes, which is where onerror and href would live', () => {
-    expect(hasAttributes('<p onclick="steal()">Nice</p>')).toBe(true);
-    expect(hasAttributes('<p>Nice</p>')).toBe(false);
   });
 });
 

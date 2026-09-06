@@ -1,5 +1,6 @@
 import { POLICY } from '../../config/policy';
 import { priceOf } from '../../utils/pricing';
+import { serialiseJsonLd } from '../../utils/jsonLd';
 
 const SITE_URL = 'https://www.shopmasterpro.in';
 
@@ -44,7 +45,7 @@ export default function Seo({
       {jsonLd && (
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+          dangerouslySetInnerHTML={{ __html: serialiseJsonLd(jsonLd) }}
         />
       )}
     </>
