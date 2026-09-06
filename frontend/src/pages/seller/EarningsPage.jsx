@@ -168,10 +168,24 @@ export default function EarningsPage() {
             accent="brand"
             hint="Transferred to your account."
           />
+          {/*
+            The rate belongs beside the amount.
+
+            The rupees say what has been taken; they do not say what will be.
+            A seller looking at their money page could not see their own rate -
+            the one number an admin can change - so they were being asked to
+            trust a figure they had no way to check.
+          */}
           <StatCard
             label="Platform commission"
             value={money(earnings?.commissionCharged)}
-            hint="Kept by the shop on your sales so far."
+            hint={
+              earnings?.commissionRate === 0
+                ? 'You sell commission-free — nothing is deducted.'
+                : earnings?.commissionRate != null
+                  ? `Kept by the shop so far. You are on ${earnings.commissionRate}% of item value, never on delivery.`
+                  : 'Kept by the shop on your sales so far.'
+            }
           />
         </div>
 

@@ -149,7 +149,10 @@ exports.getMyEarnings = async (req, res) => {
   try {
     const sellerId = req.user._id;
 
-    const [payable] = await getPayableSummary(sellerId);
+    const [payable, seller] = await Promise.all([
+      getPayableSummary(sellerId).then((rows) => rows[0]),
+      Seller.findOne({ userId: sellerId }).select('commissionRate'),
+    ]);
 
     // Delivered but still inside the return window, plus sold-not-yet-delivered.
     const pipeline = [
@@ -197,6 +200,16 @@ exports.getMyEarnings = async (req, res) => {
         // Sold but not yet payable: undelivered, or still returnable.
         pendingClearance: Math.round((totalUnsettled - readyNow) * 100) / 100,
         commissionCharged: unsettled ? Math.round(unsettled.commission * 100) / 100 : 0,
+
+        /*
+         * The RATE, not just the rupees.
+         *
+         * The amount alone tells a seller what has been taken and not what
+         * will be. A seller who cannot see their own rate on the page where
+         * they look at their money is being asked to trust a number they
+         * cannot check - and it is the one number an admin can change.
+         */
+        commissionRate: seller?.commissionRate ?? null,
       },
       payouts,
     });
