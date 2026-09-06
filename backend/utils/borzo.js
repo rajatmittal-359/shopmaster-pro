@@ -107,6 +107,8 @@ const quoteSameDay = async (address, weightKg) => {
           {
             address: drop,
             contact_person: {
+              // The person, not the address's nickname. See shiprocketBooking.
+              // A quote needs no recipient name, and quoteSameDay has no order.
               name: address.label || 'Customer',
               phone: address.phoneNumber,
             },
@@ -180,7 +182,10 @@ const bookSameDay = async (order, address, weightKg) => {
           { address: pickup, contact_person: { name: 'ShopMaster Pro', phone: pickupPhone } },
           {
             address: drop,
-            contact_person: { name: address.label || 'Customer', phone: address.phoneNumber },
+            contact_person: {
+              name: order?.customerId?.name || address.label || 'Customer',
+              phone: address.phoneNumber,
+            },
           },
         ],
       },

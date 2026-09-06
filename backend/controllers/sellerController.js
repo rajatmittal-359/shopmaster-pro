@@ -879,7 +879,12 @@ exports.shipOrder = async (req, res) => {
     const order = await Order.findOne({
       _id: orderId,
       'items.sellerId': req.user._id,
-    }).populate('items.productId', 'weight sku');
+    })
+      .populate('items.productId', 'weight sku')
+      // The courier needs a PERSON to hand the parcel to. Without this the
+      // booking fell back to the address nickname and shipped parcels
+      // addressed to "Home" or "Relative (test delivery)".
+      .populate('customerId', 'name');
 
     if (!order) {
       return res.status(404).json({ success: false, message: 'Order not found' });

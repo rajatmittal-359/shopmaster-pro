@@ -96,7 +96,19 @@ const bookShipment = async (order, address, weightKg) => {
     .filter((i) => i.status !== 'cancelled')
     .reduce((sum, i) => sum + i.price * i.quantity, 0);
 
-  const [firstName, ...restOfName] = String(address.label || 'Customer').split(' ');
+  /*
+   * Who the parcel is FOR.
+   *
+   * This read address.label, which is the address's nickname - "Home",
+   * "Office", "Relative (test delivery)". So the courier was handed that as the
+   * recipient's name and a rider arrived asking for "Home". The customer's own
+   * name is on the order; the nickname is only a fallback for old orders where
+   * it was never populated.
+   */
+  const recipient = String(
+    order.customerId?.name || address.label || 'Customer'
+  ).trim();
+  const [firstName, ...restOfName] = recipient.split(' ');
 
   const payload = {
     // Our own reference. Shiprocket returns ITS order id separately, and that
