@@ -106,6 +106,19 @@ const applyCourierUpdate = (order, fulfilment, update = {}) => {
     if (!fulfilment.deliveredAt) fulfilment.deliveredAt = when;
 
     /*
+     * An exchange finishes HERE and nowhere else.
+     *
+     * The seller's money is held from the moment a replacement is owed until
+     * this scan, because an exchange is not done when the faulty item comes
+     * back - it is done when the customer is holding a working one. Closing it
+     * on dispatch instead would pay the seller for a parcel still in a van.
+     */
+    if (fulfilment.replacementStage === 'shipped') {
+      fulfilment.replacementStage = 'delivered';
+      fulfilment.replacementDeliveredAt = when;
+    }
+
+    /*
      * The courier's word, recorded as the courier's word.
      *
      * This overwrites a seller's earlier claim on purpose. Both cannot be the

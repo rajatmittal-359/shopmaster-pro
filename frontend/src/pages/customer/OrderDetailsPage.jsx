@@ -148,11 +148,14 @@ export default function OrderDetailsPage() {
   }, [load]);
 
   /** Actions that carry a reason: the modal has already collected it. */
-  const submitWithReason = async (text) => {
+  const submitWithReason = async (text, choice) => {
     setBusy(true);
     try {
       if (asking === 'return') {
-        const { data } = await returnOrder(orderId, text);
+        // The choice travels with the reason. Defaulting here as well as on the
+        // server means a UI that somehow sends nothing still gets the customer
+        // the refund they were promised rather than an unasked-for parcel.
+        const { data } = await returnOrder(orderId, text, choice || 'refund');
         toastSuccess(data.message || 'Return requested');
       } else {
         const { data } = await raiseDispute(orderId, text);
@@ -213,6 +216,24 @@ export default function OrderDetailsPage() {
 
   const returnStage = fulfilment?.returnStage;
   const disputeOpen = fulfilment?.disputeStatus === 'open';
+
+  /*
+   * An exchange, not a refund. Every sentence below has to change with it -
+   * telling somebody who asked for a replacement that "the refund has been
+   * raised" is worse than saying nothing, because they will wait for money
+   * that is never coming.
+   */
+  const swapping = fulfilment?.returnResolution === 'replacement';
+  const replacementStage = fulfilment?.replacementStage;
+
+  /*
+   * A finished exchange opens the door again. The customer is holding a
+   * replacement that arrived on its own date with its own seven days, so the
+   * old return being 'received' must not be what hides the button - if this
+   * one is faulty too they would have no way to say so.
+   */
+  const exchangeDone = replacementStage === 'delivered';
+  const returnOpen = Boolean(returnStage) && !exchangeDone;
 
   /*
    * A delivery nobody independent witnessed. The seller handed it over by hand,
@@ -342,16 +363,33 @@ export default function OrderDetailsPage() {
         {returnStage && (
           <section className="bg-white rounded-xl border border-gray-200 p-5">
             <p className="text-sm font-medium text-gray-900">
-              {returnStage === 'requested' && 'Return requested'}
-              {returnStage === 'picked' && 'Return collected'}
-              {returnStage === 'received' && 'Return complete'}
+              {returnStage === 'requested' &&
+                (swapping ? 'Replacement requested' : 'Return requested')}
+              {returnStage === 'picked' && 'Collected from you'}
+              {returnStage === 'received' &&
+                (swapping
+                  ? {
+                      due: 'Your replacement is being packed',
+                      shipped: 'Your replacement is on its way',
+                      delivered: 'Exchange complete',
+                    }[replacementStage] || 'The seller has your item back'
+                  : 'Return complete')}
               {returnStage === 'rejected' && 'The seller refused this return'}
             </p>
             <p className="text-sm text-gray-600 mt-1">
               {returnStage === 'requested' &&
-                'Your refund is raised once the item is back with the seller.'}
+                (swapping
+                  ? 'A new one is sent out once this one reaches the seller. There is nothing more to pay.'
+                  : 'Your refund is raised once the item is back with the seller.')}
               {returnStage === 'picked' && 'It is on its way back to the seller.'}
-              {returnStage === 'received' && 'The refund has been raised.'}
+              {returnStage === 'received' &&
+                (swapping
+                  ? {
+                      due: 'They have it back. Your replacement goes out shortly.',
+                      shipped: 'You can follow it in the tracking above.',
+                      delivered: 'Your replacement has arrived.',
+                    }[replacementStage] || 'They have it back.'
+                  : 'The refund has been raised.')}
               {returnStage === 'rejected' && fulfilment?.returnNote}
             </p>
             {returnStage === 'rejected' && canDispute && (
@@ -427,15 +465,15 @@ export default function OrderDetailsPage() {
 
               {/* Deliberately plain and last: most people do not need it, and
                   the ones who do should not have to hunt for it. */}
-              {canDispute && !returnStage && (
+              {canDispute && !returnOpen && (
                 <Button variant="secondary" disabled={busy} onClick={() => setAsking('dispute')}>
                   Something is wrong
                 </Button>
               )}
 
-              {rules.canReturn && !returnStage && (
+              {rules.canReturn && !returnOpen && (
                 <Button variant="secondary" disabled={busy} onClick={() => setAsking('return')}>
-                  Return this order
+                  {exchangeDone ? 'Send this one back too' : 'Return or exchange'}
                 </Button>
               )}
             </div>
@@ -633,12 +671,25 @@ export default function OrderDetailsPage() {
 
       <ReasonModal
         open={asking === 'return'}
-        title="Return this order?"
+        title="Send this back?"
         hint="The seller reads this, and it decides whether the return is accepted."
+        optionsLabel="What would you like instead?"
+        options={[
+          {
+            value: 'refund',
+            label: 'My money back',
+            hint: 'Refunded to the way you paid, once the item reaches the seller.',
+          },
+          {
+            value: 'replacement',
+            label: 'The same item again',
+            hint: 'A new one is sent out once the seller has this one back. Nothing more to pay.',
+          },
+        ]}
         label="What is wrong with it?"
         placeholder="The clasp is broken"
-        note="Your refund is raised once the item is back with the seller."
-        confirmLabel="Request the return"
+        note="Nothing happens until the item is back with the seller."
+        confirmLabel="Send the request"
         minLength={3}
         busy={busy}
         onSubmit={submitWithReason}

@@ -117,6 +117,23 @@ const payoutBlockedReason = (fulfilment, now = new Date()) => {
   if (['requested', 'picked'].includes(fulfilment.returnStage)) {
     return 'The customer has started a return.';
   }
+  /*
+   * An exchange owed, or on its way.
+   *
+   * returnStage reads 'received' by this point - the faulty item IS back - so
+   * the check above has already let go. But an exchange is only half finished
+   * there: no money was refunded and the customer is holding nothing. Paying
+   * the seller now would pay them for a sale whose goods are on a shelf in
+   * their own shop.
+   *
+   * It clears when the courier scans the replacement as delivered, and the
+   * customer's return window then runs from THAT delivery.
+   */
+  if (['due', 'shipped'].includes(fulfilment.replacementStage)) {
+    return fulfilment.replacementStage === 'due'
+      ? 'A replacement for this order has not been sent yet.'
+      : 'A replacement for this order is still on its way.';
+  }
   if (awaitingCustomerConfirmation(fulfilment, now)) {
     return 'Waiting for the customer to confirm they received it.';
   }

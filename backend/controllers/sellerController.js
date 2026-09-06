@@ -547,6 +547,10 @@ exports.getMyOrders = async (req, res) => {
 
         returnStage: fulfilment?.returnStage || null,
         returnReason: fulfilment?.returnReason || null,
+        // Whether the customer asked for their money or for the item again.
+        // Without it a seller settling a return cannot tell which they owe.
+        returnResolution: fulfilment?.returnResolution || null,
+        replacementStage: fulfilment?.replacementStage || null,
         disputeStatus: fulfilment?.disputeStatus || null,
         bookingFailedReason: fulfilment?.bookingFailedReason || null,
         bookingFailedKind: fulfilment?.bookingFailedKind || null,
@@ -662,6 +666,14 @@ exports.getOrderDetails = async (req, res) => {
       returnStage: fulfilment?.returnStage || null,
       returnReason: fulfilment?.returnReason || null,
       returnNote: fulfilment?.returnNote || null,
+      /**
+       * Refund or replacement, and how far the replacement has got. The seller
+       * has to know which the customer asked for BEFORE they settle it - the
+       * two owe completely different things and neither can be taken back.
+       */
+      returnResolution: fulfilment?.returnResolution || null,
+      replacementStage: fulfilment?.replacementStage || null,
+      replacementBookedAt: fulfilment?.replacementBookedAt || null,
       // Whether a courier is already coming for it, so the page does not offer
       // to book a second one.
       returnBookedAt: fulfilment?.returnBookedAt || null,
@@ -1308,6 +1320,7 @@ exports.cancelOwnLines = async (req, res) => {
 };
 
 const returns = require('../utils/settleReturn');
+const replacements = require('../utils/settleReplacement');
 const reverse = require('../utils/shiprocketReturn');
 const { classifyBookingFailure } = require('../utils/bookingFailure');
 
@@ -1326,10 +1339,11 @@ exports.settleReturn = async (req, res) => {
     if (!mongoose.isValidObjectId(orderId)) {
       return res.status(400).json({ success: false, message: 'Invalid order id' });
     }
-    if (!['receive', 'reject', 'pickup'].includes(action)) {
-      return res
-        .status(400)
-        .json({ success: false, message: "action must be 'receive', 'reject' or 'pickup'" });
+    if (!['receive', 'reject', 'pickup', 'replace'].includes(action)) {
+      return res.status(400).json({
+        success: false,
+        message: "action must be 'receive', 'reject', 'pickup' or 'replace'",
+      });
     }
 
     const order = await Order.findOne({ _id: orderId, 'items.sellerId': req.user._id });
@@ -1405,6 +1419,36 @@ exports.settleReturn = async (req, res) => {
         success: true,
         message: 'Return pickup booked. The courier collects it from the customer.',
       });
+    }
+
+    /*
+     * Sending the replacement the customer asked for.
+     *
+     * A separate button from 'receive' on purpose. Receiving says the faulty
+     * item is back; dispatching says a good one has gone out. They happen at
+     * different times - the seller has to find and pack the thing in between -
+     * and collapsing them into one press would book a courier for a parcel
+     * nobody had made up yet.
+     */
+    if (action === 'replace') {
+      await order.populate([
+        { path: 'shippingAddressId' },
+        { path: 'customerId', select: 'name email' },
+        { path: 'items.productId', select: 'weight sku' },
+      ]);
+
+      const done = await replacements.dispatchReplacement(
+        order,
+        order.shippingAddressId,
+        { sellerId: req.user._id, actorId: req.user._id }
+      );
+
+      if (!done.ok) {
+        return res
+          .status(done.status || 400)
+          .json({ success: false, message: done.message });
+      }
+      return res.json({ success: true, message: done.message, awb: done.awb });
     }
 
     const result =

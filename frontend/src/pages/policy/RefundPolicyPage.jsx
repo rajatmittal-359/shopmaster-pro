@@ -39,6 +39,26 @@ export default function RefundPolicyPage() {
         </ul>
       </Section>
 
+      <Section title="Exchanges">
+        <p>
+          When you start a return you choose{' '}
+          <strong>your money back, or the same item again</strong>. Ask for a
+          replacement and nothing is refunded: once your item reaches the seller
+          they send out a new one, and there is nothing more to pay &mdash; the
+          replacement is delivered free.
+        </p>
+        <p>
+          We exchange an item for the same item. If you want something different,
+          take the refund and order the piece you want &mdash; that way you see
+          what you are buying and pay the right price for it.
+        </p>
+        <p>
+          If the seller has none left to send, they will tell you and refund you
+          instead. You can follow the replacement from{' '}
+          <strong>My orders</strong> exactly like the first parcel.
+        </p>
+      </Section>
+
       <Section title="What cannot be returned">
         <p>
           Items made or engraved to your order, and pierced jewellery such as

@@ -211,6 +211,51 @@ const fulfilmentSchema = new mongoose.Schema(
     returnNote: { type: String, default: null },
 
     /**
+     * What the customer asked for when they opened the return: their money
+     * back, or the same item again.
+     *
+     * WHY IT IS RECORDED AT THE REQUEST AND NOT AT THE END
+     *   The two settle completely differently - one moves money and the other
+     *   moves goods - and the decision belongs to the customer, not to whoever
+     *   happens to press the button when the parcel comes back. Left until
+     *   settlement, a seller could refund a customer who wanted the item, or
+     *   ship a replacement to somebody who wanted their money. Neither is
+     *   correctable afterwards without a second return.
+     *
+     *   Null on returns opened before replacements existed. Those are refunds,
+     *   which is what they were promised, and settleReturn treats a missing
+     *   value as 'refund' rather than guessing.
+     */
+    returnResolution: {
+      type: String,
+      enum: ['refund', 'replacement'],
+      default: null,
+    },
+
+    /**
+     * The replacement, once the customer has asked for one.
+     *
+     *   due        the faulty item is back with the seller and a replacement
+     *              is owed. No money has moved and none will.
+     *   shipped    a courier is carrying the replacement
+     *   delivered  it arrived, and the whole exchange is closed
+     *
+     * WHY THE SELLER'S MONEY DOES NOT MOVE UNTIL 'delivered'
+     *   An exchange is not finished when the faulty item comes back - it is
+     *   finished when the customer is holding a working one. Paying out at the
+     *   first half would pay a seller for a sale the customer does not yet have
+     *   anything to show for. payoutBlockedReason holds on this.
+     */
+    replacementStage: {
+      type: String,
+      enum: ['due', 'shipped', 'delivered'],
+      default: null,
+    },
+    replacementDueAt: { type: Date, default: null },
+    replacementBookedAt: { type: Date, default: null },
+    replacementDeliveredAt: { type: Date, default: null },
+
+    /**
      * The reverse shipment, once a courier has been booked to collect it.
      *
      * Kept apart from the forward `awb` on purpose: a return travels on its own
@@ -323,6 +368,37 @@ const fulfilmentSchema = new mongoose.Schema(
     shipmentId: { type: String, default: null },
     shippingOrderId: { type: String, default: null },
     trackingUrl: { type: String, default: null },
+
+    /**
+     * Parcels that have already made this journey and are finished with.
+     *
+     * WHY THE CURRENT PARCEL KEEPS THE PLAIN FIELD NAMES
+     *   An exchange sends a SECOND parcel to the same customer for the same
+     *   fulfilment. Everything that watches a parcel move - the courier
+     *   webhook, the reconciler, the tracking panel the customer refreshes -
+     *   finds it by `awb`. Giving the replacement its own field name would mean
+     *   teaching every one of those about a second place to look, and the one
+     *   that was forgotten would go quiet without erroring: a replacement in
+     *   transit that nothing was tracking.
+     *
+     *   So `awb` and the fields beside it always mean THE PARCEL ON ITS WAY TO
+     *   THE CUSTOMER NOW, and the one it replaced is moved in here first.
+     *   Nothing is lost - a dispute about an exchange needs to read both
+     *   journeys - and nothing downstream changes.
+     */
+    previousParcels: [
+      {
+        _id: false,
+        awb: { type: String },
+        courierName: { type: String },
+        shipmentId: { type: String },
+        shippingOrderId: { type: String },
+        trackingUrl: { type: String },
+        deliveredAt: { type: Date },
+        /** Why this parcel stopped being the current one. */
+        replacedBecause: { type: String },
+      },
+    ],
   },
   { _id: false }
 );

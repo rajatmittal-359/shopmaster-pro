@@ -29,8 +29,8 @@ export const cancelOrderItem = (orderId, itemId) =>
  * This raises a REQUEST. No money moves until the goods are back with the
  * seller - see backend/utils/settleReturn.js.
  */
-export const returnOrder = (orderId, reason) =>
-  api.post(`/customer/orders/${orderId}/return`, { reason });
+export const returnOrder = (orderId, reason, resolution = 'refund') =>
+  api.post(`/customer/orders/${orderId}/return`, { reason, resolution });
 
 /** "Yes, I got it" - on a delivery only the seller claimed. */
 export const confirmReceipt = (orderId) =>

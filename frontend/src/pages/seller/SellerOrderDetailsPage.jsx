@@ -379,10 +379,31 @@ export default function SellerOrderDetailsPage() {
         */}
         {['requested', 'picked'].includes(order.returnStage) && (
           <div className="bg-white p-5 rounded-xl border border-gray-200">
-            <h3 className="font-semibold text-gray-900">The customer wants to return this</h3>
+            <h3 className="font-semibold text-gray-900">
+              {order.returnResolution === 'replacement'
+                ? 'The customer wants this one swapped'
+                : 'The customer wants to return this'}
+            </h3>
             <p className="text-sm text-gray-600 mt-1">
               They said: “{order.returnReason}”
             </p>
+
+            {/*
+              What they asked for, said plainly and before the buttons.
+              A seller who reads "return" and refunds somebody who wanted the
+              necklace has done something no button can take back.
+            */}
+            {order.returnResolution === 'replacement' ? (
+              <p className="text-sm text-gray-900 mt-2">
+                They asked for <strong>a replacement, not a refund</strong>. No money
+                goes back — you send another one once you have this one.
+              </p>
+            ) : (
+              <p className="text-sm text-gray-900 mt-2">
+                They asked for <strong>their money back</strong>.
+              </p>
+            )}
+
             <p className="text-xs text-gray-500 mt-2">
               Your payment for this order is held until it is settled.
             </p>
@@ -442,6 +463,61 @@ export default function SellerOrderDetailsPage() {
                 Refuse this return
               </Button>
             </div>
+          </div>
+        )}
+
+        {/*
+          A replacement owed, or on its way.
+          Deliberately a SECOND panel and a second press. "I have the item back"
+          and "I have posted a new one" happen hours or days apart - the seller
+          has to find and pack the thing in between - and one button for both
+          would book a courier for a parcel nobody had made up yet.
+        */}
+        {['due', 'shipped'].includes(order.replacementStage) && (
+          <div className="bg-white p-5 rounded-xl border border-gray-200">
+            <h3 className="font-semibold text-gray-900">
+              {order.replacementStage === 'due'
+                ? 'You owe this customer a replacement'
+                : 'The replacement is on its way'}
+            </h3>
+
+            {order.replacementStage === 'due' ? (
+              <>
+                <p className="text-sm text-gray-600 mt-1">
+                  You have their old one back. Pack a new one, then book the courier
+                  here — it takes a unit off your stock and the customer pays
+                  nothing.
+                </p>
+                <p className="text-xs text-gray-500 mt-2">
+                  Your payment for this order stays held until the replacement is
+                  delivered.
+                </p>
+
+                <Button
+                  className="mt-4"
+                  loading={updating}
+                  onClick={async () => {
+                    setUpdating(true);
+                    try {
+                      const { data } = await settleReturn(order._id, 'replace');
+                      toastSuccess(data.message || 'Replacement booked');
+                      await loadOrder();
+                    } catch (err) {
+                      toastError(err?.response?.data?.message || 'That did not work');
+                    } finally {
+                      setUpdating(false);
+                    }
+                  }}
+                >
+                  Send the replacement
+                </Button>
+              </>
+            ) : (
+              <p className="text-sm text-gray-600 mt-1">
+                Tracking is above. Your payment is released once the courier scans
+                it as delivered.
+              </p>
+            )}
           </div>
         )}
 

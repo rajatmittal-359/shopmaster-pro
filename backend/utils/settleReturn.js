@@ -55,12 +55,37 @@ const receiveReturn = async (order, { by, actorId, sellerId }) => {
     return { ok: false, status: 400, message: 'There is no open return here' };
   }
 
-  const owners = parcels.map((f) => String(f.sellerId));
-  const lines = order.items.filter(
-    (i) => i.status !== 'cancelled' && owners.includes(String(i.sellerId))
-  );
+  /*
+   * A return settles one of two ways, and the CUSTOMER chose which when they
+   * opened it - see Order.returnResolution.
+   *
+   *   refund       money goes back, the goods count back in as stock, the sale
+   *                is reversed.
+   *   replacement  no money moves at all. The seller owes a working item, and
+   *                the exchange is not finished until that item arrives.
+   *
+   * A return opened before exchanges existed has no resolution recorded. Those
+   * customers were promised a refund, so a missing value means refund - the one
+   * case where guessing is safe, because it is what they were told.
+   */
+  const wantsReplacement = (f) => f.returnResolution === 'replacement';
+  const replacementParcels = parcels.filter(wantsReplacement);
+  const refundParcels = parcels.filter((f) => !wantsReplacement(f));
 
-  if (!lines.length) {
+  const linesOf = (ps) => {
+    const owners = ps.map((f) => String(f.sellerId));
+    return order.items.filter(
+      (i) => i.status !== 'cancelled' && owners.includes(String(i.sellerId))
+    );
+  };
+
+  const lines = linesOf(refundParcels);
+  const replacementLines = linesOf(replacementParcels);
+
+  if (
+    (refundParcels.length && !lines.length) ||
+    (replacementParcels.length && !replacementLines.length)
+  ) {
     return { ok: false, status: 400, message: 'That return has no items on it' };
   }
 
@@ -68,6 +93,10 @@ const receiveReturn = async (order, { by, actorId, sellerId }) => {
    * A seller settling their own parcel in a shared basket refunds only their
    * lines. Refunding order.totalAmount there would hand back another seller's
    * money for goods still sitting with the customer.
+   *
+   * Lines being exchanged are NOT part of this sum. The customer is keeping
+   * that purchase - they asked for the item, not the money - so refunding it
+   * would pay them out and still owe them a parcel.
    */
   const liveLines = order.items.filter((i) => i.status !== 'cancelled');
   const isPartial = lines.length < liveLines.length;
@@ -79,7 +108,11 @@ const receiveReturn = async (order, { by, actorId, sellerId }) => {
   // ---- refund first, and abort if it fails --------------------------------
   // Same order as a cancellation: goods marked back with no refund raised is
   // the one state with nothing left to retry from.
-  if (order.paymentStatus === 'paid' && order.paymentMethod === 'razorpay') {
+  if (
+    refundParcels.length &&
+    order.paymentStatus === 'paid' &&
+    order.paymentMethod === 'razorpay'
+  ) {
     if (!order.razorpayPaymentId) {
       return {
         ok: false,
@@ -108,7 +141,18 @@ const receiveReturn = async (order, { by, actorId, sellerId }) => {
     }
   }
 
-  // ---- the goods are genuinely back, so now the stock is real -------------
+  /* ---- the goods are genuinely back, so now the stock is real -------------
+   *
+   * REFUNDED lines only. An item coming back to be EXCHANGED is coming back
+   * because something is wrong with it, so counting it in as sellable would put
+   * a broken piece on the shelf - and the replacement going out takes a good
+   * one off it, so the two would cancel out and the shop's stock figure would
+   * never notice it had lost an item.
+   *
+   * A seller who inspects it and finds it perfectly sellable can put it back
+   * with an ordinary stock adjustment, which is a decision made by somebody who
+   * has the thing in their hand rather than by this function.
+   */
   for (const item of lines) {
     await inventory.applyInventoryChange({
       productId: item.productId,
@@ -120,13 +164,39 @@ const receiveReturn = async (order, { by, actorId, sellerId }) => {
   }
 
   const now = new Date();
-  for (const f of parcels) {
+
+  for (const f of refundParcels) {
     f.returnStage = 'received';
     f.status = 'returned';
     f.returnedAt = now;
   }
 
+  /*
+   * An exchange is only HALF done here. The faulty item is back; the customer
+   * still has neither their goods nor their money, so the parcel is not
+   * 'returned' - the sale stands and a replacement is owed.
+   *
+   * 'processing' is the honest word for that: the seller has something to pack.
+   * It also means deriveStatus pulls the whole order back to processing, so the
+   * customer's order page stops saying "delivered" about an item they posted
+   * back last week.
+   */
+  for (const f of replacementParcels) {
+    f.returnStage = 'received';
+    f.replacementStage = 'due';
+    f.replacementDueAt = now;
+    f.status = 'processing';
+  }
+
   await order.save();
+
+  if (!refundParcels.length) {
+    return {
+      ok: true,
+      message:
+        'Item received. Send the replacement when it is packed - no refund is due on this one.',
+    };
+  }
 
   return {
     ok: true,

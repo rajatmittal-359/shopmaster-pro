@@ -160,7 +160,34 @@ export function productJsonLd(product, canonicalPath) {
         returnPolicyCategory: 'https://schema.org/MerchantReturnFiniteReturnWindow',
         merchantReturnDays: POLICY.returnDays,
         returnMethod: 'https://schema.org/ReturnByMail',
-        returnFees: 'https://schema.org/FreeReturn',
+
+        /*
+         * Both settlements are offered, and Google shows what it is told. A
+         * shop that exchanges but only declares refunds loses the customers who
+         * were looking for exactly that.
+         */
+        refundType: [
+          'https://schema.org/FullRefund',
+          'https://schema.org/ExchangeRefund',
+        ],
+
+        /*
+         * This said FreeReturn, which the shop's own returns page contradicts:
+         * "for a change of mind, the return courier is at your cost". Google
+         * reads both, and a structured-data promise the policy page refuses is
+         * the mismatch that gets an offer disapproved - quite apart from being
+         * a promise the shop was not keeping.
+         *
+         * A faulty or wrong item is still collected at our expense; schema.org
+         * has no way to say "free only when it is our fault", so the stricter
+         * of the two is declared and the page explains the exception.
+         */
+        returnFees: 'https://schema.org/ReturnFeesCustomerResponsibleForShipping',
+        returnShippingFeesAmount: {
+          '@type': 'MonetaryAmount',
+          currency: 'INR',
+          value: POLICY.shippingRate,
+        },
       },
     },
   };

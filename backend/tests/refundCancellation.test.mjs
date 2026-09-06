@@ -324,3 +324,82 @@ describe('asking to return a delivered prepaid order', () => {
     expect(orderDoc.paymentStatus).toBe('paid');
   });
 });
+
+/**
+ * Choosing an exchange instead of a refund.
+ *
+ * The choice is made HERE, at the request, and never afterwards. The two
+ * settle in opposite currencies and neither can be taken back, so a seller
+ * must not be the one guessing which the customer wanted.
+ */
+describe('asking for a replacement rather than the money', () => {
+  const delivered = (fulfilment = {}) => {
+    orderDoc = makeOrder({ status: 'delivered' });
+    Object.assign(orderDoc.fulfilments[0], fulfilment);
+    Order.findOne = vi.fn(() => chainableQuery(orderDoc));
+    return orderDoc;
+  };
+
+  it('records the choice on the parcel, where the seller will read it', async () => {
+    delivered();
+
+    const res = await returnOrder({
+      reason: 'The clasp is broken',
+      resolution: 'replacement',
+    });
+
+    expect(res.status).toBe(200);
+    expect(orderDoc.fulfilments[0].returnResolution).toBe('replacement');
+    expect(res.body.message).toMatch(/replacement/i);
+  });
+
+  it('still refunds by default, so an older app cannot switch anyone silently', async () => {
+    delivered();
+
+    await returnOrder({ reason: 'The clasp is broken' });
+
+    expect(orderDoc.fulfilments[0].returnResolution).toBe('refund');
+  });
+
+  it('refuses a resolution it does not understand rather than picking one', async () => {
+    delivered();
+
+    const res = await returnOrder({ reason: 'The clasp is broken', resolution: 'credit' });
+
+    expect(res.status).toBe(400);
+    expect(orderDoc.fulfilments[0].returnStage).toBeNull();
+  });
+
+  /**
+   * Without this the request matched no fulfilment, saved nothing, and still
+   * answered "return requested" - a silent no to somebody whose replacement had
+   * also arrived broken.
+   */
+  it('lets a customer send back a replacement that arrived faulty too', async () => {
+    delivered({ returnStage: 'received', replacementStage: 'delivered' });
+
+    const res = await returnOrder({ reason: 'This one is bent as well' });
+
+    expect(res.status).toBe(200);
+    expect(orderDoc.fulfilments[0].returnStage).toBe('requested');
+    expect(orderDoc.fulfilments[0].returnResolution).toBe('refund');
+    // The finished exchange is cleared, or the payout hold would read the old
+    // one instead of the new return.
+    expect(orderDoc.fulfilments[0].replacementStage).toBeNull();
+  });
+
+  it('will not exchange the same parcel twice - the second time it is money', async () => {
+    delivered({ returnStage: 'received', replacementStage: 'delivered' });
+
+    const res = await returnOrder({
+      reason: 'This one is bent as well',
+      resolution: 'replacement',
+    });
+
+    expect(res.status).toBe(400);
+    expect(res.body.message).toMatch(/already been replaced/i);
+    // Nothing was written: an endless exchange loop is goods leaving the shop
+    // on every turn with no refund ever raised.
+    expect(orderDoc.fulfilments[0].returnStage).toBe('received');
+  });
+});

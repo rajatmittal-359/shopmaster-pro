@@ -59,9 +59,14 @@ export const cancelOwnLines = (orderId, reason) =>
 /**
  * Closing out a return on this seller's parcel.
  *
- * 'receive' is what raises the customer's refund - it is not paid when they ask
- * for it, only when the goods are back. 'reject' needs a reason, which the
- * customer is shown and can dispute.
+ * 'receive' settles it the way the CUSTOMER asked when they opened it: their
+ * money back, or the same item again. Either way it is settled when the goods
+ * are back, never when they are asked for.
+ *
+ * 'replace' is the second half of an exchange - the new parcel actually going
+ * out. Separate from 'receive' because it happens later, once the seller has
+ * packed one. 'reject' needs a reason, which the customer is shown and can
+ * dispute.
  */
 export const settleReturn = (orderId, action, reason) =>
   api.post(`/seller/orders/${orderId}/return`, { action, reason });

@@ -93,13 +93,31 @@ const formatOrderDate = (date) => {
  * @param {object} address  the delivery address
  * @param {number} weightKg parcel weight
  */
-const bookShipment = async (order, address, weightKg, attempt = 1) => {
+/**
+ * The reference WE send Shiprocket, which has to be unique in their system.
+ *
+ * Shiprocket keys on this string forever: once a shipment carrying it has been
+ * cancelled, another with the same reference is refused outright. Two things
+ * therefore need a suffix -
+ *
+ *   a re-booking after a cancel, which is `attempt`, and
+ *   a REPLACEMENT parcel, which travels to the same customer for the same order
+ *   number and would otherwise collide with the parcel it replaces.
+ *
+ * The order number stays at the front either way, because a human in the
+ * Shiprocket panel reads this to work out which order they are looking at.
+ */
+const shipmentReference = (order, attempt = 1, prefixSuffix = null) => {
+  const base = prefixSuffix ? `${order.orderNumber}-${prefixSuffix}` : order.orderNumber;
+  return attempt > 1 ? `${base}-R${attempt}` : base;
+};
+
+const bookShipment = async (order, address, weightKg, attempt = 1, opts = {}) => {
   const pickupLocation = process.env.SHIPROCKET_PICKUP_LOCATION || 'Primary';
 
   // sub_total is the goods only. Shiprocket does not compute it, and sending
   // the order total instead would declare the shipping fee as goods value.
-  const subTotal = order.items
-    .filter((i) => i.status !== 'cancelled')
+  const subTotal = (opts.items || order.items.filter((i) => i.status !== 'cancelled'))
     .reduce((sum, i) => sum + i.price * i.quantity, 0);
 
   /*
@@ -133,7 +151,7 @@ const bookShipment = async (order, address, weightKg, attempt = 1) => {
      *   attempt after the first carries a suffix, which Shiprocket accepts as a
      *   new order while a human still reads the order number at the front.
      */
-    order_id: attempt > 1 ? `${order.orderNumber}-R${attempt}` : order.orderNumber,
+    order_id: shipmentReference(order, attempt, opts.reference),
     order_date: formatOrderDate(order.createdAt || new Date()),
     pickup_location: pickupLocation,
 
@@ -160,8 +178,14 @@ const bookShipment = async (order, address, weightKg, attempt = 1) => {
     billing_phone: address.phoneNumber,
     shipping_is_billing: true,
 
-    order_items: order.items
-      .filter((i) => i.status !== 'cancelled')
+    /*
+     * What is actually IN the box. `opts.items` exists for a replacement, where
+     * only the item being exchanged travels - declaring the whole original
+     * order would tell the courier a parcel holds goods that are still sitting
+     * with the customer, and that declaration is what an insurance claim and a
+     * customs-style check both read.
+     */
+    order_items: (opts.items || order.items.filter((i) => i.status !== 'cancelled'))
       .map((i) => ({
         name: i.name,
         sku: String(i.productId?.sku || i.productId?._id || i.productId),
@@ -169,7 +193,13 @@ const bookShipment = async (order, address, weightKg, attempt = 1) => {
         selling_price: i.price,
       })),
 
-    payment_method: order.paymentMethod === 'cod' ? 'COD' : 'Prepaid',
+    /*
+     * A REPLACEMENT is never collected for again. The customer paid for this
+     * item once - on a COD order the cash was handed over at the first
+     * delivery - and sending the second parcel as COD would have a rider ask
+     * for the money a second time. `opts.prepaid` is how the exchange says so.
+     */
+    payment_method: opts.prepaid || order.paymentMethod !== 'cod' ? 'Prepaid' : 'COD',
     shipping_charges: order.shippingCharges || 0,
     sub_total: subTotal,
 
@@ -196,7 +226,7 @@ const bookShipment = async (order, address, weightKg, attempt = 1) => {
        * make one cancel permanent. Try again under the next suffix instead.
        */
       if (/cancel|already|exist|duplicate/i.test(why) && attempt < MAX_BOOK_ATTEMPTS) {
-        return bookShipment(order, address, weightKg, attempt + 1);
+        return bookShipment(order, address, weightKg, attempt + 1, opts);
       }
 
       return { ok: false, reason: why || 'Shiprocket did not create the shipment' };
@@ -306,7 +336,7 @@ const bookShipment = async (order, address, weightKg, attempt = 1) => {
        * all - the create never failed.
        */
       if (/cancel|already|exist|duplicate/i.test(why) && attempt < MAX_BOOK_ATTEMPTS) {
-        return bookShipment(order, address, weightKg, attempt + 1);
+        return bookShipment(order, address, weightKg, attempt + 1, opts);
       }
 
       return {
@@ -354,7 +384,7 @@ const bookShipment = async (order, address, weightKg, attempt = 1) => {
     // Shiprocket refuses a spent reference with a 4xx, which lands here rather
     // than in the branch above. Same cause, same cure: try the next suffix.
     if (/cancel|already|exist|duplicate/i.test(why) && attempt < MAX_BOOK_ATTEMPTS) {
-      return bookShipment(order, address, weightKg, attempt + 1);
+      return bookShipment(order, address, weightKg, attempt + 1, opts);
     }
 
     return { ok: false, reason: why || 'Shiprocket booking failed' };
@@ -473,4 +503,4 @@ const trackByAwb = async (awb) => {
   }
 };
 
-module.exports = { bookShipment, cancelShipment, trackByAwb, getToken };
+module.exports = { bookShipment, cancelShipment, trackByAwb, getToken, shipmentReference };

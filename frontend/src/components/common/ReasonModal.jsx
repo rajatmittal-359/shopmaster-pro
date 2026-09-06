@@ -28,10 +28,24 @@ export default function ReasonModal({
   cancelLabel = 'Never mind',
   minLength = 3,
   busy = false,
+  /**
+   * An optional choice made alongside the reason - [{ value, label, hint }].
+   *
+   * WHY IT LIVES IN THIS DIALOG AND NOT BESIDE THE BUTTON
+   *   A return is now two questions that have to be answered together: what is
+   *   wrong with it, and do you want your money or the item again. Asked
+   *   separately - two buttons, or a choice on the page behind - somebody can
+   *   answer one and not the other, and the half-answer is what reaches the
+   *   seller. Neither can be changed afterwards without a second return, so
+   *   they are asked in one breath and sent in one request.
+   */
+  options = null,
+  optionsLabel = '',
   onSubmit,
   onClose,
 }) {
   const [reason, setReason] = useState('');
+  const [choice, setChoice] = useState(options?.[0]?.value ?? null);
 
   /*
    * Clear the box each time this opens.
@@ -44,13 +58,56 @@ export default function ReasonModal({
   const [wasOpen, setWasOpen] = useState(open);
   if (open !== wasOpen) {
     setWasOpen(open);
-    if (open) setReason('');
+    if (open) {
+      setReason('');
+      // Back to the first option, which is the safe default everywhere this is
+      // used: a stale choice from the last order is worse than no choice.
+      setChoice(options?.[0]?.value ?? null);
+    }
   }
 
   const tooShort = reason.trim().length < minLength;
 
   return (
     <Modal open={open} title={title} hint={hint} onClose={onClose}>
+      {options?.length > 0 && (
+        <fieldset className="mb-4">
+          {optionsLabel && (
+            <legend className="block text-sm text-gray-700 mb-2">{optionsLabel}</legend>
+          )}
+          <div className="space-y-2">
+            {options.map((option) => (
+              <label
+                key={option.value}
+                className={`flex gap-3 items-start rounded-lg border p-3 cursor-pointer
+                            transition-colors ${
+                              choice === option.value
+                                ? 'border-brand-fill bg-brand-fill/5'
+                                : 'border-gray-200 hover:border-gray-300'
+                            }`}
+              >
+                <input
+                  type="radio"
+                  name="reason-modal-choice"
+                  value={option.value}
+                  checked={choice === option.value}
+                  onChange={() => setChoice(option.value)}
+                  className="mt-0.5 accent-brand-fill"
+                />
+                <span>
+                  <span className="block text-sm font-medium text-gray-900">
+                    {option.label}
+                  </span>
+                  {option.hint && (
+                    <span className="block text-xs text-gray-500 mt-0.5">{option.hint}</span>
+                  )}
+                </span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
+      )}
+
       <label htmlFor="reason-modal-text" className="block text-sm text-gray-700 mb-1">
         {label}
       </label>
@@ -73,7 +130,7 @@ export default function ReasonModal({
           variant={confirmVariant}
           disabled={tooShort}
           loading={busy}
-          onClick={() => onSubmit(reason.trim())}
+          onClick={() => onSubmit(reason.trim(), choice)}
         >
           {confirmLabel}
         </Button>

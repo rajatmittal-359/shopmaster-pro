@@ -400,6 +400,14 @@ exports.getAllOrders = async (req, res) => {
             { disputeStatus: 'open' },
             { returnStage: { $in: ['requested', 'picked'] } },
             /*
+             * A replacement owed and not sent. It holds the seller's money the
+             * same way an open return does, but the return itself reads
+             * 'received' - so without this an exchange a seller had quietly
+             * stopped acting on would appear settled to everyone except the
+             * customer waiting for a parcel.
+             */
+            { replacementStage: 'due' },
+            /*
              * A courier the seller could not book. Included because the seller
              * may simply have given up - and the commonest cause, a flat
              * Shiprocket wallet, is not something they can fix at all. If
@@ -758,6 +766,19 @@ exports.resolveDispute = async (req, res) => {
         f.returnStage = 'received';
         f.returnedAt = now;
         f.deliveryConfirmedBy = 'admin';
+
+        /*
+         * A dispute decided for the customer is settled in MONEY, whatever they
+         * originally asked for.
+         *
+         * Somebody who wanted an exchange and ended up in a dispute has already
+         * been let down once by a parcel. Posting them a third one is not a
+         * resolution, and leaving the request as 'replacement' would send
+         * receiveReturn down the branch that deliberately refunds nothing - so
+         * the admin would rule for the customer and no money would move.
+         */
+        f.returnResolution = 'refund';
+        f.replacementStage = null;
       }
 
       const result = await returnsUtil.receiveReturn(order, {

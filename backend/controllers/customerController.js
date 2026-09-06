@@ -722,15 +722,91 @@ exports.cancelOrderItem = async (req, res) => {
         });
       }
 
+      /*
+       * Money back, or the same item again.
+       *
+       * WHY THE CUSTOMER CHOOSES, AND CHOOSES NOW
+       *   The two settle completely differently and neither can be undone
+       *   without a second return. Left to whoever settles it, a seller could
+       *   refund somebody who wanted the necklace, or post a replacement to
+       *   somebody who wanted their money - and both are the sort of thing that
+       *   only surfaces as a complaint.
+       *
+       *   Defaults to a refund. That is what this endpoint has always done, so
+       *   an older app that sends nothing keeps getting exactly what its
+       *   customers were promised rather than silently switching them to an
+       *   exchange.
+       */
+      const resolution = String(req.body?.resolution || 'refund').trim();
+      if (!['refund', 'replacement'].includes(resolution)) {
+        return res.status(400).json({
+          message: "Choose either a refund or a replacement.",
+        });
+      }
+
+      /*
+       * Which parcels can still be sent back.
+       *
+       * Only ones that actually arrived - the status stays 'delivered' either
+       * way, because the goods are still with the customer until a courier
+       * takes them.
+       *
+       * A parcel whose EXCHANGE has completed is eligible again. The customer
+       * is holding a replacement that arrived on its own delivery date, with
+       * its own seven days, and if that one is faulty too they are not out of
+       * options. Without this the request saved nothing at all and still
+       * answered "return requested" - a silent no.
+       */
+      const eligible = order.fulfilments.filter(
+        (f) =>
+          f.status === 'delivered' &&
+          (!f.returnStage || f.replacementStage === 'delivered')
+      );
+
+      if (!eligible.length) {
+        return res.status(400).json({
+          message: 'There is nothing on this order that can be sent back.',
+        });
+      }
+
+      /*
+       * One exchange per parcel, and then it has to be money.
+       *
+       * A replacement that can itself be replaced is a loop with no end: goods
+       * leave the shop on every turn, nothing is ever refunded, and no rule
+       * stops it. Amazon caps replacements for the same reason. If the second
+       * one is faulty as well, something is wrong with the product rather than
+       * with that particular piece, and the honest answer is the customer's
+       * money back.
+       */
+      if (
+        resolution === 'replacement' &&
+        eligible.some((f) => f.replacementStage === 'delivered')
+      ) {
+        return res.status(400).json({
+          message:
+            'This one has already been replaced once. Ask for a refund instead and we will put the money back.',
+        });
+      }
+
       const requestedAt = new Date();
-      order.fulfilments.forEach((f) => {
-        // Only parcels that actually arrived can come back. The status stays
-        // 'delivered': the goods are still with the customer.
-        if (f.status === 'delivered' && !f.returnStage) {
-          f.returnStage = 'requested';
-          f.returnRequestedAt = requestedAt;
-          f.returnReason = reason;
-        }
+      eligible.forEach((f) => {
+        f.returnStage = 'requested';
+        f.returnRequestedAt = requestedAt;
+        f.returnReason = reason;
+        f.returnResolution = resolution;
+
+        /*
+         * A finished exchange is cleared so the payout hold reads the NEW
+         * return rather than the old replacement, which is delivered and
+         * settled. What that parcel was and why it was swapped is already kept
+         * in fulfilment.previousParcels.
+         */
+        f.replacementStage = null;
+        f.replacementDueAt = null;
+        f.replacementBookedAt = null;
+        f.replacementDeliveredAt = null;
+        f.returnNote = null;
       });
 
       await order.save();
@@ -738,7 +814,9 @@ exports.cancelOrderItem = async (req, res) => {
       res.json({
         success: true,
         message:
-          'Return requested. Once the item is back with the seller your refund is processed.',
+          resolution === 'replacement'
+            ? 'Replacement requested. Once the item is back with the seller, a new one is sent out.'
+            : 'Return requested. Once the item is back with the seller your refund is processed.',
         order,
       });
     } catch (err) {
