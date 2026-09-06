@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { useCart } from '../../context/cartContext';
 import AccountMenu from './AccountMenu';
+import { POLICY_PAGES } from '../../config/policy';
 
 export default function Layout({ children, title = 'Dashboard' }) {
   const navigate = useNavigate();
@@ -241,7 +242,34 @@ export default function Layout({ children, title = 'Dashboard' }) {
           )}
         </header>
 
-        <main className="flex-1 overflow-y-auto p-4">{children}</main>
+        <main className="flex-1 overflow-y-auto p-4">
+          {children}
+
+          {/*
+            The policy links.
+
+            They live inside the scrolling area rather than pinned below it, so
+            they sit at the END of the page the way a footer should - a bar
+            fixed above the fold would take room from the shop on a phone for
+            links almost nobody clicks.
+
+            They are not decoration: Razorpay's website check and Google
+            Merchant Center both look for these pages, and an unlinked page is
+            one they cannot find.
+          */}
+          <footer className="mt-10 pt-5 border-t border-gray-200">
+            <nav className="flex flex-wrap gap-x-5 gap-y-2 text-xs text-gray-500">
+              {POLICY_PAGES.map(([label, to]) => (
+                <Link key={to} to={to} className="hover:text-brand-ink">
+                  {label}
+                </Link>
+              ))}
+            </nav>
+            <p className="mt-3 text-xs text-gray-400">
+              © {new Date().getFullYear()} Charming Jewels · Jaipur, Rajasthan
+            </p>
+          </footer>
+        </main>
       </div>
     </div>
   );

@@ -1,3 +1,5 @@
+import { POLICY } from '../../config/policy';
+
 const SITE_URL = 'https://www.shopmasterpro.in';
 
 /**
@@ -56,13 +58,8 @@ export default function Seo({
  * return terms directly in search. CHECK THESE MATCH YOUR ACTUAL POLICY - they
  * are a public promise to the customer, not decoration.
  */
-const POLICY = {
-  shippingRate: 100, // flat freight quoted at checkout, INR
-  shippingCountry: 'IN',
-  handlingDays: [1, 2], // business days to dispatch
-  transitDays: [3, 7], // business days in transit
-  returnDays: 7, // days the customer has to start a return
-};
+// POLICY moved to src/config/policy.js: the policy PAGES quote the same
+// numbers, and a second copy is exactly how the two drift apart.
 
 /**
  * Product structured data, matching the fields Google lists for merchant

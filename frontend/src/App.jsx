@@ -29,6 +29,18 @@ import VerifyOTP from './pages/auth/VerifyOTP';
 import ForgotPassword from './pages/auth/ForgotPassword';
 import ResetPassword from './pages/auth/ResetPassword';
 
+/*
+ * Policy pages. Eagerly imported, not lazy: Razorpay's website check and
+ * Google's crawler fetch these directly, and a route that resolves to a
+ * loading spinner reads to a checker as a page with no policy on it.
+ */
+import ContactPage from './pages/policy/ContactPage';
+import ShippingPolicyPage from './pages/policy/ShippingPolicyPage';
+import RefundPolicyPage from './pages/policy/RefundPolicyPage';
+import PricingPage from './pages/policy/PricingPage';
+import TermsPage from './pages/policy/TermsPage';
+import PrivacyPage from './pages/policy/PrivacyPage';
+
 // Signed-in customer areas.
 const AddressesPage = lazy(() => import('./pages/customer/AddressesPage'));
 const CheckoutPage = lazy(() => import('./pages/customer/CheckoutPage'));
@@ -80,6 +92,15 @@ function App() {
           {/* Public by definition - the whole point is being unable to sign in. */}
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
+
+          {/* Public, and indexable on purpose - a checker that cannot read
+              the page counts the policy as missing. */}
+          <Route path="/contact" element={<ContactPage />} />
+          <Route path="/shipping-policy" element={<ShippingPolicyPage />} />
+          <Route path="/refund-policy" element={<RefundPolicyPage />} />
+          <Route path="/pricing" element={<PricingPage />} />
+          <Route path="/terms" element={<TermsPage />} />
+          <Route path="/privacy" element={<PrivacyPage />} />
 
           {/* Public */}
           <Route path="/shop" element={<HomePage />} />
