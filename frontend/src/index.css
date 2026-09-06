@@ -56,31 +56,45 @@
   Verified against the built stylesheet, not assumed.
 */
 @theme static {
-  --color-brand-50: #fff7ed;
-  --color-brand-100: #ffedd5;
-  --color-brand-200: #fed7aa;
-  --color-brand-300: #fdba74;
-  --color-brand-400: #fb923c;
-  --color-brand-500: #f97316;
-  --color-brand-600: #ea580c;
-  --color-brand-700: #c2410c;
-  --color-brand-800: #9a3412;
-  --color-brand-900: #7c2d12;
+  /*
+    THE BRAND IS RANI PINK.
+
+    It was marigold, and marigold could not do this job. Orange's dark steps
+    ARE brown - that is just where the hue goes - so "vivid orange with white
+    text that clears 4.5:1" does not exist. The AA-safe version came out the
+    colour of dried brick, which is exactly what it looked like.
+
+    Pink does not do that. It stays rich as it darkens, so -700 both reads as
+    a real colour and measures 6.04 on white.
+
+    And it is the right colour for this shop specifically: Jaipur is the Pink
+    City, the shop is in Devi Nagar, and rani pink is what Indian jewellery has
+    always been sold in. That is a reason no trend list can hand anyone else.
+
+    Not #F72585, which gets suggested for this and measures 3.78 - it cannot
+    carry white button text at any size a button uses.
+
+    Every step below is a token, so this whole decision is these ten lines.
+    Nothing in the app names a colour; it names a job.
+  */
+  --color-brand-50: #fdf2f8;
+  --color-brand-100: #fce7f3;
+  --color-brand-200: #fbcfe8;
+  --color-brand-300: #f9a8d4;
+  --color-brand-400: #f472b6;
+  --color-brand-500: #ec4899;
+  --color-brand-600: #db2777;
+  --color-brand-700: #be185d;
+  --color-brand-800: #9d174d;
+  --color-brand-900: #831843;
 
   /*
-    Rani pink - the identity accent, and the only place a two-colour gradient
-    lives. Jaipur is the Pink City and this shop is in Devi Nagar, so pink here
-    is the city's own colour rather than a borrowed trend; it is also the pink
-    Indian jewellery has always been sold in.
-
-    -700 measures 6.04 on white and -800 7.88. NOT the #F72585 usually suggested
-    for this job, which measures 3.78 and cannot carry white button text.
-
-    Deliberately never used on a button. Two colours competing to be the primary
-    action is how a screen stops having one.
+    Marigold is not gone - it is demoted. It is the second stop of the brand
+    mark and nothing else, so the two colours Jaipur is actually made of both
+    survive without either fighting to be the button.
   */
-  --color-accent-700: #be185d;
-  --color-accent-800: #9d174d;
+  --color-accent-700: #c2410c;
+  --color-accent-800: #9a3412;
 
   /*
     Status by what it MEANS, so a screen never has to remember which green.
@@ -104,15 +118,16 @@
     .action-primary  the single button on a screen that COMMITS - add to cart,
                      place the order, book the courier. The gradient is how you
                      find it without reading.
-    .brand-mark      the app's own name. Identity, not decoration.
+    .brand-mark      the app's own name - rani pink into marigold, the two
+                     colours Jaipur is actually made of. Identity, not
+                     decoration.
 
   Nowhere else. If a third use appears, one of these has stopped being special.
 */
 /*
   Both ENDS have to clear 4.5:1, not just the dark one - white sitting over the
-  light corner is still white text on that colour. -600 measures 3.56, so the
-  sweep starts at -700 (5.18) and runs to -800 (7.31). Marigold into rust: it
-  still reads as a gradient, and every pixel under the label is legible.
+  light corner is still white text on that colour. -700 measures 6.04 and -800
+  7.88, so every pixel under the label is legible. Rani pink into a deeper rani.
 */
 .action-primary {
   background-image: linear-gradient(

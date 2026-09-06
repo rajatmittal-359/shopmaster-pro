@@ -136,7 +136,13 @@ export default function ProductCard({ product }) {
           Category: {product.category?.name || 'Uncategorized'}
         </p>
 
-        <div className="flex items-center justify-between mt-2">
+        {/*
+          justify-between with no gap: once the price and the stock together
+          filled the row they simply touched, and it read as "₹1999Stock: 12".
+          A gap keeps them apart and wrapping lets stock drop to its own line
+          on a narrow card rather than being squeezed against the price.
+        */}
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 mt-2">
           <div className="flex items-center gap-2">
   {product.mrp && product.mrp > product.price && (
     <span className="text-sm text-gray-400 line-through">
@@ -149,7 +155,7 @@ export default function ProductCard({ product }) {
   </span>
 </div>
 
-          <span className="text-[11px] text-gray-500">
+          <span className="text-[11px] text-gray-500 shrink-0">
             Stock: {product.stock}
           </span>
         </div>
