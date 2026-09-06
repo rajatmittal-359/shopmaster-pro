@@ -17,6 +17,7 @@ import {
   LogOut,
 } from 'lucide-react';
 import { useCart } from '../../context/cartContext';
+import AccountMenu from './AccountMenu';
 
 export default function Layout({ children, title = 'Dashboard' }) {
   const navigate = useNavigate();
@@ -220,13 +221,13 @@ export default function Layout({ children, title = 'Dashboard' }) {
                   </button>
                 </>
               )}
-              <div
-                className="w-9 h-9 rounded-full bg-brand-fill text-on-brand text-sm font-medium
-                           flex items-center justify-center shrink-0"
-                title={name}
-              >
-                {initial}
-              </div>
+              <AccountMenu
+                name={name}
+                email={user?.email}
+                role={role}
+                initial={initial}
+                onSignOut={handleLogout}
+              />
             </div>
           ) : (
             <button
