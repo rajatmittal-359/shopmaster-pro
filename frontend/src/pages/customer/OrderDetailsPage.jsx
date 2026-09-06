@@ -48,7 +48,19 @@ const arrival = (order, fulfilment) => {
       month: 'long',
     });
 
-  if (order.status === 'cancelled') return 'This order was cancelled';
+  /*
+   * WHO cancelled it, not just that somebody did.
+   *
+   * "This order was cancelled" leaves the most important question unanswered.
+   * A customer who did not cancel it needs to know that at a glance - it means
+   * they are owed money and should expect a refund, rather than an item.
+   */
+  if (order.status === 'cancelled') {
+    if (order.cancelledBy === 'seller') return 'The seller cancelled this order';
+    if (order.cancelledBy === 'admin') return 'We cancelled this order';
+    if (order.cancelledBy === 'customer') return 'You cancelled this order';
+    return 'This order was cancelled';
+  }
   if (order.status === 'returned') return 'This order was returned';
   if (fulfilment?.deliveredAt) return `Delivered on ${day(fulfilment.deliveredAt)}`;
   if (fulfilment?.expectedDeliveryAt) return `Arriving by ${day(fulfilment.expectedDeliveryAt)}`;
@@ -70,8 +82,16 @@ const arrival = (order, fulfilment) => {
 /** One quiet line under the headline: where it actually is. */
 const whereabouts = (order, fulfilment) => {
   if (fulfilment?.ndrReason) return `Delivery attempted — ${fulfilment.ndrReason}`;
-  if (order.status === 'cancelled' && order.cancellationReason) {
-    return order.cancellationReason;
+  if (order.status === 'cancelled') {
+    const why = order.cancellationReason;
+    // A refund is the thing they want confirmed, so it is said either way.
+    const refund =
+      order.paymentStatus === 'refunded'
+        ? 'Your money has been refunded.'
+        : order.paymentMethod === 'cod'
+          ? null
+          : 'Your refund is on its way.';
+    return [why, refund].filter(Boolean).join(' ') || null;
   }
   const latest = fulfilment?.scans?.[0];
   if (latest?.activity) {
