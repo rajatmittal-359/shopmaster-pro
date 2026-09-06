@@ -43,10 +43,28 @@ const API_VERSION = '1.8';
 /** Motorbike. Right for jewellery and small parcels, and the cheapest. */
 const VEHICLE_MOTORBIKE = 8;
 
-const baseUrl = () => HOSTS[process.env.BORZO_ENV === 'production' ? 'production' : 'test'];
+const isLive = () => process.env.BORZO_ENV === 'production';
 
-/** Same-day is only offered when Borzo is actually configured. */
-const isConfigured = () => !!process.env.BORZO_API_TOKEN;
+const baseUrl = () => HOSTS[isLive() ? 'production' : 'test'];
+
+/**
+ * Same-day is only offered when Borzo can actually deliver it.
+ *
+ * A TOKEN IS NOT ENOUGH. With BORZO_ENV unset or 'test' every call goes to
+ * robotapitest-in.borzodelivery.com, which is a simulator: it answers happily,
+ * quotes a plausible price - it returned ₹59 for a real Jaipur address on
+ * 6 Sep 2026 - and books orders that no rider will ever be given.
+ *
+ * That combination is worse than being switched off. The option appeared at
+ * checkout, a customer could choose it, pay for it, and the parcel would simply
+ * never be collected; nothing anywhere would report a failure, because as far
+ * as the sandbox is concerned everything worked.
+ *
+ * So same-day stays hidden until Borzo is pointed at the real service. Nothing
+ * else has to change when the production token arrives - set BORZO_ENV and the
+ * option comes back on its own.
+ */
+const isConfigured = () => !!process.env.BORZO_API_TOKEN && isLive();
 
 /**
  * Asks Borzo what it would charge to take this basket to this address.
