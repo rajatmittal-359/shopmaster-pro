@@ -49,6 +49,8 @@ export default function MyProductsPage() {
     tags: "",
     weight: "",
     freeShipping: false,
+    salePrice: "",
+    saleEndsAt: "",
   });
 
   const [existingImages, setExistingImages] = useState([]);
@@ -207,6 +209,8 @@ export default function MyProductsPage() {
         mrp: form.mrp ? Number(form.mrp) : undefined,
         weight: form.weight ? Number(form.weight) : undefined,
         freeShipping: Boolean(form.freeShipping),
+        salePrice: form.salePrice ? Number(form.salePrice) : null,
+        saleEndsAt: form.saleEndsAt || null,
         tags: form.tags
           ? form.tags
               .split(",")
@@ -289,6 +293,8 @@ export default function MyProductsPage() {
       tags: (prod.tags || []).join(", "),
       weight: prod.weight || "",
       freeShipping: prod.freeShipping === true,
+      salePrice: prod.salePrice || "",
+      saleEndsAt: prod.saleEndsAt ? String(prod.saleEndsAt).slice(0, 10) : "",
     });
     setErrors({});
     setShowForm(true);
@@ -334,6 +340,8 @@ export default function MyProductsPage() {
       tags: "",
       weight: "",
       freeShipping: false,
+      salePrice: "",
+      saleEndsAt: "",
     });
     setExistingImages([]);
     setSelectedMainCategory("");
@@ -618,6 +626,51 @@ export default function MyProductsPage() {
                 {errors.weight && (
                   <p className="text-red-500 text-xs mt-1">{errors.weight}</p>
                 )}
+              </div>
+            </div>
+
+            {/*
+              A temporary price, and when it stops.
+
+              Kept apart from the selling price so a sale that ends leaves the
+              normal price behind without anybody restoring it. The end date is
+              the point: a sale should stop because time passed, not because
+              somebody remembered. A "sale" that never ends is not a sale, it is
+              the price.
+
+              The server refuses a sale price that is not actually lower, and
+              refuses any price above the MRP - that is the legal maximum, not a
+              comparison number.
+            */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Sale price (optional)
+                </label>
+                <input
+                  name="salePrice"
+                  value={form.salePrice}
+                  onChange={handleChange}
+                  placeholder="Lower than the selling price"
+                  type="number"
+                  min="0"
+                  className="border border-gray-300 px-3 py-2 rounded-md text-sm w-full focus:outline-none focus:ring-2 focus:ring-brand-600 focus:border-transparent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Sale ends on
+                </label>
+                <input
+                  name="saleEndsAt"
+                  value={form.saleEndsAt}
+                  onChange={handleChange}
+                  type="date"
+                  className="border border-gray-300 px-3 py-2 rounded-md text-sm w-full focus:outline-none focus:ring-2 focus:ring-brand-600 focus:border-transparent"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Leave blank and it runs until you remove the sale price.
+                </p>
               </div>
             </div>
 

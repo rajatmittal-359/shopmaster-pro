@@ -1,6 +1,6 @@
 const Coupon = require('../models/Coupon');
 const { getRatesBySeller } = require('./commission');
-const { splitDiscountedLine, round2 } = require('./discount');
+const { splitDiscountedLine, round2, effectivePrice } = require('./discount');
 const { evaluateCoupon } = require('./applyCoupon');
 
 /**
@@ -39,7 +39,15 @@ const priceOrder = async ({ items, couponCode, customerId, session }) => {
     productId: item.productId._id,
     name: item.productId.name,
     quantity: item.quantity,
-    price: item.price,
+
+    /*
+     * The price in force RIGHT NOW, not the one stamped on the cart line when
+     * the item was added. A sale that started or ended in between has to be
+     * honoured either way: charging a price the shop is no longer offering is
+     * wrong in one direction, and charging above the listed price is wrong in
+     * the more serious one.
+     */
+    price: effectivePrice(item.productId).price || item.price,
     sellerId: item.productId.sellerId,
   }));
 

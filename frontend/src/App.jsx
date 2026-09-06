@@ -65,6 +65,7 @@ const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
 const ManageSellersPage = lazy(() => import('./pages/admin/ManageSellersPage'));
 const AdminCategoriesPage = lazy(() => import('./pages/admin/AdminCategoriesPage'));
 const AdminOrdersPage = lazy(() => import('./pages/admin/AdminOrdersPage'));
+const AdminCouponsPage = lazy(() => import('./pages/admin/AdminCouponsPage'));
 const InventoryLogsPage = lazy(() => import('./pages/admin/InventoryLogsPage'));
 const PayoutsPage = lazy(() => import('./pages/admin/PayoutsPage'));
 
@@ -147,6 +148,7 @@ function App() {
             <Route path="/admin/manage-sellers" element={<ManageSellersPage />} />
             <Route path="/admin/categories" element={<AdminCategoriesPage />} />
             <Route path="/admin/orders" element={<AdminOrdersPage />} />
+            <Route path="/admin/coupons" element={<AdminCouponsPage />} />
             <Route path="/admin/inventory-logs" element={<InventoryLogsPage />} />
             <Route path="/admin/payouts" element={<PayoutsPage />} />
           </Route>

@@ -134,17 +134,20 @@ const couponSchema = new mongoose.Schema(
  * A seller-funded coupon with no seller would discount everybody's lines and
  * charge it to nobody. Caught here rather than at the point it pays out wrong.
  */
-couponSchema.pre('validate', function ensureFunderIsReal(next) {
+// Async and throwing, not next() - Mongoose gives async middleware no `next`,
+// and a hook written the other way fails on EVERY save with "next is not a
+// function". The same mistake was made on Product; a test now constructs a real
+// document so it cannot be made a third time silently.
+couponSchema.pre('validate', async function ensureFunderIsReal() {
   if (this.fundedBy === 'seller' && !this.sellerId) {
-    return next(new Error('A seller-funded coupon has to belong to a seller'));
+    throw new Error('A seller-funded coupon has to belong to a seller');
   }
   if (this.type === 'percent' && this.value > 100) {
-    return next(new Error('A percentage discount cannot be more than 100%'));
+    throw new Error('A percentage discount cannot be more than 100%');
   }
   if (this.validUntil && this.validFrom && this.validUntil <= this.validFrom) {
-    return next(new Error('The end date has to be after the start date'));
+    throw new Error('The end date has to be after the start date');
   }
-  next();
 });
 
 module.exports = mongoose.model('Coupon', couponSchema);

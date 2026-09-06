@@ -79,3 +79,12 @@ export const resolveDispute = (orderId, { inFavourOf, resolution, sellerId }) =>
  */
 export const setSellerCommission = (sellerId, commissionRate) =>
   api.patch(`/admin/sellers/${sellerId}/commission`, { commissionRate });
+
+/** Coupons the platform runs. An admin may fund either side; a seller may not. */
+export const getCoupons = () => api.get('/admin/coupons');
+
+export const createCoupon = (coupon) => api.post('/admin/coupons', coupon);
+
+/** Off, not deleted - orders point at the code by text and must stay readable. */
+export const toggleCoupon = (couponId) =>
+  api.patch(`/admin/coupons/${couponId}/toggle`);

@@ -74,6 +74,10 @@ router.patch("/orders/:orderId/cancel", cancelOrder);
 const customerCtrl = require("../controllers/customerController");
 router.post("/orders/:orderId/confirm-receipt", customerCtrl.confirmReceipt);
 router.post("/orders/:orderId/dispute", customerCtrl.raiseDispute);
+
+// Checking a coupon before committing. Never spends a use - the checkout
+// re-evaluates from scratch, so this is a preview and not a promise.
+router.post("/coupons/preview", customerCtrl.previewCoupon);
 router.patch("/orders/:orderId/items/:itemId/cancel", cancelOrderItem);
 
 // Wishlist

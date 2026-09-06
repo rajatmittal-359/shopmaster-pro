@@ -202,6 +202,8 @@ exports.addProduct = async (req, res) => {
       sku,
       mrp,
       tags,
+      salePrice,
+      saleEndsAt,
     } = req.body;
 
     const categoryError = await validateLeafCategory(category);
@@ -218,6 +220,11 @@ exports.addProduct = async (req, res) => {
       lowStockThreshold: typeof lowStockThreshold === 'number' ? lowStockThreshold : 10,
       // The seller chooses to absorb delivery on this product.
       freeShipping: freeShipping === true,
+
+      // A sale is only a sale while it is lower and inside its window. The
+      // model refuses the combinations that are not - see pricesMustBeHonest.
+      salePrice: salePrice || null,
+      saleEndsAt: saleEndsAt || null,
 
       sellerId: req.user._id,
       isActive: true,
@@ -268,6 +275,8 @@ exports.updateProduct = async (req, res) => {
       tags,
       weight,
       freeShipping,
+      salePrice,
+      saleEndsAt,
     } = req.body;
 
     // Scoped to the catalogue: a deleted product must not be editable. It
@@ -314,6 +323,14 @@ exports.updateProduct = async (req, res) => {
     // Only an explicit boolean flips it, so an absent field never silently
     // turns free delivery off on an existing product.
     if (typeof freeShipping === 'boolean') product.freeShipping = freeShipping;
+
+    /*
+     * Sending null clears the sale, which is how a seller ends one early. The
+     * model refuses a sale price that is not lower than the normal price, so an
+     * accidental clear is safer than an accidental "sale" at full price.
+     */
+    if (salePrice !== undefined) product.salePrice = salePrice || null;
+    if (saleEndsAt !== undefined) product.saleEndsAt = saleEndsAt || null;
 
     // Images handling (existing code...)
     if (Array.isArray(req.body.images) && req.body.images.length > 0) {

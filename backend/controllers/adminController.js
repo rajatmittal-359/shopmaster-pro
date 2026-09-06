@@ -884,3 +884,121 @@ exports.setSellerCommission = async (req, res) => {
     return sendError(res, error);
   }
 };
+
+const Coupon = require('../models/Coupon');
+
+/**
+ * Coupons the platform runs.
+ *
+ * WHY AN ADMIN CAN CREATE BOTH KINDS AND A SELLER CANNOT
+ *   `fundedBy` decides whose money pays for a discount. A platform-funded code
+ *   comes out of the platform's commission; a seller-funded one comes out of
+ *   the seller's own gross. Letting a seller create the first kind would let
+ *   them spend somebody else's money, which is not a thing anybody should have
+ *   to discover in a payout.
+ */
+exports.listCoupons = async (req, res) => {
+  try {
+    const coupons = await Coupon.find({}).sort({ createdAt: -1 }).limit(200);
+
+    res.json({
+      success: true,
+      coupons: coupons.map((c) => ({
+        ...c.toObject(),
+        // How many are left, worked out here so three screens cannot each get
+        // the arithmetic slightly different.
+        remaining: c.usageLimit == null ? null : Math.max(0, c.usageLimit - c.usedCount),
+      })),
+    });
+  } catch (error) {
+    return sendError(res, error);
+  }
+};
+
+exports.createCoupon = async (req, res) => {
+  try {
+    const {
+      code,
+      description,
+      type,
+      value,
+      maxDiscount,
+      minOrderValue,
+      fundedBy,
+      sellerId,
+      validFrom,
+      validUntil,
+      usageLimit,
+      perCustomerLimit,
+    } = req.body || {};
+
+    const coupon = await Coupon.create({
+      code,
+      description,
+      type,
+      value,
+      maxDiscount: maxDiscount || null,
+      minOrderValue: minOrderValue || 0,
+      fundedBy,
+      sellerId: fundedBy === 'seller' ? sellerId : null,
+      validFrom: validFrom || Date.now(),
+      validUntil: validUntil || null,
+      usageLimit: usageLimit || null,
+      perCustomerLimit: perCustomerLimit || 1,
+      createdBy: req.user._id,
+    });
+
+    console.log(
+      `Coupon ${coupon.code} created by admin ${req.user._id} - ${coupon.type} ${coupon.value}, funded by ${coupon.fundedBy}`
+    );
+
+    return res.status(201).json({ success: true, coupon });
+  } catch (error) {
+    // A duplicate code is a normal mistake, not a server fault.
+    if (error.code === 11000) {
+      return res
+        .status(409)
+        .json({ success: false, message: 'A coupon with that code already exists' });
+    }
+    if (error.name === 'ValidationError' || error.message) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+    return sendError(res, error);
+  }
+};
+
+/**
+ * Turn a coupon on or off.
+ *
+ * Deliberately not a delete. Orders point at the code by TEXT, and a customer
+ * asking why they were charged what they were charged deserves a record that
+ * still exists. Switching it off stops it being used without erasing what
+ * already happened under it.
+ */
+exports.toggleCoupon = async (req, res) => {
+  try {
+    const { couponId } = req.params;
+
+    if (!mongoose.isValidObjectId(couponId)) {
+      return res.status(400).json({ success: false, message: 'Invalid coupon id' });
+    }
+
+    const coupon = await Coupon.findById(couponId);
+    if (!coupon) {
+      return res.status(404).json({ success: false, message: 'Coupon not found' });
+    }
+
+    coupon.isActive = !coupon.isActive;
+    await coupon.save();
+
+    return res.json({
+      success: true,
+      message: coupon.isActive
+        ? `${coupon.code} is live again`
+        : `${coupon.code} is switched off. Orders already placed with it are unaffected.`,
+      isActive: coupon.isActive,
+    });
+  } catch (error) {
+    return sendError(res, error);
+  }
+};

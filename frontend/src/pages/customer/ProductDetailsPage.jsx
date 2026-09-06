@@ -17,6 +17,7 @@ import Seo, { productJsonLd } from '../../components/common/Seo';
 
 import { useAuth } from '../../context/authContext';
 import { useConfirm } from '../../context/confirmContext';
+import { priceOf } from '../../utils/pricing';
 export default function ProductDetailsPage() {
   const confirm = useConfirm();
   const { productId } = useParams();
@@ -347,21 +348,57 @@ export default function ProductDetailsPage() {
             alone, so the saving disappeared at the moment the customer was
             deciding. Same numbers in both places now.
           */}
-          <div className="flex flex-wrap items-baseline gap-2">
-            <span className="text-2xl font-bold text-brand-ink">
-              ₹{product.price}
-            </span>
-            {product.mrp > product.price && (
+          {(() => {
+            /*
+             * The same rule as the card and the server - utils/pricing.js.
+             * The percentage is rounded DOWN, never up: rounding 49.6% to 50%
+             * to make an offer look rounder is a small lie, and small lies
+             * about price are what the CCPA's dark-pattern guidelines are for.
+             */
+            const { price, was, percentOff, wasIsMrp, onSale } = priceOf(product);
+            return (
               <>
-                <span className="text-base text-gray-400 line-through">
-                  ₹{product.mrp}
-                </span>
-                <span className="text-sm font-medium text-positive">
-                  {Math.round(((product.mrp - product.price) / product.mrp) * 100)}% off
-                </span>
+                <div className="flex flex-wrap items-baseline gap-2">
+                  <span className="text-2xl font-bold text-brand-ink">₹{price}</span>
+
+                  {was && (
+                    <span className="text-base text-gray-400 line-through">
+                      {wasIsMrp && <span className="text-xs mr-1">M.R.P.</span>}₹{was}
+                    </span>
+                  )}
+
+                  {percentOff > 0 && (
+                    <span className="text-sm font-medium text-positive">
+                      {percentOff}% off
+                    </span>
+                  )}
+                </div>
+
+                {/*
+                  When a sale ends, said plainly. A countdown that is not real
+                  is false urgency, which the guidelines name outright - so this
+                  is the courier of a fact, not a timer.
+                */}
+                {onSale && product.saleEndsAt && (
+                  <p className="text-xs text-gray-600 mt-1">
+                    Sale price until{' '}
+                    {new Date(product.saleEndsAt).toLocaleDateString('en-IN', {
+                      day: 'numeric',
+                      month: 'long',
+                    })}
+                  </p>
+                )}
+
+                {/* Delivery is quoted at checkout. Saying so here is what stops
+                    the total being a surprise - the FirstCry finding exactly. */}
+                <p className="text-xs text-gray-500 mt-1">
+                  {product.freeShipping
+                    ? 'Free delivery'
+                    : 'Delivery calculated at checkout'}
+                </p>
               </>
-            )}
-          </div>
+            );
+          })()}
 
           <p className="text-sm">
             Stock:{" "}

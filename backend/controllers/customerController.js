@@ -1,6 +1,7 @@
 const Cart = require("../models/Cart");
 const Order = require("../models/Order");
 const { priceOrder, markCouponUsed } = require("../utils/priceOrder");
+const { effectivePrice } = require("../utils/discount");
 const {
   calculateShipping,
   getDeliveryOptions,
@@ -110,7 +111,9 @@ const parseQuantity = (raw) => {
         cart.items.push({
           productId,
           quantity: parsed.value,
-          price: product.price,
+          // The price in force right now, which is the sale price if one is
+          // running. See utils/discount.js.
+          price: effectivePrice(product).price,
         });
       }
 
@@ -139,6 +142,34 @@ const parseQuantity = (raw) => {
           success: true,
           cart: { items: [], totalAmount: 0 },
         });
+      }
+
+      /*
+       * Re-price the basket every time it is read.
+       *
+       * A line's price is stamped when the item is added, so a sale that starts
+       * or ends while something sits in a basket would otherwise leave the cart
+       * showing yesterday's number - and the checkout charging today's. That
+       * gap between the displayed price and the charged one is exactly the
+       * drip-pricing complaint the CCPA fined FirstCry Rs 2 lakh over.
+       *
+       * A sale ENDING moves the price up, which is why this is done on read
+       * rather than quietly at checkout: the customer sees the change before
+       * they pay, not on the receipt.
+       */
+      let repriced = false;
+      cart.items.forEach((item) => {
+        if (!item.productId) return;
+        const now = effectivePrice(item.productId).price;
+        if (now && now !== item.price) {
+          item.price = now;
+          repriced = true;
+        }
+      });
+
+      if (repriced) {
+        cart.totalAmount = cart.items.reduce((sum, i) => sum + i.price * i.quantity, 0);
+        await cart.save();
       }
 
       res.json({ success: true, cart });
@@ -992,5 +1023,60 @@ exports.raiseDispute = async (req, res) => {
   } catch (err) {
     console.error('RAISE DISPUTE ERROR:', err.message);
     res.status(500).json({ message: err.message });
+  }
+};
+
+const Coupon = require('../models/Coupon');
+const { evaluateCoupon } = require('../utils/applyCoupon');
+
+/**
+ * Checking a code before the customer commits to anything.
+ *
+ * WHY THIS EXISTS SEPARATELY FROM CHECKOUT
+ *   A customer types a code and wants to know, now, whether it works and what
+ *   it is worth. Making them press Pay to find out is the kind of interface
+ *   that teaches people not to bother with codes at all.
+ *
+ * It never spends a use - see utils/applyCoupon.js. Only a paid order does.
+ * The checkout re-evaluates from scratch, so a code that expires between this
+ * call and payment is still caught; this is a preview, not a promise.
+ */
+exports.previewCoupon = async (req, res) => {
+  try {
+    const code = String(req.body?.code || '').trim().toUpperCase();
+    if (!code) {
+      return res.status(400).json({ success: false, message: 'Enter a code' });
+    }
+
+    const cart = await Cart.findOne({ userId: req.user._id }).populate('items.productId');
+    if (!cart || !cart.items.length) {
+      return res.status(400).json({ success: false, message: 'Your basket is empty' });
+    }
+
+    const lines = cart.items.map((item) => ({
+      sellerId: item.productId.sellerId,
+      price: item.price,
+      quantity: item.quantity,
+    }));
+
+    const coupon = await Coupon.findOne({ code });
+    const verdict = evaluateCoupon(coupon, { lines, customerId: req.user._id });
+
+    if (!verdict.ok) {
+      // 200, not 4xx: the request was fine, the code was not. The page shows
+      // the reason rather than a generic failure.
+      return res.json({ success: false, message: verdict.reason });
+    }
+
+    return res.json({
+      success: true,
+      code: verdict.code,
+      discount: verdict.discount,
+      description: verdict.description,
+      message: `₹${verdict.discount} off applied`,
+    });
+  } catch (err) {
+    console.error('PREVIEW COUPON ERROR:', err.message);
+    res.status(500).json({ success: false, message: err.message });
   }
 };

@@ -40,3 +40,11 @@ export const confirmReceipt = (orderId) =>
 export const raiseDispute = (orderId, reason) =>
   api.post(`/customer/orders/${orderId}/dispute`, { reason });
   
+/**
+ * Check a code before committing to anything.
+ *
+ * Never spends a use. The checkout re-evaluates from scratch, so this is a
+ * preview and not a promise - a code that expires in between is still caught.
+ */
+export const previewCoupon = (code) =>
+  api.post('/customer/coupons/preview', { code });

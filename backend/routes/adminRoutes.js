@@ -66,6 +66,12 @@ router.patch(
   require('../controllers/adminController').setSellerCommission
 );
 
+// Coupons. An admin may create either kind; a seller may only fund their own.
+const adminCtrl = require('../controllers/adminController');
+router.get('/coupons', adminCtrl.listCoupons);
+router.post('/coupons', adminCtrl.createCoupon);
+router.patch('/coupons/:couponId/toggle', adminCtrl.toggleCoupon);
+
 // Analytics
 router.get('/analytics', getAnalytics);
 

@@ -6,6 +6,7 @@ import { useAuth } from '../../context/authContext';
 import { useWishlist } from '../../context/wishlistContext';
 import { useCart } from '../../context/cartContext';
 import Button from '../ui/Button';
+import { priceOf } from '../../utils/pricing';
 function stripHtml(html = '') {
   return html.replace(/<[^>]*>/g, '');
 }
@@ -143,17 +144,37 @@ export default function ProductCard({ product }) {
           on a narrow card rather than being squeezed against the price.
         */}
         <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 mt-2">
-          <div className="flex items-center gap-2">
-  {product.mrp && product.mrp > product.price && (
-    <span className="text-sm text-gray-400 line-through">
-      ₹{product.mrp}
-    </span>
-  )}
+          {/*
+            One pricing rule for every surface - see utils/pricing.js. A card
+            that says one number while the checkout charges another is the
+            drip-pricing complaint, not a display bug.
 
-  <span className="text-base font-bold text-brand-ink">
-    ₹{product.price}
-  </span>
-</div>
+            "M.R.P." is labelled when that is what the struck-through figure is,
+            because under the Legal Metrology rules it means something specific:
+            the legal maximum, not our old price.
+          */}
+          <div className="flex items-center gap-2 flex-wrap">
+            {(() => {
+              const { price, was, percentOff, wasIsMrp } = priceOf(product);
+              return (
+                <>
+                  <span className="text-base font-bold text-brand-ink">₹{price}</span>
+
+                  {was && (
+                    <span className="text-sm text-gray-400 line-through">
+                      {wasIsMrp && <span className="text-[10px] mr-0.5">M.R.P.</span>}₹{was}
+                    </span>
+                  )}
+
+                  {percentOff > 0 && (
+                    <span className="text-xs font-semibold text-positive">
+                      {percentOff}% off
+                    </span>
+                  )}
+                </>
+              );
+            })()}
+          </div>
 
           <span className="text-[11px] text-gray-500 shrink-0">
             Stock: {product.stock}

@@ -7,6 +7,8 @@ import { getAddresses } from "../../services/addressService";
 import { useNavigate } from "react-router-dom";
 import { useCart } from "../../context/cartContext";
 import { toastSuccess, toastError } from "../../utils/toast";
+import { previewCoupon } from "../../services/orderService";
+import { money } from "../../utils/money";
 import api from "../../utils/api";
 
 export default function CheckoutPage() {
@@ -28,6 +30,18 @@ export default function CheckoutPage() {
   const [deliveryOption, setDeliveryOption] = useState('standard');
   const [grandTotal, setGrandTotal] = useState(0);
   const [calculatingTotals, setCalculatingTotals] = useState(false);
+
+  /*
+   * A coupon the customer has actually had confirmed.
+   *
+   * Held apart from the box they type into, so a half-typed code never reads as
+   * applied. The checkout re-evaluates from scratch anyway - this is what the
+   * page shows, not what the order is charged.
+   */
+  const [couponInput, setCouponInput] = useState('');
+  const [coupon, setCoupon] = useState(null);
+  const [couponError, setCouponError] = useState(null);
+  const [checkingCoupon, setCheckingCoupon] = useState(false);
 
   const navigate = useNavigate();
 
@@ -114,6 +128,36 @@ export default function CheckoutPage() {
   }, [selectedAddressId, paymentMethod, deliveryOption]);
 
 
+  const applyCoupon = async () => {
+    const code = couponInput.trim();
+    if (!code) return;
+
+    setCheckingCoupon(true);
+    setCouponError(null);
+    try {
+      const { data } = await previewCoupon(code);
+      if (data.success) {
+        setCoupon({ code: data.code, discount: data.discount, description: data.description });
+        toastSuccess(data.message);
+      } else {
+        // Their own words, not "invalid coupon" - a customer who is RS 200
+        // short of the minimum will add RS 200 of jewellery if told so.
+        setCoupon(null);
+        setCouponError(data.message);
+      }
+    } catch (err) {
+      setCouponError(err?.response?.data?.message || 'Could not check that code');
+    } finally {
+      setCheckingCoupon(false);
+    }
+  };
+
+  const removeCoupon = () => {
+    setCoupon(null);
+    setCouponInput('');
+    setCouponError(null);
+  };
+
   const handlePlaceOrder = async () => {
     if (!selectedAddressId) {
       toastError("Please select a shipping address");
@@ -133,6 +177,7 @@ export default function CheckoutPage() {
         const res = await api.post("/customer/checkout-online", {
           shippingAddressId: selectedAddressId,
           deliveryOption,
+          couponCode: coupon?.code || undefined,
         });
 
         if (!res.data.success) {
@@ -217,6 +262,7 @@ export default function CheckoutPage() {
 
       // COD FLOW
       const res = await api.post("/customer/checkout-cod", {
+        couponCode: coupon?.code || undefined,
         shippingAddressId: selectedAddressId,
         deliveryOption,
       });
@@ -498,9 +544,75 @@ export default function CheckoutPage() {
             </div>
           )}
 
+          {/*
+            The coupon box.
+
+            Sits above the total on purpose: a customer types a code to change
+            the number below it, and a field placed after the total reads as an
+            afterthought nobody uses.
+          */}
+          <div className="border-t pt-3 mt-3">
+            {coupon ? (
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-positive">
+                    {coupon.code} applied
+                  </p>
+                  {coupon.description && (
+                    <p className="text-xs text-gray-500">{coupon.description}</p>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={removeCoupon}
+                  className="text-xs text-gray-600 hover:underline shrink-0"
+                >
+                  Remove
+                </button>
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <input
+                  value={couponInput}
+                  onChange={(e) => {
+                    setCouponInput(e.target.value.toUpperCase());
+                    setCouponError(null);
+                  }}
+                  onKeyDown={(e) => e.key === 'Enter' && applyCoupon()}
+                  placeholder="Coupon code"
+                  aria-label="Coupon code"
+                  className="flex-1 min-w-0 border border-gray-300 rounded-lg px-3 py-2 text-sm
+                             tracking-wide focus:outline-none focus:ring-2 focus:ring-brand-fill"
+                />
+                <button
+                  type="button"
+                  onClick={applyCoupon}
+                  disabled={!couponInput.trim() || checkingCoupon}
+                  className="px-4 py-2 text-sm font-medium text-brand-ink border border-brand-600
+                             rounded-lg hover:bg-brand-50 disabled:opacity-50 shrink-0"
+                >
+                  {checkingCoupon ? 'Checking…' : 'Apply'}
+                </button>
+              </div>
+            )}
+
+            {couponError && (
+              <p className="text-xs text-red-600 mt-2">{couponError}</p>
+            )}
+          </div>
+
+          {coupon && (
+            <div className="flex justify-between text-sm mt-3">
+              <span className="text-gray-600">Discount</span>
+              <span className="text-positive tabular-nums">−{money(coupon.discount)}</span>
+            </div>
+          )}
+
           <div className="flex justify-between font-bold text-lg border-t pt-3 mt-3">
             <span>Order Total</span>
-            <span className="text-brand-ink">₹{grandTotal}</span>
+            <span className="text-brand-ink">
+              {money(Math.max(0, grandTotal - (coupon?.discount || 0)))}
+            </span>
           </div>
 
           <p className="text-xs text-gray-500 mt-2">
@@ -551,8 +663,10 @@ export default function CheckoutPage() {
                 ? "Redirecting to payment..."
                 : "Placing Order..."
               : paymentMethod === "online"
-              ? `Pay ₹${grandTotal} Online`
-              : `Place Order (COD – ₹${grandTotal})`}
+              ? `Pay ${money(Math.max(0, grandTotal - (coupon?.discount || 0)))} Online`
+              : `Place Order (COD – ${money(
+                  Math.max(0, grandTotal - (coupon?.discount || 0))
+                )})`}
           </button>
 
           {addresses.length === 0 && (

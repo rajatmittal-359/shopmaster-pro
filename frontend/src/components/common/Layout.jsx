@@ -15,6 +15,7 @@ import {
   Users,
   FolderTree,
   Settings,
+  Ticket,
   LogOut,
 } from 'lucide-react';
 import { useCart } from '../../context/cartContext';
@@ -120,6 +121,7 @@ export default function Layout({ children, title = 'Dashboard' }) {
                 <SidebarLink to="/admin/manage-sellers" icon={<Users size={18} />} text="Sellers" />
                 <SidebarLink to="/admin/categories" icon={<FolderTree size={18} />} text="Categories" />
                 <SidebarLink to="/admin/payouts" icon={<Wallet size={18} />} text="Payouts" />
+                <SidebarLink to="/admin/coupons" icon={<Ticket size={18} />} text="Coupons" />
                 <SidebarLink to="/admin/inventory-logs" icon={<LineChart size={18} />} text="Inventory logs" />
               </>
             )}
