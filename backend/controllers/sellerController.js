@@ -1001,6 +1001,22 @@ exports.shipOrder = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Delivery address is missing' });
     }
 
+    /*
+     * Do we know where to COLLECT from?
+     *
+     * Booking reads the pickup address out of the environment, which is the
+     * platform shop's. For any other seller that would send a courier to the
+     * wrong door for a parcel sitting in their shop - the fee is charged, the
+     * rider finds nothing, and nothing errors because the booking itself
+     * succeeded. Refusing costs a message to somebody who can fix it in a
+     * minute; guessing costs a wasted pickup and a waiting customer.
+     */
+    const sellerProfile = await Seller.findOne({ userId: req.user._id });
+    const pickup = truth.pickupAddressFor(sellerProfile);
+    if (!pickup.ok) {
+      return res.status(400).json({ success: false, message: pickup.reason });
+    }
+
     const result = await shipment.bookForOrder(order, address);
 
     if (!result.ok) {
@@ -1316,6 +1332,9 @@ exports.settleReturn = async (req, res) => {
           customerName: order.customerId?.name,
           customerEmail: order.customerId?.email,
           weightKg: shipment.parcelWeight(order),
+          // Back to whoever sold it. The platform's own address is used only
+          // when the seller IS the platform shop.
+          sellerAddress: (await Seller.findOne({ userId: req.user._id }))?.pickupAddress,
           items: mine.map((i) => ({
             name: i.name,
             productId: i.productId,

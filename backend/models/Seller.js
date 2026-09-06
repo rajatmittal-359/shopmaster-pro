@@ -69,6 +69,43 @@ const sellerSchema = new mongoose.Schema(
      * liability. Marked explicitly rather than inferred from a 0% commission,
      * because a negotiated 0% partner would still need paying.
      */
+    /**
+     * Where this seller's parcels are collected from, and returned to.
+     *
+     * WHY IT HAS TO BE PER SELLER
+     *   Shipping read one address out of the environment - the platform shop's -
+     *   and used it for everybody. On a marketplace that is three wrong things
+     *   at once, and all of them cost money without anybody making a mistake:
+     *
+     *     a courier is sent to the PLATFORM's door to collect a parcel sitting
+     *     in another seller's shop;
+     *     a return of that seller's goods is delivered to the platform's door
+     *     rather than theirs;
+     *     and freight is quoted from the platform's pincode, so a seller in
+     *     Mumbai has their customer charged Jaipur rates.
+     *
+     *   Harmless while Charming Jewels is the only seller. The first real
+     *   third-party seller is when it starts costing.
+     *
+     * `shiprocketNickname` is the name the address is saved under in the
+     * Shiprocket panel; bookings send that rather than the address itself,
+     * which is how their pickup API works.
+     */
+    pickupAddress: {
+      contactName: { type: String, trim: true },
+      address1: { type: String, trim: true },
+      address2: { type: String, trim: true },
+      city: { type: String, trim: true },
+      state: { type: String, trim: true },
+      pincode: {
+        type: String,
+        trim: true,
+        match: [/^[1-9]\d{5}$/, 'Enter a valid 6-digit PIN code'],
+      },
+      phone: { type: String, trim: true },
+      shiprocketNickname: { type: String, trim: true },
+    },
+
     isPlatformOwned: {
       type: Boolean,
       default: false

@@ -245,3 +245,44 @@ describe('splitting a name into their two fields', () => {
     expect(splitName(full)).toEqual({ first, last });
   });
 });
+
+/**
+ * A marketplace has more than one shop.
+ *
+ * A third-party seller's returned goods delivered to the PLATFORM's door is the
+ * same mistake as collecting from the wrong door, at the other end of the
+ * journey - and it leaves the platform holding somebody else's stock.
+ */
+describe('whose door the goods come back to', () => {
+  const OTHER_SELLER = {
+    contactName: 'Meera Shah',
+    address1: '14 Linking Road',
+    city: 'Mumbai',
+    state: 'Maharashtra',
+    pincode: '400050',
+    phone: '9820011111',
+  };
+
+  it('goes back to the seller who sold it, not the platform', async () => {
+    await book({ sellerAddress: OTHER_SELLER });
+
+    expect(posted.payload.shipping_address).toBe('14 Linking Road');
+    expect(posted.payload.shipping_pincode).toBe(400050);
+    expect(posted.payload.shipping_customer_name).toBe('Meera Shah');
+    expect(posted.payload.shipping_address).not.toBe(BUSINESS.address1);
+  });
+
+  /**
+   * The platform shop keeps its own address, because for it the two are the
+   * same thing.
+   */
+  it('falls back to the shop when there is no seller address', async () => {
+    await book({ sellerAddress: null });
+    expect(posted.payload.shipping_address).toBe(BUSINESS.address1);
+  });
+
+  it('ignores a half-filled seller address rather than sending a broken one', async () => {
+    await book({ sellerAddress: { city: 'Mumbai' } });
+    expect(posted.payload.shipping_address).toBe(BUSINESS.address1);
+  });
+});

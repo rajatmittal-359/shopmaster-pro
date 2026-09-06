@@ -123,6 +123,45 @@ const payoutBlockedReason = (fulfilment, now = new Date()) => {
   return null;
 };
 
+
+/**
+ * Whether we know where to collect this seller's parcel from.
+ *
+ * WHY IT REFUSES RATHER THAN FALLING BACK
+ *   Shipping used to read one pickup address out of the environment and use it
+ *   for every seller. With one shop that is correct by accident. With a second
+ *   seller it silently sends a courier to the PLATFORM's door for a parcel
+ *   sitting in somebody else's shop - the fee is spent, the rider finds
+ *   nothing, and no error is raised anywhere because the booking succeeded.
+ *
+ *   A fallback is exactly the wrong instinct here: the cost of guessing is a
+ *   wasted pickup and a customer waiting on a parcel that was never collected,
+ *   while the cost of refusing is a clear message to somebody who can fix it in
+ *   a minute.
+ *
+ * The platform's own shop is exempt because SHIPROCKET_PICKUP_LOCATION IS its
+ * address - that is whose account the shipments are booked on.
+ *
+ * @param {object} seller  the Seller profile, or null
+ * @returns {{ok: boolean, reason?: string}}
+ */
+const pickupAddressFor = (seller) => {
+  if (!seller) {
+    return { ok: false, reason: 'No seller profile was found for this order' };
+  }
+  if (seller.isPlatformOwned) return { ok: true };
+
+  const p = seller.pickupAddress || {};
+  if (!p.address1 || !p.pincode || !p.phone) {
+    return {
+      ok: false,
+      reason:
+        'Add your pickup address before shipping. Without it a courier would be sent to the wrong place, and the pickup is charged either way.',
+    };
+  }
+  return { ok: true, address: p };
+};
+
 module.exports = {
   SELF_DELIVERY_CONFIRM_DAYS,
   hasCourier,
@@ -130,4 +169,5 @@ module.exports = {
   awaitingCustomerConfirmation,
   codMayBeMarkedPaid,
   payoutBlockedReason,
+  pickupAddressFor,
 };

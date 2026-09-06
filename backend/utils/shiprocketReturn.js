@@ -56,11 +56,34 @@ const splitName = (full) => {
  * @param {object} order       the order being returned
  * @param {object} fulfilment  the parcel coming back
  * @param {object} address     the customer's address it is collected from
- * @param {object} opts        { customerName, customerEmail, weightKg, items }
+ * @param {object} opts        { customerName, customerEmail, weightKg, items, sellerAddress }
  * @returns {Promise<{ok: boolean, reason?: string, orderId?, shipmentId?, status?}>}
  */
 const bookReturnPickup = async (order, fulfilment, address, opts = {}) => {
-  const { customerName, customerEmail, weightKg = 0.5, items = [] } = opts;
+  const { customerName, customerEmail, weightKg = 0.5, items = [], sellerAddress } = opts;
+
+  /*
+   * The goods go back to whoever sold them, not to the platform.
+   *
+   * A third-party seller's returned items delivered to the platform's door is
+   * the same mistake as collecting from the wrong door, at the other end of
+   * the journey - and it is the platform left holding somebody else's stock.
+   * The shop's own address is the fallback only because the shop IS the
+   * platform seller.
+   */
+  const home = sellerAddress?.address1
+    ? {
+        contactName: sellerAddress.contactName || BUSINESS.contactName,
+        address1: sellerAddress.address1,
+        address2: sellerAddress.address2 || '',
+        city: sellerAddress.city,
+        state: sellerAddress.state,
+        country: 'India',
+        pincode: sellerAddress.pincode,
+        phone: sellerAddress.phone,
+        email: BUSINESS.email,
+      }
+    : BUSINESS;
 
   if (!address?.zipCode || !address?.street) {
     return { ok: false, reason: 'The customer has no usable address to collect from' };
@@ -95,16 +118,16 @@ const bookReturnPickup = async (order, fulfilment, address, opts = {}) => {
     pickup_isd_code: '91',
 
     // ---- shipping: US. The goods are coming back here. -------------------
-    shipping_customer_name: BUSINESS.contactName,
+    shipping_customer_name: home.contactName,
     shipping_last_name: '',
-    shipping_address: BUSINESS.address1,
-    shipping_address_2: BUSINESS.address2,
-    shipping_city: BUSINESS.city,
-    shipping_state: BUSINESS.state,
-    shipping_country: BUSINESS.country,
-    shipping_pincode: Number(BUSINESS.pincode),
-    shipping_email: BUSINESS.email,
-    shipping_phone: Number(String(BUSINESS.phone).replace(/\D/g, '').slice(-10)),
+    shipping_address: home.address1,
+    shipping_address_2: home.address2 || '',
+    shipping_city: home.city,
+    shipping_state: home.state,
+    shipping_country: home.country || 'India',
+    shipping_pincode: Number(home.pincode),
+    shipping_email: home.email,
+    shipping_phone: Number(String(home.phone).replace(/\D/g, '').slice(-10)),
     shipping_isd_code: '91',
 
     order_items: items.map((item, index) => ({
