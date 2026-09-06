@@ -51,9 +51,13 @@ export default function MyProductsPage() {
     freeShipping: false,
     salePrice: "",
     saleEndsAt: "",
+    video: undefined,
   });
 
   const [existingImages, setExistingImages] = useState([]);
+  // The clip already stored on this product, so the form can show it and let
+  // the seller remove it without uploading a replacement.
+  const [existingVideo, setExistingVideo] = useState(null);
   const [errors, setErrors] = useState({});
 
   const navigate = useNavigate();
@@ -141,6 +145,35 @@ export default function MyProductsPage() {
     setForm((prev) => ({ ...prev, category: value }));
   };
 
+  /**
+   * A short product clip.
+   *
+   * Capped at 7MB because it travels as base64 inside the JSON body, the same
+   * way the images do, and the server accepts 10mb. Base64 inflates by about a
+   * third, so 7MB is the honest ceiling - and 20 seconds is what these clips
+   * want to be anyway.
+   */
+  const handleVideoChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('video/')) {
+      toastError('That is not a video file');
+      return;
+    }
+    if (file.size > 7 * 1024 * 1024) {
+      toastError(
+        `That video is ${(file.size / 1024 / 1024).toFixed(1)}MB. Keep it under 7MB — about 20 seconds is plenty.`
+      );
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => setForm((f) => ({ ...f, video: reader.result }));
+    reader.onerror = () => toastError('Could not read that video');
+    reader.readAsDataURL(file);
+  };
+
   const handleImageChange = (e) => {
     const files = Array.from(e.target.files || []);
     const maxSize = 5 * 1024 * 1024;
@@ -210,6 +243,9 @@ export default function MyProductsPage() {
         weight: form.weight ? Number(form.weight) : undefined,
         freeShipping: Boolean(form.freeShipping),
         salePrice: form.salePrice ? Number(form.salePrice) : null,
+        // undefined leaves the stored clip alone; null clears it. See
+        // updateProduct in sellerController.
+        video: form.video,
         saleEndsAt: form.saleEndsAt || null,
         tags: form.tags
           ? form.tags
@@ -295,7 +331,9 @@ export default function MyProductsPage() {
       freeShipping: prod.freeShipping === true,
       salePrice: prod.salePrice || "",
       saleEndsAt: prod.saleEndsAt ? String(prod.saleEndsAt).slice(0, 10) : "",
+      video: undefined,
     });
+    setExistingVideo(prod.video?.url || null);
     setErrors({});
     setShowForm(true);
 
@@ -342,7 +380,9 @@ export default function MyProductsPage() {
       freeShipping: false,
       salePrice: "",
       saleEndsAt: "",
+      video: undefined,
     });
+    setExistingVideo(null);
     setExistingImages([]);
     setSelectedMainCategory("");
     setSelectedSubCategory("");
@@ -766,6 +806,71 @@ export default function MyProductsPage() {
                 </div>
               </div>
             )}
+
+            {/*
+              One short clip, shown first in the gallery.
+
+              Jewellery is where a photograph is weakest - shine, drape and
+              scale barely survive a still. Amazon and Flipkart both put a video
+              in the first gallery slot for exactly that reason.
+            */}
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-700">
+                Product video (optional)
+              </label>
+
+              {form.video ? (
+                <div className="flex items-center gap-3">
+                  <video
+                    src={form.video}
+                    className="w-32 h-32 object-cover rounded-md border border-gray-300 bg-black"
+                    muted
+                    playsInline
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setForm((f) => ({ ...f, video: undefined }))}
+                    className="text-xs text-red-600 hover:underline"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ) : existingVideo ? (
+                <div className="flex items-center gap-3">
+                  <video
+                    src={existingVideo}
+                    className="w-32 h-32 object-cover rounded-md border border-gray-300 bg-black"
+                    muted
+                    playsInline
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      // null, not undefined - that is what tells the server to
+                      // clear it rather than leave it alone.
+                      setForm((f) => ({ ...f, video: null }));
+                      setExistingVideo(null);
+                    }}
+                    className="text-xs text-red-600 hover:underline"
+                  >
+                    Remove this video
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <input
+                    type="file"
+                    accept="video/*"
+                    onChange={handleVideoChange}
+                    className="text-sm w-full"
+                  />
+                  <p className="text-xs text-gray-500">
+                    About 20 seconds, under 7MB. Customers see a still until they press
+                    play, so it never eats their data uninvited.
+                  </p>
+                </>
+              )}
+            </div>
 
             {/* New images - DO NOT TOUCH THIS SECTION */}
             <div className="space-y-2">

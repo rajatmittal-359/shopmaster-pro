@@ -127,6 +127,27 @@ const productSchema = new mongoose.Schema(
       max: [30, 'Weight cannot exceed 30 kg'],
     },
 
+    /**
+     * One short clip, shown first in the gallery.
+     *
+     * WHY ONE AND NOT MANY
+     *   Amazon allows several for brand-registered sellers; a shop this size
+     *   does not need that, and every extra video is another thing a seller has
+     *   to make. One good 20-second clip is the whole benefit.
+     *
+     * WHY THE POSTER IS STORED
+     *   The still Cloudinary generates from the first frame. The gallery shows
+     *   it until somebody presses play - a clip that autoplays on a phone
+     *   spends a customer's mobile data without asking, which is rude and, on a
+     *   slow connection, makes the page feel broken.
+     */
+    video: {
+      url: { type: String, default: null },
+      publicId: { type: String, default: null },
+      poster: { type: String, default: null },
+      duration: { type: Number, default: null },
+    },
+
     images: {
       type: [String],
       validate: {

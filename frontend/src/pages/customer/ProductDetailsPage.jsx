@@ -1,7 +1,7 @@
 // frontend/src/pages/customer/ProductDetailsPage.jsx
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { Heart, Minus, Plus } from "lucide-react";
+import { Heart, Minus, Plus, Play } from "lucide-react";
 
 import Layout from "../../components/common/Layout";
 import { getProductDetails } from "../../services/productService";
@@ -25,6 +25,14 @@ export default function ProductDetailsPage() {
 
   const [product, setProduct] = useState(null);
   const [activeImage, setActiveImage] = useState("");
+  /*
+   * The gallery is showing the clip rather than a still.
+   *
+   * A separate flag rather than a magic value in activeImage: the two are
+   * different kinds of thing, and conflating them is how a video URL ends up in
+   * an <img> tag showing a broken icon.
+   */
+  const [showingVideo, setShowingVideo] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const [qty, setQty] = useState(1);
@@ -278,7 +286,24 @@ export default function ProductDetailsPage() {
         {/* ✅ LEFT: IMAGE GALLERY */}
         <div>
           <div className="relative h-[420px] bg-gray-100 rounded-lg flex items-center justify-center mb-4">
-            {activeImage ? (
+            {showingVideo && product.video?.url ? (
+              /*
+                controls, and no autoPlay.
+
+                A clip that plays itself on a phone spends the customer's data
+                without asking, and on a slow connection it makes the page feel
+                broken. The poster frame is shown until they choose to press
+                play - which is also why it is stored.
+              */
+              <video
+                src={product.video.url}
+                poster={product.video.poster || undefined}
+                controls
+                playsInline
+                preload="none"
+                className="h-full w-full object-contain bg-black rounded-lg"
+              />
+            ) : activeImage ? (
               <img
                 src={activeImage}
                 className="h-full object-contain"
@@ -303,15 +328,41 @@ export default function ProductDetailsPage() {
             </button>
           </div>
 
-          {/* Thumbnails */}
-          <div className="flex gap-2">
+          {/* Thumbnails. The clip sits first, which is where both Amazon and
+              Flipkart put it - it is the thing a jewellery buyer wants most. */}
+          <div className="flex gap-2 flex-wrap">
+            {product.video?.url && (
+              <button
+                type="button"
+                onClick={() => setShowingVideo(true)}
+                aria-label="Play the product video"
+                className={`relative w-16 h-16 rounded-lg overflow-hidden border bg-black
+                            ${showingVideo ? 'border-brand-600' : 'border-gray-200'}`}
+              >
+                {product.video.poster && (
+                  <img
+                    src={product.video.poster}
+                    alt=""
+                    className="w-full h-full object-cover opacity-70"
+                  />
+                )}
+                <span className="absolute inset-0 flex items-center justify-center">
+                  <Play size={20} className="text-white drop-shadow" fill="currentColor" />
+                </span>
+              </button>
+            )}
+
             {product.images?.map((img, i) => (
               <img
                 key={i}
                 src={img}
-                onClick={() => setActiveImage(img)}
+                alt=""
+                onClick={() => {
+                  setActiveImage(img);
+                  setShowingVideo(false);
+                }}
                 className={`w-16 h-16 object-cover border rounded-lg cursor-pointer ${
-                  activeImage === img ? "border-brand-600" : ""
+                  !showingVideo && activeImage === img ? "border-brand-600" : ""
                 }`}
               />
             ))}

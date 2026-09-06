@@ -247,6 +247,16 @@ exports.addProduct = async (req, res) => {
       }
     }
 
+    /*
+     * The clip, if there is one. Uploaded AFTER validation for the same reason
+     * the images are: a rejected product must not leave paid-for storage
+     * attached to something that never existed.
+     */
+    if (typeof req.body.video === 'string' && req.body.video.startsWith('data:video/')) {
+      const clip = await cloudinary.uploadVideo(req.body.video);
+      product.video = clip;
+    }
+
     await product.save();
 
     res.status(201).json({ message: 'Product created', product });
@@ -347,6 +357,26 @@ exports.updateProduct = async (req, res) => {
       }
 
       product.images = finalImages;
+    }
+
+    /*
+     * A new clip replaces the old one, and the old one is deleted rather than
+     * left paying for storage nothing points at. Sending null clears it, which
+     * is how a seller removes a video without replacing it.
+     */
+    if (req.body.video !== undefined) {
+      const incoming = req.body.video;
+      const previousId = product.video?.publicId;
+
+      if (typeof incoming === 'string' && incoming.startsWith('data:video/')) {
+        product.video = await cloudinary.uploadVideo(incoming);
+        if (previousId) await cloudinary.deleteVideo(previousId);
+      } else if (!incoming) {
+        product.video = { url: null, publicId: null, poster: null, duration: null };
+        if (previousId) await cloudinary.deleteVideo(previousId);
+      }
+      // Anything else (an unchanged object from the client) is ignored - the
+      // stored clip stays as it is.
     }
 
     await product.save();

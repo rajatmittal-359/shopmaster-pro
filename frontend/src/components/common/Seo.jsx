@@ -1,4 +1,5 @@
 import { POLICY } from '../../config/policy';
+import { priceOf } from '../../utils/pricing';
 
 const SITE_URL = 'https://www.shopmasterpro.in';
 
@@ -84,10 +85,41 @@ export function productJsonLd(product, canonicalPath) {
     image: product.images?.length ? product.images : undefined,
     sku: product.sku || undefined,
     brand: product.brand ? { '@type': 'Brand', name: product.brand } : undefined,
+
+    /*
+     * The clip, declared so search engines know it exists.
+     *
+     * Without VideoObject markup a product video is just a file on the page -
+     * Google cannot show it as a video result, and the AI engines have no way
+     * to know the product has one. name, description, thumbnail and
+     * uploadDate are the fields Google requires; a VideoObject missing any of
+     * them is ignored rather than partly used.
+     */
+    video: product.video?.url
+      ? {
+          '@type': 'VideoObject',
+          name: `${product.name} — video`,
+          description: `A short video of ${product.name}.`,
+          thumbnailUrl: product.video.poster || product.images?.[0],
+          contentUrl: product.video.url,
+          uploadDate: product.updatedAt || product.createdAt,
+          duration: product.video.duration
+            ? `PT${Math.round(product.video.duration)}S`
+            : undefined,
+        }
+      : undefined,
+
     offers: {
       '@type': 'Offer',
       url: `${SITE_URL}${canonicalPath}`,
-      price: product.price,
+
+      /*
+       * The price actually being charged, which is the sale price while one is
+       * running. Advertising one number in search and charging another is the
+       * complaint the CCPA fined FirstCry over - and Google delists a shop whose
+       * structured data disagrees with its page.
+       */
+      price: priceOf(product).price,
       priceCurrency: 'INR',
       availability: inStock
         ? 'https://schema.org/InStock'

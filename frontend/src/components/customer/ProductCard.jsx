@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Heart, Minus, Plus } from 'lucide-react';
+import { Heart, Minus, Plus, Play } from 'lucide-react';
 import { toastSuccess, toastError } from '../../utils/toast';
 
 import { useAuth } from '../../context/authContext';
@@ -143,6 +143,15 @@ export default function ProductCard({ product }) {
           A gap keeps them apart and wrapping lets stock drop to its own line
           on a narrow card rather than being squeezed against the price.
         */}
+        {/* Says a clip exists before the customer opens the product - the same
+            hint Flipkart puts on a listing card. */}
+        {product.video?.url && (
+          <span className="inline-flex items-center gap-1 text-[11px] text-gray-600 mt-1">
+            <Play size={11} fill="currentColor" />
+            Video
+          </span>
+        )}
+
         <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 mt-2">
           {/*
             One pricing rule for every surface - see utils/pricing.js. A card
