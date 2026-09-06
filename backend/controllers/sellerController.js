@@ -912,7 +912,32 @@ exports.shipOrder = async (req, res) => {
       return res.status(409).json({ success: false, message: result.reason });
     }
 
-    await Order.updateOne({ _id: order._id }, { $set: result.update });
+    /*
+     * Move THIS SELLER'S parcel to shipped, not just the order.
+     *
+     * The order's status is DERIVED from its fulfilments (see deriveStatus in
+     * models/Order.js). Writing status:'shipped' straight onto the order while
+     * the seller's fulfilment still said 'pending' left the two disagreeing -
+     * and the next time the document was saved through Mongoose the hook would
+     * recompute status from the fulfilments and quietly put it back to pending,
+     * on an order whose parcel was already with a courier.
+     *
+     * In a split order it matters more: only the seller who booked has shipped,
+     * and the order as a whole is only as far along as its least advanced part.
+     */
+    await Order.updateOne(
+      { _id: order._id },
+      {
+        $set: {
+          ...result.update,
+          'fulfilments.$[mine].status': 'shipped',
+          'fulfilments.$[mine].shippedAt': new Date(),
+          'fulfilments.$[mine].courierName': result.update.shippingCourierName,
+          'fulfilments.$[mine].awb': result.update.shippingAwb,
+        },
+      },
+      { arrayFilters: [{ 'mine.sellerId': req.user._id }] }
+    );
 
     res.json({
       success: true,

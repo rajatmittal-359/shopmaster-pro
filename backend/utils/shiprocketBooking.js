@@ -36,6 +36,12 @@ const BASE_URL = 'https://apiv2.shiprocket.in/v1/external';
 /** Shiprocket refuses a shipment without dimensions, so a parcel needs a size. */
 const DEFAULT_PARCEL_CM = { length: 15, breadth: 12, height: 6 };
 
+/**
+ * How many references to try before giving up. Each cancelled shipment burns
+ * one, so this is the number of times an order may be re-booked.
+ */
+const MAX_BOOK_ATTEMPTS = 5;
+
 /** Their minimum billable weight; anything lighter is charged at this anyway. */
 const MIN_WEIGHT_KG = 0.5;
 
@@ -87,7 +93,7 @@ const formatOrderDate = (date) => {
  * @param {object} address  the delivery address
  * @param {number} weightKg parcel weight
  */
-const bookShipment = async (order, address, weightKg) => {
+const bookShipment = async (order, address, weightKg, attempt = 1) => {
   const pickupLocation = process.env.SHIPROCKET_PICKUP_LOCATION || 'Primary';
 
   // sub_total is the goods only. Shiprocket does not compute it, and sending
@@ -111,9 +117,23 @@ const bookShipment = async (order, address, weightKg) => {
   const [firstName, ...restOfName] = recipient.split(' ');
 
   const payload = {
-    // Our own reference. Shiprocket returns ITS order id separately, and that
-    // is the one every later call needs.
-    order_id: order.orderNumber,
+    /*
+     * Our own reference. Shiprocket returns ITS order id separately, and that
+     * is the one every later call needs.
+     *
+     * WHY IT IS NOT JUST THE ORDER NUMBER
+     *   Shiprocket keys on this string, so once a shipment is cancelled there,
+     *   creating another with the same reference is refused - "order is in
+     *   cancelled state". That made a cancelled shipment PERMANENT: the order
+     *   could never be shipped again, by us or by anyone, and the seller was
+     *   left with a paid order and no way to send it.
+     *
+     *   A cancel is an ordinary thing - wrong address, wrong parcel, a courier
+     *   the seller changed their mind about - so re-booking has to work. Each
+     *   attempt after the first carries a suffix, which Shiprocket accepts as a
+     *   new order while a human still reads the order number at the front.
+     */
+    order_id: attempt > 1 ? `${order.orderNumber}-R${attempt}` : order.orderNumber,
     order_date: formatOrderDate(order.createdAt || new Date()),
     pickup_location: pickupLocation,
 
@@ -159,7 +179,19 @@ const bookShipment = async (order, address, weightKg) => {
     );
 
     if (!created || !created.shipment_id) {
-      return { ok: false, reason: created?.message || 'Shiprocket did not create the shipment' };
+      const why = String(created?.message || '');
+
+      /*
+       * A reference Shiprocket has seen before. This is what a cancelled
+       * shipment leaves behind: the order number is spent, and every later
+       * attempt is refused with "order is in cancelled state" - which would
+       * make one cancel permanent. Try again under the next suffix instead.
+       */
+      if (/cancel|already|exist|duplicate/i.test(why) && attempt < MAX_BOOK_ATTEMPTS) {
+        return bookShipment(order, address, weightKg, attempt + 1);
+      }
+
+      return { ok: false, reason: why || 'Shiprocket did not create the shipment' };
     }
 
     // The shipment exists from here on, so a later failure is reported WITH the
@@ -210,25 +242,70 @@ const bookShipment = async (order, address, weightKg) => {
       // Leave it to Shiprocket rather than fail the booking over a price check.
     }
 
-    let awb = null;
-    let courierName = null;
-    try {
-      const { data: assigned } = await axios.post(
+    /*
+     * Asking for a specific courier can be REFUSED even when the rate check
+     * just offered it - "Given courier not serviceable", seen on a real
+     * booking. Serviceability answers for a route and a weight; assignment
+     * answers for this parcel, and the two do not always agree.
+     *
+     * So the preference is exactly that, a preference: ask for the cheapest,
+     * and if that is refused ask again with no courier named rather than
+     * leaving the seller with a shipment that has no AWB. A dearer courier
+     * still beats a parcel nobody collects.
+     */
+    const assignAwb = async (courierId) => {
+      const { data } = await axios.post(
         `${BASE_URL}/courier/assign/awb`,
-        preferredCourierId
-          ? { shipment_id: created.shipment_id, courier_id: preferredCourierId }
+        courierId
+          ? { shipment_id: created.shipment_id, courier_id: courierId }
           : { shipment_id: created.shipment_id },
         { headers: authHeaders(token), timeout: 20000 }
       );
-      const res = assigned?.response?.data || {};
+      return data?.response?.data || {};
+    };
+
+    let awb = null;
+    let courierName = null;
+    try {
+      let res = {};
+      try {
+        res = await assignAwb(preferredCourierId);
+      } catch (preferredErr) {
+        if (!preferredCourierId) throw preferredErr;
+        console.warn(
+          'Shiprocket refused the cheapest courier, letting it choose:',
+          preferredErr.response?.data?.message || preferredErr.message
+        );
+        res = await assignAwb(null);
+      }
+
       awb = res.awb_code || null;
       courierName = res.courier_name || null;
     } catch (awbErr) {
+      const why = String(awbErr.response?.data?.message || '');
+
+      /*
+       * THE SPENT REFERENCE, and it does not announce itself where you expect.
+       *
+       * /orders/create/adhoc is idempotent on our order_id: given a reference
+       * it has seen, it returns the EXISTING order rather than failing. So a
+       * cancelled shipment comes back looking like a fresh, successful create -
+       * and the truth only surfaces one call later, when the AWB request says
+       * "order is in cancelled state".
+       *
+       * That is the moment to start again under the next suffix. Retrying at
+       * the create, which is where it looks like it belongs, does nothing at
+       * all - the create never failed.
+       */
+      if (/cancel|already|exist|duplicate/i.test(why) && attempt < MAX_BOOK_ATTEMPTS) {
+        return bookShipment(order, address, weightKg, attempt + 1);
+      }
+
       return {
         ok: false,
         ...ids,
         reason:
-          awbErr.response?.data?.message ||
+          why ||
           'Shipment created but no courier would take it. Check the wallet balance and pickup address.',
       };
     }
@@ -264,10 +341,15 @@ const bookShipment = async (order, address, weightKg) => {
       pickupScheduled,
     };
   } catch (err) {
-    return {
-      ok: false,
-      reason: err.response?.data?.message || err.message || 'Shiprocket booking failed',
-    };
+    const why = String(err.response?.data?.message || err.message || '');
+
+    // Shiprocket refuses a spent reference with a 4xx, which lands here rather
+    // than in the branch above. Same cause, same cure: try the next suffix.
+    if (/cancel|already|exist|duplicate/i.test(why) && attempt < MAX_BOOK_ATTEMPTS) {
+      return bookShipment(order, address, weightKg, attempt + 1);
+    }
+
+    return { ok: false, reason: why || 'Shiprocket booking failed' };
   }
 };
 
