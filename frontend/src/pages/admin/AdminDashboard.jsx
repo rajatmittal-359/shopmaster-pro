@@ -173,15 +173,23 @@ export default function AdminDashboard() {
 
       {/* Low Stock Alert + Top Sellers */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        {/* Low Stock (Global) */}
-        <div className="bg-white rounded-xl shadow p-5">
+        {/*
+          Low Stock (Global)
+
+          A flex column, and the list below flexes to fill it. The list had a
+          fixed max-h-64 while Top Sellers beside it grew to fit its four rows -
+          so the grid stretched this card to match and left dead white space
+          under a list that was still scrolling. Filling the height removes the
+          gap AND shows more of the thing the card is for.
+        */}
+        <div className="bg-white rounded-xl shadow p-5 flex flex-col">
           <h3 className="text-lg font-semibold mb-3">Low Stock (Global)</h3>
           <p className="text-xs text-gray-500 mb-3">
             Products below alert threshold across all sellers and categories
           </p>
 
           {analytics.lowStockGlobal && analytics.lowStockGlobal.length > 0 ? (
-            <div className="space-y-2 max-h-64 overflow-y-auto">
+            <div className="space-y-2 overflow-y-auto flex-1 min-h-0 max-h-96">
               {analytics.lowStockGlobal.map((prod) => (
                 <div
                   key={prod._id}
@@ -200,22 +208,25 @@ export default function AdminDashboard() {
               ))}
             </div>
           ) : (
-            <EmptyState
-              title="Nothing is running low"
-              hint="Products appear here once they reach their alert threshold."
-            />
+            <div className="flex-1 flex items-center justify-center">
+              <EmptyState
+                title="Nothing is running low"
+                hint="Products appear here once they reach their alert threshold."
+              />
+            </div>
           )}
         </div>
 
-        {/* Top Sellers */}
-        <div className="bg-white rounded-xl shadow p-5">
+        {/* Top Sellers. Same flex column, so whichever card is shorter fills
+            the row rather than leaving a gap under it. */}
+        <div className="bg-white rounded-xl shadow p-5 flex flex-col">
           <h3 className="text-lg font-semibold mb-3">Top Sellers</h3>
           <p className="text-xs text-gray-500 mb-3">
             Based on revenue from completed orders (all time)
           </p>
 
           {analytics.topSellers && analytics.topSellers.length > 0 ? (
-            <div className="space-y-2">
+            <div className="space-y-2 overflow-y-auto flex-1 min-h-0 max-h-96">
               {analytics.topSellers.map((seller, idx) => (
                 <div key={seller._id} className="border rounded-lg p-3 bg-gray-50">
                   <div className="flex justify-between items-start">
@@ -240,7 +251,7 @@ export default function AdminDashboard() {
               ))}
             </div>
           ) : (
-            <p className="text-sm text-gray-600 py-8 text-center">
+            <p className="flex-1 flex items-center justify-center text-sm text-gray-600">
               No seller data yet
             </p>
           )}
