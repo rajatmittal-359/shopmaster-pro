@@ -125,6 +125,25 @@ const fulfilmentSchema = new mongoose.Schema(
     },
     awb: { type: String, default: null },
     courierName: { type: String, default: null },
+
+    /**
+     * The courier's own last word, kept verbatim.
+     *
+     * Our four states are a summary; a seller chasing a parcel needs what the
+     * courier actually said - "Address issue - customer not available" is
+     * actionable, "shipped" is not. Held per fulfilment because in a split
+     * order the two parcels travel separately.
+     */
+    courierStatus: { type: String, default: null },
+    courierStatusAt: { type: Date, default: null },
+
+    /**
+     * A failed delivery attempt. Deliberately not a fulfilment status: the
+     * parcel has not moved backwards and the courier will try again, so
+     * overwriting 'shipped' would lose where it actually is.
+     */
+    ndrReason: { type: String, default: null },
+    ndrAt: { type: Date, default: null },
     shipmentId: { type: String, default: null },
     shippingOrderId: { type: String, default: null },
     trackingUrl: { type: String, default: null },

@@ -85,6 +85,10 @@ app.use('/api/reviews', reviewRoutes);
 app.use('/api/inventory', inventoryRoutes);
 app.use('/api/pincode', require('./routes/pincodeRoutes'));
 
+// Courier tracking updates. Named "logistics" on purpose - Shiprocket will not
+// register a webhook URL containing "shiprocket", "sr" or "kr".
+app.use('/api/logistics', require('./routes/logisticsRoutes'));
+
 // Error middleware
 const errorMiddleware = require('./middlewares/errorMiddleware');
 app.use(errorMiddleware);
