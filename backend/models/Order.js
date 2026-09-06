@@ -167,6 +167,19 @@ const fulfilmentSchema = new mongoose.Schema(
     returnNote: { type: String, default: null },
 
     /**
+     * The reverse shipment, once a courier has been booked to collect it.
+     *
+     * Kept apart from the forward `awb` on purpose: a return travels on its own
+     * waybill, and overwriting the outbound one would lose the record of how
+     * the goods got there in the first place - which is exactly what a dispute
+     * about a return needs to read.
+     */
+    returnOrderId: { type: String, default: null },
+    returnShipmentId: { type: String, default: null },
+    returnAwb: { type: String, default: null },
+    returnBookedAt: { type: Date, default: null },
+
+    /**
      * Somebody says the record is wrong.
      *
      * Amazon's A-to-z works this way: the buyer raises it, the seller has 72

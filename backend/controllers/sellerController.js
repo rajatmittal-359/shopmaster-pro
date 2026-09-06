@@ -613,6 +613,10 @@ exports.getOrderDetails = async (req, res) => {
       returnStage: fulfilment?.returnStage || null,
       returnReason: fulfilment?.returnReason || null,
       returnNote: fulfilment?.returnNote || null,
+      // Whether a courier is already coming for it, so the page does not offer
+      // to book a second one.
+      returnBookedAt: fulfilment?.returnBookedAt || null,
+      returnAwb: fulfilment?.returnAwb || null,
       disputeStatus: fulfilment?.disputeStatus || null,
       disputeReason: fulfilment?.disputeReason || null,
       disputeResolution: fulfilment?.disputeResolution || null,
@@ -1197,6 +1201,7 @@ exports.cancelOwnLines = async (req, res) => {
 };
 
 const returns = require('../utils/settleReturn');
+const reverse = require('../utils/shiprocketReturn');
 
 /**
  * A seller closing out a return on their own parcel.
@@ -1213,15 +1218,82 @@ exports.settleReturn = async (req, res) => {
     if (!mongoose.isValidObjectId(orderId)) {
       return res.status(400).json({ success: false, message: 'Invalid order id' });
     }
-    if (!['receive', 'reject'].includes(action)) {
+    if (!['receive', 'reject', 'pickup'].includes(action)) {
       return res
         .status(400)
-        .json({ success: false, message: "action must be 'receive' or 'reject'" });
+        .json({ success: false, message: "action must be 'receive', 'reject' or 'pickup'" });
     }
 
     const order = await Order.findOne({ _id: orderId, 'items.sellerId': req.user._id });
     if (!order) {
       return res.status(404).json({ success: false, message: 'Order not found' });
+    }
+
+    /*
+     * Booking a courier to collect it.
+     *
+     * Deliberately a button and not automatic. A return pickup spends real
+     * money out of the Shiprocket wallet, and whether a particular return is
+     * worth collecting is a judgement - a RS 40 item may not be. Booking every
+     * request the moment it arrives would spend that money on the customer's
+     * say-so alone.
+     */
+    if (action === 'pickup') {
+      const fulfilment = fulfilmentOf(order, req.user._id);
+
+      if (!fulfilment || !['requested', 'picked'].includes(fulfilment.returnStage)) {
+        return res
+          .status(400)
+          .json({ success: false, message: 'There is no open return here' });
+      }
+      if (fulfilment.returnAwb || fulfilment.returnOrderId) {
+        // Booking twice sends two riders and spends the fee twice.
+        return res.status(409).json({
+          success: false,
+          message: 'A return pickup is already booked for this parcel',
+        });
+      }
+
+      await order.populate([
+        { path: 'shippingAddressId' },
+        { path: 'customerId', select: 'name email' },
+      ]);
+
+      const mine = order.items.filter(
+        (i) => String(i.sellerId) === String(req.user._id) && i.status !== 'cancelled'
+      );
+
+      const booked = await reverse.bookReturnPickup(
+        order,
+        fulfilment,
+        order.shippingAddressId,
+        {
+          customerName: order.customerId?.name,
+          customerEmail: order.customerId?.email,
+          weightKg: shipment.parcelWeight(order),
+          items: mine.map((i) => ({
+            name: i.name,
+            productId: i.productId,
+            quantity: i.quantity,
+            price: i.price,
+            image: null,
+          })),
+        }
+      );
+
+      if (!booked.ok) {
+        return res.status(502).json({ success: false, message: booked.reason });
+      }
+
+      fulfilment.returnOrderId = booked.orderId;
+      fulfilment.returnShipmentId = booked.shipmentId;
+      fulfilment.returnBookedAt = new Date();
+      await order.save();
+
+      return res.json({
+        success: true,
+        message: 'Return pickup booked. The courier collects it from the customer.',
+      });
     }
 
     const result =

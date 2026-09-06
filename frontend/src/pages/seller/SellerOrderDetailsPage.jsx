@@ -345,7 +345,40 @@ export default function SellerOrderDetailsPage() {
               Your payment for this order is held until it is settled.
             </p>
 
+            {order.returnBookedAt ? (
+              <p className="text-xs text-gray-500 mt-2">
+                A courier is booked to collect it from the customer.
+              </p>
+            ) : (
+              <p className="text-xs text-gray-500 mt-2">
+                Book a courier to collect it, or take it back yourself — a pickup
+                costs from your Shiprocket wallet, so for a small item it may not
+                be worth it.
+              </p>
+            )}
+
             <div className="flex flex-wrap gap-2 mt-4">
+              {!order.returnBookedAt && (
+                <Button
+                  variant="secondary"
+                  loading={updating}
+                  onClick={async () => {
+                    setUpdating(true);
+                    try {
+                      const { data } = await settleReturn(order._id, 'pickup');
+                      toastSuccess(data.message || 'Return pickup booked');
+                      await loadOrder();
+                    } catch (err) {
+                      toastError(err?.response?.data?.message || 'That did not work');
+                    } finally {
+                      setUpdating(false);
+                    }
+                  }}
+                >
+                  Book a return pickup
+                </Button>
+              )}
+
               <Button
                 loading={updating}
                 onClick={async () => {
