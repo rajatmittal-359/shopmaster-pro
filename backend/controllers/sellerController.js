@@ -1047,7 +1047,38 @@ exports.cancelShipment = async (req, res) => {
       return res.status(409).json({ success: false, message: result.reason });
     }
 
-    await Order.updateOne({ _id: order._id }, { $set: result.update });
+    /*
+     * The FULFILMENT has to come back too, not just the order.
+     *
+     * This wrote `status: 'processing'` straight onto the order and left this
+     * seller's fulfilment saying 'shipped' with a shippedAt and an AWB. Since
+     * order.status is DERIVED from the fulfilments on every save, the next
+     * write of any kind - a courier webhook, a status update - re-derived it
+     * back to 'shipped'. The cancellation silently undid itself.
+     *
+     * The customer's page reads the fulfilment directly, so in the meantime it
+     * kept showing a courier and a timeline for a booking that no longer
+     * existed.
+     */
+    Object.assign(order, result.update);
+
+    const fulfilment = fulfilmentOf(order, req.user._id);
+    if (fulfilment) {
+      fulfilment.status = 'processing';
+      fulfilment.shippedAt = null;
+      fulfilment.awb = null;
+      fulfilment.courierName = null;
+      fulfilment.shippingProvider = 'none';
+      // Scans and an ETD belong to the booking that has just been called off.
+      fulfilment.courierStatus = null;
+      fulfilment.courierStatusAt = null;
+      fulfilment.expectedDeliveryAt = null;
+      fulfilment.scans = [];
+    }
+
+    // save(), not updateOne(): the pre-validate hook is what re-derives
+    // order.status from the fulfilments, and updateOne skips it.
+    await order.save();
 
     res.json({ success: true, message: 'Shipment cancelled; the order is back to processing' });
   } catch (error) {
