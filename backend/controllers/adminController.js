@@ -792,3 +792,65 @@ exports.resolveDispute = async (req, res) => {
     return sendError(res, error);
   }
 };
+
+/**
+ * What the platform charges one seller.
+ *
+ * WHY THIS IS A SCREEN AND NOT A DATABASE EDIT
+ *   `commissionRate` on a seller profile has always overridden the 8% default,
+ *   so a negotiated rate was possible in the data. There was just no way to set
+ *   one without opening the database - which meant "give my friend 0%" was a
+ *   developer task, and every rate the platform agreed to lived only in
+ *   somebody's memory.
+ *
+ * WHY CHANGING IT NEVER TOUCHES PAST ORDERS
+ *   The rate is COPIED onto every order line when the order is placed, and all
+ *   later money reads that copy (utils/commission.js). So this changes what the
+ *   platform earns from here on, and cannot rewrite what a seller was already
+ *   owed. That is deliberate: a payout run over old orders must produce the
+ *   same answer today as it did last month.
+ */
+exports.setSellerCommission = async (req, res) => {
+  try {
+    const { sellerId } = req.params;
+    const { commissionRate } = req.body || {};
+
+    if (!mongoose.isValidObjectId(sellerId)) {
+      return res.status(400).json({ success: false, message: 'Invalid seller id' });
+    }
+
+    const rate = Number(commissionRate);
+    if (!Number.isFinite(rate) || rate < 0 || rate > 100) {
+      return res.status(400).json({
+        success: false,
+        message: 'The commission rate must be a number between 0 and 100',
+      });
+    }
+
+    const seller = await Seller.findById(sellerId);
+    if (!seller) {
+      return res.status(404).json({ success: false, message: 'Seller not found' });
+    }
+
+    const was = seller.commissionRate;
+    seller.commissionRate = rate;
+    await seller.save();
+
+    // Worth a log line: this is the platform's own revenue being changed, and
+    // afterwards there is no other record of who did it or when.
+    console.log(
+      `Commission for ${seller.businessName} changed ${was}% -> ${rate}% by admin ${req.user._id}`
+    );
+
+    return res.json({
+      success: true,
+      message:
+        rate === 0
+          ? `${seller.businessName} now sells commission-free. Orders already placed keep the rate they were sold under.`
+          : `${seller.businessName} is now on ${rate}%. Orders already placed keep the rate they were sold under.`,
+      commissionRate: rate,
+    });
+  } catch (error) {
+    return sendError(res, error);
+  }
+};

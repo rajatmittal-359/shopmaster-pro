@@ -106,6 +106,23 @@ const sellerSchema = new mongoose.Schema(
       shiprocketNickname: { type: String, trim: true },
     },
 
+    /**
+     * This seller pays the delivery, on everything they sell.
+     *
+     * A per-PRODUCT `freeShipping` flag already existed, which is right for a
+     * heavy item a seller wants to price differently - but a seller who has
+     * decided their whole shop absorbs delivery had to remember to tick every
+     * product, and every new one forever. This is that decision said once.
+     *
+     * The two are an OR, not a replacement: a product marked free stays free
+     * whatever this says. Turning this off therefore never silently starts
+     * charging for something a seller had deliberately made free.
+     */
+    offersFreeShipping: {
+      type: Boolean,
+      default: false
+    },
+
     isPlatformOwned: {
       type: Boolean,
       default: false

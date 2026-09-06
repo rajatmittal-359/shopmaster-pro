@@ -14,6 +14,7 @@
  *   If every item in the basket is free-shipping, delivery is zero and the
  *   courier is never called.
  */
+const Seller = require('../models/Seller');
 const shiprocketService = require('./shiprocketService');
 const borzo = require('./borzo');
 
@@ -103,10 +104,73 @@ const weightOf = (item) => {
   return (product.weight || DEFAULT_ITEM_WEIGHT) * (item.quantity || 1);
 };
 
-/** True when this line's product is flagged as free to deliver. */
-const isFreeShipping = (item) => {
-  const product = item.productId && typeof item.productId === 'object' ? item.productId : item;
-  return product.freeShipping === true;
+/** The product behind a cart line, whether it is populated or plain. */
+const productOf = (item) =>
+  item.productId && typeof item.productId === 'object' ? item.productId : item;
+
+/**
+ * True when this line costs the customer nothing to deliver.
+ *
+ * Two ways that happens, and they are an OR:
+ *   the PRODUCT is marked free - a seller pricing one item differently;
+ *   the SELLER absorbs delivery on everything they sell.
+ *
+ * The second exists because a seller who has made that decision should not have
+ * to tick every product they own, and every new one forever. Because it is an
+ * OR, turning the seller-wide switch off never silently starts charging for an
+ * item somebody had deliberately made free.
+ *
+ * @param {object} item
+ * @param {Set<string>} freeSellers  seller ids who absorb delivery
+ */
+const isFreeShipping = (item, freeSellers = new Set()) => {
+  const product = productOf(item);
+  if (product.freeShipping === true) return true;
+  return freeSellers.has(String(product.sellerId || ''));
+};
+
+/**
+ * Which of the sellers in this basket pay the delivery themselves.
+ *
+ * One query for the whole basket rather than one per line. A failure here bills
+ * normally rather than throwing: a courier lookup that cannot see a preference
+ * should quote a price, not break a checkout.
+ */
+const freeShippingSellers = async (cartItems) => {
+  const ids = [
+    ...new Set(
+      cartItems
+        .map((item) => productOf(item).sellerId)
+        .filter(Boolean)
+        .map(String)
+    ),
+  ];
+  if (!ids.length) return new Set();
+
+  try {
+    const sellers = await Seller.find({
+      userId: { $in: ids },
+      offersFreeShipping: true,
+    }).select('userId offersFreeShipping');
+
+    /*
+     * The flag is checked again on what came back, not just asked for in the
+     * query.
+     *
+     * Getting this wrong costs money in one direction only: a seller wrongly
+     * treated as free-shipping means the courier is paid and nobody was
+     * charged. That is worth one more comparison - it is free, and it does not
+     * depend on the query having been read the way it was meant.
+     */
+    return new Set(
+      sellers
+        .filter((seller) => seller.offersFreeShipping === true)
+        .map((seller) => String(seller.userId))
+    );
+  } catch (err) {
+    console.error('Could not read seller shipping preferences:', err.message);
+    return new Set();
+  }
 };
 
 /**
@@ -118,7 +182,8 @@ const isFreeShipping = (item) => {
  * @returns {{shippingCharges: number, shippingCourier: string, freeShipping: boolean}}
  */
 const calculateShipping = async (cartItems, address, isCOD) => {
-  const billable = cartItems.filter((item) => !isFreeShipping(item));
+  const freeSellers = await freeShippingSellers(cartItems);
+  const billable = cartItems.filter((item) => !isFreeShipping(item, freeSellers));
 
   // Nothing to bill for: every item carries its own delivery.
   if (billable.length === 0) {

@@ -65,6 +65,12 @@ router.post(
   require('../controllers/sellerController').settleReturn
 );
 
+// A seller's own shop settings: whether they absorb delivery, and the address a
+// courier collects from.
+const sellerCtrl = require('../controllers/sellerController');
+router.get('/settings', sellerCtrl.getSettings);
+router.patch('/settings', sellerCtrl.updateSettings);
+
 // A seller's own earnings, settlement history and the account they are paid into.
 const {
   getMyEarnings,

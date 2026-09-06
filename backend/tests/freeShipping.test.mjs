@@ -16,8 +16,16 @@ import { createRequire } from 'module';
 
 const require = createRequire(import.meta.url);
 
+const mongoose = require('mongoose');
 const shiprocket = require('../utils/shiprocketService');
+const Seller = require('../models/Seller');
 const { calculateShipping, fallbackPrice } = require('../utils/shipping');
+
+/** The minimum query builder utils/shipping.js uses: .select() then awaited. */
+const chainableQuery = (result) => ({
+  select: () => chainableQuery(result),
+  then: (resolve, reject) => Promise.resolve(result).then(resolve, reject),
+});
 
 const ADDRESS = { zipCode: '560038' };
 
@@ -29,10 +37,15 @@ const line = (weight, quantity, freeShipping = false) => ({
 
 let rateCalls;
 let originalGetShippingRate;
+let originalSellerFind;
 
 beforeEach(() => {
   originalGetShippingRate = shiprocket.getShippingRate;
+  originalSellerFind = Seller.find;
   rateCalls = [];
+
+  // No seller absorbs delivery unless a test says so.
+  Seller.find = vi.fn(() => chainableQuery([]));
 
   // Rate rises with weight, so an excluded item is visible in the price.
   shiprocket.getShippingRate = vi.fn(async (pincode, weightKg, isCod) => {
@@ -50,6 +63,7 @@ beforeEach(() => {
 
 afterEach(() => {
   shiprocket.getShippingRate = originalGetShippingRate;
+  Seller.find = originalSellerFind;
 });
 
 describe('a basket of only free-shipping items', () => {
@@ -212,5 +226,89 @@ describe('the courier being unavailable never blocks checkout', () => {
     // The fallback must never turn a promised free delivery into a charge.
     const result = await calculateShipping([line(0.5, 1, true)], ADDRESS, false);
     expect(result.shippingCharges).toBe(0);
+  });
+});
+
+/**
+ * A seller who absorbs delivery on everything they sell.
+ *
+ * The per-PRODUCT flag came first and is right for one heavy item priced
+ * differently. But a seller who has decided their whole shop pays the delivery
+ * had to tick every product they owned, and every new one forever - which is
+ * not a decision anybody can keep.
+ *
+ * The two are an OR, deliberately: turning the shop-wide switch OFF must never
+ * silently start charging for an item somebody had marked free on purpose.
+ */
+describe('a seller who pays the delivery themselves', () => {
+  const SELLER = new mongoose.Types.ObjectId();
+  const OTHER = new mongoose.Types.ObjectId();
+
+  const lineFrom = (sellerId, freeShipping = false) => ({
+    quantity: 1,
+    productId: { _id: new mongoose.Types.ObjectId(), sellerId, weight: 0.5, freeShipping },
+  });
+
+  const withFreeSellers = (ids) => {
+    Seller.find = vi.fn(() =>
+      chainableQuery(ids.map((id) => ({ userId: id, offersFreeShipping: true })))
+    );
+  };
+
+  it('charges nothing for their items', async () => {
+    withFreeSellers([SELLER]);
+
+    const quote = await calculateShipping([lineFrom(SELLER)], ADDRESS, false);
+
+    expect(quote.shippingCharges).toBe(0);
+    expect(quote.freeShipping).toBe(true);
+  });
+
+  it("does not make another seller's items free too", async () => {
+    withFreeSellers([SELLER]);
+
+    const quote = await calculateShipping(
+      [lineFrom(SELLER), lineFrom(OTHER)],
+      ADDRESS,
+      false
+    );
+
+    // The other seller's half is still billable, so this is a real quote.
+    expect(quote.freeShipping).toBe(false);
+    expect(quote.shippingCharges).toBeGreaterThan(0);
+  });
+
+  /**
+   * The defence that costs nothing: a seller wrongly read as free-shipping
+   * means the courier is paid and nobody was charged.
+   */
+  it('ignores a seller row that does not actually carry the flag', async () => {
+    Seller.find = vi.fn(() =>
+      chainableQuery([{ userId: SELLER, offersFreeShipping: false }])
+    );
+
+    const quote = await calculateShipping([lineFrom(SELLER)], ADDRESS, false);
+
+    expect(quote.freeShipping).toBe(false);
+  });
+
+  it('still bills normally when the preference cannot be read at all', async () => {
+    Seller.find = vi.fn(() => {
+      throw new Error('database down');
+    });
+
+    const quote = await calculateShipping([lineFrom(SELLER)], ADDRESS, false);
+
+    // A checkout must not break because a preference lookup failed.
+    expect(quote.freeShipping).toBe(false);
+    expect(quote.shippingCharges).toBeGreaterThan(0);
+  });
+
+  it('keeps a product marked free free, whatever the seller switch says', async () => {
+    Seller.find = vi.fn(() => chainableQuery([]));
+
+    const quote = await calculateShipping([lineFrom(SELLER, true)], ADDRESS, false);
+
+    expect(quote.freeShipping).toBe(true);
   });
 });

@@ -59,6 +59,13 @@ router.post(
   require('../controllers/adminController').resolveDispute
 );
 
+// What the platform charges one seller. Rates are snapshotted onto orders when
+// they are placed, so this only ever changes what happens from here on.
+router.patch(
+  '/sellers/:sellerId/commission',
+  require('../controllers/adminController').setSellerCommission
+);
+
 // Analytics
 router.get('/analytics', getAnalytics);
 

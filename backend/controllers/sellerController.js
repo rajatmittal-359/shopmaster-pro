@@ -1383,3 +1383,110 @@ exports.settleReturn = async (req, res) => {
     return res.status(500).json({ success: false, message: error.message });
   }
 };
+
+/**
+ * The seller's own settings: how they ship, and from where.
+ *
+ * Two things a seller could not change about their own shop:
+ *
+ *   Free shipping was a flag on each PRODUCT and nowhere else, so a seller who
+ *   had decided their shop absorbs delivery had to tick every item they owned,
+ *   and every new one forever - or ask a developer.
+ *
+ *   The pickup address did not exist at all. Shipping read one address out of
+ *   the environment and used it for everybody, which for any seller but the
+ *   platform's own shop means a courier sent to the wrong door.
+ */
+exports.getSettings = async (req, res) => {
+  try {
+    const seller = await Seller.findOne({ userId: req.user._id });
+    if (!seller) {
+      return res.status(404).json({ success: false, message: 'Seller profile not found' });
+    }
+
+    return res.json({
+      success: true,
+      settings: {
+        businessName: seller.businessName,
+        offersFreeShipping: Boolean(seller.offersFreeShipping),
+        pickupAddress: seller.pickupAddress || {},
+
+        /*
+         * Shown, not editable. A seller seeing what the platform charges them
+         * is the difference between a fee and a deduction they discover in a
+         * payout - and only an admin can change it.
+         */
+        commissionRate: seller.commissionRate,
+        isPlatformOwned: Boolean(seller.isPlatformOwned),
+      },
+    });
+  } catch (error) {
+    return sendError(res, error);
+  }
+};
+
+exports.updateSettings = async (req, res) => {
+  try {
+    const { offersFreeShipping, pickupAddress } = req.body || {};
+
+    const seller = await Seller.findOne({ userId: req.user._id });
+    if (!seller) {
+      return res.status(404).json({ success: false, message: 'Seller profile not found' });
+    }
+
+    if (offersFreeShipping !== undefined) {
+      seller.offersFreeShipping = Boolean(offersFreeShipping);
+    }
+
+    if (pickupAddress) {
+      const p = pickupAddress;
+
+      /*
+       * All or nothing. A half-saved pickup address is worse than none: the
+       * guard that stops a booking would pass, and a courier would be sent
+       * somewhere that does not resolve.
+       */
+      const required = ['contactName', 'address1', 'city', 'state', 'pincode', 'phone'];
+      const missing = required.filter((f) => !String(p[f] || '').trim());
+      if (missing.length) {
+        return res.status(400).json({
+          success: false,
+          message: `Your pickup address needs ${missing.join(', ')} — a courier is sent to it.`,
+        });
+      }
+      if (!/^[1-9]\d{5}$/.test(String(p.pincode).trim())) {
+        return res.status(400).json({ success: false, message: 'Enter a valid 6-digit PIN code' });
+      }
+      if (!/^\d{10}$/.test(String(p.phone).replace(/\D/g, '').slice(-10))) {
+        return res.status(400).json({
+          success: false,
+          message: 'Enter a 10-digit phone number the courier can call',
+        });
+      }
+
+      seller.pickupAddress = {
+        contactName: String(p.contactName).trim(),
+        address1: String(p.address1).trim(),
+        address2: String(p.address2 || '').trim(),
+        city: String(p.city).trim(),
+        state: String(p.state).trim(),
+        pincode: String(p.pincode).trim(),
+        phone: String(p.phone).replace(/\D/g, '').slice(-10),
+        shiprocketNickname: seller.pickupAddress?.shiprocketNickname || null,
+      };
+    }
+
+    await seller.save();
+
+    return res.json({
+      success: true,
+      message: 'Saved',
+      settings: {
+        offersFreeShipping: Boolean(seller.offersFreeShipping),
+        pickupAddress: seller.pickupAddress || {},
+      },
+    });
+  } catch (error) {
+    return sendError(res, error);
+  }
+};

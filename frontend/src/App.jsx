@@ -58,6 +58,7 @@ const SellerOrderDetailsPage = lazy(() => import('./pages/seller/SellerOrderDeta
 const SellerProductDetailsPage = lazy(() => import('./pages/seller/SellerProductDetailsPage'));
 const SellerInventoryLogsPage = lazy(() => import('./pages/seller/InventoryLogsPage'));
 const EarningsPage = lazy(() => import('./pages/seller/EarningsPage'));
+const SellerSettingsPage = lazy(() => import('./pages/seller/SellerSettingsPage'));
 
 // Admin - the smallest audience and the heaviest page (recharts).
 const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
@@ -137,6 +138,7 @@ function App() {
             <Route path="/seller/orders/:orderId" element={<SellerOrderDetailsPage />} />
             <Route path="/seller/inventory-logs" element={<SellerInventoryLogsPage />} />
             <Route path="/seller/earnings" element={<EarningsPage />} />
+            <Route path="/seller/settings" element={<SellerSettingsPage />} />
           </Route>
 
           {/* Admin */}

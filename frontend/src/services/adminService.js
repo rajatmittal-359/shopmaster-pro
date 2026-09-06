@@ -69,3 +69,13 @@ export const resolveDispute = (orderId, { inFavourOf, resolution, sellerId }) =>
     resolution,
     sellerId,
   });
+
+/**
+ * What the platform charges one seller.
+ *
+ * Rates are snapshotted onto every order line when the order is placed, so this
+ * only ever changes what happens from here on - it cannot rewrite what a seller
+ * was already owed.
+ */
+export const setSellerCommission = (sellerId, commissionRate) =>
+  api.patch(`/admin/sellers/${sellerId}/commission`, { commissionRate });

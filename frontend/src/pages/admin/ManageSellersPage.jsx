@@ -5,7 +5,8 @@ import {
   approveSeller, 
   rejectSeller,
   suspendSeller,
-  activateSeller 
+  activateSeller,
+  setSellerCommission
 } from "../../services/adminService";
 import { toastSuccess, toastError } from "../../utils/toast";
 import Loader from "../../components/common/Loader";
@@ -16,12 +17,16 @@ export default function ManageSellersPage() {
   const [sellers, setSellers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all"); // all, pending, active, suspended
+  // Rate boxes being typed in, keyed by seller id. Held apart from `sellers`
+  // so a half-typed number never reads as the saved rate.
+  const [rates, setRates] = useState({});
+  const [savingRate, setSavingRate] = useState(null);
 
   useEffect(() => {
     loadSellers();
   }, []);
 
-const loadSellers = async () => {
+  const loadSellers = async () => {
   try {
     setLoading(true);
     const res = await getPendingSellers();  // ✅ Ye function SAME rahega!
@@ -40,6 +45,33 @@ const loadSellers = async () => {
       loadSellers();
     } catch (err) {
       toastError(err?.response?.data?.message || "Failed to approve seller");
+    }
+  };
+
+  /**
+   * Change what the platform charges this seller.
+   *
+   * Orders already placed keep the rate they were sold under - it is copied
+   * onto each line when the order is made - so this only ever changes what
+   * happens from here on.
+   */
+  const saveRate = async (seller, value) => {
+    const rate = Number(value);
+    if (!Number.isFinite(rate) || rate < 0 || rate > 100) {
+      toastError("The commission rate has to be between 0 and 100");
+      return;
+    }
+
+    setSavingRate(seller._id);
+    try {
+      const { data } = await setSellerCommission(seller._id, rate);
+      toastSuccess(data.message || "Commission updated");
+      setRates((r) => ({ ...r, [seller._id]: undefined }));
+      await loadSellers();
+    } catch (err) {
+      toastError(err?.response?.data?.message || "Could not change that rate");
+    } finally {
+      setSavingRate(null);
     }
   };
 
@@ -182,6 +214,61 @@ const loadSellers = async () => {
                     Reason: {seller.suspensionReason}
                   </p>
                 )}
+
+                {/*
+                  What the platform charges this seller.
+
+                  A negotiated rate was always possible in the data - it just
+                  had no screen, so "let my friend sell commission-free" was a
+                  developer task and every agreed rate lived in somebody's
+                  memory. Changing it never touches an order already placed:
+                  the rate is copied onto each line when the order is made.
+                */}
+                <div className="flex items-center gap-2 mt-2">
+                  <span className="text-xs text-gray-600">Commission</span>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.5"
+                    aria-label={`Commission rate for ${seller.businessName}`}
+                    value={
+                      rates[seller._id] ?? String(seller.commissionRate ?? 8)
+                    }
+                    onChange={(e) =>
+                      setRates((r) => ({ ...r, [seller._id]: e.target.value }))
+                    }
+                    className="w-20 border border-gray-300 rounded-lg px-2 py-1 text-sm
+                               focus:outline-none focus:ring-2 focus:ring-brand-fill"
+                  />
+                  <span className="text-xs text-gray-600">%</span>
+
+                  <button
+                    type="button"
+                    disabled={savingRate === seller._id}
+                    onClick={() => saveRate(seller, rates[seller._id])}
+                    className="text-xs text-brand-ink hover:underline disabled:opacity-50"
+                  >
+                    Save
+                  </button>
+
+                  {/* The whole point of the ask: one press, not a form. */}
+                  {Number(seller.commissionRate) !== 0 && (
+                    <button
+                      type="button"
+                      disabled={savingRate === seller._id}
+                      onClick={() => saveRate(seller, 0)}
+                      className="text-xs text-gray-600 hover:underline disabled:opacity-50"
+                    >
+                      Make commission-free
+                    </button>
+                  )}
+                  {Number(seller.commissionRate) === 0 && (
+                    <span className="text-xs text-positive font-medium">
+                      Commission-free
+                    </span>
+                  )}
+                </div>
               </div>
 
               {/* Action Buttons */}

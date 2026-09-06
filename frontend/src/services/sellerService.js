@@ -65,3 +65,8 @@ export const cancelOwnLines = (orderId, reason) =>
  */
 export const settleReturn = (orderId, action, reason) =>
   api.post(`/seller/orders/${orderId}/return`, { action, reason });
+
+/** A seller's own shop settings: free shipping, and the pickup address. */
+export const getSellerSettings = () => api.get('/seller/settings');
+
+export const updateSellerSettings = (settings) => api.patch('/seller/settings', settings);
