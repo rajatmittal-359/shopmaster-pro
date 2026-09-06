@@ -2,11 +2,27 @@ const User = require('../models/User');
 const Seller = require('../models/Seller');
 const { generateToken } = require('../utils/tokenUtils');
 const sendEmail = require('../utils/sendEmail');
+const crypto = require('crypto');
+const { passwordResetEmail } = require('../utils/emailTemplates');
 
 // Register
 // Register
 /** How long a caller must wait before another code can be sent. */
 const OTP_RESEND_COOLDOWN_MS = 60 * 1000;
+
+/** Same idea for reset links, which cost the same sending reputation. */
+const RESET_RESEND_COOLDOWN_MS = 60 * 1000;
+
+/** The shortest password that will be accepted when one is being replaced. */
+const MIN_PASSWORD_LENGTH = 6;
+
+/**
+ * Where the reset link points. The API and the site are different origins in
+ * every environment this runs in, so the backend cannot build this from the
+ * request - a link to the API host would 404 in the person's browser.
+ */
+const frontendUrl = () =>
+  (process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/+$/, '');
 
 /**
  * Sends a verification code and records when.
@@ -225,6 +241,136 @@ exports.resendOtp = async (req, res) => {
     }
 
     return res.json({ message: 'A new code is on its way.' });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: 'Server error' });
+  }
+};
+
+
+/**
+ * "I forgot my password."
+ *
+ * There was no way to do this at all. Anyone who forgot their password was
+ * locked out permanently - they could not log in, and registering again is
+ * refused because the address is taken.
+ *
+ * THE ANSWER IS ALWAYS THE SAME, whether or not the address has an account.
+ * A different reply for a real address turns this into a way to test which
+ * emails are registered on the platform, one address at a time. Every seller's
+ * and customer's address is worth something to a spammer, so the endpoint
+ * refuses to confirm anything.
+ */
+exports.forgotPassword = async (req, res) => {
+  // Said once and reused, so the two paths cannot drift apart and start
+  // telling a caller which one they took.
+  const neutral = {
+    message:
+      'If there is an account for that address, a reset link is on its way.',
+  };
+
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ message: 'Email required' });
+
+    const user = await User.findOne({ email }).select(
+      '+resetTokenHash +resetTokenExpiry +resetLastSentAt'
+    );
+
+    if (!user) return res.json(neutral);
+
+    const since = user.resetLastSentAt
+      ? Date.now() - user.resetLastSentAt.getTime()
+      : Infinity;
+    // Silently satisfied rather than a 429: a rate-limit reply that only ever
+    // appears for real accounts is the same leak by another route.
+    if (since < RESET_RESEND_COOLDOWN_MS) return res.json(neutral);
+
+    const rawToken = user.generateResetToken();
+    user.resetLastSentAt = new Date();
+    await user.save();
+
+    const link = `${frontendUrl()}/reset-password?token=${rawToken}`;
+    const mail = passwordResetEmail(user, link);
+
+    try {
+      await sendEmail({ to: user.email, ...mail });
+    } catch (err) {
+      // Loud in the log because this is the shop's own problem to fix, and no
+      // one locked out can report it. The caller still gets the neutral reply:
+      // a delivery failure must not become a way to probe for real addresses.
+      console.error(
+        'Could not send the reset link to',
+        user.email,
+        '-',
+        err.message
+      );
+    }
+
+    return res.json(neutral);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: 'Server error' });
+  }
+};
+
+/**
+ * Sets the new password, given the token from the email.
+ *
+ * The token is hashed before it is looked up, because only the hash was ever
+ * stored - see the User model. Expiry is checked in the query itself, so an
+ * expired token cannot be matched at all rather than being matched and then
+ * rejected.
+ */
+exports.resetPassword = async (req, res) => {
+  try {
+    const { token, password } = req.body;
+
+    if (!token || !password) {
+      return res
+        .status(400)
+        .json({ message: 'Reset link and new password are both required' });
+    }
+    if (String(password).length < MIN_PASSWORD_LENGTH) {
+      return res.status(400).json({
+        message: `Password must be at least ${MIN_PASSWORD_LENGTH} characters`,
+      });
+    }
+
+    const tokenHash = crypto
+      .createHash('sha256')
+      .update(String(token))
+      .digest('hex');
+
+    const user = await User.findOne({
+      resetTokenHash: tokenHash,
+      resetTokenExpiry: { $gt: new Date() },
+    }).select('+resetTokenHash +resetTokenExpiry');
+
+    if (!user) {
+      return res.status(400).json({
+        message: 'That reset link has expired or has already been used.',
+      });
+    }
+
+    // The pre('save') hook hashes it; assigning the plain value here is
+    // correct and matches how registration sets one.
+    user.password = password;
+
+    // Cleared in the same save, which is what makes the link single-use. Left
+    // in place, one intercepted email would stay a working key for an hour.
+    user.resetTokenHash = undefined;
+    user.resetTokenExpiry = undefined;
+
+    // Someone who resets a password they never set has proved they own the
+    // inbox, which is exactly what verification asks for.
+    if (!user.isVerified) user.isVerified = true;
+
+    await user.save();
+
+    return res.json({
+      message: 'Your password has been changed. You can sign in with it now.',
+    });
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: 'Server error' });

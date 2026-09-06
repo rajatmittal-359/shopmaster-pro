@@ -62,7 +62,17 @@ const handleSubmit = async (e) => {
           </div>
 
           <div>
-            <label className="block text-sm mb-1">Password</label>
+            {/* The way out of being locked out has to be ON the screen where
+                you discover you are locked out. */}
+            <div className="flex items-baseline justify-between mb-1">
+              <label className="block text-sm">Password</label>
+              <Link
+                to="/forgot-password"
+                className="text-xs text-brand-ink font-medium"
+              >
+                Forgot password?
+              </Link>
+            </div>
             <input
               type="password"
               name="password"

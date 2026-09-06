@@ -53,6 +53,51 @@ exports.orderStatusEmail = (order, customer, status) => ({
   `
 });
 
+/**
+ * The password reset mail.
+ *
+ * It says WHEN the link dies and what to do if the person did not ask for it,
+ * because a reset mail arriving unprompted is how someone finds out their
+ * address is being targeted. Saying "ignore this" is the whole safety advice,
+ * and it only works if it is in the mail.
+ */
+exports.passwordResetEmail = (user, link) => ({
+  subject: 'Reset your ShopMaster Pro password',
+  html: `
+    <h3>Hi ${user.name || 'there'},</h3>
+    <p>Someone asked to reset the password for this account.</p>
+    <p>
+      <a href="${link}"
+         style="display:inline-block;padding:10px 18px;background:#2563eb;
+                color:#ffffff;text-decoration:none;border-radius:8px;
+                font-weight:600">Choose a new password</a>
+    </p>
+    <p>Or paste this into your browser:<br>
+      <span style="word-break:break-all">${link}</span>
+    </p>
+    <p><b>This link works for one hour, and once only.</b></p>
+    <p style="color:#555">
+      If you did not ask for this, you can ignore this email - your password
+      has not changed.
+    </p>
+  `,
+  text:
+    `Hi ${user.name || 'there'},
+
+` +
+    `Someone asked to reset the password for this account.
+
+` +
+    `${link}
+
+` +
+    `This link works for one hour, and once only.
+
+` +
+    `If you did not ask for this, ignore this email - your password has not changed.
+`,
+});
+
 // Seller emails
 exports.lowStockEmail = (products, seller) => {
   const list = products.map(p => `<li>${p.name} - Stock: ${p.stock}</li>`).join('');
