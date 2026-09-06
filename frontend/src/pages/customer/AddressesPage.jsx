@@ -5,6 +5,7 @@ import {
   addAddress,
   updateAddress,
   deleteAddress,
+  lookupPincode,
 } from '../../services/addressService';
 import { toastSuccess, toastError } from '../../utils/toast';
 import { validateAddress, serverMessage } from '../../utils/validate';
@@ -28,6 +29,18 @@ export default function AddressesPage() {
     isDefault: false,
   });
 
+  /**
+   * What the PIN code told us.
+   *
+   * `areas` are POST OFFICE names, not colony names - 302021 comes back as
+   * "Heerapura, Vaishali Nagar" while a real address in it reads "Vidhyut
+   * Nagar". So they are shown as a hint to confirm the code was typed right,
+   * never as a dropdown to choose from: forcing a choice would make people
+   * pick a wrong one.
+   */
+  const [pinInfo, setPinInfo] = useState(null);
+  const [pinState, setPinState] = useState('idle'); // idle | looking | ok | notfound | unavailable
+
   useEffect(() => {
     loadAddresses();
   }, []);
@@ -45,6 +58,29 @@ export default function AddressesPage() {
     }
   };
 
+  /**
+   * Fills city and state from the PIN code.
+   *
+   * The three outcomes are deliberately different. A code that does not exist
+   * is the person's typo and is said plainly. A lookup that FAILS is ours, and
+   * must not block them - city and state stay editable so the address can still
+   * be saved. Only a success locks those two fields, because then they are
+   * known facts and typing over them is how a parcel goes to the wrong city.
+   */
+  const fillFromPincode = async (code) => {
+    setPinState('looking');
+    try {
+      const { data } = await lookupPincode(code);
+      setPinInfo(data);
+      setPinState('ok');
+      setForm((prev) => ({ ...prev, city: data.city, state: data.state }));
+      setErrors((prev) => ({ ...prev, city: undefined, state: undefined, zipCode: undefined }));
+    } catch (err) {
+      setPinInfo(null);
+      setPinState(err?.response?.status === 404 ? 'notfound' : 'unavailable');
+    }
+  };
+
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setForm((prev) => ({
@@ -53,6 +89,17 @@ export default function AddressesPage() {
     }));
     // Stop complaining about a field the moment it is being fixed.
     setErrors((prev) => (prev[name] ? { ...prev, [name]: undefined } : prev));
+
+    if (name === 'zipCode') {
+      const digits = value.replace(/\D/g, '');
+      // Six digits is the whole trigger - no button to press, and no request
+      // fired at every keystroke on the way there.
+      if (digits.length === 6) fillFromPincode(digits);
+      else {
+        setPinInfo(null);
+        setPinState('idle');
+      }
+    }
   };
 
 const handleSubmit = async (e) => {
@@ -85,6 +132,10 @@ const handleSubmit = async (e) => {
 
   const handleEdit = (addr) => {
     setEditingId(addr._id);
+    // An address already saved has a city and state that were accepted once;
+    // they stay editable until the PIN code is retyped and confirms them.
+    setPinInfo(null);
+    setPinState('idle');
     setForm({
       label: addr.label,
       phoneNumber: addr.phoneNumber,
@@ -128,6 +179,10 @@ const handleDelete = async (id) => {
     setEditingId(null);
     setErrors({});
     setShowForm(false);
+    // Or the next address opens showing the last one's PIN code result, and
+    // its city and state locked to somewhere else entirely.
+    setPinInfo(null);
+    setPinState('idle');
   };
 
   return (
@@ -194,6 +249,60 @@ const handleDelete = async (id) => {
                 {errors.street && <p className="mt-1 text-xs text-red-600">{errors.street}</p>}
               </div>
 
+              {/*
+                The PIN code comes BEFORE city and state because it fills them.
+                Asked afterwards, a person types a city, then a code that
+                disagrees with it, and the courier gets an address that cannot
+                exist - which is the commonest way a booking is rejected.
+              */}
+              <div>
+                <label className="block text-sm mb-1">PIN Code *</label>
+                <input
+                  type="text"
+                  name="zipCode"
+                  maxLength="6"
+                  inputMode="numeric"
+                  placeholder="302019"
+                  value={form.zipCode}
+                  onChange={handleChange}
+                  required
+                  className={`w-full border rounded-lg px-3 py-2 text-sm ${
+                    errors.zipCode || pinState === 'notfound' ? 'border-red-400' : ''
+                  }`}
+                />
+
+                {pinState === 'looking' && (
+                  <p className="mt-1 text-xs text-gray-500">Checking…</p>
+                )}
+                {pinState === 'ok' && pinInfo && (
+                  <p className="mt-1 text-xs text-positive">
+                    {pinInfo.city}, {pinInfo.state}
+                    {/* A few names are enough to confirm the code was typed
+                        right; a busy city returns a dozen and the hint stops
+                        being readable. */}
+                    {pinInfo.areas?.length
+                      ? ` · covers ${pinInfo.areas.slice(0, 3).join(', ')}${
+                          pinInfo.areas.length > 3
+                            ? ` +${pinInfo.areas.length - 3} more`
+                            : ''
+                        }`
+                      : ''}
+                  </p>
+                )}
+                {pinState === 'notfound' && (
+                  <p className="mt-1 text-xs text-red-600">
+                    No such PIN code. Check the six digits.
+                  </p>
+                )}
+                {pinState === 'unavailable' && (
+                  <p className="mt-1 text-xs text-notice">
+                    Could not check that PIN code — please fill in city and state
+                    yourself.
+                  </p>
+                )}
+                {errors.zipCode && <p className="mt-1 text-xs text-red-600">{errors.zipCode}</p>}
+              </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm mb-1">City</label>
@@ -203,9 +312,10 @@ const handleDelete = async (id) => {
                     value={form.city}
                     onChange={handleChange}
                     required
+                    readOnly={pinState === 'ok'}
                     className={`w-full border rounded-lg px-3 py-2 text-sm ${
-                      errors.city ? 'border-red-400' : ''
-                    }`}
+                      pinState === 'ok' ? 'bg-gray-100 text-gray-600' : ''
+                    } ${errors.city ? 'border-red-400' : ''}`}
                   />
                   {errors.city && <p className="mt-1 text-xs text-red-600">{errors.city}</p>}
                 </div>
@@ -217,32 +327,16 @@ const handleDelete = async (id) => {
                     value={form.state}
                     onChange={handleChange}
                     required
+                    readOnly={pinState === 'ok'}
                     className={`w-full border rounded-lg px-3 py-2 text-sm ${
-                      errors.state ? 'border-red-400' : ''
-                    }`}
+                      pinState === 'ok' ? 'bg-gray-100 text-gray-600' : ''
+                    } ${errors.state ? 'border-red-400' : ''}`}
                   />
                   {errors.state && <p className="mt-1 text-xs text-red-600">{errors.state}</p>}
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm mb-1">PIN Code *</label>
-                  <input
-                    type="text"
-                    name="zipCode"
-                    maxLength="6"
-                    inputMode="numeric"
-                    placeholder="302019"
-                    value={form.zipCode}
-                    onChange={handleChange}
-                    required
-                    className={`w-full border rounded-lg px-3 py-2 text-sm ${
-                      errors.zipCode ? 'border-red-400' : ''
-                    }`}
-                  />
-                  {errors.zipCode && <p className="mt-1 text-xs text-red-600">{errors.zipCode}</p>}
-                </div>
                 <div>
                   <label className="block text-sm mb-1">Country</label>
                   <input

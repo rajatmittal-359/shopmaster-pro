@@ -83,6 +83,7 @@ app.use('/api/customer', customerRoutes);
 app.use('/api/public/products', publicCatalogue, productRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/inventory', inventoryRoutes);
+app.use('/api/pincode', require('./routes/pincodeRoutes'));
 
 // Error middleware
 const errorMiddleware = require('./middlewares/errorMiddleware');
