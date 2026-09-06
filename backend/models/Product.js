@@ -191,9 +191,39 @@ const productSchema = new mongoose.Schema(
     type: String,
     trim: true,
   },
+  /**
+   * The Maximum Retail Price printed on the pack.
+   *
+   * NOT a marketing anchor. Under the Legal Metrology (Packaged Commodities)
+   * Rules it is the highest price at which the item may lawfully be sold,
+   * inclusive of all taxes - selling above it is an offence under s.36, and
+   * inflating it to manufacture a bigger "discount" is the exact practice the
+   * CCPA's 2023 dark-pattern guidelines were written for. The validator below
+   * is why `price` can never exceed it.
+   */
   mrp: {
     type: Number,
+    min: [0, 'MRP cannot be negative'],
   },
+
+  /**
+   * A temporary price, and the window it runs in.
+   *
+   * Separate from `price` on purpose: `price` is what the shop normally sells
+   * at, so a sale that ends leaves the normal price behind without anybody
+   * restoring it. Dates are the point - a sale should stop because time passed,
+   * not because somebody remembered to switch it off, and "sale" that never
+   * ends is not a sale, it is the price.
+   *
+   * utils/discount.js decides which of the two is in force at a given moment.
+   */
+  salePrice: {
+    type: Number,
+    default: null,
+    min: [0, 'A sale price cannot be negative'],
+  },
+  saleStartsAt: { type: Date, default: null },
+  saleEndsAt: { type: Date, default: null },
   tags: [
     {
       type: String,
@@ -207,6 +237,42 @@ const productSchema = new mongoose.Schema(
 );
 
 // Virtual field for low stock alert
+/**
+ * Prices that cannot lie.
+ *
+ * WHY THIS IS A HARD REFUSAL AND NOT A WARNING
+ *   MRP is the legal maximum, not a number to anchor against. Selling above it
+ *   is an offence under s.36 of the Legal Metrology Act (RS 25,000 rising to
+ *   RS 1,00,000, plus up to a year), and inflating it so a "70% off" looks
+ *   bigger is the practice the CCPA's 2023 dark-pattern guidelines exist to
+ *   stop - they fined FirstCry RS 2 lakh in September 2025 for a milder version
+ *   of the same thing.
+ *
+ *   On a marketplace the platform carries that, not the seller who typed it. So
+ *   the impossible combinations are refused at the model, where no controller
+ *   can forget to check.
+ */
+// Async, and throwing rather than calling next - the same shape as the slug
+// hook below it. Mongoose gives async middleware no `next` to call.
+productSchema.pre('validate', async function pricesMustBeHonest() {
+  if (this.mrp && this.price > this.mrp) {
+    throw new Error(
+      'The selling price cannot be above the MRP - MRP is the legal maximum, not a comparison price'
+    );
+  }
+
+  if (this.salePrice != null && this.salePrice !== 0) {
+    if (this.salePrice >= this.price) {
+      throw new Error(
+        'A sale price has to be lower than the normal price, or it is not a sale'
+      );
+    }
+    if (this.saleEndsAt && this.saleStartsAt && this.saleEndsAt <= this.saleStartsAt) {
+      throw new Error('The sale has to end after it starts');
+    }
+  }
+});
+
 productSchema.virtual('isLowStock').get(function () {
   return this.stock <= this.lowStockThreshold;
 });
