@@ -507,6 +507,20 @@ exports.getMyOrders = async (req, res) => {
         // always false and EVERY order claimed to be paid online - including
         // the COD ones, where the seller has to collect cash at the door.
         paymentMethod: order.paymentMethod,
+
+        /*
+         * Whether a courier is already carrying this.
+         *
+         * Also never sent, and the seller list branches on it twice: it offered
+         * "Book courier & ship" on a parcel that was already booked, and never
+         * offered "Cancel shipment" at all, because the field it tests was
+         * always undefined. Prefer this seller's own AWB - in a split order the
+         * two sellers ship separately and have different ones.
+         */
+        shippingAwb: (fulfilment && fulfilment.awb) || order.shippingAwb || null,
+        shippingCourierName:
+          (fulfilment && fulfilment.courierName) || order.shippingCourierName || null,
+
         trackingInfo: order.trackingInfo,
         createdAt: order.createdAt,
       };

@@ -6,6 +6,7 @@ import {
   updateTracking,
   shipOrder,
   cancelShipment,
+  cancelOwnLines,
 } from '../../services/sellerService';
 import { toastSuccess, toastError } from '../../utils/toast';
 import { Link } from 'react-router-dom';
@@ -14,6 +15,7 @@ import { orderRef } from '../../utils/orderRef';
 import { useConfirm } from '../../context/confirmContext';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
+import Modal from '../../components/ui/Modal';
 import { money } from '../../utils/money';
 /**
  * The stages this seller's parcel moves through.
@@ -29,6 +31,36 @@ export default function SellerOrdersPage() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState(null);
+
+  /**
+   * Saying "I cannot supply this".
+   *
+   * The reason is required rather than optional: the customer is told it, and
+   * a seller who is repeatedly out of stock is exactly the pattern a
+   * marketplace has to be able to see afterwards.
+   */
+  const [cancellingOrder, setCancellingOrder] = useState(null);
+  const [cancelReason, setCancelReason] = useState('');
+  const [cancelBusy, setCancelBusy] = useState(false);
+
+  const submitOwnCancel = async () => {
+    if (cancelReason.trim().length < 3) {
+      toastError('Please say why - the customer is told, and it stays on the order');
+      return;
+    }
+    setCancelBusy(true);
+    try {
+      const { data } = await cancelOwnLines(cancellingOrder._id, cancelReason.trim());
+      toastSuccess(data.message || 'Cancelled and refunded');
+      setCancellingOrder(null);
+      setCancelReason('');
+      await loadOrders();
+    } catch (err) {
+      toastError(err?.response?.data?.message || 'Could not cancel that order');
+    } finally {
+      setCancelBusy(false);
+    }
+  };
   const [trackingData, setTrackingData] = useState({}); // Per-order tracking state
 
   const loadOrders = async () => {
@@ -440,6 +472,27 @@ export default function SellerOrdersPage() {
                             Cancel shipment
                           </Button>
                         )}
+
+                        {/*
+                          Calling off the ORDER, which is a different thing from
+                          calling off the courier. A seller who cannot supply had
+                          only the courier button, which leaves the order live and
+                          the customer waiting for something that is never coming.
+                          Only offered before anything is booked - a parcel with a
+                          courier has to be recalled first.
+                        */}
+                        {['pending', 'processing'].includes(order.status) &&
+                          !order.shippingAwb && (
+                            <Button
+                              variant="destructive"
+                              fullWidth
+                              onClick={() => setCancellingOrder(order)}
+                              disabled={updatingId === order._id}
+                              className="md:flex-1"
+                            >
+                              Cannot supply
+                            </Button>
+                          )}
                       </div>
                     );
                   })()}
@@ -486,6 +539,48 @@ export default function SellerOrdersPage() {
           </div>
         )}
       </div>
+      <Modal
+        open={Boolean(cancellingOrder)}
+        title={`Cannot supply ${orderRef(cancellingOrder) || 'this order'}?`}
+        hint="Your items are cancelled and the customer is refunded for them."
+        onClose={() => setCancellingOrder(null)}
+      >
+        <p className="text-sm text-gray-600">
+          Only your own items go. If another seller is in this order, theirs
+          carry on.
+        </p>
+
+        <label htmlFor="why" className="block text-sm mt-4 mb-1">
+          Why can you not supply it?
+        </label>
+        <textarea
+          id="why"
+          rows={3}
+          value={cancelReason}
+          onChange={(e) => setCancelReason(e.target.value)}
+          placeholder="Out of stock - last piece was damaged"
+          className="w-full border rounded-lg px-3 py-2 text-sm
+                     focus:outline-none focus:ring-2 focus:ring-brand-600"
+        />
+        <p className="text-xs text-gray-500 mt-1">
+          The customer is told this, and it stays on the order.
+        </p>
+
+        <div className="flex justify-end gap-2 mt-5">
+          <Button variant="secondary" onClick={() => setCancellingOrder(null)}>
+            Keep the order
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={submitOwnCancel}
+            loading={cancelBusy}
+            loadingText="Cancelling…"
+          >
+            Cancel and refund
+          </Button>
+        </div>
+      </Modal>
+
     </Layout>
   );
 }

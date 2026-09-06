@@ -48,3 +48,10 @@ export const getPayoutDetails = () => api.get('/seller/payout-details');
 /** @param {{accountNumber, ifscCode, accountHolderName, gstNumber?}} details */
 export const updatePayoutDetails = (details) =>
   api.patch('/seller/payout-details', details);
+
+/**
+ * Calling off this seller's own lines - out of stock, damaged, cannot supply.
+ * Not the same as cancelling the courier booking, which leaves the order live.
+ */
+export const cancelOwnLines = (orderId, reason) =>
+  api.post(`/seller/orders/${orderId}/cancel`, { reason });

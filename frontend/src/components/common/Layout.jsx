@@ -114,6 +114,7 @@ export default function Layout({ children, title = 'Dashboard' }) {
             {role === 'admin' && (
               <>
                 <SidebarLink to="/admin/dashboard" icon={<LayoutDashboard size={18} />} text="Dashboard" />
+                <SidebarLink to="/admin/orders" icon={<ClipboardList size={18} />} text="Orders" />
                 <SidebarLink to="/admin/manage-sellers" icon={<Users size={18} />} text="Sellers" />
                 <SidebarLink to="/admin/categories" icon={<FolderTree size={18} />} text="Categories" />
                 <SidebarLink to="/admin/payouts" icon={<Wallet size={18} />} text="Payouts" />

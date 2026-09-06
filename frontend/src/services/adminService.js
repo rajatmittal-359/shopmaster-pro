@@ -44,3 +44,13 @@ export const markPayoutPaid = (payoutId, { reference, notes }) =>
 /** Records a failed transfer; its sales return to the payable pool. */
 export const markPayoutFailed = (payoutId, reason) =>
   api.patch(`/admin/payouts/${payoutId}/failed`, { reason });
+
+/** Every order on the platform. The admin could already fetch these; there was no screen. */
+export const getAllOrders = (params) => api.get('/admin/orders', { params });
+
+/**
+ * The platform calling off an order. The reason is required: it is shown to
+ * the customer and kept on the order.
+ */
+export const cancelOrderAsAdmin = (orderId, reason) =>
+  api.post(`/admin/orders/${orderId}/cancel`, { reason });
