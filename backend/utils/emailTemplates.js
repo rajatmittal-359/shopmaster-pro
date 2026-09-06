@@ -329,3 +329,75 @@ exports.shippingNotificationEmail = (order, customer, trackingInfo) => {
     `),
   };
 };
+
+/**
+ * Telling a seller the platform's cut has changed.
+ *
+ * WHY THIS IS NOT OPTIONAL
+ *   A commission rate decides what a seller takes home on every sale they make
+ *   from now on. Changing it silently means they find out from a payout that
+ *   is smaller than they expected - which is exactly how a marketplace loses
+ *   the sellers it wants to keep, and it is the same class of unfairness as
+ *   letting somebody grade their own homework: the party with the power tells
+ *   the other party afterwards, or not at all.
+ *
+ *   So both numbers are in it. "Now 12%" means nothing on its own; "8% -> 12%"
+ *   is a fact a seller can act on, dispute, or accept.
+ */
+exports.commissionChangedEmail = (seller, { from, to }) => {
+  const better = to < from;
+  const name = seller?.name || seller?.businessName || 'there';
+
+  const subject =
+    to === 0
+      ? 'You now sell commission-free on ShopMaster Pro'
+      : `Your ShopMaster Pro commission is now ${to}%`;
+
+  const text = [
+    `Hi ${name},`,
+    '',
+    to === 0
+      ? `The commission on your sales has been removed. It was ${from}%, and it is now 0% - you keep the whole item value on everything you sell.`
+      : `The commission on your sales has changed from ${from}% to ${to}%.`,
+    '',
+    'Orders you have already received keep the rate they were sold under, so nothing you are already owed changes.',
+    '',
+    'Commission is taken from the item value only, never from delivery.',
+    '',
+    'If this is not what you agreed, reply to this email.',
+  ].join('\n');
+
+  const html = wrap(`
+      <h2 style="margin:0 0 12px 0;font-size:22px;color:#111827">
+        ${to === 0 ? 'You now sell commission-free' : 'Your commission has changed'}
+      </h2>
+      <p style="margin:0 0 20px 0">Hi ${name},</p>
+
+      ${facts([
+        ['Commission before', `${from}%`],
+        ['Commission now', `${to}%`],
+      ])}
+
+      <p style="margin:0 0 12px 0">
+        ${
+          to === 0
+            ? 'You keep the whole item value on everything you sell from now on.'
+            : better
+              ? 'You keep more of every sale from now on.'
+              : 'This applies to sales you make from now on.'
+        }
+      </p>
+
+      <p style="margin:0 0 12px 0">
+        Orders you have <strong>already received</strong> keep the rate they were
+        sold under, so nothing you are already owed changes.
+      </p>
+
+      <p style="margin:0 0 20px 0;font-size:14px;color:#6b7280">
+        Commission is taken from the item value only, never from delivery.
+        If this is not what you agreed, just reply to this email.
+      </p>`);
+
+  return { subject, html, text };
+};
+

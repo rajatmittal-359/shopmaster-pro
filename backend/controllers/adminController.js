@@ -2,6 +2,8 @@
 const { sendError } = require('../utils/apiError');
 const mongoose = require('mongoose');
 const User = require('../models/User');
+const sendSafeEmail = require('../utils/sendSafeEmail');
+const { commissionChangedEmail } = require('../utils/emailTemplates');
 const Seller = require('../models/Seller');
 const Category = require('../models/Category');
 const Product = require('../models/Product');
@@ -841,6 +843,34 @@ exports.setSellerCommission = async (req, res) => {
     console.log(
       `Commission for ${seller.businessName} changed ${was}% -> ${rate}% by admin ${req.user._id}`
     );
+
+    /*
+     * Tell the seller, with both numbers.
+     *
+     * This decides what they take home on every sale from now on. Changing it
+     * silently means they find out from a payout that is smaller than they
+     * expected - and a marketplace that does that to the sellers it wants to
+     * keep does not keep them. It is the same unfairness as any of the other
+     * money rules here: the party with the power tells the other party
+     * afterwards, or not at all.
+     *
+     * setImmediate, so a mail server having a bad afternoon cannot fail a
+     * change that has already been saved.
+     */
+    setImmediate(async () => {
+      try {
+        const user = await User.findById(seller.userId).select('name email');
+        if (!user?.email) return;
+
+        const { subject, html, text } = commissionChangedEmail(
+          { name: user.name, businessName: seller.businessName },
+          { from: was, to: rate }
+        );
+        await sendSafeEmail({ toEmail: user.email, subject, html, text });
+      } catch (err) {
+        console.error('Commission email failed for', seller.businessName, '-', err.message);
+      }
+    });
 
     return res.json({
       success: true,
