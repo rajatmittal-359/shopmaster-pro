@@ -5,7 +5,8 @@ import { Copy, Check } from 'lucide-react';
 import Layout from '../../components/common/Layout';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
-import ShipmentTimeline, { readable } from '../../components/customer/ShipmentTimeline';
+import ShipmentTimeline from '../../components/customer/ShipmentTimeline';
+import { readable, hasLeftTheSeller } from '../../utils/courierText';
 import ReasonModal from '../../components/common/ReasonModal';
 import {
   getOrderDetails,
@@ -77,7 +78,13 @@ const arrival = (order, fulfilment) => {
    * the page - which is the only thing this page has.
    */
   if (order.status === 'shipped') {
-    return fulfilment?.scans?.length ? 'On its way' : 'Booked with a courier';
+    /*
+     * A scan is not movement. The first thing a courier records is "Data
+     * Received" - the manifest reached them, the parcel is still on the
+     * seller's shelf. Saying "On its way" over that is the same over-promise as
+     * the handover one, and it is one line of code away from being made again.
+     */
+    return hasLeftTheSeller(fulfilment?.scans) ? 'On its way' : 'Booked with a courier';
   }
   return 'Being prepared by the seller';
 };

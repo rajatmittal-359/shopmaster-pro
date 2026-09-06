@@ -212,6 +212,29 @@ const fulfilmentSchema = new mongoose.Schema(
     ndrReason: { type: String, default: null },
     ndrAt: { type: Date, default: null },
 
+    /** How many times the courier has tried. Two failures is a real problem. */
+    ndrAttempts: { type: Number, default: 0 },
+
+    /**
+     * The courier never COLLECTED it. A different failure from a failed
+     * delivery, and one nothing was watching for: the seller thinks it has
+     * gone, the customer is waiting, and the parcel is on a shelf.
+     */
+    nprReason: { type: String, default: null },
+
+    /**
+     * Proof of delivery - a signature or a photo, as the courier recorded it.
+     *
+     * This is the evidence an admin needs to settle "the tracking says
+     * delivered but nothing arrived". Without it a dispute is one person's word
+     * against another's, and Indian consumer forums give the benefit of the
+     * doubt to the customer where the platform cannot show its working.
+     *
+     * It arrives with ordinary tracking - no special arrangement needed - but
+     * only once a parcel has actually been delivered.
+     */
+    podUrl: { type: String, default: null },
+
     /**
      * When the courier expects to deliver it.
      *

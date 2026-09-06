@@ -2,7 +2,8 @@ const crypto = require('crypto');
 
 const Order = require('../models/Order');
 const User = require('../models/User');
-const { normaliseCourierStatus, FULFILMENT_STATE } = require('../utils/courierStatus');
+const { normaliseCourierStatus } = require('../utils/courierStatus');
+const { applyCourierUpdate } = require('../utils/applyCourierUpdate');
 const { orderStatusEmail } = require('../utils/emailTemplates');
 const sendSafeEmail = require('../utils/sendSafeEmail');
 
@@ -158,74 +159,23 @@ exports.courierUpdate = async (req, res) => {
       return acknowledge();
     }
 
-    const when = at && !Number.isNaN(Date.parse(at)) ? new Date(at) : new Date();
-    const was = fulfilment.status;
-
-    fulfilment.courierStatus = status;
-    fulfilment.courierStatusAt = when;
-
-    if (etd && !Number.isNaN(Date.parse(etd))) {
-      // Couriers revise this as the parcel moves, so the latest word wins.
-      fulfilment.expectedDeliveryAt = new Date(etd);
-    }
-
-    if (scans.length) {
-      // Replace rather than append: each event carries the WHOLE history, so
-      // appending would duplicate every earlier stop on every update. Capped at
-      // 30 - older scans stop being interesting once a parcel has arrived.
-      fulfilment.scans = scans.slice(0, 30);
-    }
-
-    if (mapped === 'ndr') {
-      fulfilment.ndrReason = reason || status;
-      fulfilment.ndrAt = when;
-    } else {
-      const next = FULFILMENT_STATE[mapped];
-
-      // Never walk a parcel backwards. Couriers resend events, and out-of-order
-      // delivery of those events must not turn a delivered parcel into one in
-      // transit.
-      const RANK = { pending: 0, processing: 1, shipped: 2, delivered: 3, returned: 4, cancelled: 4 };
-      if (next && (RANK[next] ?? 0) >= (RANK[fulfilment.status] ?? 0)) {
-        fulfilment.status = next;
-      }
-
-      if (next === 'delivered' && !fulfilment.deliveredAt) {
-        // The moment that starts the return window and, once it closes, makes
-        // this seller's line payable.
-        fulfilment.deliveredAt = when;
-      }
-      if (next === 'delivered') {
-        /*
-         * The courier's word, recorded as the courier's word.
-         *
-         * This overwrites a seller's earlier claim on purpose. Both cannot be
-         * the source, and of the two only the courier has nothing to gain from
-         * the answer - so when the tracking feed speaks, it is what the record
-         * says happened.
-         */
-        fulfilment.deliveryConfirmedBy = 'courier';
-
-        /*
-         * COD is collected at the door by the courier, so their delivery scan
-         * is the only honest signal that the cash exists. A seller pressing a
-         * button used to declare this for money that had not reached anybody.
-         */
-        const everyPartDone = order.fulfilments
-          .filter((f) => f.status !== 'cancelled')
-          .every((f) => ['delivered', 'returned'].includes(f.status));
-
-        if (
-          order.paymentMethod === 'cod' &&
-          order.paymentStatus === 'pending' &&
-          everyPartDone
-        ) {
-          order.paymentStatus = 'paid';
-        }
-      }
-      if (next === 'returned' && !fulfilment.returnedAt) fulfilment.returnedAt = when;
-      if (next === 'shipped' && !fulfilment.shippedAt) fulfilment.shippedAt = when;
-    }
+    /*
+     * The rules live in utils/applyCourierUpdate.js, not here.
+     *
+     * They decide when deliveredAt is set - which starts the return window,
+     * which releases a seller's money - and when COD counts as collected. The
+     * tracking reconciler applies the same rules to the same parcels when a
+     * webhook goes missing, and two copies of this would quietly drift until
+     * they disagreed about whether somebody had been paid.
+     */
+    const { changed, was } = applyCourierUpdate(order, fulfilment, {
+      status,
+      statusId,
+      reason,
+      at,
+      etd,
+      scans,
+    });
 
     // order.status is derived from the fulfilments by the pre-validate hook.
     await order.save();
@@ -235,7 +185,7 @@ exports.courierUpdate = async (req, res) => {
     );
 
     // Tell the customer, but only when something actually changed for them.
-    if (fulfilment.status !== was && ['delivered', 'returned'].includes(fulfilment.status)) {
+    if (changed && ['delivered', 'returned'].includes(fulfilment.status)) {
       setImmediate(async () => {
         try {
           const customer = await User.findById(order.customerId).select('name email');

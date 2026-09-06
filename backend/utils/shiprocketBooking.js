@@ -391,4 +391,86 @@ const cancelShipment = async (externalOrderId) => {
   }
 };
 
-module.exports = { bookShipment, cancelShipment, getToken };
+
+/**
+ * What the courier says about a parcel right now.
+ *
+ * WHY WE ASK RATHER THAN ONLY LISTEN
+ *   The webhook is a single delivery attempt to a server that sleeps on a free
+ *   Render plan. Miss the one event that says "delivered" and nothing else ever
+ *   notices: the parcel stays 'shipped' forever, the return window never opens,
+ *   and that seller is simply never paid - with nothing on any screen to
+ *   explain it. So the reconciler asks as well as listening.
+ *
+ * The shape below was read off a real response for our own AWB rather than
+ * guessed, and matches what Shiprocket's own MCP server reads:
+ *   tracking_data.shipment_track[0]        current_status, current_status_id,
+ *                                          edd, delivered_date, pod, courier_name
+ *   tracking_data.shipment_track_activities  newest first: date, activity, location
+ *   tracking_data.ndr                      reason, attempts - a failed delivery
+ *   tracking_data.npr                      reason, attempts - never COLLECTED
+ *
+ * @returns {{ok: boolean, reason?: string, ...}}
+ */
+const trackByAwb = async (awb) => {
+  try {
+    const token = await getToken();
+    const { data } = await axios.get(
+      `${BASE_URL}/courier/track/awb/${encodeURIComponent(awb)}`,
+      { headers: authHeaders(token), timeout: 20000 }
+    );
+
+    const t = data?.tracking_data;
+    if (!t) return { ok: false, reason: 'No tracking data returned' };
+
+    // They report a bad AWB inside a 200, not as an HTTP error.
+    if (t.error) return { ok: false, reason: String(t.error) };
+
+    const track = Array.isArray(t.shipment_track) ? t.shipment_track[0] : null;
+    const activities = Array.isArray(t.shipment_track_activities)
+      ? t.shipment_track_activities
+      : [];
+
+    return {
+      ok: true,
+      status: track?.current_status || null,
+      statusId: Number(track?.current_status_id) || null,
+      courierName: track?.courier_name || null,
+      // Their empty value is "" and "NA", neither of which is a date.
+      deliveredDate: track?.delivered_date || null,
+      etd: t.etd || track?.edd || null,
+      at: track?.updated_time_stamp || activities[0]?.date || null,
+
+      /*
+       * Proof of delivery - a signature or photo. This is the evidence an admin
+       * needs to settle "it says delivered but nothing came", and it turns out
+       * to arrive with ordinary tracking rather than needing anything special
+       * switched on. "Not Available" is their word for none yet.
+       */
+      pod: track?.pod && track.pod !== 'Not Available' ? track.pod : null,
+
+      /** Why a delivery failed, and how many times it has been tried. */
+      ndrReason: t.ndr?.reason || null,
+      ndrAttempts: Number(t.ndr?.attempts) || 0,
+
+      /** Why the parcel was never COLLECTED. A different problem entirely. */
+      nprReason: t.npr?.reason || null,
+      nprAttempts: Number(t.npr?.attempts) || 0,
+
+      scans: activities
+        .filter((a) => a.activity)
+        .map((a) => ({
+          at: a.date && !Number.isNaN(Date.parse(a.date)) ? new Date(a.date) : null,
+          activity: String(a.activity),
+          location: a.location ? String(a.location) : null,
+        })),
+    };
+  } catch (err) {
+    return {
+      ok: false,
+      reason: err.response?.data?.message || err.message || 'Could not reach the courier',
+    };
+  }
+};
+
+module.exports = { bookShipment, cancelShipment, trackByAwb, getToken };

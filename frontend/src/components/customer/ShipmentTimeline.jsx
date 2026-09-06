@@ -1,3 +1,5 @@
+import { readable, hasLeftTheSeller } from '../../utils/courierText';
+
 /**
  * Where the parcel has been, and where it is going next.
  *
@@ -17,18 +19,22 @@
  *   One greyed line saying what comes next answers that without adding noise -
  *   and it disappears once the parcel arrives, because then nothing is next.
  */
+
 /**
  * What has not happened yet.
  *
  * `shipped` has TWO different next steps and they are not interchangeable.
- * Our shippedAt is set when the seller BOOKS a courier - the parcel is still
- * on their shelf at that point. Until a courier scan arrives, the next thing
- * is collection, not delivery. Saying "out for delivery" there would tell a
- * customer their parcel is minutes away while it sits in a house.
+ * Our shippedAt is set when the seller BOOKS a courier, and the courier's first
+ * scan only says their system has the manifest - the parcel is on a shelf for
+ * both. Until a scan shows real movement (see hasLeftTheSeller) the next thing
+ * is collection, not delivery. Saying "out for delivery" there tells a customer
+ * their parcel is minutes away while it sits in a house.
  */
-const nextStepFor = (status, hasScans) => {
+const nextStepFor = (status, scans) => {
   if (status === 'pending' || status === 'processing') return 'Seller is preparing it';
-  if (status === 'shipped') return hasScans ? 'Out for delivery' : 'Waiting to be collected';
+  if (status === 'shipped') {
+    return hasLeftTheSeller(scans) ? 'Out for delivery' : 'Waiting to be collected';
+  }
   return null;
 };
 
@@ -40,13 +46,6 @@ const when = (date) =>
     minute: '2-digit',
     hour12: true,
   });
-
-/** Sentence case: couriers SHOUT, and a wall of capitals reads as noise. */
-export const readable = (text) => {
-  const t = String(text || '').trim();
-  if (!t) return '';
-  return t === t.toUpperCase() ? t.charAt(0) + t.slice(1).toLowerCase() : t;
-};
 
 export default function ShipmentTimeline({ order, fulfilment }) {
   const f = fulfilment || {};
@@ -69,7 +68,7 @@ export default function ShipmentTimeline({ order, fulfilment }) {
       ].filter(Boolean);
 
   const sorted = [...events].sort((a, b) => new Date(b.at) - new Date(a.at));
-  const next = nextStepFor(order?.status, scans.length > 0);
+  const next = nextStepFor(order?.status, scans);
 
   if (!sorted.length && !next) return null;
 

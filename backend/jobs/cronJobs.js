@@ -3,6 +3,7 @@ const Product = require('../models/Product');
 const User = require('../models/User');
 const sendEmail = require('../utils/sendEmail');
 const { lowStockEmail } = require('../utils/emailTemplates');
+const { reconcileOnce } = require('./trackingReconcile');
 
 exports.startCronJobs = () => {
   // Daily at 9 AM - Low stock alert
@@ -42,5 +43,35 @@ exports.startCronJobs = () => {
     }
   });
   
+  /*
+   * Every two hours: ask the courier about parcels the webhook has gone quiet
+   * on.
+   *
+   * Not daily. deliveredAt starts a 7-day return window and the window closing
+   * is what pays a seller, so a day's delay is a day's delay in somebody's
+   * money. Not every few minutes either - it is a safety net, and the webhook
+   * is the fast path.
+   *
+   * SHIPROCKET_API_EMAIL gates it because without credentials every call is a
+   * failed login, which is noise in the log and nothing else.
+   */
+  if (process.env.SHIPROCKET_API_EMAIL) {
+    cron.schedule('15 */2 * * *', async () => {
+      try {
+        const { asked, moved, scanned } = await reconcileOnce();
+        if (asked) {
+          console.log(
+            `📦 Tracking reconcile: ${scanned} order(s), ${asked} asked, ${moved} moved`
+          );
+        }
+      } catch (err) {
+        console.error('❌ Tracking reconcile failed:', err.message);
+      }
+    });
+    console.log('📦 Tracking reconcile scheduled');
+  } else {
+    console.warn('⚠️  Tracking reconcile off: SHIPROCKET_API_EMAIL is not set');
+  }
+
   console.log('📧 Cron jobs started');
 };
