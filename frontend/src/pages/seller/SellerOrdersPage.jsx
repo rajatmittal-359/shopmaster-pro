@@ -189,14 +189,14 @@ export default function SellerOrdersPage() {
                     done
                       ? 'bg-positive'
                       : current
-                      ? 'bg-brand-700 ring-4 ring-brand-200'
+                      ? 'bg-brand-fill ring-4 ring-brand-200'
                       : 'bg-gray-300'
                   }`}
                 />
                 <span
                   className={`text-xs capitalize ${
                     current
-                      ? 'text-brand-700 font-medium'
+                      ? 'text-brand-ink font-medium'
                       : done
                       ? 'text-gray-600'
                       : 'text-gray-400'

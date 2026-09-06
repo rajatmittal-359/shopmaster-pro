@@ -123,7 +123,7 @@ export default function ProductCard({ product }) {
 
       {/* Content */}
       <div className="flex-1 p-3 flex flex-col gap-1">
-        <h3 className="font-semibold text-sm line-clamp-2 group-hover:text-brand-700">
+        <h3 className="font-semibold text-sm line-clamp-2 group-hover:text-brand-ink">
           {product.name}
         </h3>
         {shortDesc && (
@@ -150,7 +150,7 @@ export default function ProductCard({ product }) {
     </span>
   )}
 
-  <span className="text-base font-bold text-brand-700">
+  <span className="text-base font-bold text-brand-ink">
     ₹{product.price}
   </span>
 </div>
@@ -181,7 +181,7 @@ export default function ProductCard({ product }) {
               type="button"
               onClick={() => changeQty(qty - 1)}
               aria-label={qty === 1 ? 'Remove from cart' : 'One fewer'}
-              className="px-3 py-2 text-brand-700 hover:bg-brand-50
+              className="px-3 py-2 text-brand-ink hover:bg-brand-50
                          focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-700"
             >
               <Minus size={16} />
@@ -197,7 +197,7 @@ export default function ProductCard({ product }) {
               disabled={qty >= product.stock}
               aria-label="One more"
               title={qty >= product.stock ? `Only ${product.stock} left` : undefined}
-              className="px-3 py-2 text-brand-700 hover:bg-brand-50 disabled:opacity-40
+              className="px-3 py-2 text-brand-ink hover:bg-brand-50 disabled:opacity-40
                          disabled:cursor-not-allowed
                          focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-700"
             >

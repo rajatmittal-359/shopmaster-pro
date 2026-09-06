@@ -193,7 +193,7 @@ export default function OrderDetailsPage() {
             )}
             <div className="flex justify-between font-bold text-lg border-t pt-2">
               <span>Grand Total</span>
-              <span className="text-brand-700">₹{order.totalAmount}</span>
+              <span className="text-brand-ink">₹{order.totalAmount}</span>
             </div>
           </div>
         </div>
@@ -284,7 +284,7 @@ export default function OrderDetailsPage() {
             <button
               onClick={handleReturn}
               disabled={actionLoading}
-              className="flex-1 px-4 py-2 bg-brand-700 text-white rounded-lg hover:bg-brand-800 disabled:opacity-50"
+              className="flex-1 px-4 py-2 bg-brand-fill text-on-brand rounded-lg hover:bg-brand-fill-hover disabled:opacity-50"
             >
               {actionLoading ? 'Returning...' : 'Return Order'}
             </button>

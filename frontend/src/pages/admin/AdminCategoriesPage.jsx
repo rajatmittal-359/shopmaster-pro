@@ -371,7 +371,7 @@ export default function AdminCategoriesPage() {
                                   alone is enough for a quiet affordance.
                                 */
                                 className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs
-                                           text-gray-500 hover:text-brand-700 transition-colors
+                                           text-gray-500 hover:text-brand-ink transition-colors
                                            focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-700"
                               >
                                 <Plus size={14} /> Add subcategory
@@ -573,7 +573,7 @@ export default function AdminCategoriesPage() {
                 type="button"
                 onClick={() => setMainSubs([...mainSubs, ''])}
                 className="inline-flex items-center gap-1.5 mt-2 px-2 py-1 -ml-2 rounded-lg text-xs
-                           text-gray-500 hover:text-brand-700 transition-colors
+                           text-gray-500 hover:text-brand-ink transition-colors
                            focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-700"
               >
                 <Plus size={14} /> Add another

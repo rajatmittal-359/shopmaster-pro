@@ -57,52 +57,59 @@
 */
 @theme static {
   /*
-    THE BRAND IS RANI PINK.
+    THE BRAND: BLUE.
 
-    It was marigold, and marigold could not do this job. Orange's dark steps
-    ARE brown - that is just where the hue goes - so "vivid orange with white
-    text that clears 4.5:1" does not exist. The AA-safe version came out the
-    colour of dried brick, which is exactly what it looked like.
+    Everything below is a value, not a decision spread through the app. Four
+    tokens carry the whole thing, and they exist because each was a bug first:
 
-    Pink does not do that. It stays rich as it darkens, so -700 both reads as
-    a real colour and measures 6.04 on white.
+      --color-brand-fill        the solid a button is painted with
+      --color-brand-fill-hover  where it goes on hover - which is DARKER for a
+                                dark brand and LIGHTER for a bright one, so it
+                                cannot be a fixed step
+      --color-on-brand          the label ON that fill. White or ink is a
+                                property of the BRAND, not of the button.
+      --color-brand-ink         brand-coloured TEXT on white, which is not the
+                                same colour as the brand: some brands cannot be
+                                text at all.
 
-    And it is the right colour for this shop specifically: Jaipur is the Pink
-    City, the shop is in Devi Nagar, and rani pink is what Indian jewellery has
-    always been sold in. That is a reason no trend list can hand anyone else.
-
-    Not #F72585, which gets suggested for this and measures 3.78 - it cannot
-    carry white button text at any size a button uses.
-
-    Every step below is a token, so this whole decision is these ten lines.
-    Nothing in the app names a colour; it names a job.
+    Swapping the brand is this block. Nothing else.
   */
-  --color-brand-50: #fdf2f8;
-  --color-brand-100: #fce7f3;
-  --color-brand-200: #fbcfe8;
-  --color-brand-300: #f9a8d4;
-  --color-brand-400: #f472b6;
-  --color-brand-500: #ec4899;
-  --color-brand-600: #db2777;
-  --color-brand-700: #be185d;
-  --color-brand-800: #9d174d;
-  --color-brand-900: #831843;
+  --color-brand-50: #eff6ff;
+  --color-brand-100: #dbeafe;
+  --color-brand-200: #bfdbfe;
+  --color-brand-300: #93c5fd;
+  --color-brand-400: #60a5fa;
+  --color-brand-500: #3b82f6;
+  --color-brand-600: #2563eb;
+  --color-brand-700: #1d4ed8;
+  --color-brand-800: #1e40af;
+  --color-brand-900: #1e3a8a;
+
+  --color-brand-fill: #2563eb;
+  --color-brand-fill-hover: #1d4ed8;
+  --color-on-brand: #ffffff;
+  --color-brand-ink: #1d4ed8;
 
   /*
-    Marigold is not gone - it is demoted. It is the second stop of the brand
-    mark and nothing else, so the two colours Jaipur is actually made of both
-    survive without either fighting to be the button.
+    The brand mark's far stop. It has to be the SAME FAMILY as the brand or the
+    app's own name looks like it belongs to a different product - which is
+    exactly what it looked like when the mark was still teal and the buttons
+    had moved on. Cyan is blue's neighbour, and dark enough to read as text.
   */
-  --color-accent-700: #c2410c;
-  --color-accent-800: #9a3412;
+  --color-accent-700: #0e7490;
+  --color-accent-800: #155e75;
 
   /*
-    Status by what it MEANS, so a screen never has to remember which green.
-    Each of these is the first step of its hue that passes AA on white.
+    Status by what it MEANS.
+
+    Green comes BACK as success here. It had to be teal while the brand was
+    lime, because a lime brand and a green badge are the same family and the
+    eye cannot separate the thing you press from the thing that has happened.
+    A blue brand has no such quarrel with green.
   */
   --color-positive: #15803d;
-  /* For a green fill carrying white text: -500 measures 2.50 and -600 3.30. */
   --color-positive-strong: #166534;
+  --color-positive-tint: #dcfce7;
   --color-negative: #dc2626;
   --color-notice: #b45309;
   --color-info: #1d4ed8;
@@ -126,13 +133,13 @@
 */
 /*
   Both ENDS have to clear 4.5:1, not just the dark one - white sitting over the
-  light corner is still white text on that colour. -700 measures 6.04 and -800
-  7.88, so every pixel under the label is legible. Rani pink into a deeper rani.
+  light corner is still text on that colour. White over the fill measures 5.17
+  and over -800 8.72, so every pixel under the label is legible.
 */
 .action-primary {
   background-image: linear-gradient(
     135deg,
-    var(--color-brand-700) 0%,
+    var(--color-brand-fill) 0%,
     var(--color-brand-800) 100%
   );
 }
@@ -140,7 +147,7 @@
 .action-primary:hover:not(:disabled) {
   background-image: linear-gradient(
     135deg,
-    var(--color-brand-800) 0%,
+    var(--color-brand-fill-hover) 0%,
     var(--color-brand-900) 100%
   );
 }
@@ -148,7 +155,7 @@
 .brand-mark {
   background-image: linear-gradient(
     100deg,
-    var(--color-brand-700) 0%,
+    var(--color-brand-ink) 0%,
     var(--color-accent-700) 100%
   );
   -webkit-background-clip: text;

@@ -13,15 +13,15 @@ const statusColors = {
   pending: 'bg-yellow-100 text-yellow-700',
   processing: 'bg-blue-100 text-blue-700',
   shipped: 'bg-purple-100 text-purple-700',
-  delivered: 'bg-green-100 text-positive',
+  delivered: 'bg-positive-tint text-positive',
   cancelled: 'bg-red-100 text-red-700',
   returned: 'bg-gray-100 text-gray-700',
 };
 
 const paymentColors = {
   pending: 'bg-yellow-100 text-yellow-700',
-  paid: 'bg-green-100 text-positive',
-  completed: 'bg-green-100 text-positive',
+  paid: 'bg-positive-tint text-positive',
+  completed: 'bg-positive-tint text-positive',
 };
 
 export default function SellerOrderDetailsPage() {
@@ -328,7 +328,7 @@ export default function SellerOrderDetailsPage() {
             <button
               onClick={() => handleStatusUpdate(nextStatus)}
               disabled={updating}
-              className="mt-4 w-full py-3 bg-brand-700 hover:bg-brand-700 text-white rounded-lg font-semibold disabled:opacity-50"
+              className="mt-4 w-full py-3 bg-brand-fill hover:bg-brand-fill-hover text-on-brand rounded-lg font-semibold disabled:opacity-50"
             >
               {updating ? 'Updating...' : `Mark as ${nextStatus}`}
             </button>

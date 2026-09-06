@@ -70,7 +70,7 @@ export default function VerifyOTP() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
       <div className="w-full max-w-md bg-white shadow-md rounded-lg p-6">
-        <h2 className="text-2xl font-bold mb-4 text-center text-brand-700">
+        <h2 className="text-2xl font-bold mb-4 text-center text-brand-ink">
           Verify OTP
         </h2>
 
@@ -100,7 +100,7 @@ export default function VerifyOTP() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-brand-700 hover:bg-brand-700 text-white font-semibold py-2 rounded-lg transition disabled:opacity-60"
+            className="w-full bg-brand-fill hover:bg-brand-fill-hover text-on-brand font-semibold py-2 rounded-lg transition disabled:opacity-60"
           >
             {loading ? 'Verifying...' : 'Verify'}
           </button>
@@ -115,7 +115,7 @@ export default function VerifyOTP() {
             type="button"
             onClick={handleResend}
             disabled={resending || cooldown > 0}
-            className="text-brand-700 font-medium hover:underline disabled:text-gray-400 disabled:no-underline"
+            className="text-brand-ink font-medium hover:underline disabled:text-gray-400 disabled:no-underline"
           >
             {resending
               ? 'Sending...'

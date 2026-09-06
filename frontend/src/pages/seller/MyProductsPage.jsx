@@ -387,7 +387,7 @@ export default function MyProductsPage() {
               );
             }
           }}
-          className="px-5 py-2 bg-brand-700 hover:bg-brand-700 text-white rounded-lg text-sm font-semibold transition-colors"
+          className="px-5 py-2 bg-brand-fill hover:bg-brand-fill-hover text-on-brand rounded-lg text-sm font-semibold transition-colors"
         >
           {showForm ? "Close Form" : "+ Add Product"}
         </button>
@@ -722,7 +722,7 @@ export default function MyProductsPage() {
 
             <button
               type="submit"
-              className="w-full bg-brand-700 hover:bg-brand-700 text-white py-2.5 rounded-md text-sm font-semibold transition-colors"
+              className="w-full bg-brand-fill hover:bg-brand-fill-hover text-on-brand py-2.5 rounded-md text-sm font-semibold transition-colors"
             >
               {editingId ? "Update Product" : "Add Product"}
             </button>
@@ -783,7 +783,7 @@ export default function MyProductsPage() {
                         ₹{prod.mrp}
                       </span>
                     )}
-                    <span className="font-bold text-brand-700">
+                    <span className="font-bold text-brand-ink">
                       ₹{prod.price}
                     </span>
                   </div>
@@ -803,7 +803,7 @@ export default function MyProductsPage() {
                     onClick={() =>
                       navigate(`/seller/products/${prod._id}`)
                     }
-                    className="flex-1 border border-brand-600 text-brand-700 text-xs py-1.5 rounded-lg hover:bg-brand-50 transition-colors font-medium"
+                    className="flex-1 border border-brand-600 text-brand-ink text-xs py-1.5 rounded-lg hover:bg-brand-50 transition-colors font-medium"
                   >
                     View
                   </button>

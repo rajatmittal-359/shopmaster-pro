@@ -122,7 +122,7 @@ export default function SellerProductDetailsPage() {
               Category: <span className="font-medium">{product.category?.name}</span>
             </p>
 
-            <p className="text-2xl font-bold text-brand-700">₹{product.price}</p>
+            <p className="text-2xl font-bold text-brand-ink">₹{product.price}</p>
 
             <p className="text-sm">
               Stock:{" "}

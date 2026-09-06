@@ -322,7 +322,7 @@ export default function CheckoutPage() {
                 <button
                   type="button"
                   onClick={() => navigate("/customer/addresses")}
-                  className="text-xs text-brand-700 hover:underline font-semibold"
+                  className="text-xs text-brand-ink hover:underline font-semibold"
                 >
                   Manage addresses
                 </button>
@@ -371,7 +371,7 @@ export default function CheckoutPage() {
                       </span>
 
                       {addr.isDefault && (
-                        <span className="ml-2 text-[10px] bg-green-100 text-positive px-1 rounded-lg">
+                        <span className="ml-2 text-[10px] bg-positive-tint text-positive px-1 rounded-lg">
                           Default
                         </span>
                       )}
@@ -464,7 +464,7 @@ export default function CheckoutPage() {
 
           <div className="flex justify-between font-bold text-lg border-t pt-3 mt-3">
             <span>Order Total</span>
-            <span className="text-brand-700">₹{grandTotal}</span>
+            <span className="text-brand-ink">₹{grandTotal}</span>
           </div>
 
           <p className="text-xs text-gray-500 mt-2">
@@ -508,7 +508,7 @@ export default function CheckoutPage() {
             disabled={
               placing || addresses.length === 0 || calculatingTotals
             }
-            className="w-full mt-4 bg-brand-700 hover:bg-brand-700 text-white py-3 rounded-lg font-semibold disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+            className="w-full mt-4 bg-brand-fill hover:bg-brand-fill-hover text-on-brand py-3 rounded-lg font-semibold disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
           >
             {placing
               ? paymentMethod === "online"

@@ -104,7 +104,7 @@ const loadSellers = async () => {
           onClick={() => setFilter("all")}
           className={`px-4 py-2 text-sm font-medium ${
             filter === "all"
-              ? "border-b-2 border-brand-600 text-brand-700"
+              ? "border-b-2 border-brand-600 text-brand-ink"
               : "text-gray-600 hover:text-gray-800"
           }`}
         >
@@ -114,7 +114,7 @@ const loadSellers = async () => {
           onClick={() => setFilter("pending")}
           className={`px-4 py-2 text-sm font-medium ${
             filter === "pending"
-              ? "border-b-2 border-brand-600 text-brand-700"
+              ? "border-b-2 border-brand-600 text-brand-ink"
               : "text-gray-600 hover:text-gray-800"
           }`}
         >
@@ -124,7 +124,7 @@ const loadSellers = async () => {
           onClick={() => setFilter("active")}
           className={`px-4 py-2 text-sm font-medium ${
             filter === "active"
-              ? "border-b-2 border-brand-600 text-brand-700"
+              ? "border-b-2 border-brand-600 text-brand-ink"
               : "text-gray-600 hover:text-gray-800"
           }`}
         >
@@ -134,7 +134,7 @@ const loadSellers = async () => {
           onClick={() => setFilter("suspended")}
           className={`px-4 py-2 text-sm font-medium ${
             filter === "suspended"
-              ? "border-b-2 border-brand-600 text-brand-700"
+              ? "border-b-2 border-brand-600 text-brand-ink"
               : "text-gray-600 hover:text-gray-800"
           }`}
         >
@@ -161,7 +161,7 @@ const loadSellers = async () => {
                   <span
                     className={`text-xs px-2 py-0.5 rounded-lg ${
                       seller.isApproved
-                        ? "bg-green-100 text-positive"
+                        ? "bg-positive-tint text-positive"
                         : "bg-yellow-100 text-yellow-700"
                     }`}
                   >
@@ -208,7 +208,7 @@ const loadSellers = async () => {
                 {seller.isApproved && seller.status === "active" && (
                   <button
                     onClick={() => handleSuspend(seller._id)}
-                    className="px-3 py-1 text-sm bg-brand-700 text-white rounded-lg hover:bg-brand-700"
+                    className="px-3 py-1 text-sm bg-brand-fill text-on-brand rounded-lg hover:bg-brand-fill-hover"
                   >
                     Suspend
                   </button>

@@ -137,7 +137,7 @@ const handleDelete = async (id) => {
           <h2 className="text-2xl font-bold">My Addresses</h2>
           <button
             onClick={() => setShowForm((p) => !p)}
-            className="px-4 py-2 bg-brand-700 text-white rounded-lg hover:bg-brand-700 text-sm"
+            className="px-4 py-2 bg-brand-fill text-on-brand rounded-lg hover:bg-brand-fill-hover text-sm"
           >
             {showForm ? 'Cancel' : '+ Add Address'}
           </button>
@@ -267,7 +267,7 @@ const handleDelete = async (id) => {
 
               <button
                 type="submit"
-                className="w-full bg-brand-700 text-white py-2 rounded-lg text-sm hover:bg-brand-700"
+                className="w-full bg-brand-fill text-on-brand py-2 rounded-lg text-sm hover:bg-brand-fill-hover"
               >
                 {editingId ? 'Update Address' : 'Add Address'}
               </button>
@@ -291,7 +291,7 @@ const handleDelete = async (id) => {
                   <div className="flex items-center gap-2 mb-1">
                     <span className="font-semibold text-sm">{addr.label}</span>
                     {addr.isDefault && (
-                      <span className="text-xs bg-green-100 text-positive px-2 py-0.5 rounded-lg">
+                      <span className="text-xs bg-positive-tint text-positive px-2 py-0.5 rounded-lg">
                         Default
                       </span>
                     )}

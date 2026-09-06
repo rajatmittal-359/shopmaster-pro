@@ -24,15 +24,18 @@
 /*
  * `action-primary` is the app's only gradient, defined in index.css. It marks
  * the button that COMMITS - it is how the eye finds the main action without
- * reading the label. White on the old flat orange-600 measured 3.56:1, under
- * the 4.5 AA needs, so the gradient ends on -700 (5.18) and the border matches:
- * the fix and the flourish are the same change.
+ * reading the label.
+ *
+ * The label colour is `text-on-brand`, not a hardcoded white or black: whether
+ * a brand needs light or dark text is a property OF THE BRAND, and it changes
+ * when the brand changes. Bright lime needs ink (9.69:1); white over it
+ * measures 1.51 and cannot be read at all.
  */
 const VARIANTS = {
   primary:
-    'action-primary text-white border border-brand-700 ' +
-    'hover:border-brand-800 shadow-sm hover:shadow ' +
-    'focus-visible:outline-brand-700',
+    'action-primary text-on-brand border border-brand-fill ' +
+    'hover:border-brand-fill-hover shadow-sm hover:shadow ' +
+    'focus-visible:outline-brand-fill',
   secondary:
     'bg-white text-gray-800 border border-gray-300 ' +
     'hover:bg-gray-50 hover:border-gray-400 ' +
@@ -43,7 +46,7 @@ const VARIANTS = {
     'focus-visible:outline-negative',
   ghost:
     'bg-transparent text-gray-600 border border-transparent ' +
-    'hover:text-brand-700 hover:bg-brand-50 ' +
+    'hover:text-brand-ink hover:bg-brand-50 ' +
     'focus-visible:outline-brand-700',
 };
 

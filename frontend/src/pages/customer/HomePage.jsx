@@ -255,7 +255,7 @@ const getSortedProducts = () => {
               <SlidersHorizontal size={16} />
               Filters
               {activeFilterCount > 0 && (
-                <span className="ml-0.5 min-w-5 h-5 px-1.5 rounded-full bg-brand-700 text-white text-xs
+                <span className="ml-0.5 min-w-5 h-5 px-1.5 rounded-full bg-brand-fill text-on-brand text-xs
                                  inline-flex items-center justify-center">
                   {activeFilterCount}
                 </span>
@@ -373,8 +373,8 @@ const getSortedProducts = () => {
               <button
                 type="button"
                 onClick={() => setFiltersOpen(false)}
-                className="w-full py-2.5 rounded-lg bg-brand-700 text-white font-medium
-                           hover:bg-brand-800
+                className="w-full py-2.5 rounded-lg bg-brand-fill text-on-brand font-medium
+                           hover:bg-brand-fill-hover
                            focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-700"
               >
                 Show {meta.total} product{meta.total === 1 ? '' : 's'}

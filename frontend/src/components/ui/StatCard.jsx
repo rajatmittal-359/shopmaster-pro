@@ -16,7 +16,7 @@
 
 const ACCENTS = {
   neutral: 'text-gray-900',
-  brand: 'text-brand-700',
+  brand: 'text-brand-ink',
   info: 'text-blue-600',
   warning: 'text-amber-600',
   success: 'text-positive',

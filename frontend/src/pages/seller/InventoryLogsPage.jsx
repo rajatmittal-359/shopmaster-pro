@@ -80,7 +80,7 @@ export default function SellerInventoryLogsPage() {
     if (type === "return") {
       return (
         <span
-          className={`${base} bg-green-50 text-positive border border-green-200`}
+          className={`${base} bg-positive-tint text-positive border border-positive`}
         >
           Return
         </span>

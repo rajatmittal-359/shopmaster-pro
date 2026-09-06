@@ -12,7 +12,7 @@ const statusColors = {
   pending: "bg-yellow-100 text-yellow-700",
   processing: "bg-blue-100 text-blue-700",
   shipped: "bg-indigo-100 text-indigo-700",
-  delivered: "bg-green-100 text-positive",
+  delivered: "bg-positive-tint text-positive",
   cancelled: "bg-red-100 text-red-700",
   returned: "bg-purple-100 text-purple-700",
 };
@@ -89,7 +89,7 @@ export default function MyOrdersPage() {
             </p>
             <Link
               to="/shop"
-              className="inline-block px-4 py-2 bg-brand-700 text-white rounded-lg hover:bg-brand-700"
+              className="inline-block px-4 py-2 bg-brand-fill text-on-brand rounded-lg hover:bg-brand-fill-hover"
             >
               Start Shopping
             </Link>
@@ -139,7 +139,7 @@ export default function MyOrdersPage() {
 
                         <p className="text-sm font-bold">
                           Total:{" "}
-                          <span className="text-brand-700">₹{orderTotal}</span>
+                          <span className="text-brand-ink">₹{orderTotal}</span>
                         </p>
                       </div>
 
@@ -157,7 +157,7 @@ export default function MyOrdersPage() {
                           className={`text-xs px-2 py-1 rounded-lg ${
                             order.paymentMethod === "cod"
                               ? "bg-amber-50 text-amber-700"
-                              : "bg-green-50 text-positive"
+                              : "bg-positive-tint text-positive"
                           }`}
                         >
                           {order.paymentMethod === "cod"
@@ -179,7 +179,7 @@ export default function MyOrdersPage() {
 
                       <Link
                         to={`/customer/orders/${order._id}`}
-                        className="text-xs text-brand-700 hover:underline whitespace-nowrap"
+                        className="text-xs text-brand-ink hover:underline whitespace-nowrap"
                       >
                         View Details →
                       </Link>

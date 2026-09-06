@@ -38,7 +38,7 @@ const handleSubmit = async (e) => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
       <div className="w-full max-w-md bg-white shadow-md rounded-lg p-6">
-        <h2 className="text-2xl font-bold mb-4 text-center text-brand-700">
+        <h2 className="text-2xl font-bold mb-4 text-center text-brand-ink">
           Login
         </h2>
 
@@ -76,7 +76,7 @@ const handleSubmit = async (e) => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-brand-700 hover:bg-brand-700 text-white font-semibold py-2 rounded-lg transition disabled:opacity-60"
+            className="w-full bg-brand-fill hover:bg-brand-fill-hover text-on-brand font-semibold py-2 rounded-lg transition disabled:opacity-60"
           >
             {loading ? 'Logging in...' : 'Login'}
           </button>
@@ -84,7 +84,7 @@ const handleSubmit = async (e) => {
 
         <p className="mt-4 text-center text-sm text-gray-600">
           New user?{' '}
-          <Link to="/register" className="text-brand-700 font-medium">
+          <Link to="/register" className="text-brand-ink font-medium">
             Create an account
           </Link>
         </p>

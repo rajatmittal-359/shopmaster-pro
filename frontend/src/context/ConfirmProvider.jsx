@@ -97,10 +97,14 @@ export function ConfirmProvider({ children }) {
                 type="button"
                 autoFocus
                 onClick={() => settle(true)}
-                className={`rounded-lg px-4 py-2 text-sm text-white ${
+                // The label colour follows the fill, not the button: red wants
+                // white on it, the brand may want ink. Sharing one `text-white`
+                // between them made the confirm unreadable the moment the brand
+                // stopped being dark.
+                className={`rounded-lg px-4 py-2 text-sm ${
                   request.danger
-                    ? 'bg-red-600 hover:bg-red-700'
-                    : 'bg-brand-700 hover:bg-brand-800'
+                    ? 'bg-red-600 hover:bg-red-700 text-white'
+                    : 'bg-brand-fill hover:bg-brand-fill-hover text-on-brand'
                 }`}
               >
                 {request.confirmLabel}

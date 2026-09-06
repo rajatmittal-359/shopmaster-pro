@@ -90,7 +90,7 @@ export default function CartPage() {
           <p className="text-gray-600 mb-4">Your cart is empty</p>
           <Link
             to="/shop"   // ✅ public shop
-            className="inline-block px-6 py-2 bg-brand-700 text-white rounded-lg hover:bg-brand-700"
+            className="inline-block px-6 py-2 bg-brand-fill text-on-brand rounded-lg hover:bg-brand-fill-hover"
           >
             Continue Shopping
           </Link>
@@ -197,7 +197,7 @@ export default function CartPage() {
                     </button>
                   </div>
 
-                  <p className="font-bold text-brand-700">
+                  <p className="font-bold text-brand-ink">
                     ₹{item.price * item.quantity}
                   </p>
                 </div>
@@ -234,7 +234,7 @@ export default function CartPage() {
 
             <button
               onClick={() => navigate('/customer/checkout')}
-              className="w-full bg-brand-700 text-white py-3 rounded-lg font-semibold hover:bg-brand-700"
+              className="w-full bg-brand-fill text-on-brand py-3 rounded-lg font-semibold hover:bg-brand-fill-hover"
             >
               Proceed to Checkout
             </button>

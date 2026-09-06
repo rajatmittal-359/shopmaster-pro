@@ -196,14 +196,14 @@ export default function Layout({ children, title = 'Dashboard' }) {
                     aria-label={
                       cartCount > 0 ? `My cart, ${cartCount} item(s)` : 'My cart'
                     }
-                    className="relative p-2 rounded-lg text-xl text-gray-700 hover:text-brand-700 hover:bg-brand-50
+                    className="relative p-2 rounded-lg text-xl text-gray-700 hover:text-brand-ink hover:bg-brand-50
                                focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-700"
                   >
                     <FiShoppingCart />
                     {cartCount > 0 && (
                       <span
                         className="absolute -top-0.5 -right-0.5 min-w-4.5 h-4.5 px-1 rounded-full
-                                   bg-brand-700 text-white text-[11px] font-medium leading-none
+                                   bg-brand-fill text-on-brand text-[11px] font-medium leading-none
                                    flex items-center justify-center"
                       >
                         {cartCount > 9 ? '9+' : cartCount}
@@ -213,7 +213,7 @@ export default function Layout({ children, title = 'Dashboard' }) {
                   <button
                     onClick={() => navigate('/customer/wishlist')}
                     aria-label="My wishlist"
-                    className="p-2 rounded-lg text-xl text-gray-700 hover:text-brand-700 hover:bg-brand-50
+                    className="p-2 rounded-lg text-xl text-gray-700 hover:text-brand-ink hover:bg-brand-50
                                focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-700"
                   >
                     <FiHeart />
@@ -221,7 +221,7 @@ export default function Layout({ children, title = 'Dashboard' }) {
                 </>
               )}
               <div
-                className="w-9 h-9 rounded-full bg-brand-700 text-white text-sm font-medium
+                className="w-9 h-9 rounded-full bg-brand-fill text-on-brand text-sm font-medium
                            flex items-center justify-center shrink-0"
                 title={name}
               >
@@ -231,7 +231,7 @@ export default function Layout({ children, title = 'Dashboard' }) {
           ) : (
             <button
               onClick={() => navigate('/login')}
-              className="shrink-0 px-3 py-1.5 rounded-lg text-sm font-medium text-brand-700
+              className="shrink-0 px-3 py-1.5 rounded-lg text-sm font-medium text-brand-ink
                          border border-brand-200 hover:bg-brand-50
                          focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-700"
             >
@@ -257,7 +257,7 @@ function SidebarLink({ to, icon, text }) {
     <Link
       to={to}
       className="flex items-center gap-3 p-3 rounded-md hover:bg-brand-50
-                 text-gray-700 hover:text-brand-700 transition-colors
+                 text-gray-700 hover:text-brand-ink transition-colors
                  focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-700"
     >
       <span className="shrink-0" aria-hidden="true">

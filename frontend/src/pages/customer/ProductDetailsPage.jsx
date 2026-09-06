@@ -348,7 +348,7 @@ export default function ProductDetailsPage() {
             deciding. Same numbers in both places now.
           */}
           <div className="flex flex-wrap items-baseline gap-2">
-            <span className="text-2xl font-bold text-brand-700">
+            <span className="text-2xl font-bold text-brand-ink">
               ₹{product.price}
             </span>
             {product.mrp > product.price && (
@@ -417,7 +417,7 @@ export default function ProductDetailsPage() {
           {inCart > 0 && (
             <p className="text-sm text-gray-600 mt-2">
               {inCart} already in your cart ·{' '}
-              <Link to="/customer/cart" className="text-brand-700 underline">
+              <Link to="/customer/cart" className="text-brand-ink underline">
                 View cart
               </Link>
             </p>
@@ -426,7 +426,7 @@ export default function ProductDetailsPage() {
           <button
             onClick={handleAddToCart}
             disabled={product.stock === 0 || inCart >= product.stock}
-            className="mt-3 w-full max-w-xs bg-brand-700 hover:bg-brand-700 text-white py-2
+            className="mt-3 w-full max-w-xs bg-brand-fill hover:bg-brand-fill-hover text-on-brand py-2
                        rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {product.stock === 0
@@ -533,7 +533,7 @@ export default function ProductDetailsPage() {
                 <button
                   type="submit"
                   disabled={savingReview}
-                  className="px-4 py-2 bg-brand-700 hover:bg-brand-700 text-white text-sm rounded-lg disabled:opacity-60"
+                  className="px-4 py-2 bg-brand-fill hover:bg-brand-fill-hover text-on-brand text-sm rounded-lg disabled:opacity-60"
                 >
                   {savingReview
                     ? "Saving..."
