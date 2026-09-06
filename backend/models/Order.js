@@ -106,6 +106,24 @@ const fulfilmentSchema = new mongoose.Schema(
     shippedAt: { type: Date, default: null },
 
     /**
+     * Why the last attempt to book a courier failed.
+     *
+     * A failed booking used to exist only as a red toast in front of whoever
+     * pressed the button. Nothing was written down, so nothing could chase it:
+     * the order sat in 'processing' looking exactly like one nobody had got
+     * round to yet, and the customer went on being told it was being prepared.
+     *
+     * That is how a flat Shiprocket wallet becomes invisible - bookings simply
+     * stop at a moment nobody is watching. Kept here so the seller's screen,
+     * the admin's queue and anyone reading the order later all see the same
+     * thing. Cleared the moment a booking succeeds.
+     */
+    bookingFailedReason: { type: String, default: null },
+    bookingFailedKind: { type: String, default: null },
+    bookingFailedAt: { type: Date, default: null },
+    bookingAttempts: { type: Number, default: 0 },
+
+    /**
      * When THIS seller's parcel reached the customer.
      *
      * The return window and therefore payout eligibility are measured from

@@ -327,6 +327,48 @@ export default function SellerOrderDetailsPage() {
         </div>
 
         {/*
+          A courier that would not be booked.
+
+          This used to be a red toast and nothing else, so an order whose
+          booking failed looked exactly like one nobody had got round to yet -
+          including to the seller who had already tried. The commonest cause is
+          a flat Shiprocket wallet, which a seller often cannot fix themselves,
+          so the reason is spelled out rather than left as the courier's own
+          wording.
+        */}
+        {order.bookingFailedReason && order.status !== 'shipped' && (
+          <div className="bg-white p-5 rounded-xl border border-red-200">
+            <h3 className="font-semibold text-gray-900">
+              The courier would not take this parcel
+            </h3>
+            <p className="text-sm text-gray-700 mt-1">
+              {
+                {
+                  wallet:
+                    'The Shiprocket wallet is out of money, so no courier can be booked. It needs topping up before this or any other parcel can go.',
+                  serviceability:
+                    'No courier will carry this parcel to that PIN code. Try again later, or contact the customer about a different address.',
+                  address:
+                    'The delivery details were refused. Check the address and phone number on this order.',
+                  weight:
+                    'The parcel weight or size was refused. Check the product weights on the items in this order.',
+                  duplicate:
+                    'The courier already has a shipment under this reference. Check the Shiprocket panel before trying again.',
+                }[order.bookingFailedKind] || 'The courier refused this booking.'
+              }
+            </p>
+            <p className="text-xs text-gray-500 mt-2">
+              They said: “{order.bookingFailedReason}”
+              {order.bookingAttempts > 1 && ` · ${order.bookingAttempts} attempts`}
+            </p>
+            <p className="text-xs text-gray-500 mt-2">
+              The customer is still being told this is being prepared, so it is
+              worth sorting out or cancelling rather than leaving.
+            </p>
+          </div>
+        )}
+
+        {/*
           A return the customer has asked for.
 
           The seller had no idea one existed: nothing on any screen showed it,

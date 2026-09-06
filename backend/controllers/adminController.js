@@ -394,7 +394,17 @@ exports.getAllOrders = async (req, res) => {
     if (needsMe === 'true') {
       filter.fulfilments = {
         $elemMatch: {
-          $or: [{ disputeStatus: 'open' }, { returnStage: { $in: ['requested', 'picked'] } }],
+          $or: [
+            { disputeStatus: 'open' },
+            { returnStage: { $in: ['requested', 'picked'] } },
+            /*
+             * A courier the seller could not book. Included because the seller
+             * may simply have given up - and the commonest cause, a flat
+             * Shiprocket wallet, is not something they can fix at all. If
+             * nobody else can see it, nobody does.
+             */
+            { bookingFailedReason: { $ne: null }, status: { $in: ['pending', 'processing'] } },
+          ],
         },
       };
     }

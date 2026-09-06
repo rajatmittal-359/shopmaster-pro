@@ -501,6 +501,8 @@ exports.getMyOrders = async (req, res) => {
         returnStage: fulfilment?.returnStage || null,
         returnReason: fulfilment?.returnReason || null,
         disputeStatus: fulfilment?.disputeStatus || null,
+        bookingFailedReason: fulfilment?.bookingFailedReason || null,
+        bookingFailedKind: fulfilment?.bookingFailedKind || null,
         canDeclareDelivered: truth.sellerMayDeclareDelivered(order, fulfilment).allowed,
 
         /**
@@ -617,6 +619,11 @@ exports.getOrderDetails = async (req, res) => {
       // to book a second one.
       returnBookedAt: fulfilment?.returnBookedAt || null,
       returnAwb: fulfilment?.returnAwb || null,
+
+      /** A booking that failed and has not been retried since. */
+      bookingFailedReason: fulfilment?.bookingFailedReason || null,
+      bookingFailedKind: fulfilment?.bookingFailedKind || null,
+      bookingAttempts: fulfilment?.bookingAttempts || 0,
       disputeStatus: fulfilment?.disputeStatus || null,
       disputeReason: fulfilment?.disputeReason || null,
       disputeResolution: fulfilment?.disputeResolution || null,
@@ -997,10 +1004,43 @@ exports.shipOrder = async (req, res) => {
     const result = await shipment.bookForOrder(order, address);
 
     if (!result.ok) {
-      // Store any ids a half-finished booking left behind, so a shipment that
-      // exists at the courier is never invisible here.
-      if (result.update) await Order.updateOne({ _id: order._id }, { $set: result.update });
-      return res.status(409).json({ success: false, message: result.reason });
+      /*
+       * Write the failure down.
+       *
+       * It used to live only in the red toast in front of whoever pressed the
+       * button. Nothing was recorded, so nothing could chase it: the order sat
+       * in 'processing' looking exactly like one nobody had got round to yet,
+       * the customer's page went on saying "being prepared", and the one person
+       * who knew had closed the tab. A flat Shiprocket wallet is invisible in
+       * exactly that way - bookings stop dead and no screen says so.
+       */
+      const { kind, advice } = classifyBookingFailure(result.reason);
+
+      await Order.updateOne(
+        { _id: order._id },
+        {
+          $set: {
+            // Ids a half-finished booking left behind, so a shipment that
+            // exists at the courier is never invisible here.
+            ...(result.update || {}),
+            'fulfilments.$[mine].bookingFailedReason': result.reason,
+            'fulfilments.$[mine].bookingFailedKind': kind,
+            'fulfilments.$[mine].bookingFailedAt': new Date(),
+          },
+          $inc: { 'fulfilments.$[mine].bookingAttempts': 1 },
+        },
+        { arrayFilters: [{ 'mine.sellerId': req.user._id }] }
+      );
+
+      return res.status(409).json({
+        success: false,
+        message: result.reason,
+        // What to do about it, which the courier's own wording rarely says -
+        // "recharge your Shiprocket wallet" is addressed to the account holder,
+        // who on a marketplace is usually not this seller.
+        advice,
+        kind,
+      });
     }
 
     /*
@@ -1025,6 +1065,10 @@ exports.shipOrder = async (req, res) => {
           'fulfilments.$[mine].shippedAt': new Date(),
           'fulfilments.$[mine].courierName': result.update.shippingCourierName,
           'fulfilments.$[mine].awb': result.update.shippingAwb,
+          // The parcel is booked, so the old failure is history, not news.
+          'fulfilments.$[mine].bookingFailedReason': null,
+          'fulfilments.$[mine].bookingFailedKind': null,
+          'fulfilments.$[mine].bookingFailedAt': null,
         },
       },
       { arrayFilters: [{ 'mine.sellerId': req.user._id }] }
@@ -1202,6 +1246,7 @@ exports.cancelOwnLines = async (req, res) => {
 
 const returns = require('../utils/settleReturn');
 const reverse = require('../utils/shiprocketReturn');
+const { classifyBookingFailure } = require('../utils/bookingFailure');
 
 /**
  * A seller closing out a return on their own parcel.
