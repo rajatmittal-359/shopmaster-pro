@@ -85,6 +85,15 @@ app.use('/api/reviews', reviewRoutes);
 app.use('/api/inventory', inventoryRoutes);
 app.use('/api/pincode', require('./routes/pincodeRoutes'));
 
+/*
+ * The product feed Google fetches on a schedule.
+ *
+ * Public and unauthenticated because Google crawls it anonymously. Everything
+ * in it is already on the public product pages - names, prices, images - and
+ * nothing about sellers, orders or margins goes near it.
+ */
+app.get('/api/feed/google.xml', require('./controllers/feedController').googleProductFeed);
+
 // Courier tracking updates. Named "logistics" on purpose - Shiprocket will not
 // register a webhook URL containing "shiprocket", "sr" or "kr".
 app.use('/api/logistics', require('./routes/logisticsRoutes'));
