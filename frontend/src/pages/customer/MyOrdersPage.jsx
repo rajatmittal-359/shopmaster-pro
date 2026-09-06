@@ -195,8 +195,18 @@ export default function MyOrdersPage() {
                           item.status === "cancelled" ? "opacity-50" : ""
                         }`}
                       >
-                        <div className="w-12 h-12 bg-gray-100 rounded-lg flex-shrink-0 flex items-center justify-center text-xs text-gray-400">
-                          📦
+                        <div
+                          className="w-12 h-12 bg-gray-100 rounded-lg flex-shrink-0
+                                     overflow-hidden border border-gray-200"
+                        >
+                          {item.productId?.images?.[0] && (
+                            <img
+                              src={item.productId.images[0]}
+                              alt=""
+                              loading="lazy"
+                              className="w-full h-full object-cover"
+                            />
+                          )}
                         </div>
                         <div className="flex-1">
                           <p className="text-sm font-medium">{item.name}</p>
@@ -214,11 +224,14 @@ export default function MyOrdersPage() {
                             ₹{item.price * item.quantity}
                           </p>
 
-                          {/* ✅ NEW: Cancel Item Button */}
-                          {order.status !== "delivered" &&
-                            order.status !== "cancelled" &&
-                            order.status !== "returned" &&
-                            item.status !== "cancelled" && (
+                          {/*
+                            canCancel comes from the server, which decides it
+                            with the rule the cancel endpoint enforces. This
+                            used to test "not delivered", so it drew a Cancel
+                            button on a SHIPPED parcel - the API refused it with
+                            a 400 and the customer saw only a red error.
+                          */}
+                          {order.canCancel && item.status !== "cancelled" && (
                               <button
                                 onClick={() =>
                                   handleCancelItem(order._id, item._id, item.name)

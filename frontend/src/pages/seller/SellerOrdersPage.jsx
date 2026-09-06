@@ -26,6 +26,35 @@ import { money } from '../../utils/money';
  */
 const statusFlow = ['pending', 'processing', 'shipped', 'delivered'];
 
+/**
+ * When this seller's money is released. The states come from the server
+ * (sellerPayoutStateFor), which reads the same rules a payout run reads.
+ */
+function PayoutNote({ payout }) {
+  if (!payout) return null;
+
+  const on = (d) =>
+    new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'long' });
+
+  const text = {
+    unpaid_order: 'Not paid for yet.',
+    awaiting_delivery: `Released ${payout.returnWindowDays} days after delivery.`,
+    holding: payout.releasesAt
+      ? `Held until ${on(payout.releasesAt)}.`
+      : 'Held until the return window shuts.',
+    ready: 'Cleared for the next payout.',
+    paid: 'Paid out.',
+  }[payout.state];
+
+  if (!text) return null;
+
+  return (
+    <p className={`text-xs pt-0.5 ${payout.state === 'paid' ? 'text-positive' : 'text-gray-500'}`}>
+      {text}
+    </p>
+  );
+}
+
 export default function SellerOrdersPage() {
   const confirm = useConfirm();
   const [orders, setOrders] = useState([]);
@@ -335,9 +364,9 @@ export default function SellerOrdersPage() {
                     SNAPSHOT taken when the order was placed - so an old order
                     keeps showing the rate it was actually sold under.
                   */}
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm space-y-1">
-                    <div className="flex justify-between text-gray-700">
-                      <span>Item total</span>
+                  <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm space-y-1">
+                    <div className="flex justify-between text-gray-600">
+                      <span>Customer paid</span>
                       <span className="tabular-nums">{money(order.sellerSubtotal)}</span>
                     </div>
 
@@ -355,35 +384,25 @@ export default function SellerOrdersPage() {
                       </div>
                     )}
 
-                    <div className="flex justify-between pt-1 border-t border-blue-200">
-                      <span className="font-medium text-gray-800">You earn</span>
-                      <span className="font-bold text-blue-700 tabular-nums">
+                    <div className="flex justify-between pt-1.5 mt-1 border-t border-gray-200">
+                      <span className="font-medium text-gray-900">You earn</span>
+                      <span className="font-semibold text-brand-ink tabular-nums">
                         {money(order.sellerEarning)}
                       </span>
                     </div>
 
-                    <div className="flex justify-between text-xs text-gray-600 pt-1">
-                      <span>Payment</span>
-                      <span className="font-medium">
-                        {order.paymentMethod === 'cod'
-                          ? 'Cash on delivery'
-                          : 'Paid online'}
-                      </span>
-                    </div>
-
                     {/*
-                      This tested for 'completed', which is not one of the four
-                      values paymentStatus can hold, so it never once appeared.
-                      COD is money the seller collects at the door, so "paid"
-                      there means collected, not received in advance.
+                      This used to end with "✓ Payment received", which was
+                      about the CUSTOMER's payment and told the seller they had
+                      been paid when the money is still held. What it says now
+                      comes from the server and follows the payout rules.
                     */}
-                    {order.paymentStatus === 'paid' && (
-                      <p className="text-xs text-positive font-semibold">
-                        ✓ {order.paymentMethod === 'cod' ? 'Cash collected' : 'Payment received'}
-                      </p>
-                    )}
+                    <PayoutNote payout={order.payout} />
+
                     {order.paymentStatus === 'refunded' && (
-                      <p className="text-xs text-red-700 font-semibold">Refunded</p>
+                      <p className="text-xs text-red-700 font-medium">
+                        Refunded to the customer
+                      </p>
                     )}
                   </div>
 

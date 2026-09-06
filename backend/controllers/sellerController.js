@@ -11,6 +11,7 @@ const mongoose = require('mongoose');
 // the product has been checked, and a destructured copy cannot be replaced.
 const cloudinary = require('../utils/cloudinary');
 const { deleteImage } = cloudinary;
+const { sellerPayoutStateFor, RETURN_WINDOW_DAYS } = require('../utils/payout');
 
 /**
  * A seller's catalogue: everything they have not deleted, whether it is
@@ -490,6 +491,12 @@ exports.getMyOrders = async (req, res) => {
         items: sellerItems,
         ...money,
 
+        /** And when it is released. Same rules as the details page. */
+        payout: {
+          ...sellerPayoutStateFor(order, req.user._id),
+          returnWindowDays: RETURN_WINDOW_DAYS,
+        },
+
         /**
          * What THIS seller still has to do. In a split order the order-level
          * status reflects the least advanced seller, so showing that here would
@@ -571,6 +578,16 @@ exports.getOrderDetails = async (req, res) => {
       // The money, worked out server-side from the commission snapshot rather
       // than re-derived by the page. See sellerMoneyFor.
       ...sellerMoneyFor(order, sellerId),
+
+      /*
+       * WHEN that money arrives, which is the seller's real question. Decided
+       * by the same rules payouts run on, so this page cannot promise a
+       * settlement a payout would refuse.
+       */
+      payout: {
+        ...sellerPayoutStateFor(order, sellerId),
+        returnWindowDays: RETURN_WINDOW_DAYS,
+      },
 
       /**
        * How far THIS seller's parcel has got. This used to send the order-level

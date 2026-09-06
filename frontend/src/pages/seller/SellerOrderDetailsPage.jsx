@@ -24,6 +24,42 @@ const paymentColors = {
   completed: 'bg-positive-tint text-positive',
 };
 
+/**
+ * When this seller's money is released, said plainly.
+ *
+ * The states come from the server (sellerPayoutStateFor), which reads the same
+ * rules a payout run reads. Nothing is worked out here, so the page cannot
+ * promise a settlement the payout would refuse.
+ */
+function PayoutNote({ payout }) {
+  if (!payout) return null;
+
+  const on = (d) =>
+    new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'long' });
+
+  const text = {
+    unpaid_order: 'The customer has not paid for this order yet.',
+    awaiting_delivery: `Released ${payout.returnWindowDays} days after the parcel is delivered.`,
+    holding: payout.releasesAt
+      ? `Held until ${on(payout.releasesAt)}, when the return window shuts.`
+      : 'Held until the return window shuts.',
+    ready: 'Cleared for the next payout run.',
+    paid: 'Paid out.',
+  }[payout.state];
+
+  if (!text) return null;
+
+  return (
+    <p
+      className={`text-xs pt-1 ${
+        payout.state === 'paid' ? 'text-positive' : 'text-gray-500'
+      }`}
+    >
+      {text}
+    </p>
+  );
+}
+
 export default function SellerOrderDetailsPage() {
   const confirm = useConfirm();
   const { orderId } = useParams();
@@ -199,41 +235,57 @@ export default function SellerOrderDetailsPage() {
           </div>
         )}
 
-        {/* Items */}
-        <div className="bg-white p-5 rounded-lg shadow">
-          <h3 className="font-semibold text-lg mb-3">Order Items</h3>
-          <div className="space-y-3">
-            {order.items.map((item) => (
-              <div
-                key={item._id}
-                className={`flex justify-between items-center pb-3 border-b last:border-b-0 ${
-                  item.status === 'cancelled' ? 'opacity-50' : ''
-                }`}
-              >
-                <div>
-                  <p className="font-medium">{item.name}</p>
-                  <p className="text-sm text-gray-600">
-                    ₹{item.price} × {item.quantity}
+        {/* What was bought, and what it is worth to this seller. */}
+        <div className="bg-white p-5 rounded-xl border border-gray-200">
+          <h3 className="font-semibold text-gray-900 mb-3">
+            {order.items.length} item{order.items.length > 1 ? 's' : ''} to send
+          </h3>
+
+          <ul className="divide-y divide-gray-100">
+            {order.items.map((item) => {
+              const gone = item.status === 'cancelled';
+              return (
+                <li
+                  key={item._id}
+                  className={`flex items-start justify-between gap-3 py-3 first:pt-0
+                              last:pb-0 ${gone ? 'opacity-60' : ''}`}
+                >
+                  <div className="min-w-0">
+                    <p className="text-sm text-gray-900">{item.name}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      Qty {item.quantity} · {money(item.price)} each
+                    </p>
+                    {gone && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        Cancelled · not yours to pack, and not counted below
+                      </p>
+                    )}
+                  </div>
+
+                  <p
+                    className={`text-sm tabular-nums shrink-0 ${
+                      gone ? 'text-gray-500 line-through' : 'text-gray-900 font-medium'
+                    }`}
+                  >
+                    {money(item.price * item.quantity)}
                   </p>
-                  {item.status === 'cancelled' && (
-                    <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-lg">
-                      Cancelled
-                    </span>
-                  )}
-                </div>
-                <p className="font-bold">₹{item.price * item.quantity}</p>
-              </div>
-            ))}
-          </div>
+                </li>
+              );
+            })}
+          </ul>
 
           {/*
-            The same breakdown as the orders list, and for the same reason: the
-            bold number has to be what the seller is actually paid, not what the
-            customer paid. See sellerMoneyFor in sellerController.
+            The seller's money, and only the seller's money.
+
+            This box used to end with a green tick reading "Payment received" -
+            which was true of the CUSTOMER's payment and false of this seller's.
+            A seller read it as "I have been paid" when the money is held until
+            the parcel arrives and the return window shuts. What replaces it is
+            the one line that answers the question they actually had: when.
           */}
-          <div className="mt-4 pt-4 border-t bg-blue-50 p-3 rounded-lg space-y-1 text-sm">
-            <div className="flex justify-between text-gray-700">
-              <span>Item total</span>
+          <div className="mt-4 pt-4 border-t border-gray-100 space-y-1.5 text-sm">
+            <div className="flex justify-between text-gray-600">
+              <span>Customer paid</span>
               <span className="tabular-nums">{money(order.sellerSubtotal)}</span>
             </div>
 
@@ -249,25 +301,17 @@ export default function SellerOrderDetailsPage() {
               </div>
             )}
 
-            <div className="flex justify-between pt-1 border-t border-blue-200 text-lg font-bold">
+            <div
+              className="flex justify-between pt-2 mt-1 border-t border-gray-100
+                         text-base font-semibold text-gray-900"
+            >
               <span>You earn</span>
-              <span className="text-blue-700 tabular-nums">
+              <span className="text-brand-ink tabular-nums">
                 {money(order.sellerEarning)}
               </span>
             </div>
 
-            <p className="text-xs text-gray-600 pt-1">
-              Payment:{' '}
-              {order.paymentMethod === 'cod' ? 'Cash on delivery' : 'Paid online'}
-            </p>
-            {order.paymentStatus === 'paid' && (
-              <p className="text-xs text-positive font-semibold">
-                ✓ {order.paymentMethod === 'cod' ? 'Cash collected' : 'Payment received'}
-              </p>
-            )}
-            {order.paymentStatus === 'refunded' && (
-              <p className="text-xs text-red-700 font-semibold">Refunded</p>
-            )}
+            <PayoutNote payout={order.payout} />
           </div>
         </div>
 

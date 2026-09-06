@@ -14,7 +14,7 @@ const Product = require("../models/Product");
 const mongoose = require('mongoose'); 
 const Address = require('../models/Address'); 
 const { applyInventoryChange } = require("./inventoryController");
-const { cancelOrderFor, CANCELLABLE } = require('../utils/cancelOrder');
+const { cancelOrderFor, canCancelOrder } = require('../utils/cancelOrder');
 const refunds = require('../utils/refund');
 const InventoryLog = require("../models/Inventory");
 
@@ -347,9 +347,19 @@ exports.getMyOrders = async (req, res) => {
   try {
     const orders = await Order.find({ customerId: req.user._id })
       .sort({ createdAt: -1 })
-      .populate("shippingAddressId"); // ✅ ADD THIS
+      .populate("shippingAddressId")
+      .populate({ path: "items.productId", select: "name slug images" });
 
-    res.json({ success: true, orders });
+    res.json({
+      success: true,
+      // canCancel travels with each order for the same reason the details page
+      // gets it: the list was drawing a Cancel button on shipped parcels the
+      // API would refuse. See canCancelOrder.
+      orders: orders.map((order) => ({
+        ...order.toObject(),
+        canCancel: canCancelOrder(order),
+      })),
+    });
   } catch (err) {
     console.error("GET MY ORDERS ERROR", err.message);
     res.status(500).json({ message: err.message });
@@ -366,7 +376,21 @@ exports.getOrderDetails = async (req, res) => {
     const order = await Order.findOne({
       _id: req.params.orderId,
       customerId: req.user._id,
-    }).populate("shippingAddressId"); // ✅ IMPORTANT
+    })
+      .populate("shippingAddressId")
+      /*
+       * The picture and the link back to the product.
+       *
+       * An order line stores only a name and a price - correct, because a
+       * snapshot must not change when the seller edits the listing. But a list
+       * of names is not how anybody recognises what they bought, and there was
+       * no way back to the product to buy it again or read its returns terms.
+       *
+       * Only these three fields: the snapshot still decides what was paid.
+       * `images` can be missing on an older product, and the page must render
+       * without it.
+       */
+      .populate({ path: "items.productId", select: "name slug images" });
 
     if (!order) {
       return res.status(404).json({ message: "Order not found" });
@@ -386,9 +410,7 @@ exports.getOrderDetails = async (req, res) => {
      * nothing but promise something impossible. Same reasoning as canReturn -
      * one answer, so the button and the endpoint cannot disagree.
      */
-    const canCancel =
-      CANCELLABLE.includes(order.status) &&
-      !(order.paymentMethod === 'cod' && order.paymentStatus === 'paid');
+    const canCancel = canCancelOrder(order);
 
     res.json({
       success: true,

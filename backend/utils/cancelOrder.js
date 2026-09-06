@@ -153,4 +153,23 @@ const cancelOrderFor = async (order, { by, actorId, reason, sellerId }) => {
   };
 };
 
-module.exports = { cancelOrderFor, CANCELLABLE };
+
+/**
+ * Whether a customer may still stop this order - the SAME question cancelOrderFor
+ * answers, asked before the button is drawn.
+ *
+ * It exists because two screens were re-deriving it and getting it wrong. The
+ * orders list offered "Cancel" on anything not yet delivered, including a
+ * shipped parcel: the customer pressed it, the API refused with a 400, and all
+ * they saw was a red error. A button that cannot work is worse than no button,
+ * because it also tells them cancelling was possible and they missed it.
+ *
+ * One rule, read by the page and enforced by the endpoint, so the two can no
+ * longer disagree.
+ */
+const canCancelOrder = (order) =>
+  Boolean(order) &&
+  CANCELLABLE.includes(order.status) &&
+  !(order.paymentMethod === 'cod' && order.paymentStatus === 'paid');
+
+module.exports = { cancelOrderFor, CANCELLABLE, canCancelOrder };

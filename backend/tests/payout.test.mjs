@@ -31,6 +31,7 @@ const {
   markPayoutPaid,
   markPayoutFailed,
   returnWindowFor,
+  sellerPayoutStateFor,
   RETURN_WINDOW_DAYS,
 } = require('../utils/payout');
 
@@ -472,5 +473,96 @@ describe('whether a customer can still return an order', () => {
 
     const stillReturnable = daysAgo(RETURN_WINDOW_DAYS - 0.01);
     expect(returnWindowFor({ status: 'delivered', deliveredAt: stillReturnable }).canReturn).toBe(true);
+  });
+});
+
+/**
+ * What a seller is TOLD about their money.
+ *
+ * The seller's order page showed "You earn RS X" beside a green tick reading
+ * "Payment received". Both described the customer's payment; neither described
+ * the seller's. A seller reading it believed the money was theirs when it is
+ * held until the parcel arrives and the return window shuts.
+ *
+ * These states drive that line, so they must agree with the rules a payout run
+ * actually applies - a page that promises a settlement the payout would refuse
+ * is the same bug wearing a different sentence.
+ */
+describe('what a seller is told about when they are paid', () => {
+  const build = ({
+    paymentStatus = 'paid',
+    fulStatus = 'delivered',
+    deliveredAt = SETTLED,
+    payoutId = null,
+    itemStatus = 'active',
+  } = {}) => ({
+    paymentStatus,
+    items: [
+      { sellerId: PARTNER, status: itemStatus, sellerEarning: 900, payoutId },
+    ],
+    fulfilments: [{ sellerId: PARTNER, status: fulStatus, deliveredAt }],
+  });
+
+  it('says the money is waiting on the customer when the order is unpaid', () => {
+    const { state } = sellerPayoutStateFor(build({ paymentStatus: 'pending' }), PARTNER);
+    expect(state).toBe('unpaid_order');
+  });
+
+  it('says it is waiting on delivery before the parcel arrives', () => {
+    const { state } = sellerPayoutStateFor(
+      build({ fulStatus: 'shipped', deliveredAt: null }),
+      PARTNER
+    );
+    expect(state).toBe('awaiting_delivery');
+  });
+
+  it('holds the money while the customer can still return it, and names the date', () => {
+    const order = build({ deliveredAt: STILL_RETURNABLE });
+    const { state, releasesAt } = sellerPayoutStateFor(order, PARTNER);
+
+    expect(state).toBe('holding');
+    // Exactly the window the customer was promised, from THIS delivery.
+    expect(releasesAt.getTime()).toBe(
+      STILL_RETURNABLE.getTime() + RETURN_WINDOW_DAYS * 86400000
+    );
+    expect(releasesAt.getTime()).toBeGreaterThan(Date.now());
+  });
+
+  it('clears it once the window has shut', () => {
+    expect(sellerPayoutStateFor(build(), PARTNER).state).toBe('ready');
+  });
+
+  it('says paid once a payout has claimed the lines', () => {
+    const claimed = new mongoose.Types.ObjectId();
+    expect(sellerPayoutStateFor(build({ payoutId: claimed }), PARTNER).state).toBe('paid');
+  });
+
+  /**
+   * The bug this whole per-seller design exists to prevent. Reading delivery
+   * from the ORDER would tell a seller who has not shipped that their money is
+   * on its way, because the other seller's parcel arrived.
+   */
+  it("reads delivery from this seller's parcel, not the order", () => {
+    const order = {
+      paymentStatus: 'paid',
+      status: 'delivered',
+      items: [{ sellerId: PARTNER, status: 'active', sellerEarning: 900, payoutId: null }],
+      fulfilments: [
+        { sellerId: PARTNER, status: 'processing', deliveredAt: null },
+        { sellerId: HOUSE, status: 'delivered', deliveredAt: SETTLED },
+      ],
+    };
+
+    expect(sellerPayoutStateFor(order, PARTNER).state).toBe('awaiting_delivery');
+  });
+
+  /**
+   * A cancelled line is never paid, so "every line is paid" must not be true
+   * of a seller whose only line was cancelled - that would report `paid` for
+   * money that will never move.
+   */
+  it('does not call a cancelled-only order paid', () => {
+    const order = build({ itemStatus: 'cancelled' });
+    expect(sellerPayoutStateFor(order, PARTNER).state).not.toBe('paid');
   });
 });

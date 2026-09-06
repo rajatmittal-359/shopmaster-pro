@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Copy, Check } from 'lucide-react';
 
 import Layout from '../../components/common/Layout';
@@ -162,6 +162,10 @@ export default function OrderDetailsPage() {
   const courier = fulfilment?.courierName || order.shippingCourierName;
   const live = !['cancelled', 'returned', 'delivered'].includes(order.status);
 
+  // The goods alone. totalAmount already has delivery in it, so taking it back
+  // out is the only way to show the two separately without a second source.
+  const itemsTotal = Math.max(0, (order.totalAmount || 0) - (order.shippingCharges || 0));
+
   const copyTracking = async () => {
     try {
       await navigator.clipboard.writeText(tracking);
@@ -288,53 +292,146 @@ export default function OrderDetailsPage() {
             <p className="text-xs text-gray-500 mb-2">
               {order.items.length} item{order.items.length > 1 ? 's' : ''}
             </p>
-            <ul className="space-y-2">
-              {order.items.map((item) => (
-                <li key={item._id} className="flex items-start justify-between gap-3 text-sm">
-                  <span className="min-w-0">
-                    <span className="text-gray-800">{item.name}</span>
-                    <span className="block text-xs text-gray-500">
-                      {item.quantity} × {money(item.price)}
-                      {item.status === 'cancelled' && ' · cancelled'}
-                    </span>
-                  </span>
+            <ul className="divide-y divide-gray-100">
+              {order.items.map((item) => {
+                // Populated when the product still exists; an order line keeps
+                // its own name and price either way.
+                const product = item.productId;
+                const image = product?.images?.[0];
+                const href = product?.slug || product?._id;
+                const gone = item.status === 'cancelled';
 
-                  <span className="flex items-center gap-3 shrink-0">
-                    <span className="tabular-nums text-gray-800">
-                      {money(item.price * item.quantity)}
-                    </span>
-                    {/* One item of several, and only while the whole order could
-                        still be cancelled anyway. */}
-                    {rules.canCancel && order.items.length > 1 && item.status !== 'cancelled' && (
-                      <button
-                        type="button"
-                        disabled={busy}
-                        onClick={() =>
-                          run(
-                            () => cancelOrderItem(orderId, item._id),
-                            {
-                              title: `Remove ${item.name}?`,
-                              message: 'The rest of the order carries on, and you are refunded for this item.',
-                              confirmLabel: 'Remove it',
-                              cancelLabel: 'Keep it',
-                            },
-                            'Item cancelled'
-                          )
-                        }
-                        className="text-xs text-red-600 hover:underline disabled:opacity-50"
+                return (
+                  <li
+                    key={item._id}
+                    className={`flex items-start gap-3 py-3 first:pt-0 last:pb-0 ${
+                      gone ? 'opacity-60' : ''
+                    }`}
+                  >
+                    <div
+                      className="w-14 h-14 shrink-0 rounded-lg bg-gray-100 overflow-hidden
+                                 border border-gray-200"
+                    >
+                      {image ? (
+                        <img
+                          src={image}
+                          alt=""
+                          loading="lazy"
+                          className="w-full h-full object-cover"
+                        />
+                      ) : null}
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                      {href ? (
+                        <Link
+                          to={`/products/${href}`}
+                          className="text-sm text-gray-900 hover:text-brand-ink line-clamp-2"
+                        >
+                          {item.name}
+                        </Link>
+                      ) : (
+                        <p className="text-sm text-gray-900 line-clamp-2">{item.name}</p>
+                      )}
+
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        Qty {item.quantity} · {money(item.price)} each
+                      </p>
+
+                      {gone && (
+                        <p className="text-xs text-gray-500 mt-1">
+                          Cancelled · refunded to your original payment method
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="shrink-0 text-right">
+                      <p
+                        className={`text-sm tabular-nums ${
+                          gone ? 'text-gray-500 line-through' : 'text-gray-900 font-medium'
+                        }`}
                       >
-                        Remove
-                      </button>
-                    )}
-                  </span>
-                </li>
-              ))}
+                        {money(item.price * item.quantity)}
+                      </p>
+
+                      {/* One item of several, and only while the whole order
+                          could still be cancelled anyway. */}
+                      {rules.canCancel && order.items.length > 1 && !gone && (
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() =>
+                            run(
+                              () => cancelOrderItem(orderId, item._id),
+                              {
+                                title: `Remove ${item.name}?`,
+                                message:
+                                  'The rest of the order carries on, and you are refunded for this item.',
+                                confirmLabel: 'Remove it',
+                                cancelLabel: 'Keep it',
+                              },
+                              'Item cancelled'
+                            )
+                          }
+                          className="text-xs text-red-600 hover:underline disabled:opacity-50 mt-1"
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
             </ul>
 
-            <div className="flex justify-between text-sm font-semibold text-gray-900 border-t border-gray-100 mt-3 pt-3">
-              <span>Total</span>
-              <span className="tabular-nums">{money(order.totalAmount)}</span>
-            </div>
+            {/*
+              PRICE DETAILS - what a marketplace calls this block, and what a
+              customer checks when the amount on their statement does not look
+              like the price on the product.
+
+              Only lines we can prove: the order stores totalAmount and
+              shippingCharges, and item price is snapshotted per line. There is
+              no MRP on an order item, so there is no "you saved" here - it
+              would have to be guessed from today's price, and a saving that
+              cannot be proved is not worth printing.
+            */}
+            <dl className="border-t border-gray-100 mt-3 pt-3 space-y-1.5 text-sm">
+              <div className="flex justify-between">
+                <dt className="text-gray-600">Item total</dt>
+                <dd className="tabular-nums text-gray-800">{money(itemsTotal)}</dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-gray-600">Delivery</dt>
+                <dd className="tabular-nums text-gray-800">
+                  {order.shippingCharges > 0 ? money(order.shippingCharges) : 'Free'}
+                </dd>
+              </div>
+              {order.refundAmount > 0 && (
+                <div className="flex justify-between">
+                  <dt className="text-gray-600">Refunded</dt>
+                  <dd className="tabular-nums text-positive">
+                    −{money(order.refundAmount)}
+                  </dd>
+                </div>
+              )}
+              <div className="flex justify-between font-semibold text-gray-900 border-t border-gray-100 pt-2 mt-2">
+                <dt>Total paid</dt>
+                <dd className="tabular-nums">{money(order.totalAmount)}</dd>
+              </div>
+            </dl>
+
+            {/*
+              The document a customer is entitled to, and the one they need for
+              a return, an expense claim or a warranty. Marketplaces call this
+              "Download invoice"; ours is a Bill of Supply, because the shop is
+              not registered under GST and may not issue a tax invoice.
+            */}
+            <Link
+              to={`/customer/orders/${orderId}/bill`}
+              className="inline-block mt-3 text-sm font-medium text-brand-ink hover:underline"
+            >
+              Download bill
+            </Link>
           </div>
 
           {address && (

@@ -380,6 +380,58 @@ const markPayoutFailed = async (payoutId, { reason, adminId }) => {
   return { ok: true, payout: await Payout.findById(payoutId).lean() };
 };
 
+
+/**
+ * When THIS seller gets paid for THIS order, in words a seller can act on.
+ *
+ * WHY IT EXISTS
+ *   The seller's order page showed "You earn RS X" next to a green tick
+ *   reading "Payment received". Both were true of the CUSTOMER's payment and
+ *   neither was true of the seller's: the money is held until the parcel
+ *   arrives and the return window shuts. A seller reading that page believed
+ *   they had been paid, and the one question they actually had - when does
+ *   this reach my bank - had no answer anywhere in the product.
+ *
+ *   The rules are the ones payouts already run on, so the page cannot promise
+ *   something a payout would refuse.
+ *
+ * @returns {{state: 'unpaid_order'|'awaiting_delivery'|'holding'|'ready'|'paid',
+ *            releasesAt: Date|null}}
+ */
+const sellerPayoutStateFor = (order, sellerId) => {
+  const lines = (order.items || []).filter(
+    (i) => String(i.sellerId) === String(sellerId) && i.status !== 'cancelled'
+  );
+
+  // Already settled: a payout has claimed every one of this seller's lines.
+  if (lines.length && lines.every((i) => i.payoutId)) {
+    return { state: 'paid', releasesAt: null };
+  }
+
+  if (order.paymentStatus !== 'paid') {
+    return { state: 'unpaid_order', releasesAt: null };
+  }
+
+  const fulfilment = (order.fulfilments || []).find(
+    (f) => String(f.sellerId) === String(sellerId)
+  );
+
+  // Read per seller, never from order.status: in a split order the other
+  // seller's parcel says nothing about this one.
+  if (!fulfilment || fulfilment.status !== 'delivered' || !fulfilment.deliveredAt) {
+    return { state: 'awaiting_delivery', releasesAt: null };
+  }
+
+  const releasesAt = new Date(
+    new Date(fulfilment.deliveredAt).getTime() +
+      RETURN_WINDOW_DAYS * 24 * 60 * 60 * 1000
+  );
+
+  return releasesAt > new Date()
+    ? { state: 'holding', releasesAt }
+    : { state: 'ready', releasesAt };
+};
+
 module.exports = {
   RETURN_WINDOW_DAYS,
   getPayableSummary,
@@ -390,4 +442,5 @@ module.exports = {
   payableOrderFilter,
   isPayableLine,
   returnWindowFor,
+  sellerPayoutStateFor,
 };
