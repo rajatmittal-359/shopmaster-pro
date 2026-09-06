@@ -195,6 +195,34 @@ exports.courierUpdate = async (req, res) => {
         // this seller's line payable.
         fulfilment.deliveredAt = when;
       }
+      if (next === 'delivered') {
+        /*
+         * The courier's word, recorded as the courier's word.
+         *
+         * This overwrites a seller's earlier claim on purpose. Both cannot be
+         * the source, and of the two only the courier has nothing to gain from
+         * the answer - so when the tracking feed speaks, it is what the record
+         * says happened.
+         */
+        fulfilment.deliveryConfirmedBy = 'courier';
+
+        /*
+         * COD is collected at the door by the courier, so their delivery scan
+         * is the only honest signal that the cash exists. A seller pressing a
+         * button used to declare this for money that had not reached anybody.
+         */
+        const everyPartDone = order.fulfilments
+          .filter((f) => f.status !== 'cancelled')
+          .every((f) => ['delivered', 'returned'].includes(f.status));
+
+        if (
+          order.paymentMethod === 'cod' &&
+          order.paymentStatus === 'pending' &&
+          everyPartDone
+        ) {
+          order.paymentStatus = 'paid';
+        }
+      }
       if (next === 'returned' && !fulfilment.returnedAt) fulfilment.returnedAt = when;
       if (next === 'shipped' && !fulfilment.shippedAt) fulfilment.shippedAt = when;
     }

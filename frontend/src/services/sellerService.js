@@ -55,3 +55,13 @@ export const updatePayoutDetails = (details) =>
  */
 export const cancelOwnLines = (orderId, reason) =>
   api.post(`/seller/orders/${orderId}/cancel`, { reason });
+
+/**
+ * Closing out a return on this seller's parcel.
+ *
+ * 'receive' is what raises the customer's refund - it is not paid when they ask
+ * for it, only when the goods are back. 'reject' needs a reason, which the
+ * customer is shown and can dispute.
+ */
+export const settleReturn = (orderId, action, reason) =>
+  api.post(`/seller/orders/${orderId}/return`, { action, reason });

@@ -77,6 +77,10 @@ const makeOrder = (overrides = {}) => {
     status: base.status,
     deliveredAt: base.status === 'delivered' ? base.deliveredAt : null,
     returnedAt: null,
+    returnStage: null,
+    returnRequestedAt: null,
+    returnReason: null,
+    disputeStatus: null,
   }));
 
   const doc = fakeOrderDoc(base);
@@ -131,11 +135,11 @@ const cancelOrder = () =>
     .set('Authorization', `Bearer ${token()}`)
     .send({});
 
-const returnOrder = () =>
+const returnOrder = (body = { reason: 'The clasp is broken' }) =>
   request(app)
     .post(`/api/customer/orders/${ORDER_ID}/return`)
     .set('Authorization', `Bearer ${token()}`)
-    .send({});
+    .send(body);
 
 describe('cancelling a paid prepaid order', () => {
   it('actually initiates a refund (the paymentStatus guard now matches the schema)', async () => {
@@ -210,20 +214,69 @@ describe('cancelling an unpaid COD order', () => {
   });
 });
 
-describe('returning a delivered prepaid order', () => {
-  it('initiates a refund and preserves the order total', async () => {
+/**
+ * Asking to send something back.
+ *
+ * THE BUG THESE NOW DEFEND AGAINST
+ *   Pressing Return refunded the money on the spot and counted the goods back
+ *   in as sellable stock - before anything was collected and without anybody
+ *   ever seeing the item. A customer could keep a RS 2,300 necklace and the
+ *   RS 2,300, while the shop's own stock figure said the necklace was on the
+ *   shelf.
+ *
+ *   Flipkart's policy is the model: "the refund will be processed once the
+ *   returned product has been received by the seller." Asking is a claim.
+ *   Receiving it back is the fact, and only facts move money.
+ */
+describe('asking to return a delivered prepaid order', () => {
+  it('refunds nothing yet - the goods have not moved', async () => {
     orderDoc = makeOrder({ status: 'delivered' });
     Order.findOne = vi.fn(() => chainableQuery(orderDoc));
 
     const res = await returnOrder();
 
     expect(res.status).toBe(200);
-    expect(refundSpy).toHaveBeenCalledTimes(1);
-    expect(refundSpy.mock.calls[0][1]).toBe(ORIGINAL_TOTAL);
-    expect(orderDoc.status).toBe('returned');
+    expect(refundSpy).not.toHaveBeenCalled();
+    expect(orderDoc.paymentStatus).toBe('paid');
+    expect(orderDoc.refundAmount).toBeNull();
     expect(orderDoc.totalAmount).toBe(ORIGINAL_TOTAL);
-    expect(orderDoc.paymentStatus).toBe('refunded');
-    expect(orderDoc.refundAmount).toBe(ORIGINAL_TOTAL);
+  });
+
+  /**
+   * The parcel is still with the customer. Calling it 'returned' would be the
+   * system agreeing with a claim nobody has checked - and it is what let the
+   * stock figure count goods that had never come back.
+   */
+  it("does not mark the parcel returned on a customer's word alone", async () => {
+    orderDoc = makeOrder({ status: 'delivered' });
+    Order.findOne = vi.fn(() => chainableQuery(orderDoc));
+
+    await returnOrder();
+
+    expect(orderDoc.fulfilments[0].status).toBe('delivered');
+    expect(orderDoc.fulfilments[0].returnStage).toBe('requested');
+    expect(orderDoc.fulfilments[0].returnReason).toMatch(/clasp/i);
+  });
+
+  it('insists on a reason, which is what the seller answers', async () => {
+    orderDoc = makeOrder({ status: 'delivered' });
+    Order.findOne = vi.fn(() => chainableQuery(orderDoc));
+
+    const res = await returnOrder({});
+
+    expect(res.status).toBe(400);
+    expect(orderDoc.fulfilments[0].returnStage).toBeNull();
+  });
+
+  it('refuses a second request while one is already open', async () => {
+    orderDoc = makeOrder({ status: 'delivered' });
+    orderDoc.fulfilments[0].returnStage = 'requested';
+    Order.findOne = vi.fn(() => chainableQuery(orderDoc));
+
+    const res = await returnOrder();
+
+    expect(res.status).toBe(409);
+    expect(refundSpy).not.toHaveBeenCalled();
   });
 
   it('does not attempt a refund for a delivered COD order', async () => {
@@ -252,17 +305,9 @@ describe('returning a delivered prepaid order', () => {
     const res = await returnOrder();
 
     expect(res.status).toBe(200);
-    expect(orderDoc.status).toBe('returned');
+    expect(orderDoc.fulfilments[0].returnStage).toBe('requested');
   });
 
-  /**
-   * The whole settlement design rests on this window actually closing.
-   * utils/payout.js releases a seller's money once their delivery is older than
-   * RETURN_WINDOW_DAYS, on the stated assumption that the goods can no longer
-   * come back. Without this guard an order delivered months ago could still be
-   * returned: the customer is refunded in full, the seller was paid long ago,
-   * there is no clawback anywhere, and the platform absorbs the entire loss.
-   */
   it('refuses a return once the window has closed, and refunds nothing', async () => {
     orderDoc = makeOrder({
       status: 'delivered',

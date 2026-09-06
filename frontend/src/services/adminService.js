@@ -54,3 +54,18 @@ export const getAllOrders = (params) => api.get('/admin/orders', { params });
  */
 export const cancelOrderAsAdmin = (orderId, reason) =>
   api.post(`/admin/orders/${orderId}/cancel`, { reason });
+
+/**
+ * Deciding a dispute.
+ *
+ * The platform decides, not either side - which only means anything because the
+ * seller's money is still held while it is open. Amazon's A-to-z works the same
+ * way, and the reason is kept on the order so a decision can be read back later
+ * by somebody who was not there.
+ */
+export const resolveDispute = (orderId, { inFavourOf, resolution, sellerId }) =>
+  api.post(`/admin/orders/${orderId}/dispute/resolve`, {
+    inFavourOf,
+    resolution,
+    sellerId,
+  });

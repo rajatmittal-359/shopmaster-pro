@@ -12,6 +12,7 @@ const mongoose = require('mongoose');
 const cloudinary = require('../utils/cloudinary');
 const { deleteImage } = cloudinary;
 const { sellerPayoutStateFor, RETURN_WINDOW_DAYS } = require('../utils/payout');
+const truth = require('../utils/deliveryTruth');
 
 /**
  * A seller's catalogue: everything they have not deleted, whether it is
@@ -497,6 +498,11 @@ exports.getMyOrders = async (req, res) => {
           returnWindowDays: RETURN_WINDOW_DAYS,
         },
 
+        returnStage: fulfilment?.returnStage || null,
+        returnReason: fulfilment?.returnReason || null,
+        disputeStatus: fulfilment?.disputeStatus || null,
+        canDeclareDelivered: truth.sellerMayDeclareDelivered(order, fulfilment).allowed,
+
         /**
          * What THIS seller still has to do. In a split order the order-level
          * status reflects the least advanced seller, so showing that here would
@@ -599,6 +605,24 @@ exports.getOrderDetails = async (req, res) => {
       status: fulfilment ? fulfilment.status : order.status,
       deliveredAt: fulfilment ? fulfilment.deliveredAt : order.deliveredAt,
 
+      /*
+       * What is being argued about, if anything. Without these the seller had
+       * no way to see a return had been asked for, let alone answer it - and
+       * an unanswered return holds their own money.
+       */
+      returnStage: fulfilment?.returnStage || null,
+      returnReason: fulfilment?.returnReason || null,
+      returnNote: fulfilment?.returnNote || null,
+      disputeStatus: fulfilment?.disputeStatus || null,
+      disputeReason: fulfilment?.disputeReason || null,
+      disputeResolution: fulfilment?.disputeResolution || null,
+
+      /** Who said it arrived - the seller, or somebody with no stake in it. */
+      deliveryConfirmedBy: fulfilment?.deliveryConfirmedBy || null,
+
+      /** Whether "Mark as delivered" is theirs to press at all. */
+      canDeclareDelivered: truth.sellerMayDeclareDelivered(order, fulfilment).allowed,
+
       /** Where the whole basket has got to, for context only. */
       orderStatus: order.status,
       isSplitOrder: (order.fulfilments || []).length > 1,
@@ -688,9 +712,33 @@ exports.updateOrderStatus = async (req, res) => {
       });
     }
 
+    /*
+     * A seller cannot declare their own parcel delivered while a courier is
+     * carrying it.
+     *
+     * deliveredAt starts the return window, and the window closing is what
+     * releases THIS seller's payout - so the button was the seller deciding
+     * when to pay themselves. Worse, the courier webhook will not walk a parcel
+     * backwards, so a delivery claimed early could never afterwards be
+     * corrected by the courier's own scans.
+     *
+     * With no courier booked - handed over by hand in the same city - there is
+     * no better witness, so the seller's word is taken and recorded AS the
+     * seller's word. See utils/deliveryTruth.js.
+     */
+    if (status === 'delivered') {
+      const verdict = truth.sellerMayDeclareDelivered(order, fulfilment);
+      if (!verdict.allowed) {
+        return res.status(409).json({ success: false, message: verdict.reason });
+      }
+    }
+
     fulfilment.status = status;
     if (status === 'shipped') fulfilment.shippedAt = new Date();
-    if (status === 'delivered') fulfilment.deliveredAt = new Date();
+    if (status === 'delivered') {
+      fulfilment.deliveredAt = new Date();
+      fulfilment.deliveryConfirmedBy = 'seller';
+    }
 
     // COD money is only fully collected once every parcel in the basket has
     // been handed over, so the order is marked paid when the LAST seller
@@ -701,9 +749,12 @@ exports.updateOrderStatus = async (req, res) => {
       .every((f) => ['delivered', 'returned'].includes(f.status));
 
     if (
-      order.paymentMethod === 'cod' &&
       order.paymentStatus === 'pending' &&
-      everyPartDelivered
+      everyPartDelivered &&
+      // Only whoever actually took the cash may say it was taken. By hand that
+      // is this seller; with a courier it is the courier's scan, which arrives
+      // through the webhook - not a button here.
+      truth.codMayBeMarkedPaid(order, fulfilment, 'seller')
     ) {
       order.paymentStatus = 'paid';
     }
@@ -1138,6 +1189,58 @@ exports.cancelOwnLines = async (req, res) => {
 
     if (!result.ok) {
       return res.status(result.status || 400).json({ success: false, message: result.message });
+    }
+    return res.json({ success: true, message: result.message });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+const returns = require('../utils/settleReturn');
+
+/**
+ * A seller closing out a return on their own parcel.
+ *
+ * Receiving is what pays the refund - see utils/settleReturn.js for why it is
+ * not paid when the customer asks. Refusing needs a reason, because a seller
+ * who refuses everything is a problem the platform has to be able to see.
+ */
+exports.settleReturn = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const { action, reason } = req.body || {};
+
+    if (!mongoose.isValidObjectId(orderId)) {
+      return res.status(400).json({ success: false, message: 'Invalid order id' });
+    }
+    if (!['receive', 'reject'].includes(action)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "action must be 'receive' or 'reject'" });
+    }
+
+    const order = await Order.findOne({ _id: orderId, 'items.sellerId': req.user._id });
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Order not found' });
+    }
+
+    const result =
+      action === 'receive'
+        ? await returns.receiveReturn(order, {
+            by: 'seller',
+            actorId: req.user._id,
+            sellerId: req.user._id,
+          })
+        : await returns.rejectReturn(order, {
+            actorId: req.user._id,
+            sellerId: req.user._id,
+            reason,
+          });
+
+    if (!result.ok) {
+      return res
+        .status(result.status || 400)
+        .json({ success: false, message: result.message });
     }
     return res.json({ success: true, message: result.message });
   } catch (error) {

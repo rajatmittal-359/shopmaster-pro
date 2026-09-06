@@ -6,11 +6,14 @@ import Layout from '../../components/common/Layout';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
 import ShipmentTimeline, { readable } from '../../components/customer/ShipmentTimeline';
+import ReasonModal from '../../components/common/ReasonModal';
 import {
   getOrderDetails,
   cancelOrder,
   returnOrder,
   cancelOrderItem,
+  confirmReceipt,
+  raiseDispute,
 } from '../../services/orderService';
 import { toastSuccess, toastError } from '../../utils/toast';
 import { orderRef } from '../../utils/orderRef';
@@ -114,6 +117,8 @@ export default function OrderDetailsPage() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
+  // Which reason is being asked for, if any: 'return' or 'dispute'.
+  const [asking, setAsking] = useState(null);
 
   const load = useCallback(async () => {
     try {
@@ -134,6 +139,26 @@ export default function OrderDetailsPage() {
   useEffect(() => {
     load();
   }, [load]);
+
+  /** Actions that carry a reason: the modal has already collected it. */
+  const submitWithReason = async (text) => {
+    setBusy(true);
+    try {
+      if (asking === 'return') {
+        const { data } = await returnOrder(orderId, text);
+        toastSuccess(data.message || 'Return requested');
+      } else {
+        const { data } = await raiseDispute(orderId, text);
+        toastSuccess(data.message || 'Thank you - we have this');
+      }
+      setAsking(null);
+      await load();
+    } catch (err) {
+      toastError(err?.response?.data?.message || 'That did not work');
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const run = async (action, ask, done) => {
     const sure = await confirm(ask);
@@ -178,6 +203,27 @@ export default function OrderDetailsPage() {
   // parcel rather than assuming the order only ever has one.
   const fulfilment = order.fulfilments?.[0];
   const address = order.shippingAddressId;
+
+  const returnStage = fulfilment?.returnStage;
+  const disputeOpen = fulfilment?.disputeStatus === 'open';
+
+  /*
+   * A delivery nobody independent witnessed. The seller handed it over by hand,
+   * so their word was taken - and the customer gets the say that makes that
+   * fair, before the seller's money is released.
+   */
+  const awaitingMyConfirmation =
+    fulfilment?.status === 'delivered' && fulfilment?.deliveryConfirmedBy === 'seller';
+
+  /*
+   * Deliberately open even on a courier-scanned delivery. Couriers do mark
+   * parcels delivered that never arrived, and a system where the courier is
+   * final in every case has quietly decided the customer is always the liar.
+   */
+  const canDispute =
+    !disputeOpen &&
+    !fulfilment?.disputeStatus &&
+    ['shipped', 'delivered'].includes(fulfilment?.status);
   const tracking = fulfilment?.awb || order.shippingAwb;
   const courier = fulfilment?.courierName || order.shippingCourierName;
   const live = !['cancelled', 'returned', 'delivered'].includes(order.status);
@@ -243,8 +289,109 @@ export default function OrderDetailsPage() {
           </section>
         )}
 
+        {/*
+          A delivery only the seller claimed.
+
+          They handed it over themselves, so there was no courier to ask and
+          their word was taken. This is the customer's say on it - and it is not
+          a formality: confirming ends the hold on the seller's payout, and
+          silence releases it after three days, because a claim nobody ever
+          answers cannot hold a shop's earnings forever.
+        */}
+        {awaitingMyConfirmation && !disputeOpen && (
+          <section className="bg-white rounded-xl border border-gray-200 p-5">
+            <p className="text-sm text-gray-900 font-medium">
+              The seller says they delivered this by hand
+            </p>
+            <p className="text-sm text-gray-600 mt-1">
+              No courier carried it, so nobody else can confirm it. Did you get it?
+            </p>
+            <div className="flex flex-wrap gap-2 mt-4">
+              <Button
+                loading={busy}
+                onClick={() =>
+                  run(
+                    () => confirmReceipt(orderId),
+                    {
+                      title: 'Confirm you received this?',
+                      message: 'This releases the payment to the seller.',
+                      confirmLabel: 'Yes, I received it',
+                      cancelLabel: 'Not yet',
+                    },
+                    'Thank you'
+                  )
+                }
+              >
+                Yes, I received it
+              </Button>
+              <Button variant="secondary" disabled={busy} onClick={() => setAsking('dispute')}>
+                No, I did not
+              </Button>
+            </div>
+          </section>
+        )}
+
+        {/* Where a return has got to, in the customer's own words back at them. */}
+        {returnStage && (
+          <section className="bg-white rounded-xl border border-gray-200 p-5">
+            <p className="text-sm font-medium text-gray-900">
+              {returnStage === 'requested' && 'Return requested'}
+              {returnStage === 'picked' && 'Return collected'}
+              {returnStage === 'received' && 'Return complete'}
+              {returnStage === 'rejected' && 'The seller refused this return'}
+            </p>
+            <p className="text-sm text-gray-600 mt-1">
+              {returnStage === 'requested' &&
+                'Your refund is raised once the item is back with the seller.'}
+              {returnStage === 'picked' && 'It is on its way back to the seller.'}
+              {returnStage === 'received' && 'The refund has been raised.'}
+              {returnStage === 'rejected' && fulfilment?.returnNote}
+            </p>
+            {returnStage === 'rejected' && canDispute && (
+              <Button
+                variant="secondary"
+                className="mt-4"
+                disabled={busy}
+                onClick={() => setAsking('dispute')}
+              >
+                I disagree with this
+              </Button>
+            )}
+          </section>
+        )}
+
+        {/*
+          A decision, once one has been made.
+
+          The admin screen promises both sides are shown the reason, and a
+          promise the customer's own page does not keep is not a promise. It is
+          also the only thing that makes a decision against them bearable -
+          being refused is one thing, being refused with no reason is another.
+        */}
+        {fulfilment?.disputeResolution && (
+          <section className="bg-white rounded-xl border border-gray-200 p-5">
+            <p className="text-sm font-medium text-gray-900">
+              {fulfilment.disputeStatus === 'resolved_customer'
+                ? 'We decided this in your favour'
+                : 'We looked into this'}
+            </p>
+            <p className="text-sm text-gray-600 mt-1">{fulfilment.disputeResolution}</p>
+          </section>
+        )}
+
+        {/* An argument in progress. Saying so beats silence while it is looked at. */}
+        {disputeOpen && (
+          <section className="bg-white rounded-xl border border-gray-200 p-5">
+            <p className="text-sm font-medium text-gray-900">We are looking into this</p>
+            <p className="text-sm text-gray-600 mt-1">
+              You told us: “{fulfilment.disputeReason}”. The seller has been asked to
+              respond, and nothing is paid out to them until it is settled.
+            </p>
+          </section>
+        )}
+
         {/* What they can do about it - and only what they actually can. */}
-        {(rules.canCancel || rules.canReturn) && (
+        {(rules.canCancel || rules.canReturn || canDispute) && (
           <section className="bg-white rounded-xl border border-gray-200 p-5">
             <div className="flex flex-wrap gap-2">
               {rules.canCancel && (
@@ -271,23 +418,16 @@ export default function OrderDetailsPage() {
                 </Button>
               )}
 
-              {rules.canReturn && (
-                <Button
-                  variant="secondary"
-                  loading={busy}
-                  onClick={() =>
-                    run(
-                      () => returnOrder(orderId),
-                      {
-                        title: 'Return this order?',
-                        message: 'We will arrange collection and refund you once it reaches the seller.',
-                        confirmLabel: 'Start the return',
-                        cancelLabel: 'Keep it',
-                      },
-                      'Return started'
-                    )
-                  }
-                >
+              {/* Deliberately plain and last: most people do not need it, and
+                  the ones who do should not have to hunt for it. */}
+              {canDispute && !returnStage && (
+                <Button variant="secondary" disabled={busy} onClick={() => setAsking('dispute')}>
+                  Something is wrong
+                </Button>
+              )}
+
+              {rules.canReturn && !returnStage && (
+                <Button variant="secondary" disabled={busy} onClick={() => setAsking('return')}>
                   Return this order
                 </Button>
               )}
@@ -483,6 +623,34 @@ export default function OrderDetailsPage() {
           </div>
         </section>
       </div>
+
+      <ReasonModal
+        open={asking === 'return'}
+        title="Return this order?"
+        hint="The seller reads this, and it decides whether the return is accepted."
+        label="What is wrong with it?"
+        placeholder="The clasp is broken"
+        note="Your refund is raised once the item is back with the seller."
+        confirmLabel="Request the return"
+        minLength={3}
+        busy={busy}
+        onSubmit={submitWithReason}
+        onClose={() => setAsking(null)}
+      />
+
+      <ReasonModal
+        open={asking === 'dispute'}
+        title="Tell us what happened"
+        hint="An admin reads this, and the seller is asked to respond to it."
+        label="What went wrong?"
+        placeholder="The tracking says delivered but nothing arrived, and nobody called."
+        note="Nothing is paid to the seller until this is settled."
+        confirmLabel="Report it"
+        minLength={10}
+        busy={busy}
+        onSubmit={submitWithReason}
+        onClose={() => setAsking(null)}
+      />
     </Layout>
   );
 }

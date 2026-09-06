@@ -68,6 +68,12 @@ router.get("/orders", getMyOrders);
 router.get("/orders/:orderId", getOrderDetails);
 router.post("/orders/:orderId/return", returnOrder);
 router.patch("/orders/:orderId/cancel", cancelOrder);
+
+// The customer's say on a delivery only the seller claimed, and their one
+// lever when the record is wrong. See deliveryTruth.js for why both exist.
+const customerCtrl = require("../controllers/customerController");
+router.post("/orders/:orderId/confirm-receipt", customerCtrl.confirmReceipt);
+router.post("/orders/:orderId/dispute", customerCtrl.raiseDispute);
 router.patch("/orders/:orderId/items/:itemId/cancel", cancelOrderItem);
 
 // Wishlist

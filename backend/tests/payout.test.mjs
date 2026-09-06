@@ -32,6 +32,7 @@ const {
   markPayoutFailed,
   returnWindowFor,
   sellerPayoutStateFor,
+  isPayableLine,
   RETURN_WINDOW_DAYS,
 } = require('../utils/payout');
 
@@ -508,6 +509,21 @@ describe('what a seller is told about when they are paid', () => {
     expect(state).toBe('unpaid_order');
   });
 
+  /**
+   * A dispute can be raised on a parcel still in transit - "the tracking says
+   * delivered but nothing came" is exactly that. Telling the seller "released 7
+   * days after delivery" there is true and useless: it hides the one fact that
+   * matters, which is that they are expected to answer somebody.
+   */
+  it('says a dispute is open even before the parcel has arrived', () => {
+    const order = build({ fulStatus: 'shipped', deliveredAt: null });
+    order.fulfilments[0].disputeStatus = 'open';
+
+    const { state, blockedReason } = sellerPayoutStateFor(order, PARTNER);
+    expect(state).toBe('blocked');
+    expect(blockedReason).toMatch(/dispute/i);
+  });
+
   it('says it is waiting on delivery before the parcel arrives', () => {
     const { state } = sellerPayoutStateFor(
       build({ fulStatus: 'shipped', deliveredAt: null }),
@@ -564,5 +580,85 @@ describe('what a seller is told about when they are paid', () => {
   it('does not call a cancelled-only order paid', () => {
     const order = build({ itemStatus: 'cancelled' });
     expect(sellerPayoutStateFor(order, PARTNER).state).not.toBe('paid');
+  });
+});
+
+/**
+ * What an unresolved argument does to a payout.
+ *
+ * The return window closing used to be the whole test, on the reasoning that a
+ * delivery older than the window can no longer come back. That is only true
+ * when nothing is already in progress: a return asked for on day 6, or a
+ * dispute raised on day 5, is still open on day 8 - and the old rule paid the
+ * seller anyway, on the day the argument was still going on.
+ *
+ * Paying is effectively irreversible. Getting money back from a seller means
+ * taking it off a future payout they may never earn, so an unresolved case has
+ * to hold it rather than chase it afterwards. That is also the only thing that
+ * makes an admin's decision worth anything: the money is still here when it is
+ * made.
+ */
+describe('money held while something is still being argued about', () => {
+  const settledOrder = (fulfilmentOver = {}) => ({
+    paymentStatus: 'paid',
+    items: [
+      { sellerId: PARTNER, status: 'active', sellerEarning: 900, payoutId: null },
+    ],
+    fulfilments: [
+      {
+        sellerId: PARTNER,
+        status: 'delivered',
+        deliveredAt: SETTLED,
+        deliveryConfirmedBy: 'courier',
+        returnStage: null,
+        disputeStatus: null,
+        ...fulfilmentOver,
+      },
+    ],
+  });
+
+  const payable = (order) =>
+    isPayableLine(order.items[0], PARTNER, order.fulfilments);
+
+  it('pays a clean delivery whose window has closed', () => {
+    expect(payable(settledOrder())).toBe(true);
+  });
+
+  it('holds it while a return is open, even past the window', () => {
+    expect(payable(settledOrder({ returnStage: 'requested' }))).toBe(false);
+    expect(payable(settledOrder({ returnStage: 'picked' }))).toBe(false);
+  });
+
+  it('holds it while a dispute is open', () => {
+    expect(payable(settledOrder({ disputeStatus: 'open' }))).toBe(false);
+  });
+
+  /**
+   * A refused return is settled - the sale stands - and a received one has
+   * already been refunded, so the line is not payable for other reasons.
+   * Neither should go on holding money by itself.
+   */
+  it('releases it again once the argument is over', () => {
+    expect(payable(settledOrder({ returnStage: 'rejected' }))).toBe(true);
+    expect(payable(settledOrder({ disputeStatus: 'resolved_seller' }))).toBe(true);
+  });
+
+  /**
+   * Handed over by hand: there was no courier to ask, so the seller's word
+   * alone does not release their own money until the customer has had a chance
+   * to disagree.
+   */
+  it('holds a delivery only the seller claimed, until the customer has had their say', () => {
+    const justNow = new Date();
+    const claimed = settledOrder({
+      deliveryConfirmedBy: 'seller',
+      deliveredAt: justNow,
+    });
+    // Force the window itself open so only the confirmation rule is under test.
+    claimed.fulfilments[0].deliveredAt = SETTLED;
+    expect(payable(claimed)).toBe(true); // SETTLED is older than the 3-day wait
+
+    claimed.fulfilments[0].deliveredAt = justNow;
+    expect(payable(claimed)).toBe(false);
   });
 });

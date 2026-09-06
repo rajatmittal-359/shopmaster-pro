@@ -22,7 +22,21 @@ export const cancelOrder = (orderId) =>
 export const cancelOrderItem = (orderId, itemId) =>
   api.patch(`/customer/orders/${orderId}/items/${itemId}/cancel`);
 
-// ✅ RETURN ORDER
-export const returnOrder = (orderId) =>
-  api.post(`/customer/orders/${orderId}/return`);
+/**
+ * Asking to send something back. A reason is required: the seller answers it,
+ * and it is what an admin reads if the two of them disagree.
+ *
+ * This raises a REQUEST. No money moves until the goods are back with the
+ * seller - see backend/utils/settleReturn.js.
+ */
+export const returnOrder = (orderId, reason) =>
+  api.post(`/customer/orders/${orderId}/return`, { reason });
+
+/** "Yes, I got it" - on a delivery only the seller claimed. */
+export const confirmReceipt = (orderId) =>
+  api.post(`/customer/orders/${orderId}/confirm-receipt`);
+
+/** "This is wrong." Decides nothing, but stops the seller being paid. */
+export const raiseDispute = (orderId, reason) =>
+  api.post(`/customer/orders/${orderId}/dispute`, { reason });
   

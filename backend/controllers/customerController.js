@@ -591,6 +591,26 @@ exports.cancelOrderItem = async (req, res) => {
 };
 
 
+  /**
+   * A customer asking to send something back.
+   *
+   * WHAT THIS USED TO DO, AND WHY IT WAS WRONG
+   *   Pressing Return refunded the money immediately and counted the goods back
+   *   in as sellable stock - before anything had been collected, and without
+   *   anybody ever seeing the item again. A customer could keep a RS 2,300
+   *   necklace and the RS 2,300, and the shop would carry the whole loss while
+   *   its own stock figure said the necklace was on the shelf.
+   *
+   *   Flipkart's policy is explicit about this: "the refund will be processed
+   *   once the returned product has been received by the seller." A return
+   *   request is a claim. It becomes a fact when the goods come back.
+   *
+   *   So this now records the request and nothing else. No money moves, no
+   *   stock moves, and the parcel is NOT marked returned - it is still with the
+   *   customer, which is the truth. What it does do is hold the seller's payout
+   *   (see deliveryTruth.payoutBlockedReason), because money that has left
+   *   cannot be brought back.
+   */
   exports.returnOrder = async (req, res) => {
     try {
       const order = await Order.findOne({
@@ -624,63 +644,42 @@ exports.cancelOrderItem = async (req, res) => {
         });
       }
 
-      // Mark every delivered part as returned; the order derives to 'returned'
-      // once they all are.
-      const returnedAt = new Date();
-      order.fulfilments.forEach((f) => {
-        if (f.status === 'delivered') {
-          f.status = 'returned';
-          f.returnedAt = returnedAt;
-        }
-      });
-
-// Initiate refund for returned prepaid orders.
-// Previously guarded on 'completed', which the paymentStatus enum does not
-// allow, so a returned prepaid order was never refunded.
-if (order.paymentStatus === 'paid' && order.paymentMethod === 'razorpay') {
-  try {
-    if (order.razorpayPaymentId) {
-      const refundAmount = order.totalAmount;
-      const refund = await refunds.refundPayment(
-        order.razorpayPaymentId,
-        refundAmount
+      const already = order.fulfilments.find((f) =>
+        ['requested', 'picked'].includes(f.returnStage)
       );
-      order.refundId = refund.id;
-      order.refundStatus = 'processing';
-      order.refundAmount = refundAmount;
-      order.refundedAt = new Date();
-      order.paymentStatus = 'refunded';
-      console.log('Return refund initiated', refund.id);
-    }
-  } catch (refundErr) {
-  console.error("Return refund failed", refundErr.message);
-  // ✅ FIX: Stop return if refund fails
-  return res.status(500).json({
-    success: false,
-    message: "Refund initiation failed for return. Please contact support.",
-    error: refundErr.message,
-    orderId: order._id
-  });
-}
-
-}
-
-
-
-      await order.save();
-
-      for (const item of order.items) {
-        await applyInventoryChange({
-          productId: item.productId,
-          quantity: item.quantity,
-          type: "return", 
-          orderId: order._id,
-          performedBy: req.user._id,
+      if (already) {
+        return res.status(409).json({
+          message: 'A return for this order is already in progress.',
         });
       }
 
-      res.json({ success: true, message: "Order returned", order });
+      const reason = String(req.body?.reason || '').trim();
+      if (reason.length < 3) {
+        return res.status(400).json({
+          message:
+            'Please say what is wrong with it. The seller is told, and it decides whether the return is accepted.',
+        });
+      }
 
+      const requestedAt = new Date();
+      order.fulfilments.forEach((f) => {
+        // Only parcels that actually arrived can come back. The status stays
+        // 'delivered': the goods are still with the customer.
+        if (f.status === 'delivered' && !f.returnStage) {
+          f.returnStage = 'requested';
+          f.returnRequestedAt = requestedAt;
+          f.returnReason = reason;
+        }
+      });
+
+      await order.save();
+
+      res.json({
+        success: true,
+        message:
+          'Return requested. Once the item is back with the seller your refund is processed.',
+        order,
+      });
     } catch (err) {
       console.error("RETURN ORDER ERROR:", err.message);
       res.status(500).json({ message: err.message });
@@ -843,5 +842,125 @@ exports.previewTotals = async (req, res) => {
       success: false,
       message: err.message || "Failed to calculate totals",
     });
+  }
+};
+
+const truth = require('../utils/deliveryTruth');
+
+/**
+ * The customer's answer to a delivery only the seller claimed.
+ *
+ * When no courier was booked - a parcel handed over by hand in the same city -
+ * there is no third party to ask, so the seller's word is taken. It is recorded
+ * AS the seller's word, and the customer gets the one thing that makes that
+ * fair: the chance to say yes or no before the money moves.
+ *
+ * Confirming here is not a formality. It is what ends the hold on the seller's
+ * payout, so a customer who confirms is releasing somebody's money - which is
+ * why silence releases it too, after SELF_DELIVERY_CONFIRM_DAYS. A claim nobody
+ * ever answers cannot hold a shop's earnings forever.
+ */
+exports.confirmReceipt = async (req, res) => {
+  try {
+    const order = await Order.findOne({
+      _id: req.params.orderId,
+      customerId: req.user._id,
+    });
+
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+
+    const waiting = order.fulfilments.filter(
+      (f) => f.status === 'delivered' && f.deliveryConfirmedBy === 'seller'
+    );
+    if (!waiting.length) {
+      return res.status(400).json({
+        message: 'There is nothing waiting for you to confirm on this order.',
+      });
+    }
+
+    waiting.forEach((f) => {
+      f.deliveryConfirmedBy = 'customer';
+    });
+
+    await order.save();
+
+    res.json({
+      success: true,
+      message: 'Thank you - that is confirmed.',
+    });
+  } catch (err) {
+    console.error('CONFIRM RECEIPT ERROR:', err.message);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+/**
+ * "This is wrong" - the customer's only lever, and the one that must exist.
+ *
+ * Raising this does not decide anything and does not move money. What it does
+ * is stop the seller's payout and put the disagreement in front of an admin,
+ * which is the whole point: once a seller has been paid, getting it back means
+ * taking it off a future payout they may never earn.
+ *
+ * This is deliberately open to a customer whose parcel says 'delivered' by
+ * courier scan too. Couriers do mark parcels delivered that never arrived, and
+ * a system where the courier's word is final in every case has quietly decided
+ * that the customer is always the liar.
+ */
+exports.raiseDispute = async (req, res) => {
+  try {
+    const reason = String(req.body?.reason || '').trim();
+    if (reason.length < 10) {
+      return res.status(400).json({
+        message:
+          'Please describe what happened in a sentence or two. An admin reads this, and the seller is asked to respond to it.',
+      });
+    }
+
+    const order = await Order.findOne({
+      _id: req.params.orderId,
+      customerId: req.user._id,
+    });
+
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+
+    // Nothing to argue about before a parcel has moved.
+    const arguable = order.fulfilments.filter((f) =>
+      ['shipped', 'delivered'].includes(f.status)
+    );
+    if (!arguable.length) {
+      return res.status(400).json({
+        message: 'This order has not been sent yet, so there is nothing to dispute. Cancel it instead.',
+      });
+    }
+    if (arguable.some((f) => f.disputeStatus === 'open')) {
+      return res.status(409).json({
+        message: 'A dispute on this order is already open. We will come back to you on it.',
+      });
+    }
+
+    const now = new Date();
+    arguable.forEach((f) => {
+      f.disputeStatus = 'open';
+      f.disputeReason = reason;
+      f.disputeRaisedAt = now;
+    });
+
+    await order.save();
+
+    console.warn(`Dispute raised on ${order.orderNumber} by customer ${req.user._id}`);
+
+    res.json({
+      success: true,
+      message:
+        'Thank you - we have this. The seller has been asked to respond and nothing is paid out until it is settled.',
+    });
+  } catch (err) {
+    console.error('RAISE DISPUTE ERROR:', err.message);
+    res.status(500).json({ message: err.message });
   }
 };

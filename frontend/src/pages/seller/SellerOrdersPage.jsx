@@ -44,6 +44,9 @@ function PayoutNote({ payout }) {
       : 'Held until the return window shuts.',
     ready: 'Cleared for the next payout.',
     paid: 'Paid out.',
+    // Something is being argued about. Money that has left cannot be brought
+    // back, so an open return or dispute holds it regardless of the date.
+    blocked: payout.blockedReason,
   }[payout.state];
 
   if (!text) return null;
@@ -218,11 +221,23 @@ export default function SellerOrdersPage() {
     }));
   };
 
-  const getNextStatus = (current) => {
+/**
+ * The next thing this seller can actually do.
+ *
+ * "Delivered" is deliberately not one of them when a courier is carrying the
+ * parcel. deliveredAt starts the return window and the window closing releases
+ * THIS seller's money, so the button was the seller choosing when to pay
+ * themselves - and because the courier webhook will not walk a parcel
+ * backwards, a delivery claimed early could never be corrected by the courier's
+ * own scans. The server refuses it either way (utils/deliveryTruth.js); this
+ * just stops offering a button that cannot work.
+ */
+  const getNextStatus = (order) => {
+    const current = order.status;
     if (['cancelled', 'returned'].includes(current)) return null;
     if (current === 'pending') return 'processing';
     if (current === 'processing') return 'shipped';
-    if (current === 'shipped') return 'delivered';
+    if (current === 'shipped') return order.canDeclareDelivered ? 'delivered' : null;
     return null;
   };
 
@@ -301,7 +316,7 @@ export default function SellerOrdersPage() {
         ) : (
           <div className="space-y-5">
             {orders.map((order) => {
-              const nextStatus = getNextStatus(order.status);
+              const nextStatus = getNextStatus(order);
               return (
                 <div key={order._id} className="bg-white p-5 rounded-lg shadow border space-y-4">
                   {/* ✅ HEADER */}

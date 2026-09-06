@@ -37,6 +37,7 @@ const mongoose = require('mongoose');
 const Order = require('../models/Order');
 const Seller = require('../models/Seller');
 const Payout = require('../models/Payout');
+const truth = require('./deliveryTruth');
 
 /** Days a customer has to start a return; matches the published policy. */
 const RETURN_WINDOW_DAYS = 7;
@@ -122,11 +123,29 @@ const settledDeliveryAt = (fulfilments, sellerId) => {
  * window. Passing no fulfilments means nothing is payable, which is the safe
  * default - it under-pays rather than over-pays.
  */
-const isPayableLine = (item, sellerId, fulfilments = []) =>
-  item.status !== 'cancelled' &&
-  item.payoutId == null &&
-  (!sellerId || String(item.sellerId) === String(sellerId)) &&
-  settledDeliveryAt(fulfilments, item.sellerId) !== null;
+const isPayableLine = (item, sellerId, fulfilments = []) => {
+  if (item.status === 'cancelled') return false;
+  if (item.payoutId != null) return false;
+  if (sellerId && String(item.sellerId) !== String(sellerId)) return false;
+  if (settledDeliveryAt(fulfilments, item.sellerId) === null) return false;
+
+  /*
+   * Anything unresolved holds the money.
+   *
+   * The return window closing used to be the whole test, on the reasoning that
+   * a delivery older than the window can no longer come back. That is only true
+   * when nothing is already in progress: a return requested on day 6, or a
+   * dispute raised on day 5, is still open on day 8 - and the old rule paid the
+   * seller anyway, on the day the argument was still going on.
+   *
+   * Paying is effectively irreversible. Getting money back from a seller means
+   * taking it off a future payout they may never earn, so an unresolved case
+   * has to hold it rather than chase it. Amazon works the same way, which is
+   * what makes an A-to-z decision worth anything: the money is still on the
+   * platform when the decision is made.
+   */
+  return truth.payoutBlockedReason(fulfilmentOf(fulfilments, item.sellerId)) === null;
+};
 
 /**
  * What every seller is currently owed.
@@ -395,8 +414,8 @@ const markPayoutFailed = async (payoutId, { reason, adminId }) => {
  *   The rules are the ones payouts already run on, so the page cannot promise
  *   something a payout would refuse.
  *
- * @returns {{state: 'unpaid_order'|'awaiting_delivery'|'holding'|'ready'|'paid',
- *            releasesAt: Date|null}}
+ * @returns {{state: 'unpaid_order'|'awaiting_delivery'|'holding'|'blocked'|'ready'|'paid',
+ *            releasesAt: Date|null, blockedReason?: string}}
  */
 const sellerPayoutStateFor = (order, sellerId) => {
   const lines = (order.items || []).filter(
@@ -419,6 +438,19 @@ const sellerPayoutStateFor = (order, sellerId) => {
   // Read per seller, never from order.status: in a split order the other
   // seller's parcel says nothing about this one.
   if (!fulfilment || fulfilment.status !== 'delivered' || !fulfilment.deliveredAt) {
+    /*
+     * Checked before the delivery test, not after.
+     *
+     * A dispute can be raised on a parcel that is still in transit - "the
+     * tracking says delivered but nothing came" is exactly that case. Telling
+     * the seller "released 7 days after delivery" there is true and useless: it
+     * hides the one fact that matters to them, which is that somebody is
+     * arguing and they are expected to answer.
+     */
+    const blockedEarly = fulfilment && truth.payoutBlockedReason(fulfilment);
+    if (blockedEarly) {
+      return { state: 'blocked', releasesAt: null, blockedReason: blockedEarly };
+    }
     return { state: 'awaiting_delivery', releasesAt: null };
   }
 
@@ -426,6 +458,11 @@ const sellerPayoutStateFor = (order, sellerId) => {
     new Date(fulfilment.deliveredAt).getTime() +
       RETURN_WINDOW_DAYS * 24 * 60 * 60 * 1000
   );
+
+  // An open return or dispute holds it regardless of the date, and saying so is
+  // better than a page promising "cleared" while the payout refuses.
+  const blocked = truth.payoutBlockedReason(fulfilment);
+  if (blocked) return { state: 'blocked', releasesAt, blockedReason: blocked };
 
   return releasesAt > new Date()
     ? { state: 'holding', releasesAt }

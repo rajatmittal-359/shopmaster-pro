@@ -377,11 +377,27 @@ exports.deleteCategory = async (req, res) => {
 // Get platform orders (paginated, optionally filtered)
 exports.getAllOrders = async (req, res) => {
   try {
-    const { status, paymentStatus, page = 1, limit = 20 } = req.query;
+    const { status, paymentStatus, needsMe, page = 1, limit = 20 } = req.query;
 
     const filter = {};
     if (status) filter.status = status;
     if (paymentStatus) filter.paymentStatus = paymentStatus;
+
+    /*
+     * The orders waiting on a human.
+     *
+     * A disputed order was indistinguishable from any other in this list, so
+     * the one screen that could settle an argument gave no hint that an
+     * argument existed. Meanwhile the money sits held, which is fair to nobody
+     * if nobody looks.
+     */
+    if (needsMe === 'true') {
+      filter.fulfilments = {
+        $elemMatch: {
+          $or: [{ disputeStatus: 'open' }, { returnStage: { $in: ['requested', 'picked'] } }],
+        },
+      };
+    }
 
     const numericLimit = Math.min(Math.max(Number(limit) || 20, 1), 100);
     const numericPage = Math.max(Number(page) || 1, 1);
@@ -650,6 +666,118 @@ exports.cancelOrderAsAdmin = async (req, res) => {
       return res.status(result.status || 400).json({ success: false, message: result.message });
     }
     return res.json({ success: true, message: result.message });
+  } catch (error) {
+    return sendError(res, error);
+  }
+};
+
+const returnsUtil = require('../utils/settleReturn');
+
+/**
+ * The referee.
+ *
+ * WHY THE ADMIN NEEDED ANY OF THIS
+ *   The admin could look at orders and cancel them. That was all. So when a
+ *   customer said "it never arrived" and a seller said "I delivered it", there
+ *   was nobody who could decide - no way to correct a wrong record, no way to
+ *   stop the seller's payout while it was argued about, and no note left behind
+ *   of what was decided or why.
+ *
+ *   Amazon's A-to-z Guarantee is the shape this follows: the buyer raises it,
+ *   the seller answers with evidence, and the PLATFORM decides - then debits
+ *   whoever was at fault. The one thing that makes it work is that the money is
+ *   still on the platform when the decision is made, which is why an open
+ *   dispute holds the payout (see utils/deliveryTruth.js).
+ *
+ * Every resolution is written onto the order with a reason. An admin who can
+ * change a record silently is not a referee, they are a third party with a
+ * motive nobody can audit.
+ */
+exports.resolveDispute = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const { sellerId, inFavourOf, resolution } = req.body || {};
+
+    if (!mongoose.isValidObjectId(orderId)) {
+      return res.status(400).json({ success: false, message: 'Invalid order id' });
+    }
+    if (!['customer', 'seller'].includes(inFavourOf)) {
+      return res.status(400).json({
+        success: false,
+        message: "inFavourOf must be 'customer' or 'seller'",
+      });
+    }
+    const note = String(resolution || '').trim();
+    if (note.length < 3) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please record why you decided this. It is shown to both sides.',
+      });
+    }
+
+    const order = await Order.findById(orderId);
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Order not found' });
+    }
+
+    const open = (order.fulfilments || []).filter(
+      (f) =>
+        f.disputeStatus === 'open' &&
+        (!sellerId || String(f.sellerId) === String(sellerId))
+    );
+    if (!open.length) {
+      return res
+        .status(400)
+        .json({ success: false, message: 'There is no open dispute on this order' });
+    }
+
+    const now = new Date();
+
+    if (inFavourOf === 'customer') {
+      /*
+       * The customer is believed: the parcel did not arrive, or what arrived
+       * was not the goods. The delivery record is corrected rather than left
+       * standing - a 'delivered' nobody believes is what released the money in
+       * the first place - and the refund is raised through the same path a
+       * received return uses, so there is one refund code path and not two.
+       */
+      for (const f of open) {
+        f.status = 'returned';
+        f.returnStage = 'received';
+        f.returnedAt = now;
+        f.deliveryConfirmedBy = 'admin';
+      }
+
+      const result = await returnsUtil.receiveReturn(order, {
+        by: 'admin',
+        actorId: req.user._id,
+        sellerId: sellerId || undefined,
+      }).catch(() => null);
+
+      // receiveReturn refuses when no return is open, which is the case when
+      // this dispute was about a delivery rather than a return. The status
+      // changes above still stand and are saved below.
+      if (result && !result.ok && result.status === 500) {
+        return res.status(500).json({ success: false, message: result.message });
+      }
+    }
+
+    for (const f of open) {
+      f.disputeStatus = inFavourOf === 'customer' ? 'resolved_customer' : 'resolved_seller';
+      f.disputeResolution = note;
+      f.disputeResolvedAt = now;
+    }
+
+    await order.save();
+
+    console.log(
+      `Dispute on ${order.orderNumber} resolved for the ${inFavourOf} by admin ${req.user._id}`
+    );
+
+    return res.json({
+      success: true,
+      message: `Decided in the ${inFavourOf}'s favour. Both sides can see the reason.`,
+    });
   } catch (error) {
     return sendError(res, error);
   }

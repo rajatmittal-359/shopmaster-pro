@@ -117,6 +117,73 @@ const fulfilmentSchema = new mongoose.Schema(
     /** When the customer started a return for this seller's parcel. */
     returnedAt: { type: Date, default: null },
 
+    /**
+     * WHO said this parcel was delivered.
+     *
+     * WHY THIS EXISTS
+     *   "Delivered" is the single most valuable claim in the system: it starts
+     *   the return window, and the window closing is what releases the seller's
+     *   money. It was recorded with no note of who said it, which meant a
+     *   seller pressing a button and a courier scanning a parcel were
+     *   indistinguishable afterwards - so a dispute had nothing to weigh.
+     *
+     *   Indian consumer forums decide these on evidence: courier logs, parcel
+     *   weight, complaint history. Where the platform cannot show its working,
+     *   the benefit of the doubt goes to the customer. This field is the start
+     *   of that working.
+     *
+     *   'courier'  a tracking scan - the only party with no stake in the answer
+     *   'customer' the customer confirmed receipt themselves
+     *   'seller'   the seller's own word, used only where no courier was booked
+     *   'auto'     nobody objected within the confirmation window
+     *   'admin'    a human decided a dispute
+     */
+    deliveryConfirmedBy: {
+      type: String,
+      enum: ['courier', 'customer', 'seller', 'auto', 'admin'],
+      default: null,
+    },
+
+    /**
+     * A return in progress for this seller's parcel.
+     *
+     *   requested  the customer has asked; nothing has moved and no money has
+     *              been refunded
+     *   picked     a courier has collected it
+     *   received   it is back with the seller - THIS is what pays the refund
+     *   rejected   the seller or an admin refused it, with a reason
+     *
+     * Deliberately separate from `status`. A requested return must not make the
+     * parcel 'returned': that is a claim, not a fact, and treating it as fact is
+     * how a customer ends up holding both the goods and the money.
+     */
+    returnStage: {
+      type: String,
+      enum: ['requested', 'picked', 'received', 'rejected'],
+      default: null,
+    },
+    returnRequestedAt: { type: Date, default: null },
+    returnReason: { type: String, default: null },
+    returnNote: { type: String, default: null },
+
+    /**
+     * Somebody says the record is wrong.
+     *
+     * Amazon's A-to-z works this way: the buyer raises it, the seller has 72
+     * hours to answer with evidence, and the platform - not either side -
+     * decides. While it is open the seller's money does not move, because money
+     * that has left is money that cannot be brought back.
+     */
+    disputeStatus: {
+      type: String,
+      enum: ['open', 'resolved_customer', 'resolved_seller'],
+      default: null,
+    },
+    disputeReason: { type: String, default: null },
+    disputeRaisedAt: { type: Date, default: null },
+    disputeResolvedAt: { type: Date, default: null },
+    disputeResolution: { type: String, default: null },
+
     // Courier details for this seller's parcel.
     shippingProvider: {
       type: String,

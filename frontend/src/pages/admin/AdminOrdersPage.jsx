@@ -6,7 +6,8 @@ import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 import EmptyState from '../../components/ui/EmptyState';
 import Modal from '../../components/ui/Modal';
-import { getAllOrders, cancelOrderAsAdmin } from '../../services/adminService';
+import ReasonModal from '../../components/common/ReasonModal';
+import { getAllOrders, cancelOrderAsAdmin, resolveDispute } from '../../services/adminService';
 import { toastSuccess, toastError } from '../../utils/toast';
 import { money } from '../../utils/money';
 
@@ -34,6 +35,9 @@ export default function AdminOrdersPage() {
   const [cancelling, setCancelling] = useState(null); // the order being cancelled
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
+  // The dispute being decided: {order, inFavourOf}.
+  const [deciding, setDeciding] = useState(null);
+  const [onlyNeedsMe, setOnlyNeedsMe] = useState(false);
 
   // Declared before the effect that calls it, and memoised, so the effect can
   // depend on it honestly rather than lying with an empty dependency list.
@@ -75,6 +79,7 @@ export default function AdminOrdersPage() {
   };
 
   const visible = orders.filter((o) => {
+    if (onlyNeedsMe && !disputeOf(o) && !openReturnOf(o)) return false;
     if (status !== 'all' && o.status !== status) return false;
     if (!query.trim()) return true;
     const hay = `${o.orderNumber || ''} ${o.customerId?.name || ''} ${o.customerId?.email || ''}`;
@@ -84,6 +89,13 @@ export default function AdminOrdersPage() {
   /** Only an order nobody has shipped yet can still be called off. */
   const canCancel = (o) =>
     ['pending', 'processing'].includes(o.status) && !o.shippingAwb;
+
+  /** The parcel somebody is arguing about, if there is one. */
+  const disputeOf = (o) =>
+    (o.fulfilments || []).find((f) => f.disputeStatus === 'open');
+
+  const openReturnOf = (o) =>
+    (o.fulfilments || []).find((f) => ['requested', 'picked'].includes(f.returnStage));
 
   return (
     <Layout title="Orders">
@@ -118,6 +130,19 @@ export default function AdminOrdersPage() {
               </option>
             ))}
           </select>
+          {/*
+            The whole point of a referee is being able to find the arguments.
+            Everything else on this screen is browsing; this is the queue.
+          */}
+          <label className="flex items-center gap-2 text-sm text-gray-700">
+            <input
+              type="checkbox"
+              checked={onlyNeedsMe}
+              onChange={(e) => setOnlyNeedsMe(e.target.checked)}
+              className="rounded border-gray-300"
+            />
+            Needs me
+          </label>
         </div>
       </div>
 
@@ -199,9 +224,39 @@ export default function AdminOrdersPage() {
                           by {o.cancelledBy}
                         </span>
                       )}
+                      {/* The thing this screen exists to catch. A disputed
+                          order looked exactly like a settled one, so the money
+                          sat held and nobody knew to look. */}
+                      {disputeOf(o) && (
+                        <span className="block text-xs text-red-600 font-medium mt-1">
+                          Disputed
+                        </span>
+                      )}
+                      {openReturnOf(o) && (
+                        <span className="block text-xs text-gray-600 mt-1">
+                          Return {openReturnOf(o).returnStage}
+                        </span>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-right whitespace-nowrap">
-                      {canCancel(o) ? (
+                      {disputeOf(o) ? (
+                        <span className="inline-flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => setDeciding({ order: o, inFavourOf: 'seller' })}
+                          >
+                            For seller
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => setDeciding({ order: o, inFavourOf: 'customer' })}
+                          >
+                            For customer
+                          </Button>
+                        </span>
+                      ) : canCancel(o) ? (
                         <Button
                           variant="destructive"
                           size="sm"
@@ -265,6 +320,55 @@ export default function AdminOrdersPage() {
           </Button>
         </div>
       </Modal>
+
+      {/*
+        Deciding an argument.
+
+        A reason is required and kept on the order, because an admin who can
+        change a record silently is not a referee - they are a third party with
+        a motive nobody can audit. Both sides are shown what was decided.
+      */}
+      <ReasonModal
+        open={Boolean(deciding)}
+        title={
+          deciding?.inFavourOf === 'customer'
+            ? `Decide for the customer on ${deciding?.order?.orderNumber || 'this order'}?`
+            : `Decide for the seller on ${deciding?.order?.orderNumber || 'this order'}?`
+        }
+        hint={
+          deciding?.inFavourOf === 'customer'
+            ? 'The delivery record is corrected and the customer is refunded.'
+            : 'The sale stands and the seller is paid as normal.'
+        }
+        label="What did you decide, and why?"
+        placeholder={
+          deciding?.inFavourOf === 'customer'
+            ? 'Courier could produce no POD and the customer called twice before the scan.'
+            : 'Courier POD is signed and the weight matches the manifest.'
+        }
+        note="Both the customer and the seller are shown this."
+        confirmLabel="Record the decision"
+        confirmVariant={deciding?.inFavourOf === 'customer' ? 'destructive' : 'primary'}
+        minLength={10}
+        busy={busy}
+        onSubmit={async (resolution) => {
+          setBusy(true);
+          try {
+            const { data } = await resolveDispute(deciding.order._id, {
+              inFavourOf: deciding.inFavourOf,
+              resolution,
+            });
+            toastSuccess(data.message || 'Decision recorded');
+            setDeciding(null);
+            await load();
+          } catch (err) {
+            toastError(err?.response?.data?.message || 'Could not record that');
+          } finally {
+            setBusy(false);
+          }
+        }}
+        onClose={() => setDeciding(null)}
+      />
     </Layout>
   );
 }

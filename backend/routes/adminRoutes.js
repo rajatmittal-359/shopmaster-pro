@@ -52,6 +52,13 @@ router.get('/orders/:orderId', getOrderById);
 // orders and do nothing about them.
 router.post('/orders/:orderId/cancel', require('../controllers/adminController').cancelOrderAsAdmin);
 
+// The referee. Somebody has to be able to decide when a customer and a seller
+// disagree about what happened, and to be seen to have decided.
+router.post(
+  '/orders/:orderId/dispute/resolve',
+  require('../controllers/adminController').resolveDispute
+);
+
 // Analytics
 router.get('/analytics', getAnalytics);
 

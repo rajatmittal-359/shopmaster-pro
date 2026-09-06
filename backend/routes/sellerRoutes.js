@@ -57,6 +57,14 @@ router.post('/orders/:orderId/ship/cancel', requireApprovedSeller, cancelShipmen
 // Calling off the ORDER, not just the courier. See cancelOwnLines.
 router.post('/orders/:orderId/cancel', requireApprovedSeller, cancelOwnLines);
 
+// Closing out a return. Receiving the goods back is what pays the refund;
+// refusing needs a reason the customer can dispute.
+router.post(
+  '/orders/:orderId/return',
+  requireApprovedSeller,
+  require('../controllers/sellerController').settleReturn
+);
+
 // A seller's own earnings, settlement history and the account they are paid into.
 const {
   getMyEarnings,

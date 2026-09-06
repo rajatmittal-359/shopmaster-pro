@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Layout from '../../components/common/Layout';
-import { getOrderDetails, updateOrderStatus, updateTracking } from '../../services/sellerService';
+import { getOrderDetails, updateOrderStatus, updateTracking, settleReturn } from '../../services/sellerService';
+import ReasonModal from '../../components/common/ReasonModal';
+import Button from '../../components/ui/Button';
 import { toastSuccess, toastError } from '../../utils/toast';
 
 import { orderRef } from '../../utils/orderRef';
@@ -45,6 +47,9 @@ function PayoutNote({ payout }) {
       : 'Held until the return window shuts.',
     ready: 'Cleared for the next payout run.',
     paid: 'Paid out.',
+    // Something is being argued about. Money that has left cannot be brought
+    // back, so an open return or dispute holds it regardless of the date.
+    blocked: payout.blockedReason,
   }[payout.state];
 
   if (!text) return null;
@@ -69,6 +74,7 @@ export default function SellerOrderDetailsPage() {
   const [updating, setUpdating] = useState(false);
   const [courierName, setCourierName] = useState('');
   const [trackingNumber, setTrackingNumber] = useState('');
+  const [refusing, setRefusing] = useState(false);
 
   useEffect(() => {
     loadOrder();
@@ -177,7 +183,12 @@ export default function SellerOrderDetailsPage() {
     );
   }
 
-  const nextStatus = getNextStatus(order.status);
+  // Same rule as the list: a courier-carried parcel is not the seller's to
+  // declare delivered. See getNextStatus there.
+  const nextStatus =
+    order.status === 'shipped' && !order.canDeclareDelivered
+      ? null
+      : getNextStatus(order.status);
   return (
     <Layout title="Order Details">
       <div className="max-w-5xl mx-auto space-y-6">
@@ -315,6 +326,65 @@ export default function SellerOrderDetailsPage() {
           </div>
         </div>
 
+        {/*
+          A return the customer has asked for.
+
+          The seller had no idea one existed: nothing on any screen showed it,
+          while the request quietly held their payout. Receiving the goods back
+          is what raises the customer's refund - it is deliberately not raised
+          when they ask, because a request is a claim and the goods coming back
+          is the fact.
+        */}
+        {['requested', 'picked'].includes(order.returnStage) && (
+          <div className="bg-white p-5 rounded-xl border border-gray-200">
+            <h3 className="font-semibold text-gray-900">The customer wants to return this</h3>
+            <p className="text-sm text-gray-600 mt-1">
+              They said: “{order.returnReason}”
+            </p>
+            <p className="text-xs text-gray-500 mt-2">
+              Your payment for this order is held until it is settled.
+            </p>
+
+            <div className="flex flex-wrap gap-2 mt-4">
+              <Button
+                loading={updating}
+                onClick={async () => {
+                  setUpdating(true);
+                  try {
+                    const { data } = await settleReturn(order._id, 'receive');
+                    toastSuccess(data.message || 'Return received');
+                    await loadOrder();
+                  } catch (err) {
+                    toastError(err?.response?.data?.message || 'That did not work');
+                  } finally {
+                    setUpdating(false);
+                  }
+                }}
+              >
+                I have the item back
+              </Button>
+              <Button variant="secondary" disabled={updating} onClick={() => setRefusing(true)}>
+                Refuse this return
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* A customer says the record is wrong, and an admin will decide. */}
+        {order.disputeStatus === 'open' && (
+          <div className="bg-white p-5 rounded-xl border border-gray-200">
+            <h3 className="font-semibold text-gray-900">This order is disputed</h3>
+            <p className="text-sm text-gray-600 mt-1">
+              The customer said: “{order.disputeReason}”
+            </p>
+            <p className="text-xs text-gray-500 mt-2">
+              An admin is looking at it. Send them anything that shows what happened —
+              the courier POD, the pickup scan, a delivery photo. Nothing is paid out
+              until it is decided.
+            </p>
+          </div>
+        )}
+
         {/* Tracking */}
         <div className="bg-white p-5 rounded-lg shadow">
           <h3 className="font-semibold text-lg mb-3">Tracking Information</h3>
@@ -377,6 +447,25 @@ export default function SellerOrderDetailsPage() {
               {updating ? 'Updating...' : `Mark as ${nextStatus}`}
             </button>
           )}
+
+          {/*
+            A missing button with no explanation is the complaint this project
+            has already had once. Say why it is not there.
+          */}
+          {order.status === 'shipped' && !order.canDeclareDelivered && (
+            <p className="mt-4 text-sm text-gray-500">
+              The courier confirms this delivery, so there is nothing to press. It
+              updates on its own from their tracking — usually within a day of the
+              parcel arriving.
+            </p>
+          )}
+
+          {order.deliveryConfirmedBy === 'seller' && (
+            <p className="mt-4 text-sm text-gray-500">
+              You marked this delivered yourself. The customer has three days to
+              confirm or object before the payment is released.
+            </p>
+          )}
         </div>
 
         {/* Back Button */}
@@ -387,6 +476,32 @@ export default function SellerOrderDetailsPage() {
           Back to Orders
         </button>
       </div>
+
+      <ReasonModal
+        open={refusing}
+        title="Refuse this return?"
+        hint="The customer is shown this, and can dispute it."
+        label="Why are you refusing it?"
+        placeholder="The box came back empty"
+        note="No money moves and the sale stands. Refusing without a real reason is what a pattern of refusals looks like later."
+        confirmLabel="Refuse the return"
+        confirmVariant="destructive"
+        busy={updating}
+        onSubmit={async (reason) => {
+          setUpdating(true);
+          try {
+            const { data } = await settleReturn(order._id, 'reject', reason);
+            toastSuccess(data.message || 'Return refused');
+            setRefusing(false);
+            await loadOrder();
+          } catch (err) {
+            toastError(err?.response?.data?.message || 'That did not work');
+          } finally {
+            setUpdating(false);
+          }
+        }}
+        onClose={() => setRefusing(false)}
+      />
     </Layout>
   );
 }
