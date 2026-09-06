@@ -17,10 +17,19 @@
  *   One greyed line saying what comes next answers that without adding noise -
  *   and it disappears once the parcel arrives, because then nothing is next.
  */
-const NEXT_STEP = {
-  pending: 'Seller is preparing it',
-  processing: 'Seller is preparing it',
-  shipped: 'Out for delivery',
+/**
+ * What has not happened yet.
+ *
+ * `shipped` has TWO different next steps and they are not interchangeable.
+ * Our shippedAt is set when the seller BOOKS a courier - the parcel is still
+ * on their shelf at that point. Until a courier scan arrives, the next thing
+ * is collection, not delivery. Saying "out for delivery" there would tell a
+ * customer their parcel is minutes away while it sits in a house.
+ */
+const nextStepFor = (status, hasScans) => {
+  if (status === 'pending' || status === 'processing') return 'Seller is preparing it';
+  if (status === 'shipped') return hasScans ? 'Out for delivery' : 'Waiting to be collected';
+  return null;
 };
 
 const when = (date) =>
@@ -53,12 +62,14 @@ export default function ShipmentTimeline({ order, fulfilment }) {
         .map((s) => ({ at: s.at, label: readable(s.activity), place: s.location }))
     : [
         f.deliveredAt && { at: f.deliveredAt, label: 'Delivered' },
-        f.shippedAt && { at: f.shippedAt, label: 'Handed to the courier' },
+        // NOT "handed to the courier": shippedAt is when the seller booked one.
+        // The parcel is still with them until a collection scan says otherwise.
+        f.shippedAt && { at: f.shippedAt, label: 'Courier booked' },
         order?.createdAt && { at: order.createdAt, label: 'Order placed' },
       ].filter(Boolean);
 
   const sorted = [...events].sort((a, b) => new Date(b.at) - new Date(a.at));
-  const next = NEXT_STEP[order?.status];
+  const next = nextStepFor(order?.status, scans.length > 0);
 
   if (!sorted.length && !next) return null;
 

@@ -53,8 +53,17 @@ const arrival = (order, fulfilment) => {
   if (fulfilment?.deliveredAt) return `Delivered on ${day(fulfilment.deliveredAt)}`;
   if (fulfilment?.expectedDeliveryAt) return `Arriving by ${day(fulfilment.expectedDeliveryAt)}`;
 
-  // No date from the courier yet. Say where it has got to instead of inventing one.
-  if (order.status === 'shipped') return 'On its way';
+  /*
+   * No date from the courier yet, so say where it has actually got to.
+   *
+   * "On its way" is wrong before collection: our `shipped` means the seller
+   * booked a courier, and the parcel can sit on their shelf for a day after
+   * that. A customer told it is on its way, who then waits, stops believing
+   * the page - which is the only thing this page has.
+   */
+  if (order.status === 'shipped') {
+    return fulfilment?.scans?.length ? 'On its way' : 'Booked with a courier';
+  }
   return 'Being prepared by the seller';
 };
 
