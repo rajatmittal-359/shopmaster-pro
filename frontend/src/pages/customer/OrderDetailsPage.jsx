@@ -1,309 +1,361 @@
-// frontend/src/pages/customer/OrderDetailsPage.jsx
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import Layout from '../../components/common/Layout';
-import { getOrderDetails, cancelOrder, returnOrder, cancelOrderItem } from '../../services/orderService';
-import { toastSuccess, toastError } from '../../utils/toast';
+import { Copy, Check } from 'lucide-react';
 
+import Layout from '../../components/common/Layout';
+import Button from '../../components/ui/Button';
+import Badge from '../../components/ui/Badge';
+import ShipmentTimeline, { readable } from '../../components/customer/ShipmentTimeline';
+import {
+  getOrderDetails,
+  cancelOrder,
+  returnOrder,
+  cancelOrderItem,
+} from '../../services/orderService';
+import { toastSuccess, toastError } from '../../utils/toast';
 import { orderRef } from '../../utils/orderRef';
 import { useConfirm } from '../../context/confirmContext';
+import { money } from '../../utils/money';
+
+/**
+ * One order, for the person waiting on it.
+ *
+ * WHAT THIS PAGE IS FOR
+ *   Somebody who has already paid opens it to ask one of three things: when is
+ *   it coming, where is it now, and something is wrong so what can I do. Items,
+ *   address and payment are reference - they are not why anyone came.
+ *
+ *   The old page opened with the order number, then "Status: Shipped", then
+ *   "Payment: PAID". That is the system's view of the order. "Shipped" answers
+ *   none of the three questions, and the reference number is for support, not
+ *   for the customer.
+ *
+ *   So the arrival date is the headline, the journey is the body, and the
+ *   reference details sit quietly underneath.
+ *
+ * WHAT IT REFUSES TO DO
+ *   It never states a date it does not have. Until the courier sends one there
+ *   is no "arriving by" line at all - a guessed date is worse than none, because
+ *   the whole point of the page is to be believed.
+ */
+
+/** The headline: the answer they came for, in the plainest words available. */
+const arrival = (order, fulfilment) => {
+  const day = (d) =>
+    new Date(d).toLocaleDateString('en-IN', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+    });
+
+  if (order.status === 'cancelled') return 'This order was cancelled';
+  if (order.status === 'returned') return 'This order was returned';
+  if (fulfilment?.deliveredAt) return `Delivered on ${day(fulfilment.deliveredAt)}`;
+  if (fulfilment?.expectedDeliveryAt) return `Arriving by ${day(fulfilment.expectedDeliveryAt)}`;
+
+  // No date from the courier yet. Say where it has got to instead of inventing one.
+  if (order.status === 'shipped') return 'On its way';
+  return 'Being prepared by the seller';
+};
+
+/** One quiet line under the headline: where it actually is. */
+const whereabouts = (order, fulfilment) => {
+  if (fulfilment?.ndrReason) return `Delivery attempted — ${fulfilment.ndrReason}`;
+  if (order.status === 'cancelled' && order.cancellationReason) {
+    return order.cancellationReason;
+  }
+  const latest = fulfilment?.scans?.[0];
+  if (latest?.activity) {
+    const place = latest.location ? ` · ${readable(latest.location)}` : '';
+    return `${readable(latest.activity)}${place}`;
+  }
+  // Couriers shout: "IN TRANSIT" under a headline is noise, not information.
+  if (fulfilment?.courierStatus) return readable(fulfilment.courierStatus);
+  if (order.status === 'pending') return 'It will be handed to a courier shortly.';
+  return null;
+};
+
 export default function OrderDetailsPage() {
-  const confirm = useConfirm();
   const { orderId } = useParams();
   const navigate = useNavigate();
-  const [order, setOrder] = useState(null);
-  /**
-   * Whether a return is still possible, straight from the API.
-   *
-   * Not derived here. The page used to show the Return button for any
-   * delivered order, so once the 7-day window had passed the customer clicked
-   * it and got a bare error toast. The server owns the rule; this just renders
-   * the answer.
-   */
-  const [returnWindow, setReturnWindow] = useState({ canReturn: false });
-  const [loading, setLoading] = useState(true);
-  const [actionLoading, setActionLoading] = useState(false);
-  const [cancellingItemId, setCancellingItemId] = useState(null); // ✅ NEW
+  const confirm = useConfirm();
 
-  const loadOrder = async () => {
+  const [order, setOrder] = useState(null);
+  const [rules, setRules] = useState({ canReturn: false, canCancel: false });
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const load = useCallback(async () => {
     try {
-      setLoading(true);
-      const res = await getOrderDetails(orderId);
-      setOrder(res.data.order);
-      setReturnWindow({
-        canReturn: res.data.canReturn,
-        closesAt: res.data.returnWindowClosesAt,
-        days: res.data.returnWindowDays,
+      const { data } = await getOrderDetails(orderId);
+      setOrder(data.order);
+      setRules({
+        canReturn: Boolean(data.canReturn),
+        canCancel: Boolean(data.canCancel),
+        returnWindowClosesAt: data.returnWindowClosesAt,
       });
     } catch (err) {
-      console.error(err);
-      toastError('Could not load this order');
-      toastError(err?.response?.data?.message || 'Failed to load order');
+      toastError(err?.response?.data?.message || 'Could not load that order');
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    loadOrder();
   }, [orderId]);
 
-  const handleCancel = async () => {
-    const sure = await confirm({
-      title: 'Cancel this entire order?',
-      message: 'Every item will be cancelled, and refunded if already paid.',
-      confirmLabel: 'Cancel order',
-      cancelLabel: 'Keep order',
-    });
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const run = async (action, ask, done) => {
+    const sure = await confirm(ask);
     if (!sure) return;
+    setBusy(true);
     try {
-      setActionLoading(true);
-      await cancelOrder(orderId);
-      toastSuccess('Order cancelled successfully');
-      navigate('/customer/orders');
+      await action();
+      toastSuccess(done);
+      await load();
     } catch (err) {
-      toastError(err?.response?.data?.message || 'Cancel failed');
+      toastError(err?.response?.data?.message || 'That did not work');
     } finally {
-      setActionLoading(false);
+      setBusy(false);
     }
   };
 
-  const handleReturn = async () => {
-    const sure = await confirm({
-      title: 'Return this order?',
-      message: 'We will start a return and refund once the goods are collected.',
-      confirmLabel: 'Start return',
-      danger: false,
-    });
-    if (!sure) return;
+  if (loading) {
+    return (
+      <Layout title="Order">
+        <div className="max-w-2xl mx-auto space-y-4">
+          <div className="h-28 bg-gray-200 rounded-xl animate-pulse" />
+          <div className="h-56 bg-gray-200 rounded-xl animate-pulse" />
+        </div>
+      </Layout>
+    );
+  }
+
+  if (!order) {
+    return (
+      <Layout title="Order">
+        <div className="max-w-2xl mx-auto text-center py-16">
+          <p className="text-gray-700">We could not find that order.</p>
+          <Button as="button" variant="secondary" className="mt-4" onClick={() => navigate('/customer/orders')}>
+            Back to my orders
+          </Button>
+        </div>
+      </Layout>
+    );
+  }
+
+  // One seller for now; the shape already allows more, and this picks the
+  // parcel rather than assuming the order only ever has one.
+  const fulfilment = order.fulfilments?.[0];
+  const address = order.shippingAddressId;
+  const tracking = fulfilment?.awb || order.shippingAwb;
+  const courier = fulfilment?.courierName || order.shippingCourierName;
+  const live = !['cancelled', 'returned', 'delivered'].includes(order.status);
+
+  const copyTracking = async () => {
     try {
-      setActionLoading(true);
-      await returnOrder(orderId);
-      toastSuccess('Order returned successfully');
-      navigate('/customer/orders');
-    } catch (err) {
-      toastError(err?.response?.data?.message || 'Return failed');
-    } finally {
-      setActionLoading(false);
+      await navigator.clipboard.writeText(tracking);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    } catch {
+      toastError('Could not copy — please select and copy it by hand');
     }
   };
-
-  // ✅ NEW: Cancel individual item
-  const handleCancelItem = async (itemId, itemName) => {
-    const sure = await confirm({
-      title: `Cancel "${itemName}"?`,
-      message: 'It will be removed from this order and refunded if already paid.',
-      confirmLabel: 'Cancel this item',
-      cancelLabel: 'Keep it',
-    });
-    if (!sure) return;
-    try {
-      setCancellingItemId(itemId);
-      await cancelOrderItem(orderId, itemId);
-      toastSuccess('Item cancelled successfully');
-      await loadOrder(); // Reload order to show updated data
-    } catch (err) {
-      toastError(err?.response?.data?.message || 'Failed to cancel item');
-    } finally {
-      setCancellingItemId(null);
-    }
-  };
-
-  if (loading) return <Layout title="Order Details"><p className="p-6">Loading...</p></Layout>;
-  if (!order) return <Layout title="Order Details"><p className="p-6">Order not found</p></Layout>;
-
-  const addr = order.shippingAddressId; // ✅ Works if backend populates it
 
   return (
-    <Layout title="Order Details">
-      <div className="max-w-4xl mx-auto p-4 space-y-6">
-        {/* ORDER HEADER */}
-        <div className="bg-white p-4 rounded-lg shadow">
-          <p className="text-sm font-semibold">Order {orderRef(order)}</p>
-          <p className="text-xs text-gray-500">{new Date(order.createdAt).toLocaleString()}</p>
-          <p className="text-sm mt-2">
-            Status: <strong className="capitalize">{order.status}</strong>
-          </p>
-          <p className="text-sm">
-            Payment: <strong className="uppercase">{order.paymentStatus}</strong>
-          </p>
-        </div>
-
-        {/* ITEMS */}
-        <div className="bg-white p-4 rounded-lg shadow">
-          <h2 className="font-semibold mb-3">Items</h2>
-          <div className="space-y-3">
-            {order.items.map(item => (
-              <div
-                key={item._id}
-                className={`flex justify-between items-start border-b pb-3 ${
-                  item.status === 'cancelled' ? 'opacity-60' : ''
-                }`}
-              >
-                <div className="flex items-center gap-3 flex-1">
-                  {item.productId?.images?.[0] && (
-                    <img
-                      src={item.productId.images[0]}
-                      alt={item.name}
-                      className="w-16 h-16 object-cover border rounded-lg"
-                    />
-                  )}
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">{item.name}</p>
-                    <p className="text-xs text-gray-500">₹{item.price} × {item.quantity}</p>
-                    {item.status === 'cancelled' && (
-                      <span className="inline-block mt-1 text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-lg">
-                        Cancelled
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <div className="flex flex-col items-end gap-2">
-                  <p className="text-sm font-semibold">₹{item.price * item.quantity}</p>
-                  
-                  {/* ✅ NEW: Cancel Item Button */}
-                  {order.status !== 'delivered' &&
-                    order.status !== 'cancelled' &&
-                    order.status !== 'returned' &&
-                    item.status !== 'cancelled' && (
-                      <button
-                        onClick={() => handleCancelItem(item._id, item.name)}
-                        disabled={cancellingItemId === item._id}
-                        className="text-xs text-red-600 hover:underline disabled:opacity-50"
-                      >
-                        {cancellingItemId === item._id ? 'Cancelling...' : 'Cancel Item'}
-                      </button>
-                    )}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Order Total */}
-          <div className="mt-4 pt-4 border-t space-y-1 text-sm">
-            <div className="flex justify-between">
-              <span className="text-gray-600">Subtotal</span>
-              <span>₹{order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0)}</span>
-            </div>
-            {order.shippingCharges > 0 && (
-              <div className="flex justify-between">
-                <span className="text-gray-600">Shipping</span>
-                <span className="text-positive">₹{order.shippingCharges}</span>
-              </div>
-            )}
-            <div className="flex justify-between font-bold text-lg border-t pt-2">
-              <span>Grand Total</span>
-              <span className="text-brand-ink">₹{order.totalAmount}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* SHIPPING ADDRESS - ✅ FIXED */}
-        <div className="bg-white p-4 rounded-lg shadow">
-          <h2 className="font-semibold mb-2">Shipping Address</h2>
-          {addr ? (
-            <div className="text-sm text-gray-700 space-y-1">
-              <p className="font-medium">{addr.label || 'Home'}</p>
-              <p>{addr.street}</p>
-              <p>{addr.city}, {addr.state} - {addr.zipCode}</p>
-              <p>{addr.country || 'India'}</p>
-              <p className="text-gray-600">Phone: {addr.phoneNumber}</p>
-            </div>
-          ) : (
-            <p className="text-sm text-gray-500">Shipping address not available.</p>
+    <Layout title="Order">
+      <div className="max-w-2xl mx-auto space-y-4">
+        {/* THE ANSWER. Everything else on this page is support for it. */}
+        <section className="bg-white rounded-xl border border-gray-200 p-5">
+          <h2 className="text-xl font-semibold text-gray-900">
+            {arrival(order, fulfilment)}
+          </h2>
+          {whereabouts(order, fulfilment) && (
+            <p className="text-sm text-gray-600 mt-1">{whereabouts(order, fulfilment)}</p>
           )}
-        </div>
 
-        {/* TRACKING INFO - ✅ IMPROVED */}
-        {order.trackingInfo && order.trackingInfo.courierName && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <h2 className="font-semibold mb-3 text-sm">Track Your Shipment</h2>
-            <div className="space-y-2 text-sm">
-              <p><strong>Courier:</strong> {order.trackingInfo.courierName}</p>
-              {order.trackingInfo.trackingNumber && (
-                <div className="flex flex-col gap-2">
-                  <strong>Tracking Number:</strong>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={order.trackingInfo.trackingNumber}
-                      readOnly
-                      className="flex-1 px-3 py-2 bg-white border rounded-lg text-sm font-mono"
-                    />
-                    <button
-                      onClick={() => {
-                        navigator.clipboard.writeText(order.trackingInfo.trackingNumber);
-                        toastSuccess('Tracking number copied!');
-                      }}
-                      className="px-4 py-2 text-xs bg-gray-200 hover:bg-gray-300 rounded-lg"
-                    >
-                      Copy
-                    </button>
-                  </div>
-                </div>
-              )}
-              {order.trackingInfo.shippedDate && (
-                <p>
-                  <strong>Shipped:</strong> {new Date(order.trackingInfo.shippedDate).toLocaleDateString()}
-                </p>
-              )}
-              {order.trackingInfo.courierName?.toLowerCase().includes('shiprocket') && (
-                <a
-                  href="https://www.shiprocket.in/shipment-tracking"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-block mt-2 px-4 py-2 bg-blue-500 text-white text-sm rounded-lg hover:bg-blue-600"
-                >
-                  Track on Shiprocket →
-                </a>
-              )}
+          {(live || fulfilment?.scans?.length) && (
+            <div className="mt-5">
+              <ShipmentTimeline order={order} fulfilment={fulfilment} />
             </div>
-          </div>
+          )}
+        </section>
+
+        {/* The courier, for anyone who wants to check with them directly. */}
+        {tracking && (
+          <section className="bg-white rounded-xl border border-gray-200 p-5">
+            <p className="text-sm text-gray-700">
+              {courier || 'Courier'}
+            </p>
+            <div className="flex items-center gap-2 mt-2">
+              <code className="flex-1 min-w-0 truncate text-sm bg-gray-50 border border-gray-200
+                               rounded-lg px-3 py-2 tabular-nums">
+                {tracking}
+              </code>
+              <Button variant="secondary" size="sm" onClick={copyTracking} aria-label="Copy tracking number">
+                {copied ? <Check size={15} /> : <Copy size={15} />}
+              </Button>
+            </div>
+            {order.shippingTrackingUrl && (
+              <a
+                href={order.shippingTrackingUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-block mt-3 text-sm text-brand-ink font-medium"
+              >
+                Track on the courier&rsquo;s site
+              </a>
+            )}
+          </section>
         )}
 
-        {/* ACTION BUTTONS */}
-        <div className="flex flex-col sm:flex-row gap-3">
-          <button
-            onClick={() => navigate('/customer/orders')}
-            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-          >
-            Back to Orders
-          </button>
+        {/* What they can do about it - and only what they actually can. */}
+        {(rules.canCancel || rules.canReturn) && (
+          <section className="bg-white rounded-xl border border-gray-200 p-5">
+            <div className="flex flex-wrap gap-2">
+              {rules.canCancel && (
+                <Button
+                  variant="destructive"
+                  loading={busy}
+                  onClick={() =>
+                    run(
+                      () => cancelOrder(orderId),
+                      {
+                        title: 'Cancel this order?',
+                        message:
+                          order.paymentStatus === 'paid'
+                            ? 'You will be refunded in full, back to the way you paid.'
+                            : 'Nothing has been charged, so there is nothing to refund.',
+                        confirmLabel: 'Cancel the order',
+                        cancelLabel: 'Keep it',
+                      },
+                      'Order cancelled'
+                    )
+                  }
+                >
+                  Cancel this order
+                </Button>
+              )}
 
-          {['pending', 'processing'].includes(order.status) && (
-            <button
-              onClick={handleCancel}
-              disabled={actionLoading}
-              className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:opacity-50"
-            >
-              {actionLoading ? 'Cancelling...' : 'Cancel Entire Order'}
-            </button>
-          )}
+              {rules.canReturn && (
+                <Button
+                  variant="secondary"
+                  loading={busy}
+                  onClick={() =>
+                    run(
+                      () => returnOrder(orderId),
+                      {
+                        title: 'Return this order?',
+                        message: 'We will arrange collection and refund you once it reaches the seller.',
+                        confirmLabel: 'Start the return',
+                        cancelLabel: 'Keep it',
+                      },
+                      'Return started'
+                    )
+                  }
+                >
+                  Return this order
+                </Button>
+              )}
+            </div>
 
-          {order.status === 'delivered' && returnWindow.canReturn && (
-            <button
-              onClick={handleReturn}
-              disabled={actionLoading}
-              className="flex-1 px-4 py-2 bg-brand-fill text-on-brand rounded-lg hover:bg-brand-fill-hover disabled:opacity-50"
-            >
-              {actionLoading ? 'Returning...' : 'Return Order'}
-            </button>
-          )}
+            {rules.canReturn && rules.returnWindowClosesAt && (
+              <p className="text-xs text-gray-500 mt-3">
+                You can return this until{' '}
+                {new Date(rules.returnWindowClosesAt).toLocaleDateString('en-IN', {
+                  day: 'numeric',
+                  month: 'long',
+                })}
+                .
+              </p>
+            )}
+          </section>
+        )}
 
-          {order.status === 'delivered' && !returnWindow.canReturn && (
-            <p className="flex-1 px-4 py-2 text-sm text-gray-500 text-center">
-              The {returnWindow.days}-day return window closed
-              {returnWindow.closesAt
-                ? ` on ${new Date(returnWindow.closesAt).toLocaleDateString('en-IN', {
-                    day: 'numeric',
-                    month: 'short',
-                    year: 'numeric',
-                  })}`
-                : ''}
-              .
+        {/* Reference. Quiet on purpose: true, and not why anyone came. */}
+        <section className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
+          <div>
+            <p className="text-xs text-gray-500 mb-2">
+              {order.items.length} item{order.items.length > 1 ? 's' : ''}
             </p>
+            <ul className="space-y-2">
+              {order.items.map((item) => (
+                <li key={item._id} className="flex items-start justify-between gap-3 text-sm">
+                  <span className="min-w-0">
+                    <span className="text-gray-800">{item.name}</span>
+                    <span className="block text-xs text-gray-500">
+                      {item.quantity} × {money(item.price)}
+                      {item.status === 'cancelled' && ' · cancelled'}
+                    </span>
+                  </span>
+
+                  <span className="flex items-center gap-3 shrink-0">
+                    <span className="tabular-nums text-gray-800">
+                      {money(item.price * item.quantity)}
+                    </span>
+                    {/* One item of several, and only while the whole order could
+                        still be cancelled anyway. */}
+                    {rules.canCancel && order.items.length > 1 && item.status !== 'cancelled' && (
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() =>
+                          run(
+                            () => cancelOrderItem(orderId, item._id),
+                            {
+                              title: `Remove ${item.name}?`,
+                              message: 'The rest of the order carries on, and you are refunded for this item.',
+                              confirmLabel: 'Remove it',
+                              cancelLabel: 'Keep it',
+                            },
+                            'Item cancelled'
+                          )
+                        }
+                        className="text-xs text-red-600 hover:underline disabled:opacity-50"
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </span>
+                </li>
+              ))}
+            </ul>
+
+            <div className="flex justify-between text-sm font-semibold text-gray-900 border-t border-gray-100 mt-3 pt-3">
+              <span>Total</span>
+              <span className="tabular-nums">{money(order.totalAmount)}</span>
+            </div>
+          </div>
+
+          {address && (
+            <div className="border-t border-gray-100 pt-4">
+              <p className="text-xs text-gray-500 mb-1">Delivering to</p>
+              <address className="not-italic text-sm text-gray-700">
+                {address.street}
+                <br />
+                {address.city}, {address.state} {address.zipCode}
+                <br />
+                {address.phoneNumber}
+              </address>
+            </div>
           )}
-        </div>
+
+          <div className="border-t border-gray-100 pt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-gray-500">
+            <span>{orderRef(order)}</span>
+            <span>
+              {new Date(order.createdAt).toLocaleDateString('en-IN', {
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric',
+              })}
+            </span>
+            <span>
+              {order.paymentMethod === 'cod' ? 'Cash on delivery' : 'Paid online'}
+            </span>
+            <Badge status={order.paymentStatus}>{order.paymentStatus}</Badge>
+          </div>
+        </section>
       </div>
     </Layout>
   );
