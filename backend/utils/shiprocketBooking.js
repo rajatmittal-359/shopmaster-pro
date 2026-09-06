@@ -112,7 +112,11 @@ const bookShipment = async (order, address, weightKg) => {
     billing_pincode: address.zipCode,
     billing_state: address.state,
     billing_country: address.country || 'India',
-    billing_email: address.email || process.env.SENDGRID_FROM_EMAIL,
+    // Shiprocket wants an address to reach the customer on. This still named
+    // SENDGRID_FROM_EMAIL months after the move to Brevo - it happened to
+    // resolve because the dead key was never deleted from .env, and would have
+    // become an empty field the day it was tidied away.
+    billing_email: address.email || process.env.BREVO_FROM_EMAIL,
     billing_phone: address.phoneNumber,
     shipping_is_billing: true,
 
