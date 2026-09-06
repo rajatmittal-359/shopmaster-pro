@@ -144,11 +144,19 @@ const bookShipment = async (order, address, weightKg, attempt = 1) => {
     billing_pincode: address.zipCode,
     billing_state: address.state,
     billing_country: address.country || 'India',
-    // Shiprocket wants an address to reach the customer on. This still named
-    // SENDGRID_FROM_EMAIL months after the move to Brevo - it happened to
-    // resolve because the dead key was never deleted from .env, and would have
-    // become an empty field the day it was tidied away.
-    billing_email: address.email || process.env.BREVO_FROM_EMAIL,
+    /*
+     * The address to reach the CUSTOMER on.
+     *
+     * An Address has no email field, so `address.email` was always undefined
+     * and this fell through to the shop's own no-reply address on every
+     * shipment - visible in Shiprocket as the buyer's email. Any notice the
+     * courier sends goes to a mailbox nobody reads.
+     *
+     * (Fixing the SENDGRID_FROM_EMAIL name earlier only corrected which wrong
+     * address it used. The customer's real one is on the order.)
+     */
+    billing_email:
+      order.customerId?.email || address.email || process.env.BREVO_FROM_EMAIL,
     billing_phone: address.phoneNumber,
     shipping_is_billing: true,
 

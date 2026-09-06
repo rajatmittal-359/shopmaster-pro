@@ -899,10 +899,11 @@ exports.shipOrder = async (req, res) => {
       'items.sellerId': req.user._id,
     })
       .populate('items.productId', 'weight sku')
-      // The courier needs a PERSON to hand the parcel to. Without this the
-      // booking fell back to the address nickname and shipped parcels
-      // addressed to "Home" or "Relative (test delivery)".
-      .populate('customerId', 'name');
+      // The courier needs a PERSON to hand the parcel to, and an address to
+      // reach them on. Without this the booking fell back to the address
+      // nickname ("Home", "Relative (test delivery)") and to the shop's own
+      // no-reply email.
+      .populate('customerId', 'name email');
 
     if (!order) {
       return res.status(404).json({ success: false, message: 'Order not found' });
