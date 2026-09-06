@@ -43,3 +43,7 @@ brevodomain.txt
 ARCHITECTURE-GAP-ANALYSIS.md
 CODE-STRUCTURE-REVIEW.md
 UI-UX-GAP-ANALYSIS.md
+
+# The undo record for draftProductDescriptions.js - generated, and local to
+# whoever ran it. Re-running rewrites it wholesale.
+backend/drafted-descriptions.json
