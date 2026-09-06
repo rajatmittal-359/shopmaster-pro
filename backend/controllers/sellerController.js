@@ -870,6 +870,9 @@ return res.json({
 
 const shipment = require('../utils/shipmentBooking');
 const { cancelOrderFor } = require('../utils/cancelOrder');
+const { shippingNotificationEmail } = require('../utils/emailTemplates');
+const sendSafeEmail = require('../utils/sendSafeEmail');
+const User = require('../models/User');
 const Address = require('../models/Address');
 
 /**
@@ -953,6 +956,38 @@ exports.shipOrder = async (req, res) => {
       },
       { arrayFilters: [{ 'mine.sellerId': req.user._id }] }
     );
+
+    /*
+     * Tell the customer their parcel is moving.
+     *
+     * This path sent NOTHING. The shipping email existed, but only the manual
+     * "save tracking" form ever sent it - so a seller who used the actual
+     * button, the one that books the courier, left the customer with no word
+     * from the shop at all. They would learn about it from the courier's own
+     * SMS, which is how a shop teaches people that it is not the place to look.
+     *
+     * Non-blocking on purpose: a booking that succeeded must not be reported
+     * as failed because an email did not go out.
+     */
+    setImmediate(async () => {
+      try {
+        const customer = await User.findById(order.customerId).select('name email');
+        if (!customer) return;
+
+        const { subject, html, text } = shippingNotificationEmail(
+          { ...order.toObject(), _id: order._id, orderNumber: order.orderNumber },
+          customer,
+          {
+            courierName: result.update.shippingCourierName,
+            trackingNumber: result.update.shippingAwb,
+            shippedDate: new Date(),
+          }
+        );
+        await sendSafeEmail({ toUserId: customer._id, subject, html, text });
+      } catch (err) {
+        console.error('Shipping email failed for', order.orderNumber, '-', err.message);
+      }
+    });
 
     res.json({
       success: true,
