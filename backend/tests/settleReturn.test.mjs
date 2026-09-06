@@ -242,3 +242,129 @@ describe('a seller refusing a return', () => {
     expect(order.fulfilments[0].returnNote).toMatch(/empty/i);
   });
 });
+
+/**
+ * An admin deciding a dispute for the customer.
+ *
+ * THE BUG THIS DEFENDS AGAINST
+ *   adminController set returnStage to 'received' on the disputed parcels and
+ *   THEN called receiveReturn - which only picks up returns still sitting at
+ *   'requested' or 'picked'. So it found nothing, every single time, and the
+ *   400 it came back with was swallowed because only a 500 was surfaced.
+ *
+ *   Reproduced on 7 Sep 2026 before the fix:
+ *     receiveReturn -> {ok:false, status:400, "There is no open return here"}
+ *     refunds raised: 0
+ *
+ *   The admin ruled for the customer, the parcel was marked returned, and not
+ *   a rupee moved. Nothing on any screen said so.
+ *
+ * The rules being defended:
+ *   1. an admin can settle a parcel whatever stage its return is at
+ *   2. stock only goes back when the goods are actually back - and the admin
+ *      says which, because the record cannot tell the two disputes apart
+ *   3. a settlement that moved no money says so instead of claiming success
+ */
+describe('an admin settling a disputed parcel', () => {
+  const disputed = (over = {}) =>
+    orderWith({
+      fulfilments: [
+        {
+          sellerId: SELLER,
+          status: 'delivered',
+          deliveredAt: new Date(),
+          // A DELIVERY dispute: no return was ever opened on it.
+          returnStage: null,
+          disputeStatus: 'open',
+          returnedAt: null,
+          returnNote: null,
+          ...over,
+        },
+      ],
+    });
+
+  it('refunds a parcel that has no open return, which is what silently failed before', async () => {
+    const order = disputed();
+
+    const result = await receiveReturn(order, {
+      by: 'admin',
+      actorId: ADMIN,
+      parcels: order.fulfilments,
+      restock: false,
+    });
+
+    expect(result.ok).toBe(true);
+    expect(refundSpy).toHaveBeenCalledTimes(1);
+    expect(refundSpy.mock.calls[0][1]).toBe(2300);
+    expect(order.paymentStatus).toBe('refunded');
+  });
+
+  it('settles one the seller had refused, too', async () => {
+    const order = disputed({ returnStage: 'rejected', returnNote: 'Box was empty' });
+
+    const result = await receiveReturn(order, {
+      by: 'admin',
+      actorId: ADMIN,
+      parcels: order.fulfilments,
+      restock: true,
+    });
+
+    expect(result.ok).toBe(true);
+    expect(refundSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('leaves stock alone when the parcel was simply lost', async () => {
+    const order = disputed();
+
+    await receiveReturn(order, {
+      by: 'admin',
+      actorId: ADMIN,
+      parcels: order.fulfilments,
+      restock: false,
+    });
+
+    // Counting a lost parcel back in sells an item that is not on the shelf,
+    // and disappoints a second customer to tidy up after the first.
+    expect(stockSpy).not.toHaveBeenCalled();
+  });
+
+  it('puts stock back when the seller does have the item', async () => {
+    const order = disputed({ returnStage: 'rejected' });
+
+    await receiveReturn(order, {
+      by: 'admin',
+      actorId: ADMIN,
+      parcels: order.fulfilments,
+      restock: true,
+    });
+
+    expect(stockSpy).toHaveBeenCalledTimes(1);
+    expect(stockSpy.mock.calls[0][0]).toMatchObject({ type: 'return' });
+  });
+});
+
+describe('a return on an order that was paid in cash', () => {
+  it('says the money still has to be sent, instead of claiming it was', async () => {
+    const order = orderWith({
+      paymentMethod: 'cod',
+      paymentStatus: 'paid',
+      razorpayPaymentId: null,
+    });
+
+    const result = await receiveReturn(order, {
+      by: 'seller',
+      actorId: SELLER,
+      sellerId: SELLER,
+    });
+
+    // There is no card to send it back down. The returns page promises a bank
+    // transfer, and somebody has to make it - saying "the refund has been
+    // raised" told a seller the matter was closed while the customer was still
+    // owed every rupee.
+    expect(result.ok).toBe(true);
+    expect(result.refundRaised).toBe(false);
+    expect(result.message).toMatch(/by hand|bank account/i);
+    expect(result.message).toContain('2300');
+    expect(refundSpy).not.toHaveBeenCalled();
+  });
+});

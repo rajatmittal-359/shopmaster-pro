@@ -47,10 +47,27 @@ const settleable = (order, sellerId) =>
  * @param {'seller'|'admin'} opts.by
  * @param {string} opts.actorId          for the inventory audit trail
  * @param {string} [opts.sellerId]       when a SELLER settles: only their parcel
+ * @param {Array}  [opts.parcels]        settle THESE, rather than the open returns
+ * @param {boolean} [opts.restock=true]  whether the goods are genuinely back
  * @returns {Promise<{ok: boolean, status?: number, message: string}>}
  */
-const receiveReturn = async (order, { by, actorId, sellerId }) => {
-  const parcels = settleable(order, sellerId);
+const receiveReturn = async (order, { by, actorId, sellerId, parcels: given, restock = true }) => {
+  /*
+   * `given` is how an ADMIN settling a dispute gets in.
+   *
+   * A dispute decided for the customer is a refund, but the parcel it is about
+   * is rarely sitting at 'requested' or 'picked' - a delivery dispute has no
+   * return on it at all, and a refused-return dispute reads 'rejected'. Left
+   * to settleable() the admin's call found nothing to settle and refunded
+   * nobody, silently, because only a 500 was surfaced. That was the bug.
+   *
+   * `restock` is separate because the two shapes of dispute want opposite
+   * answers, and neither is guessable from the record:
+   *   "the parcel never arrived" - the goods are gone, stock must NOT go back
+   *   "the seller refused my return" - the goods are with the seller, it must
+   * Only the person deciding the dispute knows which, so they are asked.
+   */
+  const parcels = given && given.length ? given : settleable(order, sellerId);
   if (!parcels.length) {
     return { ok: false, status: 400, message: 'There is no open return here' };
   }
@@ -105,6 +122,21 @@ const receiveReturn = async (order, { by, actorId, sellerId }) => {
     ? lines.reduce((sum, i) => sum + i.price * i.quantity, 0)
     : order.totalAmount;
 
+  /*
+   * Whether money actually moved.
+   *
+   * Only a card or UPI payment can be sent back down the wire it came up. On a
+   * COD order the customer handed cash to a rider, there is nothing to reverse,
+   * and the refund is a bank transfer somebody has to make by hand - which is
+   * exactly what the returns page promises: "we collect your bank details and
+   * transfer the refund there".
+   *
+   * This used to answer "the refund has been raised" either way, which told a
+   * seller settling a COD return that the matter was closed when the customer
+   * was still owed every rupee, with nobody assigned to send it.
+   */
+  let refundRaised = false;
+
   // ---- refund first, and abort if it fails --------------------------------
   // Same order as a cancellation: goods marked back with no refund raised is
   // the one state with nothing left to retry from.
@@ -130,6 +162,7 @@ const receiveReturn = async (order, { by, actorId, sellerId }) => {
       order.refundAmount = refundAmount;
       order.refundedAt = new Date();
       if (!isPartial) order.paymentStatus = 'refunded';
+      refundRaised = true;
     } catch (refundErr) {
       console.error('Return refund failed for', order.orderNumber, '-', refundErr.message);
       return {
@@ -153,14 +186,16 @@ const receiveReturn = async (order, { by, actorId, sellerId }) => {
    * with an ordinary stock adjustment, which is a decision made by somebody who
    * has the thing in their hand rather than by this function.
    */
-  for (const item of lines) {
-    await inventory.applyInventoryChange({
-      productId: item.productId,
-      quantity: item.quantity,
-      type: 'return',
-      orderId: order._id,
-      performedBy: actorId,
-    });
+  if (restock) {
+    for (const item of lines) {
+      await inventory.applyInventoryChange({
+        productId: item.productId,
+        quantity: item.quantity,
+        type: 'return',
+        orderId: order._id,
+        performedBy: actorId,
+      });
+    }
   }
 
   const now = new Date();
@@ -198,8 +233,25 @@ const receiveReturn = async (order, { by, actorId, sellerId }) => {
     };
   }
 
+  if (!refundRaised) {
+    /*
+     * Nothing was sent back automatically. Say so plainly and say who has to
+     * act, rather than reporting a success that leaves the customer unpaid.
+     */
+    const owed = isPartial ? refundAmount : order.totalAmount;
+    return {
+      ok: true,
+      refundRaised: false,
+      message:
+        order.paymentMethod === 'cod'
+          ? `Recorded. This was a cash-on-delivery order, so nothing could be sent back automatically - RS ${owed} has to be transferred to the customer's bank account by hand.`
+          : `Recorded. No online payment was found on this order, so RS ${owed} has to be returned to the customer by hand.`,
+    };
+  }
+
   return {
     ok: true,
+    refundRaised: true,
     message:
       by === 'admin'
         ? 'Return accepted and the refund has been raised'

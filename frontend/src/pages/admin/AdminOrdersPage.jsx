@@ -337,9 +337,37 @@ export default function AdminOrdersPage() {
         }
         hint={
           deciding?.inFavourOf === 'customer'
-            ? 'The delivery record is corrected and the customer is refunded.'
+            ? 'The delivery record is corrected and the customer is refunded in full.'
             : 'The sale stands and the seller is paid as normal.'
         }
+        /*
+          Asked only when the customer wins, because it is only then that stock
+          moves. The record cannot answer it: a dispute about a parcel that
+          never arrived and a dispute about a return the seller refused look
+          the same here, and they want opposite answers. The referee is the one
+          person who knows.
+
+          "No" is first, and therefore the default. Putting stock back that is
+          not on the shelf sells an item the shop has not got, and disappoints
+          a second customer to tidy up after the first.
+        */
+        options={
+          deciding?.inFavourOf === 'customer'
+            ? [
+                {
+                  value: 'no',
+                  label: 'No - the goods are not back',
+                  hint: 'The parcel was lost, or the customer still has it. Stock stays as it is.',
+                },
+                {
+                  value: 'yes',
+                  label: 'Yes - the seller has the item',
+                  hint: 'It was returned and refused, or it came back some other way. Stock goes back up.',
+                },
+              ]
+            : null
+        }
+        optionsLabel="Has the item come back to the seller?"
         label="What did you decide, and why?"
         placeholder={
           deciding?.inFavourOf === 'customer'
@@ -351,12 +379,13 @@ export default function AdminOrdersPage() {
         confirmVariant={deciding?.inFavourOf === 'customer' ? 'destructive' : 'primary'}
         minLength={10}
         busy={busy}
-        onSubmit={async (resolution) => {
+        onSubmit={async (resolution, goodsBack) => {
           setBusy(true);
           try {
             const { data } = await resolveDispute(deciding.order._id, {
               inFavourOf: deciding.inFavourOf,
               resolution,
+              goodsReturned: goodsBack === 'yes',
             });
             toastSuccess(data.message || 'Decision recorded');
             setDeciding(null);

@@ -716,7 +716,7 @@ const returnsUtil = require('../utils/settleReturn');
 exports.resolveDispute = async (req, res) => {
   try {
     const { orderId } = req.params;
-    const { sellerId, inFavourOf, resolution } = req.body || {};
+    const { sellerId, inFavourOf, resolution, goodsReturned } = req.body || {};
 
     if (!mongoose.isValidObjectId(orderId)) {
       return res.status(400).json({ success: false, message: 'Invalid order id' });
@@ -781,17 +781,42 @@ exports.resolveDispute = async (req, res) => {
         f.replacementStage = null;
       }
 
+      /*
+       * THE BUG THIS REPLACES
+       *   This called receiveReturn without saying which parcels it meant, and
+       *   receiveReturn only picks up returns at 'requested' or 'picked'. The
+       *   loop above had already moved them to 'received', and a dispute about
+       *   a DELIVERY has no return stage at all - so it found nothing every
+       *   single time and refunded nobody. The 400 it came back with was
+       *   swallowed, because only a 500 was surfaced.
+       *
+       *   Reproduced 7 Sep 2026:
+       *     receiveReturn -> {ok:false, status:400, "There is no open return here"}
+       *     refunds raised: 0
+       *
+       *   So the admin ruled for the customer, the parcel was marked returned,
+       *   and not a rupee moved. Nothing on any screen said so.
+       *
+       * `goodsReturned` is asked of the admin rather than guessed, because the
+       * two shapes of dispute want opposite answers and the record cannot tell
+       * them apart:
+       *   "it never arrived"        - the goods are gone; stock must NOT go back
+       *   "they refused my return"  - the goods are with the seller; it must
+       * Defaults to false: putting stock back that is not there sells an item
+       * the shop does not have, and disappoints a second customer.
+       */
       const result = await returnsUtil.receiveReturn(order, {
         by: 'admin',
         actorId: req.user._id,
         sellerId: sellerId || undefined,
-      }).catch(() => null);
+        parcels: open,
+        restock: goodsReturned === true,
+      });
 
-      // receiveReturn refuses when no return is open, which is the case when
-      // this dispute was about a delivery rather than a return. The status
-      // changes above still stand and are saved below.
-      if (result && !result.ok && result.status === 500) {
-        return res.status(500).json({ success: false, message: result.message });
+      if (!result.ok) {
+        return res
+          .status(result.status || 400)
+          .json({ success: false, message: result.message });
       }
     }
 
