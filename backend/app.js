@@ -94,6 +94,18 @@ app.use('/api/pincode', require('./routes/pincodeRoutes'));
  */
 app.get('/api/feed/google.xml', require('./controllers/feedController').googleProductFeed);
 
+/*
+ * The sitemap, live from the catalogue.
+ *
+ * Served at BOTH paths on purpose. Crawlers and robots.txt expect a sitemap at
+ * the site root, while everything else this API serves lives under /api - so
+ * the root path is what the frontend rewrites onto, and the /api one is what a
+ * human debugging it will guess. Same handler, so they cannot drift.
+ */
+const { sitemap } = require('./controllers/sitemapController');
+app.get('/sitemap.xml', sitemap);
+app.get('/api/sitemap.xml', sitemap);
+
 // Courier tracking updates. Named "logistics" on purpose - Shiprocket will not
 // register a webhook URL containing "shiprocket", "sr" or "kr".
 app.use('/api/logistics', require('./routes/logisticsRoutes'));
