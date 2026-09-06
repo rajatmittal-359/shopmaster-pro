@@ -276,6 +276,29 @@ const orderSchema = new mongoose.Schema(
     },
 
     /**
+     * Who cancelled, and why.
+     *
+     * All three can cancel and their reasons are not interchangeable: a
+     * customer changed their mind, a seller could not supply, the platform
+     * stepped in. Without this the order only records THAT it was cancelled,
+     * so a seller who keeps cancelling for being out of stock is invisible -
+     * and that is exactly the behaviour a marketplace has to be able to see.
+     */
+    cancelledBy: {
+      type: String,
+      enum: ['customer', 'seller', 'admin'],
+      default: null
+    },
+    cancelledAt: {
+      type: Date,
+      default: null
+    },
+    cancellationReason: {
+      type: String,
+      default: null
+    },
+
+    /**
      * Whether this order is currently holding inventory, and until when.
      *
      *   none      COD, or a prepaid order whose hold was never taken

@@ -48,6 +48,10 @@ router.delete('/categories/:categoryId', deleteCategory);
 router.get('/orders', getAllOrders);
 router.get('/orders/:orderId', getOrderById);
 
+// The platform stepping in. See cancelOrderAsAdmin - the admin could read
+// orders and do nothing about them.
+router.post('/orders/:orderId/cancel', require('../controllers/adminController').cancelOrderAsAdmin);
+
 // Analytics
 router.get('/analytics', getAnalytics);
 

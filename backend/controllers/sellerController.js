@@ -855,6 +855,7 @@ return res.json({
 // --------------------------------------------------------------- shipping
 
 const shipment = require('../utils/shipmentBooking');
+const { cancelOrderFor } = require('../utils/cancelOrder');
 const Address = require('../models/Address');
 
 /**
@@ -984,5 +985,64 @@ exports.cancelShipment = async (req, res) => {
     res.json({ success: true, message: 'Shipment cancelled; the order is back to processing' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+/**
+ * A seller calling off their own part of an order.
+ *
+ * There was no way to do this. A seller who found an item out of stock, or
+ * broken, or simply could not supply it had one button - "cancel shipment" -
+ * which calls off the COURIER and leaves the order sitting there paid for and
+ * undeliverable, forever.
+ *
+ * Every marketplace lets a seller cancel, and treats it as the seller's fault:
+ * the customer is refunded in full and the reason is recorded against the
+ * seller. That last part is the point - a seller who is repeatedly out of stock
+ * is a problem a marketplace has to be able to SEE, which is why the reason is
+ * required here and not optional.
+ */
+exports.cancelOwnLines = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const { reason } = req.body || {};
+
+    if (!mongoose.isValidObjectId(orderId)) {
+      return res.status(400).json({ success: false, message: 'Invalid order id' });
+    }
+    if (!reason || String(reason).trim().length < 3) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please say why you are cancelling - the customer is told, and it is recorded against your account',
+      });
+    }
+
+    const order = await Order.findOne({ _id: orderId, 'items.sellerId': req.user._id });
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Order not found' });
+    }
+
+    // A courier already carrying the parcel has to be called off first,
+    // otherwise a rider collects goods for an order that no longer exists.
+    if (order.shippingAwb || order.shippingOrderId) {
+      return res.status(409).json({
+        success: false,
+        message: 'Cancel the courier booking first, then cancel the order',
+      });
+    }
+
+    const result = await cancelOrderFor(order, {
+      by: 'seller',
+      actorId: req.user._id,
+      reason: String(reason).trim(),
+      sellerId: req.user._id,
+    });
+
+    if (!result.ok) {
+      return res.status(result.status || 400).json({ success: false, message: result.message });
+    }
+    return res.json({ success: true, message: result.message });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
   }
 };

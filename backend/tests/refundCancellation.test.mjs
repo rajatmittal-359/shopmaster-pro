@@ -32,7 +32,9 @@ const token = () =>
 const originals = {};
 let orderDoc;
 let refundSpy;
-const razorpayPath = require.resolve('razorpay');
+// The gateway moved behind utils/refund.js so it can be stood in front of
+// without reaching into the module cache for a third-party package.
+const refunds = require('../utils/refund');
 
 const SELLER_ID = new mongoose.Types.ObjectId();
 
@@ -88,7 +90,7 @@ beforeEach(() => {
   originals.orderFindOne = Order.findOne;
   originals.productFindById = Product.findById;
   originals.inventoryCreate = InventoryLog.create;
-  originals.razorpayExports = require.cache[razorpayPath].exports;
+  originals.refundPayment = refunds.refundPayment;
 
   User.findById = vi.fn((id) =>
     chainableQuery({
@@ -109,15 +111,10 @@ beforeEach(() => {
   );
   InventoryLog.create = vi.fn(async () => ({}));
 
-  // Stub the Razorpay SDK at the genuine third-party boundary. The controllers
-  // require('razorpay') lazily inside the refund branch, so replacing the
-  // cached module export is enough - no live credentials, no network.
+  // One module boundary instead of a patched constructor, and it takes rupees:
+  // the paise conversion now lives in utils/refund.js, not in every caller.
   refundSpy = vi.fn(async () => ({ id: 'rfnd_TEST123' }));
-  require.cache[razorpayPath].exports = class FakeRazorpay {
-    constructor() {
-      this.payments = { refund: refundSpy };
-    }
-  };
+  refunds.refundPayment = refundSpy;
 });
 
 afterEach(() => {
@@ -125,7 +122,7 @@ afterEach(() => {
   Order.findOne = originals.orderFindOne;
   Product.findById = originals.productFindById;
   InventoryLog.create = originals.inventoryCreate;
-  require.cache[razorpayPath].exports = originals.razorpayExports;
+  refunds.refundPayment = originals.refundPayment;
 });
 
 const cancelOrder = () =>
@@ -148,7 +145,7 @@ describe('cancelling a paid prepaid order', () => {
     expect(refundSpy).toHaveBeenCalledTimes(1);
     // Refund is requested in paise, for the full original value.
     expect(refundSpy.mock.calls[0][0]).toBe('pay_CAPTURED123');
-    expect(refundSpy.mock.calls[0][1].amount).toBe(ORIGINAL_TOTAL * 100);
+    expect(refundSpy.mock.calls[0][1]).toBe(ORIGINAL_TOTAL);
   });
 
   it('preserves the original financial total instead of zeroing it', async () => {
@@ -174,7 +171,7 @@ describe('cancelling a paid prepaid order', () => {
     const res = await cancelOrder();
 
     expect(res.status).toBe(500);
-    expect(res.body.message).toMatch(/refund initiation failed/i);
+    expect(res.body.message).toMatch(/refund could not be started/i);
     // Nothing was persisted: the order is still live and still worth its total.
     expect(orderDoc.__saveCount).toBeUndefined();
     expect(orderDoc.totalAmount).toBe(ORIGINAL_TOTAL);
@@ -208,7 +205,7 @@ describe('cancelling an unpaid COD order', () => {
     const res = await cancelOrder();
 
     expect(res.status).toBe(400);
-    expect(res.body.message).toMatch(/cannot cancel/i);
+    expect(res.body.message).toMatch(/cannot be cancelled/i);
     expect(orderDoc.totalAmount).toBe(ORIGINAL_TOTAL);
   });
 });
@@ -222,7 +219,7 @@ describe('returning a delivered prepaid order', () => {
 
     expect(res.status).toBe(200);
     expect(refundSpy).toHaveBeenCalledTimes(1);
-    expect(refundSpy.mock.calls[0][1].amount).toBe(ORIGINAL_TOTAL * 100);
+    expect(refundSpy.mock.calls[0][1]).toBe(ORIGINAL_TOTAL);
     expect(orderDoc.status).toBe('returned');
     expect(orderDoc.totalAmount).toBe(ORIGINAL_TOTAL);
     expect(orderDoc.paymentStatus).toBe('refunded');

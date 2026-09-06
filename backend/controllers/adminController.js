@@ -6,6 +6,7 @@ const Seller = require('../models/Seller');
 const Category = require('../models/Category');
 const Product = require('../models/Product');
 const Order = require('../models/Order');
+const { cancelOrderFor } = require('../utils/cancelOrder');
 
 /**
  * SELLER MANAGEMENT
@@ -596,5 +597,60 @@ exports.getAnalytics = async (req, res) => {
     });
   } catch (error) {
     sendError(res, error);
+  }
+};
+
+/**
+ * The platform calling off an order.
+ *
+ * The admin could LOOK at orders and do nothing about them - there were two
+ * read endpoints and no way to act. That is the one role that has to be able
+ * to act: when a seller has gone quiet, when a customer cannot get through to
+ * them, when something has plainly gone wrong, somebody has to be able to
+ * refund the customer and close it.
+ *
+ * The whole order goes, not one seller's part: an admin stepping in is the
+ * platform overriding everyone, and leaving half of it live would be a worse
+ * outcome than either cancelling or not.
+ */
+exports.cancelOrderAsAdmin = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const { reason } = req.body || {};
+
+    if (!mongoose.isValidObjectId(orderId)) {
+      return res.status(400).json({ success: false, message: 'Invalid order id' });
+    }
+    if (!reason || String(reason).trim().length < 3) {
+      return res.status(400).json({
+        success: false,
+        message: 'A reason is required - it is shown to the customer and kept on the order',
+      });
+    }
+
+    const order = await Order.findById(orderId);
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Order not found' });
+    }
+
+    if (order.shippingAwb || order.shippingOrderId) {
+      return res.status(409).json({
+        success: false,
+        message: 'A courier is booked for this order. It has to be called off before the order can be cancelled.',
+      });
+    }
+
+    const result = await cancelOrderFor(order, {
+      by: 'admin',
+      actorId: req.user._id,
+      reason: String(reason).trim(),
+    });
+
+    if (!result.ok) {
+      return res.status(result.status || 400).json({ success: false, message: result.message });
+    }
+    return res.json({ success: true, message: result.message });
+  } catch (error) {
+    return sendError(res, error);
   }
 };

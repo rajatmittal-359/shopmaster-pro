@@ -14,6 +14,8 @@ const Product = require("../models/Product");
 const mongoose = require('mongoose'); 
 const Address = require('../models/Address'); 
 const { applyInventoryChange } = require("./inventoryController");
+const { cancelOrderFor } = require('../utils/cancelOrder');
+const refunds = require('../utils/refund');
 const InventoryLog = require("../models/Inventory");
 
 // Imported as a module object rather than destructured so the Shiprocket call
@@ -398,91 +400,28 @@ exports.cancelOrder = async (req, res) => {
     });
 
     if (!order) {
-      return res.status(404).json({ message: "Order not found" });
+      return res.status(404).json({ message: 'Order not found' });
     }
 
-    // Status validation
-    if (!['pending', 'processing'].includes(order.status)) {
-      return res.status(400).json({ message: "Order cannot be cancelled" });
-    }
-
-    // ✅ FIX #2: COD delivered order protection
-    // 'paid' is the state the seller sets on COD delivery; 'completed' is not a
-    // member of the paymentStatus enum, so this guard never fired.
-    if (order.paymentMethod === 'cod' && order.paymentStatus === 'paid') {
-      return res.status(400).json({
-        success: false,
-        message: "COD order already delivered and payment collected. Cannot cancel. Please use Return option if needed."
-      });
-    }
-
-    // Cancel every seller's part. order.status is DERIVED from these on save,
-    // so setting it directly here would simply be overwritten.
-    order.fulfilments.forEach((f) => {
-      if (!['delivered', 'returned'].includes(f.status)) f.status = 'cancelled';
+    // The rules live in utils/cancelOrder.js so a customer, a seller and an
+    // admin all cancel the same way - three copies would refund three
+    // different amounts.
+    const result = await cancelOrderFor(order, {
+      by: 'customer',
+      actorId: req.user.id,
+      reason: req.body?.reason,
     });
 
-    // Refund logic for captured prepaid payments.
-    // Previously guarded on 'completed', which the schema does not allow, so no
-    // refund was ever initiated for a prepaid cancellation.
-    if (order.paymentStatus === 'paid' && order.paymentMethod === 'razorpay') {
-      const Razorpay = require('razorpay');
-      const razorpay = new Razorpay({
-        key_id: process.env.RAZORPAY_KEY_ID,
-        key_secret: process.env.RAZORPAY_KEY_SECRET,
-      });
-
-      try {
-        if (order.razorpayPaymentId) {
-          const refundAmount = order.totalAmount;
-          const refund = await razorpay.payments.refund(order.razorpayPaymentId, {
-            amount: Math.round(refundAmount * 100),
-            speed: 'normal',
-          });
-          order.refundId = refund.id;
-          order.refundStatus = 'processing';
-          order.refundAmount = refundAmount;
-          order.refundedAt = new Date();
-          // Terminal payment state. Also keeps the order out of revenue
-          // aggregations, which previously relied on zeroing totalAmount.
-          order.paymentStatus = 'refunded';
-          console.log("Refund initiated:", refund.id);
-        }
-      } catch (refundErr) {
-        console.error("Refund failed", refundErr.message);
-        // ✅ FIX #1: Stop cancellation if refund fails
-        return res.status(500).json({
-          success: false,
-          message: "Refund initiation failed. Please contact support. Your payment is safe.",
-          error: refundErr.message,
-          orderId: order._id
-        });
-      }
+    if (!result.ok) {
+      return res
+        .status(result.status || 400)
+        .json({ success: false, message: result.message });
     }
 
-    // Restore inventory
-    for (const item of order.items) {
-      if (item.status === 'active') {
-        await applyInventoryChange({
-          productId: item.productId,
-          quantity: item.quantity,
-          type: 'return',
-          orderId: order._id,
-          performedBy: req.user.id,
-        });
-        item.status = 'cancelled';
-      }
-    }
-
-    // NOTE: totalAmount is deliberately preserved. It previously was set to 0,
-    // which destroyed the order's financial history. Cancelled orders are kept
-    // out of revenue reporting by paymentStatus, not by erasing the amount.
-    await order.save();
-
-    res.json({ success: true, message: "Order cancelled", order });
+    return res.json({ success: true, message: result.message, order });
   } catch (err) {
-    console.error("CANCEL ORDER ERROR:", err.message);
-    res.status(500).json({ message: err.message });
+    console.error('CANCEL ORDER ERROR:', err.message);
+    return res.status(500).json({ message: err.message });
   }
 };
 
@@ -553,17 +492,13 @@ exports.cancelOrderItem = async (req, res) => {
     }
     
     if (order.paymentStatus === 'paid' && order.razorpayPaymentId) {
-      const Razorpay = require('razorpay');
-      const razorpay = new Razorpay({
-        key_id: process.env.RAZORPAY_KEY_ID,
-        key_secret: process.env.RAZORPAY_KEY_SECRET,
-      });
-      
       try {
-        const refund = await razorpay.payments.refund(order.razorpayPaymentId, {
-          amount: Math.round(refundAmount * 100), // Partial refund
-          speed: 'normal',
-        });
+        // Every refund in the app goes through this one boundary - see
+        // utils/refund.js. It takes RUPEES; the paise conversion lives there.
+        const refund = await refunds.refundPayment(
+          order.razorpayPaymentId,
+          refundAmount
+        );
         
         // Store refund info (you may want to track per-item refunds)
         item.refundId = refund.id;
@@ -667,19 +602,13 @@ exports.cancelOrderItem = async (req, res) => {
 // Previously guarded on 'completed', which the paymentStatus enum does not
 // allow, so a returned prepaid order was never refunded.
 if (order.paymentStatus === 'paid' && order.paymentMethod === 'razorpay') {
-  const Razorpay = require('razorpay');
-  const razorpay = new Razorpay({
-    key_id: process.env.RAZORPAY_KEY_ID,
-    key_secret: process.env.RAZORPAY_KEY_SECRET,
-  });
-
   try {
-    if (order.razorpayPaymentId) {  // ✅ CORRECT - Payment ID
+    if (order.razorpayPaymentId) {
       const refundAmount = order.totalAmount;
-      const refund = await razorpay.payments.refund(order.razorpayPaymentId, {
-        amount: Math.round(refundAmount * 100),
-        speed: 'normal',
-      });
+      const refund = await refunds.refundPayment(
+        order.razorpayPaymentId,
+        refundAmount
+      );
       order.refundId = refund.id;
       order.refundStatus = 'processing';
       order.refundAmount = refundAmount;
