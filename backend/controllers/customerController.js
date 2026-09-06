@@ -1,6 +1,6 @@
 const Cart = require("../models/Cart");
 const Order = require("../models/Order");
-const { applyCommission } = require("../utils/commission");
+const { priceOrder, markCouponUsed } = require("../utils/priceOrder");
 const {
   calculateShipping,
   getDeliveryOptions,
@@ -219,25 +219,42 @@ exports.checkout = async (req, res) => {
     } = await priceDeliveryOption(cart.items, address, true, req.body.deliveryOption);
 
 
-    // ✅ Create order
-    // Stamp platform commission onto each line before the order is written. The rate is
-    const orderItems = await applyCommission(
-      cart.items.map((item) => ({
-        productId: item.productId._id,
-        name: item.productId.name,
-        quantity: item.quantity,
-        price: item.price,
-        sellerId: item.productId.sellerId,
-      })),
-      session
-    );
+    /*
+     * One place decides what this order costs and who ends up with what -
+     * commission AND any discount, snapshotted onto every line. See
+     * utils/priceOrder.js for why that is not done here.
+     */
+    const { orderItems, itemsTotal, discountTotal, coupon, couponError } =
+      await priceOrder({
+        items: cart.items,
+        couponCode: req.body.couponCode,
+        customerId: req.user._id,
+        session,
+      });
+
+    /*
+     * A refused code stops the checkout rather than quietly charging full
+     * price. Someone who typed a code is expecting it to come off; taking their
+     * money without it and letting them find out on the receipt is the same
+     * silence this codebase keeps removing from everywhere else.
+     */
+    if (couponError) {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(400).json({ success: false, message: couponError });
+    }
 
     const order = await Order.create(
       [
         {
           customerId: req.user._id,
           items: orderItems,
-          totalAmount: cart.totalAmount + shippingCharges,
+          // Goods, less any discount, plus delivery. Delivery is never
+          // discounted - it is money owed to a courier, not margin.
+          totalAmount: Math.max(0, itemsTotal - discountTotal) + shippingCharges,
+          couponCode: coupon?.code || null,
+          discountAmount: discountTotal,
+          discountFundedBy: coupon?.fundedBy || null,
           shippingAddressId,
           status: 'pending',
           paymentStatus: 'pending',
@@ -298,6 +315,19 @@ exports.checkout = async (req, res) => {
         ],
         { session }
       );
+    }
+
+    /*
+     * Spend the coupon use HERE, not at delivery.
+     *
+     * A COD order is a real commitment - the goods get packed and a courier is
+     * booked. Waiting for the cash days later would let one customer place five
+     * COD orders on a one-per-person code before the first of them arrives.
+     * A cancelled order gives the use back (see utils/cancelOrder.js), which is
+     * the half that makes counting early fair.
+     */
+    if (coupon?.code) {
+      await markCouponUsed(coupon.code, req.user._id, session);
     }
 
     // ✅ Clear cart

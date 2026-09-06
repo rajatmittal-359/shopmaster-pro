@@ -119,6 +119,8 @@ const cancelOrderFor = async (order, { by, actorId, reason, sellerId }) => {
   }
 
   // ---- now it is safe to cancel -------------------------------------------
+  await releaseCouponUse(order);
+
   for (const item of affected) {
     await inventory.applyInventoryChange({
       productId: item.productId,
@@ -172,4 +174,37 @@ const canCancelOrder = (order) =>
   CANCELLABLE.includes(order.status) &&
   !(order.paymentMethod === 'cod' && order.paymentStatus === 'paid');
 
-module.exports = { cancelOrderFor, CANCELLABLE, canCancelOrder };
+/**
+ * Give a coupon use back when the order it was spent on is called off.
+ *
+ * This is the half that makes counting a use early fair. A COD order spends the
+ * use the moment it is placed, so that one customer cannot place five orders on
+ * a one-per-person code - which is only reasonable if cancelling hands it back.
+ *
+ * Floored at zero: a count that goes negative would let a finished campaign
+ * quietly reopen.
+ */
+const releaseCouponUse = async (order) => {
+  if (!order?.couponCode) return;
+
+  try {
+    const Coupon = require('../models/Coupon');
+    const code = String(order.couponCode).trim().toUpperCase();
+
+    await Coupon.updateOne(
+      { code, usedCount: { $gt: 0 } },
+      { $inc: { usedCount: -1 } }
+    );
+    await Coupon.updateOne(
+      { code, usedBy: { $elemMatch: { customerId: order.customerId, count: { $gt: 0 } } } },
+      { $inc: { 'usedBy.$.count': -1 } }
+    );
+  } catch (err) {
+    // Never fail a cancellation over this. The refund has already been raised;
+    // a coupon count that is one too high is a far smaller problem than an
+    // order stuck half-cancelled.
+    console.error('Could not release coupon use for', order.orderNumber, '-', err.message);
+  }
+};
+
+module.exports = { cancelOrderFor, CANCELLABLE, canCancelOrder, releaseCouponUse };

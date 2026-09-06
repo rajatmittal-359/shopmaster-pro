@@ -3,7 +3,7 @@ const crypto = require("crypto");
 const mongoose = require("mongoose");
 
 const Order = require("../models/Order");
-const { applyCommission } = require("../utils/commission");
+const { priceOrder, markCouponUsed } = require("../utils/priceOrder");
 const Cart = require("../models/Cart");
 const Product = require("../models/Product");
 const InventoryLog = require("../models/Inventory");
@@ -231,28 +231,45 @@ exports.createRazorpayOrder = async (req, res) => {
     const shortUserId = String(req.user.id).slice(-8);
     const shortTimestamp = Date.now().toString().slice(-8);
 
-    // ✅ 6) Calculate total with shipping
-    const finalAmount = cart.totalAmount + shippingCharges;
+    /*
+     * 6) Price the order BEFORE asking Razorpay for anything.
+     *
+     * The gateway is told an amount and that amount is what the customer's card
+     * is charged. Working the discount out afterwards - which is what the first
+     * cut of this did - would have taken full price at the till and recorded a
+     * discounted order, so the books and the bank would disagree on every
+     * couponed sale.
+     *
+     * Same single pricing path as COD: commission and any discount, snapshotted
+     * onto every line. See utils/priceOrder.js.
+     */
+    const { orderItems, itemsTotal, discountTotal, coupon, couponError } =
+      await priceOrder({
+        items: cart.items,
+        couponCode: req.body.couponCode,
+        customerId: req.user.id,
+        session,
+      });
 
-    // 7) Create Razorpay order
+    // A refused code stops the checkout. Charging someone full price after they
+    // typed a code, and letting them find out on the receipt, is not an option.
+    if (couponError) {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(400).json({ success: false, message: couponError });
+    }
+
+    // Goods, less the discount, plus delivery. Delivery is never discounted -
+    // it is money owed to a courier, not margin.
+    const finalAmount =
+      Math.round((Math.max(0, itemsTotal - discountTotal) + shippingCharges) * 100) / 100;
+
+    // 7) Create the Razorpay order for exactly that amount
     const razorpayOrder = await getRazorpay().orders.create({
       amount: Math.round(finalAmount * 100),
       currency: "INR",
       receipt: `ord_${shortUserId}_${shortTimestamp}`,
     });
-
-    // 8) Create DB order with razorpayOrderId
-    // Same commission snapshot as the COD path - see utils/commission.js. The rate is
-    const orderItems = await applyCommission(
-      cart.items.map((item) => ({
-        productId: item.productId._id,
-        name: item.productId.name,
-        quantity: item.quantity,
-        price: item.price,
-        sellerId: item.productId.sellerId,
-      })),
-      session
-    );
 
     const order = await Order.create(
       [
@@ -260,6 +277,9 @@ exports.createRazorpayOrder = async (req, res) => {
           customerId: req.user.id,
           items: orderItems,
           totalAmount: finalAmount,
+          couponCode: coupon?.code || null,
+          discountAmount: discountTotal,
+          discountFundedBy: coupon?.fundedBy || null,
           shippingAddressId,
           status: "pending",
           paymentMethod: "razorpay",
@@ -430,6 +450,19 @@ exports.verifyRazorpayPayment = async (req, res) => {
         message: "Payment already verified for this order",
         order: current,
       });
+    }
+
+    /*
+     * Spend the coupon use now that the money is actually in.
+     *
+     * Not at checkout: the prepaid order is created BEFORE payment, so counting
+     * there would burn a use every time somebody opened the Razorpay dialog and
+     * closed it - and a campaign would run out on people who never bought
+     * anything. It sits after the compare-and-set claim above, so a replayed
+     * verification cannot spend a second use either.
+     */
+    if (order.couponCode) {
+      await markCouponUsed(order.couponCode, order.customerId, session);
     }
 
     // 7) Commit stock atomically. Never throws, never goes negative.

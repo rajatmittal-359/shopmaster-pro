@@ -66,6 +66,32 @@ const orderItemSchema = new mongoose.Schema({
     default: null,
     index: true
   },
+
+  // ---- Discount snapshot ---------------------------------------------------
+  /**
+   * Money taken off THIS line, and who paid for it.
+   *
+   * Snapshotted for the same reason the commission rate above is: a payout run
+   * over this order next month has to reach the answer it reaches today,
+   * whatever the coupon has since become or been deleted into.
+   *
+   *   seller    the seller funded it - their earning above is already reduced
+   *   platform  the platform funded it out of commission - the seller's earning
+   *             is UNTOUCHED, and the platform's own net on this line may well
+   *             be negative
+   *
+   * See utils/discount.js for why those two are not interchangeable.
+   */
+  discountAmount: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
+  discountFundedBy: {
+    type: String,
+    enum: ['platform', 'seller', null],
+    default: null
+  },
 });
 
 /**
@@ -545,6 +571,26 @@ const orderSchema = new mongoose.Schema(
     shippingCharges: {
       type: Number,
       default: 0,
+    },
+
+    /**
+     * The code the customer used, and what it took off the whole basket.
+     *
+     * Kept on the order as well as apportioned onto the lines, because these
+     * two answer different questions: the lines decide what each seller is
+     * paid, and this decides what the customer's bill said. A receipt that
+     * cannot show the discount it applied is a receipt somebody will dispute.
+     *
+     * The code is stored as text rather than a reference on purpose - a coupon
+     * that is later edited or deleted must not change what this order says
+     * happened.
+     */
+    couponCode: { type: String, default: null },
+    discountAmount: { type: Number, default: 0, min: 0 },
+    discountFundedBy: {
+      type: String,
+      enum: ['platform', 'seller', null],
+      default: null,
     },
     shippingAwb: {
       type: String,
