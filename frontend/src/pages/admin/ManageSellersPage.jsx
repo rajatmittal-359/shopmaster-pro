@@ -62,6 +62,36 @@ export default function ManageSellersPage() {
       return;
     }
 
+    const was = Number(seller.commissionRate ?? 8);
+    if (rate === was) {
+      toastError(`${seller.businessName} is already on ${was}%`);
+      return;
+    }
+
+    /*
+     * Ask before changing it, showing BOTH numbers.
+     *
+     * This is the platform's own revenue, typed into a box. 80 instead of 8 is
+     * one slipped finger, and nothing downstream would question it - every
+     * order from then on would simply be sold at the wrong rate, and the
+     * mistake would surface as a seller asking why they had been underpaid.
+     *
+     * Showing the old number next to the new one is the point: "8% -> 80%"
+     * reads wrong instantly in a way that "80" on its own does not.
+     */
+    const sure = await confirm({
+      title: `Change ${seller.businessName} to ${rate}%?`,
+      message:
+        `They are on ${was}% now. From ${rate}% you ` +
+        (rate === 0
+          ? "will take nothing on their sales."
+          : `will take ${rate}% of the item value on their sales.`) +
+        " Orders already placed keep the rate they were sold under.",
+      confirmLabel: rate === 0 ? "Make them commission-free" : `Change to ${rate}%`,
+      cancelLabel: "Leave it",
+    });
+    if (!sure) return;
+
     setSavingRate(seller._id);
     try {
       const { data } = await setSellerCommission(seller._id, rate);

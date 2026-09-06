@@ -48,6 +48,7 @@ export default function MyProductsPage() {
     mrp: "",
     tags: "",
     weight: "",
+    freeShipping: false,
   });
 
   const [existingImages, setExistingImages] = useState([]);
@@ -205,6 +206,7 @@ export default function MyProductsPage() {
         sku: form.sku || undefined,
         mrp: form.mrp ? Number(form.mrp) : undefined,
         weight: form.weight ? Number(form.weight) : undefined,
+        freeShipping: Boolean(form.freeShipping),
         tags: form.tags
           ? form.tags
               .split(",")
@@ -286,6 +288,7 @@ export default function MyProductsPage() {
       mrp: prod.mrp || "",
       tags: (prod.tags || []).join(", "),
       weight: prod.weight || "",
+      freeShipping: prod.freeShipping === true,
     });
     setErrors({});
     setShowForm(true);
@@ -330,6 +333,7 @@ export default function MyProductsPage() {
       mrp: "",
       tags: "",
       weight: "",
+      freeShipping: false,
     });
     setExistingImages([]);
     setSelectedMainCategory("");
@@ -617,6 +621,36 @@ export default function MyProductsPage() {
               </div>
             </div>
 
+            {/*
+              Free delivery on THIS product.
+
+              The field existed on the model and the API accepted it, but no
+              screen ever showed it - so a seller could not actually make one
+              item free without a developer. It is per product on purpose: a
+              light, high-margin piece can carry its own delivery while a heavy
+              one cannot, and that is a call only the seller can make.
+            */}
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                name="freeShipping"
+                checked={Boolean(form.freeShipping)}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, freeShipping: e.target.checked }))
+                }
+                className="mt-0.5 rounded border-gray-300"
+              />
+              <span>
+                <span className="block text-sm font-medium text-gray-700">
+                  I pay the delivery on this one
+                </span>
+                <span className="block text-xs text-gray-500 mt-0.5">
+                  The customer sees “Free delivery” for this product, and the courier’s
+                  charge comes out of what you earn on it.
+                </span>
+              </span>
+            </label>
+
             {/* Low stock */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">
@@ -797,6 +831,15 @@ export default function MyProductsPage() {
                     Stock: {prod.stock}
                   </span>
                 </div>
+
+                {/* Which products the seller is delivering at their own cost.
+                    Without this they would have to open each one to find out. */}
+                {prod.freeShipping && (
+                  <span className="inline-block mt-2 text-[11px] font-medium text-positive
+                                   bg-positive-tint px-2 py-0.5 rounded-lg">
+                    Free delivery
+                  </span>
+                )}
 
                 <div className="flex gap-2 pt-3 mt-auto">
                   <button
