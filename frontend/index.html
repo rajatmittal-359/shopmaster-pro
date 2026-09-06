@@ -6,6 +6,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
     <!--
+      Google Merchant Center / Search Console ownership.
+
+      Stays here permanently: removing it un-verifies the site, which quietly
+      drops the free product listings and the Search Console data with them.
+      React 19 hoists per-page <meta> tags into <head>, but it only manages the
+      ones a component renders - this one is not among them and is left alone.
+    -->
+    <meta name="google-site-verification" content="J-uVRT0qusW8POpKiYesTJrheyqgBFO6G7cF-9jEUjg" />
+
+    <!--
       Defaults only. Each page sets its own <title>, description and canonical;
       React 19 hoists those into <head> and they override what is here.
 
