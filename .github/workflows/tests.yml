@@ -90,3 +90,42 @@ jobs:
       - name: lint
         working-directory: frontend
         run: node scripts/lint-baseline.mjs
+
+  # ---------------------------------------------------------------------------
+  # The gate.
+  #
+  # Render's own auto-deploy watches the branch and deploys whatever lands on
+  # it, tests or no tests. Turn that OFF in Render (Settings -> Build & Deploy
+  # -> Auto-Deploy -> No) and let this job trigger the deploy instead: it runs
+  # only after BOTH test jobs pass, and only on main.
+  #
+  # Until Render's auto-deploy is switched off, this job is harmless but
+  # pointless - Render will already have deployed.
+  # ---------------------------------------------------------------------------
+  deploy:
+    name: deploy to production
+    needs: [backend, frontend]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: tell Render to deploy
+        env:
+          HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -z "$HOOK" ]; then
+            echo "::notice::RENDER_DEPLOY_HOOK_URL is not set, so nothing was deployed."
+            echo "::notice::Add it under Settings -> Secrets and variables -> Actions,"
+            echo "::notice::then switch Render's own Auto-Deploy off."
+            exit 0
+          fi
+
+          code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 60 "$HOOK")
+          echo "Render answered HTTP $code"
+
+          # A deploy hook answers 200 with a JSON body naming the new deploy.
+          # Anything else means production did NOT update, and the run should
+          # say so rather than going green.
+          if [ "$code" != "200" ]; then
+            echo "::error::Render did not accept the deploy (HTTP $code)"
+            exit 1
+          fi
