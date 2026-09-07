@@ -501,11 +501,23 @@ Updated as it moves. The order is section 7's.
 | 1 | Feed: `color`, `gender`, `age_group` | ✅ Live and verified — 17 items, 16 with a colour |
 | 2 | Layout, header, footer, six policy pages | ✅ Built, all static. Not yet on a domain |
 | 3 | `sort` on the products API + public delivery estimate | ✅ Built, 791 tests |
-| 4 | `/products/[slug]` — the money page | ⏳ **next** |
-| 5 | `/shop` | ☐ |
+| 4 | `/products/[slug]` — the money page | ✅ Built and rendering live data. Server-rendered; price, stock, description and both JSON-LD blocks are in the HTML |
+| 5 | `/shop` | ⏳ **next** |
 | 6 | `/` | ☐ |
 | 7 | Port the 30 private routes | ☐ |
 | 8 | Cutover - see section 12 | ☐ Blocked until Oct 2026 (payment) |
+
+**Owed on the product page, and deliberately not faked:**
+
+- **Verified-purchase badges.** The plan asks for them; the `Review` model has
+  no such field. Rather than print a badge that means nothing, the reviews show
+  name, date, rating and text only. Adding the flag is backend work: set it when
+  the reviewer has a delivered order containing that product.
+- **"Sign in to add to cart" points at `/login`, which does not exist yet.** It
+  arrives with step 7. Nothing is live on the domain until step 8, so no
+  customer can reach the dead link.
+- **No image showing a piece worn, and no dimension slide.** Both are Baymard
+  findings worth acting on and both need photography, not code.
 
 Backend work that the interface needs but that ships separately (section 7a):
 Google Sign-In, role-as-capability, seller onboarding. None started.
