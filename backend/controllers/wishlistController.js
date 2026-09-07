@@ -7,7 +7,13 @@ const Product = require('../models/Product');
 exports.getWishlist = async (req, res) => {
   try {
     let wishlist = await Wishlist.findOne({ userId: req.user._id })
-      .populate('items.productId', 'name price images stock lowStockThreshold isActive');
+      /*
+       * `slug` and the sale fields are selected because the card that renders
+       * these is the SAME one the shop uses: without the slug it links to an
+       * ObjectId URL, and without the sale fields it prints the pre-sale price
+       * beside a product the shop has already discounted.
+       */
+      .populate('items.productId', 'name slug price salePrice saleStartsAt saleEndsAt mrp images stock lowStockThreshold isActive');
 
     if (!wishlist) {
       wishlist = await Wishlist.create({ userId: req.user._id, items: [] });
@@ -57,7 +63,7 @@ exports.addToWishlist = async (req, res) => {
       await wishlist.save();
     }
 
-    await wishlist.populate('items.productId', 'name price images stock lowStockThreshold isActive');
+    await wishlist.populate('items.productId', 'name slug price salePrice saleStartsAt saleEndsAt mrp images stock lowStockThreshold isActive');
 
     res.status(201).json({
       message: alreadyExists ? 'Already in wishlist' : 'Added to wishlist',
@@ -84,7 +90,7 @@ exports.removeFromWishlist = async (req, res) => {
     );
 
     await wishlist.save();
-    await wishlist.populate('items.productId', 'name price images stock lowStockThreshold isActive');
+    await wishlist.populate('items.productId', 'name slug price salePrice saleStartsAt saleEndsAt mrp images stock lowStockThreshold isActive');
 
     res.json({
       message: 'Item removed from wishlist',

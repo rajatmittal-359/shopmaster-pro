@@ -50,6 +50,7 @@ const readToken = () => {
 export default function BuyBox({ productId, name, price, inStock, maxQuantity }) {
   const [quantity, setQuantity] = useState(1);
   const [state, setState] = useState({ status: 'idle' });
+  const [saved, setSaved] = useState(false);
   const token = useSyncExternalStore(subscribeToSession, readToken, () => null);
   const signedIn = Boolean(token);
 
@@ -130,6 +131,37 @@ export default function BuyBox({ productId, name, price, inStock, maxQuantity })
         )}
 
         {button}
+
+        {/*
+          Saving is the honest alternative to a "buy now, decide later" nudge:
+          the person who is not ready still leaves with the product findable.
+          It needs a session for the same reason the cart does - the list lives
+          on the account, not in this browser.
+        */}
+        {signedIn && (
+          <Button
+            variant="outline"
+            className="w-full"
+            disabled={saved}
+            onClick={async () => {
+              try {
+                await fetch(`${apiBase}/customer/wishlist`, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`,
+                  },
+                  body: JSON.stringify({ productId }),
+                });
+                setSaved(true);
+              } catch {
+                setState({ status: 'error', message: 'Could not save that just now.' });
+              }
+            }}
+          >
+            {saved ? 'Saved' : 'Save for later'}
+          </Button>
+        )}
 
         <p aria-live="polite" className="min-h-5 text-sm">
           {state.status === 'error' && (

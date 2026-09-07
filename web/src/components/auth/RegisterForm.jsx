@@ -172,6 +172,47 @@ export default function RegisterForm({ next = '/', verifyEmail = '' }) {
         />
       </div>
 
+      {/*
+        WHY THE SELLER CHOICE IS STILL HERE
+          Section 10 argues for one account with selling ADDED to it, and that
+          is still the right end state. But the API creates the Seller record at
+          registration from `role`, and there is no endpoint that upgrades an
+          existing account - so removing this box would leave nobody able to
+          become a seller at all. Parity first; the capability model is backend
+          work with its own risk, and section 7a says it ships separately.
+      */}
+      <div className="rounded-lg border border-border p-3">
+        <label className="flex items-start gap-3 text-sm">
+          <input
+            type="checkbox"
+            checked={form.role === 'seller'}
+            onChange={(e) => setForm({ ...form, role: e.target.checked ? 'seller' : 'customer' })}
+            className="mt-1"
+          />
+          <span>
+            <strong>I want to sell on ShopMaster Pro</strong>
+            <span className="block text-muted-foreground">
+              An admin approves every shop before anything of yours appears.
+            </span>
+          </span>
+        </label>
+
+        {form.role === 'seller' && (
+          <div className="mt-3">
+            <label htmlFor="businessName" className="text-sm font-medium">
+              Your shop&rsquo;s name
+            </label>
+            <Input
+              id="businessName"
+              required
+              value={form.businessName}
+              onChange={set('businessName')}
+              className="mt-1"
+            />
+          </div>
+        )}
+      </div>
+
       <Button
         type="submit"
         disabled={state.status === 'sending'}

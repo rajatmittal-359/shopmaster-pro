@@ -20,6 +20,11 @@ export default function Footer() {
           <p className="mt-1 text-muted-foreground">
             A marketplace operated by {BUSINESS.legalName}.
           </p>
+          <p className="mt-2">
+            <Link href="/sell" className="text-brand-ink hover:underline">
+              Sell on ShopMaster Pro
+            </Link>
+          </p>
 
           <address className="mt-3 not-italic text-muted-foreground">
             {BUSINESS.addressLines.map((line) => (

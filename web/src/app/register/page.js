@@ -19,11 +19,15 @@ export default async function RegisterPage({ searchParams }) {
     <div className="mx-auto max-w-sm px-4 py-16">
       <h1 className="text-2xl font-semibold tracking-tight">Create an account</h1>
       <p className="mt-1 text-sm text-muted-foreground">
-        One account to buy with. Selling is something you add to it later.
+        One account to buy with - and to sell with, if you tick the box below.
       </p>
 
       <div className="mt-6">
-        <RegisterForm next={next} verifyEmail={one('verify') || ''} />
+        <RegisterForm
+          next={next}
+          verifyEmail={one('verify') || ''}
+          selling={one('sell') === '1'}
+        />
       </div>
     </div>
   );

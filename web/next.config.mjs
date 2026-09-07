@@ -30,6 +30,23 @@ const nextConfig = {
    * `permanent: true` (308) because these are not coming back. The old paths
    * are retired, not moved for a week.
    */
+  /*
+   * The sitemap has to live on the SHOP'S domain, not the API's.
+   *
+   * Google accepts a sitemap for URLs on the host that serves it; a sitemap on
+   * shopmaster-api-sg.onrender.com listing shopmasterpro.in pages is a
+   * cross-domain sitemap, which needs BOTH hosts verified in Search Console
+   * before it counts. Proxying it here means /sitemap.xml is on the right
+   * domain and still generated live from the database - and it removes the
+   * Render rewrite that was sitting on the manual list.
+   */
+  async rewrites() {
+    const api = (process.env.NEXT_PUBLIC_API_URL || 'https://shopmaster-api-sg.onrender.com/api')
+      .replace(/\/api$/, '');
+
+    return [{ source: '/sitemap.xml', destination: `${api}/sitemap.xml` }];
+  },
+
   async redirects() {
     return [
       { source: '/customer/orders', destination: '/orders', permanent: true },
