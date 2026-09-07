@@ -534,7 +534,7 @@ Updated as it moves. The order is section 7's.
 | 4 | `/products/[slug]` — the money page | ✅ Built and rendering live data. Server-rendered; price, stock, description and both JSON-LD blocks are in the HTML |
 | 5 | `/shop` | ✅ Filters, server-side sort, removable chips, numbered pages, a real empty state. Filtered views carry `noindex, follow` |
 | 6 | `/` | ✅ Hero with a CSS-only effect, categories from the live tree, newest products, the shop's real address, and the Organization record |
-| 7 | Port the 30 private routes | ⏳ In progress. Sign in, register with the OTP step, and the cart are done and proved against the live API. Orders, addresses, checkout, seller and admin still to come |
+| 7 | Port the 30 private routes | ⏳ In progress. **Customer side done**: sign in, register + OTP, cart, checkout (COD and Razorpay), addresses, orders list, order detail with tracking, cancel and return/exchange - all proved against the live API. **Seller and admin panels still to come** |
 | 8 | Cutover - see section 12 | ☐ Blocked until Oct 2026 (payment) |
 
 **Owed on the product page, and deliberately not faked:**

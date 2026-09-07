@@ -218,24 +218,47 @@ export default function CheckoutView() {
           }}
         />
 
-        {totals?.deliveryOptions?.length > 1 && (
+        {/*
+          Shown even when there is only ONE option, because the useful part is
+          not the choice - it is the DATE. Hiding the block when a single
+          courier serves the PIN code would mean the shopper sees a shipping
+          charge with no idea when it arrives.
+        */}
+        {totals?.deliveryOptions?.length > 0 && (
           <section className="rounded-xl border border-border p-4">
             <h2 className="font-semibold">Delivery</h2>
             <ul className="mt-3 space-y-2">
               {totals.deliveryOptions.map((option) => (
-                <li key={option.id || option.key || option.label}>
+                <li key={option.id}>
                   <label className="flex cursor-pointer items-center gap-3 rounded-lg border border-border p-3 text-sm has-[:checked]:border-primary">
-                    <input
-                      type="radio"
-                      name="delivery"
-                      checked={deliveryOption === (option.id || option.key)}
-                      onChange={() => setDeliveryOption(option.id || option.key)}
-                    />
+                    {totals.deliveryOptions.length > 1 && (
+                      <input
+                        type="radio"
+                        name="delivery"
+                        checked={deliveryOption === option.id}
+                        onChange={() => setDeliveryOption(option.id)}
+                      />
+                    )}
                     <span className="flex-1">
-                      <strong>{option.label || option.name}</strong>
-                      {option.eta && <span className="block text-muted-foreground">{option.eta}</span>}
+                      <strong>{option.label}</strong>
+                      {/* arrivalBy is a date the courier gave; etaText is how
+                          the server phrased it. Both come from the same call
+                          that priced this option, so they cannot disagree with
+                          the charge beside them. */}
+                      {(option.arrivalBy || option.etaText) && (
+                        <span className="block text-muted-foreground">
+                          {option.etaText || `Arrives by ${option.arrivalBy}`}
+                        </span>
+                      )}
+                      {option.courier && (
+                        <span className="block text-xs text-muted-foreground">{option.courier}</span>
+                      )}
                     </span>
-                    <span>₹{Number(option.charge ?? option.price ?? 0).toLocaleString('en-IN')}</span>
+                    <span>
+                      {Number(option.price) > 0
+                        ? `₹${Number(option.price).toLocaleString('en-IN')}`
+                        : 'Free'}
+                    </span>
                   </label>
                 </li>
               ))}
