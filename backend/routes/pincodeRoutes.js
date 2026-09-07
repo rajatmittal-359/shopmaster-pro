@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { lookup } = require('../utils/pincode');
+const { estimateDelivery, isValidPincode } = require('../utils/deliveryEstimate');
 
 /**
  * GET /api/pincode/:code
@@ -29,6 +30,42 @@ router.get('/:code', async (req, res) => {
     return res
       .status(503)
       .json({ message: 'Could not check that PIN code right now' });
+  }
+});
+
+/**
+ * GET /api/pincode/:code/delivery
+ *
+ * "Get it by Friday" for the product page, before there is a cart or a login.
+ *
+ * PUBLIC AND UNAUTHENTICATED, so it is written defensively: the PIN code is
+ * validated before anything is called, the answer is cached for six hours in
+ * `deliveryEstimate`, and the response is cacheable by the browser too. Without
+ * all three, a crawler walking every product page would spend our Shiprocket
+ * rate limit for us.
+ */
+router.get('/:code/delivery', async (req, res) => {
+  const { code } = req.params;
+
+  if (!isValidPincode(code)) {
+    return res.status(400).json({ message: 'That is not a PIN code' });
+  }
+
+  try {
+    const estimate = await estimateDelivery(code);
+
+    // Six hours, matching the server-side cache. A delivery date is not
+    // personal - it is the same answer for everyone asking about that PIN code
+    // - so a shared cache may hold it.
+    res.set('Cache-Control', 'public, max-age=21600');
+    return res.json(estimate);
+  } catch (err) {
+    // 503 and no number. A date we could not check is worse than no date: the
+    // page simply does not show one, and nobody is promised anything.
+    console.error('Delivery estimate failed:', err.message);
+    return res
+      .status(503)
+      .json({ message: 'Could not check delivery for that PIN code right now' });
   }
 });
 

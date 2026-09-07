@@ -96,6 +96,30 @@ router.get('/categories/tree', async (req, res) => {
  *    - page (default 1)
  *    - limit (default 20)
  */
+/**
+ * The orders a shopper may put the catalogue in.
+ *
+ * A WHITELIST, NOT A PASS-THROUGH. `?sort=` arrives from the URL bar, and
+ * handing user input straight to Mongoose lets a stranger sort by any field in
+ * the document - including ones we never meant to expose the shape of - and
+ * lets an object like `{"$where": ...}` in through a query string. Five named
+ * orders is all a jewellery shop needs; anything else falls back to newest.
+ *
+ * EVERY ONE ENDS IN `_id`. Without a tiebreaker, two products at the same price
+ * have no defined order between them, and Mongo is free to return them
+ * differently on each query - so page 2 can repeat an item page 1 already
+ * showed, and skip one entirely. The bug looks like "a product disappeared".
+ */
+const SORTS = {
+  newest: { createdAt: -1, _id: 1 },
+  'price-asc': { price: 1, _id: 1 },
+  'price-desc': { price: -1, _id: 1 },
+  // Rated highest first, but a single five-star review must not outrank a
+  // piece with fifty at 4.6 - so the count breaks the tie, not the id.
+  rating: { avgRating: -1, totalReviews: -1, _id: 1 },
+  popular: { totalReviews: -1, avgRating: -1, _id: 1 },
+};
+
 router.get('/', async (req, res) => {
   try {
     const {
@@ -103,6 +127,7 @@ router.get('/', async (req, res) => {
       search,
       minPrice,
       maxPrice,
+      sort,
       page = 1,
       limit = 20,
     } = req.query;
@@ -165,7 +190,7 @@ router.get('/', async (req, res) => {
     const products = await Product.find(filter)
       .populate('category', 'name')
       .populate('sellerId', 'name')
-      .sort({ createdAt: -1 })
+      .sort(SORTS[sort] || SORTS.newest)
       .limit(numericLimit)
       .skip((numericPage - 1) * numericLimit);
 
