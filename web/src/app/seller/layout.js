@@ -18,6 +18,9 @@ const LINKS = [
   ['/seller', 'Dashboard'],
   ['/seller/orders', 'Orders'],
   ['/seller/products', 'Products'],
+  ['/seller/earnings', 'Earnings'],
+  ['/seller/inventory', 'Stock history'],
+  ['/seller/settings', 'Settings'],
 ];
 
 export default function SellerLayout({ children }) {

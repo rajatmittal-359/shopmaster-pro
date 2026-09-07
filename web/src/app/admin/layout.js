@@ -21,6 +21,7 @@ const LINKS = [
   ['/admin/sellers', 'Sellers'],
   ['/admin/categories', 'Categories'],
   ['/admin/coupons', 'Coupons'],
+  ['/admin/inventory', 'Stock history'],
 ];
 
 export default function AdminLayout({ children }) {
