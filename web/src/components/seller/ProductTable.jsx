@@ -106,6 +106,10 @@ export default function ProductTable() {
                   {money(product.price)}
                   {!product.isActive && ' · hidden from the shop'}
                   {product.reserved > 0 && ` · ${product.reserved} held in checkouts`}
+                  {' · '}
+                  <Link href={`/seller/products/${product._id}`} className="text-brand-ink hover:underline">
+                    Edit
+                  </Link>
                 </p>
               </div>
 

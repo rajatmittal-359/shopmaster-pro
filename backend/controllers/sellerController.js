@@ -204,6 +204,22 @@ exports.addProduct = async (req, res) => {
       tags,
       salePrice,
       saleEndsAt,
+
+      /*
+       * The parcel weight, and the three attributes Google REQUIRES for free
+       * listings in category 166 - where all jewellery and most accessories
+       * sit. They were missing from this handler entirely, so a product created
+       * through the API could never carry a colour: 17 products sat in
+       * Merchant Center's "Under review" for exactly this reason and had to be
+       * backfilled by a script.
+       *
+       * Weight was missing too, which matters at booking time - the courier is
+       * quoted on it.
+       */
+      weight,
+      color,
+      gender,
+      ageGroup,
     } = req.body;
 
     const categoryError = await validateLeafCategory(category);
@@ -232,6 +248,13 @@ exports.addProduct = async (req, res) => {
       sku,
       mrp,
       tags,
+      weight,
+      color,
+      // Left undefined rather than defaulted here: the schema's defaults are
+      // right for this shop, and writing an explicit value would mean a seller
+      // of men's watches silently ships `female` because a form did not ask.
+      gender,
+      ageGroup,
     });
 
     // Check the details BEFORE spending anything on the pictures. Uploading
@@ -284,6 +307,9 @@ exports.updateProduct = async (req, res) => {
       mrp,
       tags,
       weight,
+      color,
+      gender,
+      ageGroup,
       freeShipping,
       salePrice,
       saleEndsAt,
@@ -330,6 +356,14 @@ exports.updateProduct = async (req, res) => {
     if (mrp !== undefined) product.mrp = mrp;
     if (Array.isArray(tags)) product.tags = tags;
     if (weight !== undefined) product.weight = weight;
+    /*
+     * The three Google asks for. An empty string clears the field rather than
+     * being written as an empty colour - a seller correcting a mistake needs a
+     * way to unset one, and "" in the feed is a disapproval, not a blank.
+     */
+    if (color !== undefined) product.color = color || undefined;
+    if (gender !== undefined) product.gender = gender || undefined;
+    if (ageGroup !== undefined) product.ageGroup = ageGroup || undefined;
     // Only an explicit boolean flips it, so an absent field never silently
     // turns free delivery off on an existing product.
     if (typeof freeShipping === 'boolean') product.freeShipping = freeShipping;
