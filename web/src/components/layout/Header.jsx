@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import Logo from '@/components/brand/Logo';
+import HeaderAccount from '@/components/layout/HeaderAccount';
 
 /**
  * The bar every page carries.
@@ -26,6 +27,7 @@ export default function Header() {
           <Link href="/contact" className="text-muted-foreground hover:text-brand-ink">
             Contact
           </Link>
+          <HeaderAccount />
         </nav>
       </div>
     </header>
