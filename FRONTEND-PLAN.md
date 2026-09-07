@@ -294,7 +294,139 @@ favicon are one file rather than four that drift. `web/src/components/brand/Logo
 
 ---
 
-## 8. What we could not verify
+## 9. Signing in
+
+### 9.1 Google, on our own session — not NextAuth
+
+**How it works.** Google Identity Services renders the button and One Tap; the
+browser shows the accounts already signed in on that device. On success GIS
+hands us an **ID token (a JWT)**. That token goes to `POST /api/auth/google` on
+Express, which verifies it with `google-auth-library` (`verifyIdToken`, audience
+= our client ID) and then issues **our own** session cookie, exactly like the
+password path does today.
+
+**FedCM is the transport, not a replacement.** Chrome now runs One Tap over
+FedCM because third-party cookies are gone. The API we call is unchanged; what
+changes is that the account chooser is drawn by the browser. Nothing to migrate.
+
+**Key on `sub`, never on email.** `sub` is Google's permanent user id. Email can
+change, and a Workspace admin can reassign an address to a different person —
+matching on email is how one person ends up inside another's account. Store
+`googleId = sub`; use email only to *link* to an existing account, and only when
+`email_verified` is true.
+
+**No NextAuth / Auth.js.** It would create a second source of truth for sessions
+alongside the Express JWT we already issue, and every authorisation check in the
+backend reads that JWT. Auth.js is also in maintenance mode — Better Auth took
+over in Sept 2025 (Vercel acquired it July 2026). Adding a dependency in
+maintenance to duplicate something that works is two mistakes.
+
+**Email/OTP stays.** A link opened inside the Instagram or Facebook in-app
+browser gets `403 disallowed_useragent` from Google — those webviews are blocked
+outright. Instagram is where this shop's traffic will come from, so Google
+sign-in can never be the only door.
+
+**One manual step, and it is a hard gate:** the OAuth consent screen must be
+published to **In production**. While it is in *Testing*, sign-in is capped at
+100 users and consent expires every 7 days — customers would be silently logged
+out each week.
+
+### 9.2 What the screens are
+
+| Screen | What it holds |
+|---|---|
+| Sign in | Google button first, then email + password. Not a modal — a real route, so it can be linked to and returned from |
+| Create account | Same two paths. Nothing about selling appears here |
+| Forgot password | Already exists; carried over |
+
+There is no "sign up as a seller" choice anywhere on these screens. See §10.
+
+---
+
+## 10. One account, two roles
+
+### 10.1 The change
+
+Today `User.role` is a single enum, so an identity *is* a role and one email
+cannot both buy and sell. Rajat's own family shop is a seller on this platform
+and also a customer of it — the model contradicts the business it runs.
+
+**Role becomes a capability, not an identity.** The `Seller` document already is
+the capability record: it carries `isApproved`, `kycStatus`, `status`. Nothing
+new needs inventing. The user has a seller capability if a Seller document
+exists for them and is approved.
+
+- The JWT carries the **active context**, not the user's permanent nature.
+- `POST /api/auth/switch-context` re-reads the Seller record from the database
+  and re-mints the token. It never trusts a context the client asks for.
+- No endpoint reads a role from the request body. (OWASP calls the opposite
+  pattern broken function-level authorisation; it is the most common way a
+  marketplace gets a fake seller.)
+
+**Evidence this is how it is done:** Etsy — *"You'll use this account to run your
+shop and to buy from other makers on Etsy."* eBay: personal → business is an
+account-type **upgrade**, one way. Auth0, Clerk and WorkOS all model this as a
+membership record attached to a user, never as a field on the user. Nobody
+ships `role: buyer | seller`.
+
+### 10.2 What the interface does with it
+
+One account, one sidebar, and the sidebar's contents come from what the account
+can do:
+
+- Customer only → orders, wishlist, addresses, and a single **"Sell on
+  ShopMaster Pro"** entry at the bottom.
+- Seller (approved) → a context switcher at the top of the sidebar. Switching is
+  a page change, not a different login.
+- Seller (pending) → the switcher shows, disabled, with the application status.
+- Admin → unchanged; it stays a separate area.
+
+### 10.3 Logged out
+
+A visitor who has never signed in sees the customer sidebar and can browse
+`/shop`, open any product, and add to cart. Sign-in is asked for at **checkout**
+and nowhere earlier — a marketplace that demands a login before it shows a price
+has no chance of a Google click converting.
+
+> **Not researched.** The agent tasked with logged-out marketplace navigation
+> died on a session limit. The above is a judgement call from how Amazon,
+> Flipkart and Myntra behave, not from a written source. Cheap to change later.
+
+---
+
+## 11. Becoming a seller — an upgrade, not a signup
+
+Reached from **"Sell on ShopMaster Pro"** inside an account that already exists.
+The person is already signed in, so we ask only for what selling needs.
+
+**Two tracks, because most small Jaipur sellers have no GSTIN:**
+
+| Track | Who | What it means |
+|---|---|---|
+| **GSTIN** | Registered sellers | Normal. Sells anywhere in India |
+| **Enrolment number** (Notification 34/2023) | Turnover under ₹40 lakh, PAN, no GSTIN | **Intra-state only** — a hard lock in code, not a warning in a paragraph. Rajasthan buyers only |
+
+**A GST finding that closes off a route we discussed:** imitation jewellery is
+**HSN 7117 — 3% GST, taxable, not exempt** (Notification 09/2025-CTR, Schedule
+IV). The "sell only GST-exempt goods so no registration is needed" path does not
+exist for this catalogue. Only lac/shellac, glass and plastic bangles are
+nil-rated. **On the CA list.**
+
+---
+
+## 12. A CMS — not yet
+
+Verdict: **premature.** ~50 products and six static pages do not justify one.
+The trigger for a CMS is *a non-technical person who needs to publish*, not a
+number of pages — and today the only publisher is the developer.
+
+For the record, so it isn't re-researched: Sanity Free and Contentful Free are
+both genuinely $0 and would work. Strapi Cloud has no free tier. Payload is MIT
+and self-host only (and has joined Figma). None of that changes the verdict.
+
+---
+
+## 13. What we could not verify
 
 Written down so nobody later mistakes it for fact:
 
@@ -303,3 +435,4 @@ Written down so nobody later mistakes it for fact:
 - **"Sticky add-to-cart lifts mobile conversion 5–12%"** and **"Baymard thumb-zone research"** — both are widely quoted and **neither exists**. We are adding the sticky bar because all three D2C competitors have it, not because of a number.
 - **Delivery-date conversion lifts (+12% to +25%)** — all vendor case studies, no controlled research.
 - **Legal Metrology (Packaged Commodities) Amendment Rules 2026**, in force 1 July 2026, reportedly require country of origin, net quantity, manufacturer name and address to be displayed by e-commerce entities, and possibly a country-of-origin *filter*. Melorra, Palmonas and Myntra all show such a block today. **The gazette text could not be retrieved. This is a question for a lawyer, and it is on the CA list.**
+- **Logged-out marketplace navigation** and **the seller/admin panel gaps against Amazon, Flipkart, Myntra and Meesho** - both research passes were cut off by a session limit and never returned findings. What section 10.3 says about logged-out browsing is reasoning from competitor behaviour, not a sourced finding. Worth a re-run before the sidebar is built.
