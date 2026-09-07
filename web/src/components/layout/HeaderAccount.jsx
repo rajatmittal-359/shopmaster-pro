@@ -36,6 +36,9 @@ export default function HeaderAccount() {
 
       {signedIn ? (
         <>
+          <Link href="/wishlist" className="text-muted-foreground hover:text-brand-ink">
+            Saved
+          </Link>
           <Link href="/orders" className="text-muted-foreground hover:text-brand-ink">
             {/* The first name only: a header is not the place for a full name,
                 and it is what the person calls themselves anyway. */}

@@ -320,6 +320,13 @@ export default function OrderDetail({ orderId }) {
           {state.status === 'error' && <span className="text-destructive">{state.message}</span>}
         </p>
 
+        <p className="mt-3 text-sm">
+          <Link href={`/orders/${orderId}/bill`} className="text-brand-ink hover:underline">
+            Bill of Supply
+          </Link>{' '}
+          <span className="text-muted-foreground">- print it or save it as a PDF.</span>
+        </p>
+
         <p className="mt-3 text-sm text-muted-foreground">
           Something else wrong?{' '}
           <Link href="/contact" className="text-brand-ink hover:underline">

@@ -39,6 +39,9 @@ const nextConfig = {
       // The old customer home was a dashboard of links. Orders is what people
       // actually opened it for.
       { source: '/customer/dashboard', destination: '/orders', permanent: true },
+      { source: '/customer/addresses', destination: '/addresses', permanent: true },
+      { source: '/customer/wishlist', destination: '/wishlist', permanent: true },
+      { source: '/customer/orders/:orderId/bill', destination: '/orders/:orderId/bill', permanent: true },
       { source: '/seller/dashboard', destination: '/seller', permanent: true },
       { source: '/admin/dashboard', destination: '/admin', permanent: true },
       { source: '/admin/manage-sellers', destination: '/admin/sellers', permanent: true },
