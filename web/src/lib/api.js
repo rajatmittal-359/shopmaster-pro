@@ -27,6 +27,13 @@ const CATALOGUE_TTL = 300;
 const get = async (path, { revalidate = CATALOGUE_TTL } = {}) => {
   try {
     const res = await fetch(`${API}${path}`, { next: { revalidate } });
+    /*
+     * 404 is an ANSWER, not a failure: the API sends it for a category slug
+     * that does not exist. Collapsing it into null would make the page show
+     * "could not load" for something that simply is not there - and a listing
+     * that answers 200 with an empty grid is a soft 404 Google indexes.
+     */
+    if (res.status === 404) return { __notFound: true };
     if (!res.ok) return null;
     return await res.json();
   } catch (err) {
@@ -40,7 +47,7 @@ const get = async (path, { revalidate = CATALOGUE_TTL } = {}) => {
 /** One product, by slug or by the old ObjectId - the API accepts both. */
 export const getProduct = async (slug) => {
   const data = await get(`/public/products/${encodeURIComponent(slug)}`);
-  return data?.product || null;
+  return data?.product || null; // __notFound has no .product, so this is null
 };
 
 /** The reviews shown on a product page. */
@@ -62,6 +69,39 @@ export const getRelated = async (categorySlug, excludeId, limit = 4) => {
     `/public/products?category=${encodeURIComponent(categorySlug)}&limit=${limit + 1}`
   );
   return (data?.products || []).filter((p) => p._id !== excludeId).slice(0, limit);
+};
+
+/**
+ * The listing. `params` is whatever the URL carried, minus anything empty -
+ * an empty `?color=` in the query string would otherwise be sent to the API as
+ * a filter for products whose colour is the empty string.
+ */
+export const getProducts = async (params = {}) => {
+  const qs = new URLSearchParams(
+    Object.entries(params).filter(([, v]) => v !== undefined && v !== null && v !== '')
+  ).toString();
+  const data = await get(`/public/products?${qs}`);
+  if (data?.__notFound) return { notFound: true };
+  return data;
+};
+
+/** The colours and price range that genuinely exist inside the current view. */
+export const getFilters = async (params = {}) => {
+  const qs = new URLSearchParams(
+    Object.entries(params).filter(([, v]) => v !== undefined && v !== null && v !== '')
+  ).toString();
+  return (await get(`/public/products/filters?${qs}`)) || { colors: [], price: null };
+};
+
+/**
+ * The category tree, with a live product count on every node.
+ *
+ * Cached for an hour rather than five minutes: categories are created by hand
+ * a few times a year, and this is fetched on every listing page.
+ */
+export const getCategories = async () => {
+  const data = await get('/public/products/categories/tree', { revalidate: 3600 });
+  return data?.categories || data?.tree || [];
 };
 
 export const apiBase = API;

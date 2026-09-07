@@ -2,6 +2,7 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const router = express.Router();
+const { buildCatalogueFilter } = require('../utils/catalogueFilter');
 const Product = require('../models/Product');
 const Category = require('../models/Category');
 
@@ -127,62 +128,26 @@ router.get('/', async (req, res) => {
       search,
       minPrice,
       maxPrice,
+      color,
+      minRating,
       sort,
       page = 1,
       limit = 20,
     } = req.query;
 
-    const filter = { isActive: true, stock: { $gt: 0 } };
+    const built = await buildCatalogueFilter({
+      category, search, minPrice, maxPrice, color, minRating,
+    });
 
-    // A category contains everything beneath it. Selecting a main category
-    // returns its whole subtree, not just products pinned directly to it
-    // (products live on leaves, so an exact match always returned nothing).
-    // getBrowsableIds also drops any category sitting under a deactivated
-    // parent, so switching off a parent hides its products too.
-    if (category) {
-      // Accept a slug or an ObjectId, so /shop?category=rings is a real,
-      // shareable, indexable URL and existing id-based links keep working.
-      let categoryId = category;
-      if (!mongoose.isValidObjectId(category)) {
-        const bySlug = await Category.findOne({ slug: category }).select('_id').lean();
-        // A category that does not exist is a 404, not an empty result page.
-        // Answering 200 with zero products creates a "soft 404": Google indexes
-        // the empty page as real content. Its JS SEO guidance calls this out
-        // explicitly, and it applies to any URL a crawler can reach.
-        if (!bySlug) {
-          return res.status(404).json({ message: 'Category not found' });
-        }
-        categoryId = bySlug._id;
-      }
-      const categoryIds = await Category.getBrowsableIds(categoryId);
-      if (categoryIds.length === 0) {
-        return res.json({ products: [], totalPages: 0, currentPage: 1, total: 0 });
-      }
-      filter.category = { $in: categoryIds };
-    } else {
-      // No category selected: still exclude products whose category (or any of
-      // its ancestors) has been deactivated.
-      filter.category = { $in: await Category.getBrowsableIds() };
+    // A category that does not exist is a 404, not an empty result page.
+    // Answering 200 with zero products creates a "soft 404": Google indexes the
+    // empty page as real content, and its JS SEO guidance calls this out.
+    if (built.notFound) return res.status(404).json({ message: 'Category not found' });
+    if (built.empty) {
+      return res.json({ products: [], totalPages: 0, currentPage: 1, total: 0 });
     }
 
-    // Text/regex search
-    if (search) {
-      const searchRegex = { $regex: search, $options: 'i' };
-
-      filter.$or = [
-        { name: searchRegex },
-        { description: searchRegex },
-        { brand: searchRegex },
-        { tags: searchRegex } // tags is array of strings
-      ];
-    }
-
-
-    if (minPrice || maxPrice) {
-      filter.price = {};
-      if (minPrice) filter.price.$gte = Number(minPrice);
-      if (maxPrice) filter.price.$lte = Number(maxPrice);
-    }
+    const { filter } = built;
 
     const numericLimit = Number(limit) || 20;
     const numericPage = Number(page) || 1;
@@ -201,6 +166,61 @@ router.get('/', async (req, res) => {
       totalPages: Math.ceil(total / numericLimit),
       currentPage: numericPage,
       total,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+/**
+ * ✅ GET the filter panel's own data (PUBLIC)
+ *  URL: /api/public/products/filters
+ *
+ * WHY THIS EXISTS RATHER THAN A HARD-CODED LIST
+ *   A sidebar offering "Emerald Green" when nothing green is in stock is worse
+ *   than offering nothing: the shopper clicks it and lands on an empty grid,
+ *   which Baymard finds is where nearly half of sites leave people stranded.
+ *   These are the colours and the price range that genuinely exist inside the
+ *   current category and search.
+ *
+ * WHY COLOURS IGNORE THE SELECTED COLOUR
+ *   Counted with every filter EXCEPT colour. Applying it first would leave the
+ *   panel showing one colour - the one already chosen - and no way back to the
+ *   others without clearing everything.
+ */
+router.get('/filters', async (req, res) => {
+  try {
+    const { category, search, minPrice, maxPrice, minRating } = req.query;
+
+    const forColours = await buildCatalogueFilter({
+      category, search, minPrice, maxPrice, minRating,
+    });
+    if (forColours.notFound) return res.status(404).json({ message: 'Category not found' });
+    if (forColours.empty) return res.json({ colors: [], price: null });
+
+    // The price slider's ends come from the category and search alone. Deriving
+    // them from the current price filter would shrink the slider each time it
+    // was moved, and there would be no way to widen it again.
+    const forPrices = await buildCatalogueFilter({ category, search });
+
+    const [colors, priceRange] = await Promise.all([
+      Product.aggregate([
+        { $match: forColours.filter },
+        { $match: { color: { $nin: [null, ''] } } },
+        { $group: { _id: '$color', count: { $sum: 1 } } },
+        { $sort: { count: -1, _id: 1 } },
+      ]),
+      Product.aggregate([
+        { $match: forPrices.filter },
+        { $group: { _id: null, min: { $min: '$price' }, max: { $max: '$price' } } },
+      ]),
+    ]);
+
+    res.json({
+      colors: colors.map((c) => ({ value: c._id, count: c.count })),
+      price: priceRange[0]
+        ? { min: Math.floor(priceRange[0].min), max: Math.ceil(priceRange[0].max) }
+        : null,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });

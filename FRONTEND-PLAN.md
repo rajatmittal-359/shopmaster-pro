@@ -502,8 +502,8 @@ Updated as it moves. The order is section 7's.
 | 2 | Layout, header, footer, six policy pages | ✅ Built, all static. Not yet on a domain |
 | 3 | `sort` on the products API + public delivery estimate | ✅ Built, 791 tests |
 | 4 | `/products/[slug]` — the money page | ✅ Built and rendering live data. Server-rendered; price, stock, description and both JSON-LD blocks are in the HTML |
-| 5 | `/shop` | ⏳ **next** |
-| 6 | `/` | ☐ |
+| 5 | `/shop` | ✅ Filters, server-side sort, removable chips, numbered pages, a real empty state. Filtered views carry `noindex, follow` |
+| 6 | `/` | ⏳ **next** |
 | 7 | Port the 30 private routes | ☐ |
 | 8 | Cutover - see section 12 | ☐ Blocked until Oct 2026 (payment) |
 
