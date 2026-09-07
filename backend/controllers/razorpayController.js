@@ -745,6 +745,85 @@ exports.handleRazorpayWebhook = async (req, res) => {
       return res.json({ status: 'ok' });
     }
     
+    /*
+     * A refund finished, one way or the other.
+     *
+     * WHY THIS MATTERS MORE THAN IT LOOKS
+     *   Every refund path in this codebase - a cancellation, a received return,
+     *   an admin settling a dispute - sets refundStatus to 'processing' and
+     *   then stops. Nothing ever moved it on. The enum has had 'completed' and
+     *   'failed' since the field was written and nothing has ever set either.
+     *
+     *   So the customer's order page said "refund processing" for ever, long
+     *   after the money had arrived. And when a refund FAILED at Razorpay -
+     *   a closed account, a bank rejection - nobody found out at all. The
+     *   customer's money was stuck and the only record said it was on its way.
+     *
+     *   This is the only signal Razorpay sends about a refund's fate.
+     *
+     * MATCHED ON THE REFUND ID, at either level
+     *   A whole-order refund is stored on the order; a single cancelled line
+     *   raises a PARTIAL refund stored on that item. Both are looked up,
+     *   because either can be the one that failed.
+     */
+    if (event === 'refund.processed' || event === 'refund.failed') {
+      const refund = parsed?.payload?.refund?.entity;
+
+      if (!refund?.id) {
+        console.warn(event, 'without a refund entity - ignoring');
+        return res.json({ status: 'ignored' });
+      }
+
+      const done = event === 'refund.processed' ? 'completed' : 'failed';
+
+      const order = await Order.findOne({
+        $or: [{ refundId: refund.id }, { 'items.refundId': refund.id }],
+      });
+
+      if (!order) {
+        /*
+         * Not ours, or raised by hand in the Razorpay dashboard. Answered 200
+         * on purpose: a non-2xx makes Razorpay retry for 24 hours and then
+         * DISABLE the webhook, which would cost us every future payment
+         * notification over a refund we never made.
+         */
+        console.warn('No order found for refund', refund.id, '- ignoring');
+        return res.json({ status: 'ignored' });
+      }
+
+      const now = new Date();
+
+      if (order.refundId === refund.id) {
+        order.refundStatus = done;
+        if (done === 'completed') order.refundedAt = now;
+      }
+
+      for (const item of order.items) {
+        if (item.refundId === refund.id) {
+          item.refundStatus = done;
+          if (done === 'completed') item.refundedAt = now;
+        }
+      }
+
+      await order.save();
+
+      /*
+       * A failed refund is money the customer is owed and is not getting, and
+       * no screen shows it yet. Logged loudly so it is at least findable until
+       * the admin dispute screen surfaces it.
+       */
+      if (done === 'failed') {
+        console.error(
+          `REFUND FAILED on order ${order.orderNumber} - refund ${refund.id},` +
+            ` RS ${(refund.amount || 0) / 100}. The customer has NOT been paid.`
+        );
+      } else {
+        console.log(`Refund ${refund.id} completed for order ${order.orderNumber}`);
+      }
+
+      return res.json({ status: 'ok' });
+    }
+
     // Other events - ignore
     return res.json({ status: 'ok' });
     

@@ -92,6 +92,33 @@ const orderItemSchema = new mongoose.Schema({
     enum: ['platform', 'seller', null],
     default: null
   },
+
+  /**
+   * A refund raised for THIS line alone.
+   *
+   * WHY IT IS HERE AND NOT ONLY ON THE ORDER
+   *   Cancelling one item out of a multi-item order raises a PARTIAL refund at
+   *   Razorpay. customerController already wrote `item.refundId` and
+   *   `item.refundStatus` - but neither path existed on this schema, and
+   *   Mongoose silently drops writes to unknown paths in strict mode. So the
+   *   refund happened at the payment gateway and its id was thrown away on the
+   *   floor: nothing tied that refund to this order, this item, or this
+   *   customer.
+   *
+   *   That matters most when a refund FAILS. Razorpay says so in a
+   *   refund.failed webhook, which arrives carrying a refund id - and with
+   *   nothing to match it against, the money is stuck and nobody knows.
+   *
+   *   The code that writes these was correct all along. The schema was missing.
+   */
+  refundId: { type: String, default: null },
+  refundStatus: {
+    type: String,
+    enum: ['processing', 'completed', 'failed'],
+    default: null,
+  },
+  refundAmount: { type: Number, default: null },
+  refundedAt: { type: Date, default: null },
 });
 
 /**
