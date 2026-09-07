@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { authedFetch } from '@/lib/client';
 import { Button } from '@/components/ui/button';
 
@@ -198,6 +199,12 @@ export default function OrderQueue() {
                   </div>
                 </div>
               )}
+
+              <p className="mt-3 text-sm">
+                <Link href={`/seller/orders/${order._id}`} className="text-brand-ink hover:underline">
+                  Open this order
+                </Link>
+              </p>
 
               <div className="mt-4 flex flex-wrap gap-2">
                 {!shipped && ['pending', 'processing'].includes(order.status) && (

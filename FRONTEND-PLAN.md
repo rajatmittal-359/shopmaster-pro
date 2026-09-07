@@ -534,7 +534,7 @@ Updated as it moves. The order is section 7's.
 | 4 | `/products/[slug]` — the money page | ✅ Built and rendering live data. Server-rendered; price, stock, description and both JSON-LD blocks are in the HTML |
 | 5 | `/shop` | ✅ Filters, server-side sort, removable chips, numbered pages, a real empty state. Filtered views carry `noindex, follow` |
 | 6 | `/` | ✅ Hero with a CSS-only effect, categories from the live tree, newest products, the shop's real address, and the Organization record |
-| 7 | Port the 30 private routes | ⏳ In progress. **Customer side done**: sign in, register + OTP, cart, checkout (COD and Razorpay), addresses, orders list, order detail with tracking, cancel and return/exchange - all proved against the live API. **Seller and admin panels still to come** |
+| 7 | Port the 30 private routes | ✅ **Done.** Customer, seller and admin - 36 pages, every React route mapped. See section 13a |
 | 8 | Cutover - see section 12 | ☐ Blocked until Oct 2026 (payment) |
 
 **Owed on the product page, and deliberately not faked:**
@@ -558,35 +558,49 @@ Google Sign-In, role-as-capability, seller onboarding. None started.
 
 Rajat's plan, confirmed 7 Sep 2026: **the React app goes entirely.** `web/`
 serves the domain, Render runs it, and `frontend/` is removed from the repo.
-That makes this a checklist, not an aspiration - every route the React app
-answers today has to answer somewhere afterwards, or somebody's bookmark, email
-link or WhatsApp message lands on a 404.
 
-The React app answers **37 routes**. Here is the honest state of each group.
+The React app answers **37 routes**. As of 8 September 2026, **every one of them
+has a home** - `web/` has 36 pages, plus redirects for the paths that were
+renamed. What follows is the mapping, so the deletion can be checked rather than
+felt.
 
-| Route in `frontend/` | In `web/` | Note |
+| React route | Next route | |
 |---|---|---|
-| `/`, `/shop`, `/products/:id`, 6 policy pages | ✅ | Better than before: server-rendered |
-| `/login`, `/register`, `/verify-otp` | ✅ | Verify is a step inside register; `/verify-otp` redirects |
-| `/forgot-password`, `/reset-password` | ✅ | **The reset link in every password email points here.** Built before deletion for exactly that reason |
-| `/customer/cart`, `/customer/checkout` | ✅ | Redirected from the old paths |
-| `/customer/orders`, `/customer/orders/:id` | ✅ | Redirected |
-| `/customer/dashboard` | ✅ | Redirects to `/orders` - that is what people opened it for |
-| `/customer/addresses` | ☐ | Editable only inside checkout today |
-| `/customer/wishlist` | ☐ | API exists, no screen |
-| `/customer/orders/:id/bill` | ☐ | **A Bill of Supply. Legally the document, not a nicety** |
-| `/seller/dashboard`, `/seller/orders`, `/seller/products`, `/seller/products/:id` | ✅ | Plus a new `/seller/products/new` |
-| `/seller/orders/:orderId` | ☐ | The queue covers the actions; the detail view does not exist |
-| `/seller/earnings` | ☐ | `/seller/earnings` and `/seller/payout-details` are unused endpoints |
-| `/seller/settings` | ☐ | Pickup address and free-delivery switch |
-| `/seller/inventory-logs` | ☐ | |
-| `/admin/*` - dashboard, manage-sellers, orders, payouts, categories, coupons, inventory-logs | ☐ ×7 | Section 14.3 sets the order: payouts, disputes, sellers, orders, then the rest |
+| `/`, `/shop`, `/products/:id`, 6 policy pages | same | ✅ server-rendered now |
+| `/login`, `/register`, `/verify-otp` | `/login`, `/register` | ✅ verify is a step inside register |
+| `/forgot-password`, `/reset-password` | same | ✅ **every password email links here** |
+| `/customer/cart` → `/cart`, `/customer/checkout` → `/checkout` | | ✅ redirected |
+| `/customer/orders`, `/customer/orders/:id` | `/orders`, `/orders/:id` | ✅ redirected |
+| `/customer/orders/:id/bill` | `/orders/:id/bill` | ✅ Bill of Supply, print-styled |
+| `/customer/addresses` → `/addresses` | | ✅ |
+| `/customer/wishlist` → `/wishlist` | | ✅ |
+| `/customer/dashboard` | `/orders` | ✅ redirected - that is what it was opened for |
+| `/seller/dashboard` → `/seller` | | ✅ |
+| `/seller/orders`, `/seller/orders/:id` | same | ✅ |
+| `/seller/products`, `/seller/products/:id` | same, **plus `/seller/products/new`** | ✅ a seller can list a product at last |
+| `/seller/earnings` | same | ✅ four numbers and the bank details |
+| `/seller/settings` | same | ✅ pickup address, free delivery |
+| `/seller/inventory-logs` → `/seller/inventory` | | ✅ |
+| `/admin/dashboard` → `/admin` | | ✅ |
+| `/admin/manage-sellers` → `/admin/sellers` | | ✅ approve, suspend, commission |
+| `/admin/orders` | same | ✅ **and disputes, which had no screen before** |
+| `/admin/payouts` | same | ✅ |
+| `/admin/categories`, `/admin/coupons` | same | ✅ |
+| `/admin/inventory-logs` → `/admin/inventory` | | ✅ |
 
-**Old URLs are kept alive as 308 redirects** in `next.config.mjs`. They are
-behind a login so there is no ranking to lose - but a customer who bookmarked
-their orders page and gets a 404 has no way to know the shop still works.
+**Old URLs are 308 redirects** in `next.config.mjs`. They are behind a login so
+there is no ranking to lose - but a customer who bookmarked their orders page
+and gets a 404 has no way to know the shop still works.
 
----
+**What is NOT parity, and is deliberate:**
+
+- **Toasts.** The React app popped a toast for every action. Here the answer
+  appears next to the thing that caused it, in an `aria-live` region. A toast
+  that has already faded is an error message nobody read.
+- **`/customer/dashboard`.** A page of links to other pages. The header does
+  that.
+- **Size filter.** Never existed; now needed because clothing sellers are
+  coming. Backend work, recorded in section 3.5a.
 
 ## 13b. What "moving to shadcn" actually meant
 
