@@ -1,0 +1,92 @@
+# The timetable, kept outside the server that runs the work.
+#
+# WHY IT IS NOT node-cron ANY MORE
+#   node-cron lives inside the Express process. On Render's free tier that
+#   process sleeps after 15 minutes without traffic, and a sleeping process runs
+#   no timers. So the low-stock alert never went out, and the tracking
+#   reconciler - the safety net built to catch delivery webhooks the sleeping
+#   service had missed - never ran either.
+#
+#   Nothing errored. Nothing appeared on any screen. The jobs simply did not
+#   happen, which is the worst way for a safety net to be absent.
+#
+#   Scheduling from outside is an ordinary architecture, not a workaround: it is
+#   what Vercel Cron and every hosted scheduler does. The difference from a
+#   keep-alive ping is that this one FAILS LOUDLY - a run that cannot reach the
+#   server turns red and GitHub emails about it.
+#
+# COST
+#   Nothing. Actions minutes are not metered on public repositories.
+#
+# SET-UP (one manual step)
+#   Add a repository secret named JOBS_TOKEN with the same value as the
+#   JOBS_TOKEN environment variable on Render.
+name: scheduled jobs
+
+on:
+  schedule:
+    # Every two hours at :15. Not daily - deliveredAt starts the 7-day return
+    # window and that window closing is what releases a seller's money, so a
+    # day's delay is a day's delay in somebody's payment.
+    - cron: '15 */2 * * *'
+    # 03:30 UTC is 09:00 IST - morning in Jaipur, when a seller can act on it.
+    - cron: '30 3 * * *'
+  # So it can be run by hand from the Actions tab without waiting for the clock.
+  workflow_dispatch:
+    inputs:
+      job:
+        description: 'Which job to run'
+        required: true
+        default: reconcile
+        type: choice
+        options: [reconcile, low-stock]
+
+env:
+  API: https://shopmaster-api.onrender.com
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - name: work out which job this run is for
+        id: which
+        run: |
+          if [ -n "${{ inputs.job }}" ]; then
+            echo "name=${{ inputs.job }}" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event.schedule }}" = "30 3 * * *" ]; then
+            echo "name=low-stock" >> "$GITHUB_OUTPUT"
+          else
+            echo "name=reconcile" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: run it
+        env:
+          JOB: ${{ steps.which.outputs.name }}
+          TOKEN: ${{ secrets.JOBS_TOKEN }}
+        run: |
+          if [ -z "$TOKEN" ]; then
+            echo "::error::JOBS_TOKEN is not set. Add it under"
+            echo "::error::Settings -> Secrets and variables -> Actions."
+            exit 1
+          fi
+
+          echo "Running job: $JOB"
+
+          # --max-time 300 because the FIRST request has to wake a sleeping
+          # free-tier service, which takes about 40 seconds before any work
+          # starts. --retry covers the wake-up timing out on the first attempt.
+          code=$(curl -sS -o response.json -w '%{http_code}' \
+            --max-time 300 --retry 2 --retry-delay 30 --retry-all-errors \
+            -X POST "$API/api/jobs/$JOB" \
+            -H "x-job-token: $TOKEN")
+
+          echo "HTTP $code"
+          cat response.json || true
+          echo
+
+          # Anything but 200 fails the run, so a job that has quietly stopped
+          # working becomes an email rather than a silence.
+          if [ "$code" != "200" ]; then
+            echo "::error::Job $JOB failed with HTTP $code"
+            exit 1
+          fi

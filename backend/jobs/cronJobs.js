@@ -1,48 +1,48 @@
 const cron = require('node-cron');
-const Product = require('../models/Product');
-const User = require('../models/User');
-const sendEmail = require('../utils/sendEmail');
-const { lowStockEmail } = require('../utils/emailTemplates');
+const { runLowStockAlerts } = require('./lowStock');
 const { reconcileOnce } = require('./trackingReconcile');
 
+/**
+ * Scheduled work, when this process is the one doing the scheduling.
+ *
+ * WHY THERE IS A SWITCH
+ *   node-cron lives inside the web service. On Render's free tier that service
+ *   sleeps after 15 minutes without traffic, and a sleeping process runs no
+ *   timers - so the low-stock alert never went out and the tracking reconciler
+ *   never ran. Nothing failed loudly; the jobs simply did not happen, which is
+ *   the worst way for a safety net to be missing.
+ *
+ *   The fix is to schedule from OUTSIDE: GitHub Actions calls
+ *   POST /api/jobs/:name on a timetable (see .github/workflows). That is an
+ *   ordinary architecture, not a workaround - it is what Vercel Cron and every
+ *   hosted scheduler does.
+ *
+ *   But TWO schedulers is worse than one. The low-stock job is not idempotent:
+ *   run it twice and every seller gets two emails. So when an external
+ *   scheduler is driving, this one stands down entirely.
+ *
+ *     USE_EXTERNAL_CRON=true   -> GitHub Actions drives; this does nothing
+ *     unset                    -> this process schedules, as before
+ */
 exports.startCronJobs = () => {
-  // Daily at 9 AM - Low stock alert
+  if (String(process.env.USE_EXTERNAL_CRON).toLowerCase() === 'true') {
+    console.log('⏰ In-process cron is OFF - an external scheduler is driving');
+    return;
+  }
+
+  // Daily at 9 AM - low stock alert.
   cron.schedule('0 9 * * *', async () => {
-    console.log('⏰ Running low stock cron...');
-    
     try {
-      const lowStock = await Product.find({
-        isActive: true,
-        $expr: { $lte: ['$stock', '$lowStockThreshold'] }
-      }).populate('sellerId');
-
-      // Product.sellerId references User, so the populated value IS the seller's
-      // user account. The old code read `.userId` off it as though it were a
-      // Seller profile; that is always undefined, so the lookup below returned
-      // null and every alert was silently skipped. Group by the user directly.
-      const bySeller = new Map();
-
-      lowStock.forEach(p => {
-        if (!p.sellerId) return; // product whose owner was deleted
-        const id = p.sellerId._id.toString();
-        if (!bySeller.has(id)) bySeller.set(id, { user: p.sellerId, products: [] });
-        bySeller.get(id).products.push(p);
-      });
-
-      let sent = 0;
-      for (const { user, products } of bySeller.values()) {
-        if (!user.email) continue;
-        const template = lowStockEmail(products, user);
-        await sendEmail({ to: user.email, ...template });
-        sent++;
-      }
-
-      console.log(`✅ Low stock alerts sent to ${sent} seller(s) for ${lowStock.length} product(s)`);
+      const result = await runLowStockAlerts();
+      console.log(
+        `✅ Low stock: ${result.sent} seller(s) told about ${result.products} product(s)` +
+          (result.failed ? `, ${result.failed} email(s) failed` : '')
+      );
     } catch (err) {
-      console.error('❌ Cron error:', err.message);
+      console.error('❌ Low stock cron failed:', err.message);
     }
   });
-  
+
   /*
    * Every two hours: ask the courier about parcels the webhook has gone quiet
    * on.

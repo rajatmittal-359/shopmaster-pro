@@ -1,6 +1,8 @@
 # Dependencies
 node_modules/
-package-lock.json
+# package-lock.json was ignored here, which defeats the point of a lockfile:
+# CI and this machine could install different versions and disagree about
+# whether the tests pass. Lockfiles belong in git.
 
 # Environment variables
 .env

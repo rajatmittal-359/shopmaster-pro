@@ -1,0 +1,92 @@
+# Every push and every pull request runs the tests.
+#
+# WHY THIS EXISTS
+#   754 tests were written and none of them gated anything. They ran only when
+#   somebody remembered to type `npm test`. Meanwhile Render deployed every push
+#   to main straight to production - 69 of them in the last 30 days - so a broken
+#   commit reached shopmasterpro.in and was found by a customer, if at all.
+#
+#   Auto-deploy on push is normal and professional. Auto-deploy on UNVERIFIED
+#   push is not. This is the verification.
+#
+# COST
+#   Nothing. GitHub does not meter Actions minutes on PUBLIC repositories using
+#   standard runners, and this repo is public. (On a private repo the free
+#   allowance would be 2,000 Linux minutes a month - about 600 runs of this.)
+name: tests
+
+on:
+  push:
+  pull_request:
+
+# A second push to the same branch cancels the first run still in progress.
+# Without this, pushing three times in a minute burns three full runs to learn
+# about the last commit only.
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: backend tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      # `ci` and not `install`: it installs exactly what the lockfile says and
+      # fails if package.json and the lockfile disagree. `install` would quietly
+      # resolve new versions, so CI could pass on code that fails locally.
+      - name: install
+        working-directory: backend
+        run: npm ci
+
+      - name: test
+        working-directory: backend
+        # tests/setup.mjs points MONGO_URI at a host that is never connected -
+        # no test may reach a real database. Set here too so a missing local
+        # .env can never silently change what the tests talk to.
+        env:
+          NODE_ENV: test
+          MONGO_URI: mongodb://127.0.0.1:27017/never-connected
+        run: npm test
+
+  frontend:
+    name: frontend build and lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: install
+        working-directory: frontend
+        run: npm ci
+
+      # The build is the real test here. A broken import or a mistyped component
+      # name fails it, and both have reached production from this repo before -
+      # twice, from a find-and-replace that silently matched nothing.
+      - name: build
+        working-directory: frontend
+        run: npm run build
+
+      # Plain `eslint src` would fail immediately: there are 30 long-standing
+      # ERRORS, 24 of them the same react-hooks pattern, and --max-warnings
+      # cannot excuse an error. Blocking every future commit behind fixing all
+      # of them would end one way - the lint step being switched off.
+      #
+      # So the count is compared against a committed baseline instead. New
+      # mistakes push it up and fail the build; fixing old ones pushes it down.
+      # The debt can only shrink.
+      - name: lint
+        working-directory: frontend
+        run: node scripts/lint-baseline.mjs

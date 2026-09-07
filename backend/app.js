@@ -106,6 +106,16 @@ const { sitemap } = require('./controllers/sitemapController');
 app.get('/sitemap.xml', sitemap);
 app.get('/api/sitemap.xml', sitemap);
 
+/*
+ * Scheduled work, driven from outside this process.
+ *
+ * node-cron sleeps when the free-tier service sleeps, so the timetable lives in
+ * GitHub Actions instead and calls these. Guarded by JOBS_TOKEN - see
+ * controllers/jobsController.js for why a missing token means "closed" rather
+ * than "open".
+ */
+app.post('/api/jobs/:name', require('./controllers/jobsController').runJob);
+
 // Courier tracking updates. Named "logistics" on purpose - Shiprocket will not
 // register a webhook URL containing "shiprocket", "sr" or "kr".
 app.use('/api/logistics', require('./routes/logisticsRoutes'));
