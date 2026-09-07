@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { authedFetch } from '@/lib/client';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 /**
  * The seller's own catalogue.
@@ -117,22 +119,20 @@ export default function ProductTable() {
                 <label className="sr-only" htmlFor={`stock-${product._id}`}>
                   Stock for {product.name}
                 </label>
-                <input
+                <Input
                   id={`stock-${product._id}`}
                   inputMode="numeric"
                   value={edited ?? product.stock ?? 0}
                   onChange={(e) =>
                     setEdits({ ...edits, [product._id]: e.target.value.replace(/\D/g, '') })
                   }
-                  className="w-20 rounded-md border border-border bg-background px-2 py-1.5 text-sm"
+                  className="w-20"
                 />
-                <button
+                <Button
                   onClick={() => saveStock(product)}
-                  disabled={edited === undefined || String(edited) === String(product.stock)}
-                  className="rounded-md border border-border px-3 py-1.5 text-sm hover:bg-accent disabled:opacity-40"
-                >
+                  disabled={edited === undefined || String(edited) === String(product.stock)} variant="outline" size="sm">
                   Save
-                </button>
+                </Button>
                 <span
                   className={`w-24 text-right text-sm ${available === 0 ? 'text-destructive' : 'text-muted-foreground'}`}
                 >

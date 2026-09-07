@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation';
 import { authedFetch } from '@/lib/client';
 import { useSession } from '@/lib/session';
 import AddressPicker from '@/components/checkout/AddressPicker';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 /**
  * Paying.
@@ -329,16 +331,16 @@ export default function CheckoutView() {
         )}
 
         <form onSubmit={applyCoupon} className="mt-4 flex gap-2">
-          <input
+          <Input
             value={code}
             onChange={(e) => setCode(e.target.value.toUpperCase())}
             placeholder="Coupon code"
             aria-label="Coupon code"
-            className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+            className="w-full"
           />
-          <button type="submit" className="rounded-md border border-border px-3 text-sm hover:bg-accent">
+          <Button type="submit" variant="outline" size="sm">
             Apply
-          </button>
+          </Button>
         </form>
         {coupon && (
           <p className={`mt-2 text-sm ${coupon.failed ? 'text-destructive' : 'text-muted-foreground'}`}>
@@ -346,13 +348,12 @@ export default function CheckoutView() {
           </p>
         )}
 
-        <button
+        <Button
           onClick={placeOrder}
           disabled={!addressId || !totals || state.status === 'placing'}
-          className="mt-4 h-11 w-full rounded-lg bg-primary font-medium text-primary-foreground transition hover:opacity-90 disabled:opacity-60"
-        >
+          className="mt-4 w-full" size="lg">
           {state.status === 'placing' ? 'Placing…' : payment === 'cod' ? 'Place order' : 'Pay now'}
-        </button>
+        </Button>
 
         <p aria-live="polite" className="mt-2 min-h-5 text-sm">
           {state.status === 'error' && <span className="text-destructive">{state.message}</span>}

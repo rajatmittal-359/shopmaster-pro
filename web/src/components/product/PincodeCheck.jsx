@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { apiBase } from '@/lib/api';
+import { Input } from '@/components/ui/input';
 
 /**
  * "Get it by Tuesday" - the single cheapest conversion difference on an Indian
@@ -53,14 +54,14 @@ export default function PincodeCheck() {
       <p className="text-sm font-medium">Check delivery to your PIN code</p>
 
       <form onSubmit={check} className="mt-2 flex gap-2">
-        <input
+        <Input
           value={code}
           onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
           inputMode="numeric"
           maxLength={6}
           placeholder="302019"
           aria-label="PIN code"
-          className="w-32 rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="w-32"
         />
         <button
           type="submit"

@@ -2,6 +2,7 @@
 
 import { useState, useSyncExternalStore } from 'react';
 import { apiBase } from '@/lib/api';
+import { Button } from '@/components/ui/button';
 
 /**
  * Quantity, and the button the whole page exists for.
@@ -80,12 +81,11 @@ export default function BuyBox({ productId, name, price, inStock, maxQuantity })
   const cap = Math.max(1, Math.min(Number(maxQuantity) || 1, 10));
 
   const button = !inStock ? (
-    <button
+    <Button
       disabled
-      className="h-12 w-full rounded-lg bg-muted font-medium text-muted-foreground"
-    >
+      className="w-full" variant="ghost" size="sm">
       Out of stock
-    </button>
+    </Button>
   ) : !signedIn ? (
     <a
       href={`/login?next=${encodeURIComponent(typeof window === 'undefined' ? '/' : window.location.pathname)}`}
@@ -94,17 +94,16 @@ export default function BuyBox({ productId, name, price, inStock, maxQuantity })
       Sign in to add to cart
     </a>
   ) : (
-    <button
+    <Button
       onClick={add}
       disabled={state.status === 'adding'}
-      className="h-12 w-full rounded-lg bg-primary font-medium text-primary-foreground transition hover:opacity-90 disabled:opacity-60"
-    >
+      className="w-full" size="lg">
       {state.status === 'adding'
         ? 'Adding…'
         : state.status === 'added'
           ? 'Added to cart'
           : 'Add to cart'}
-    </button>
+    </Button>
   );
 
   return (

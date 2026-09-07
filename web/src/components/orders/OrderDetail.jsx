@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { authedFetch } from '@/lib/client';
 import { useSession } from '@/lib/session';
 import { readable, hasLeftTheSeller } from '@/lib/courierText';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
 
 /**
  * One order: where each parcel is, and what can still be done about it.
@@ -209,22 +211,18 @@ export default function OrderDetail({ orderId }) {
 
         <div className="mt-3 flex flex-wrap gap-3">
           {canCancel && (
-            <button
+            <Button
               onClick={() => act(`/customer/orders/${orderId}/cancel`, undefined, 'PATCH')}
-              disabled={state.status === 'working'}
-              className="rounded-lg border border-border px-4 py-2 text-sm hover:bg-accent disabled:opacity-60"
-            >
+              disabled={state.status === 'working'} variant="outline" size="sm">
               Cancel this order
-            </button>
+            </Button>
           )}
 
           {canReturn && !returning && (
-            <button
-              onClick={() => setReturning(true)}
-              className="rounded-lg border border-border px-4 py-2 text-sm hover:bg-accent"
-            >
+            <Button
+              onClick={() => setReturning(true)} variant="outline" size="sm">
               Return or exchange
-            </button>
+            </Button>
           )}
 
           {/* Only where the seller says they delivered it themselves and no
@@ -233,13 +231,11 @@ export default function OrderDetail({ orderId }) {
           {order.fulfilments?.some(
             (f) => f.status === 'delivered' && f.deliveryConfirmedBy === 'seller'
           ) && (
-            <button
+            <Button
               onClick={() => act(`/customer/orders/${orderId}/confirm-receipt`)}
-              disabled={state.status === 'working'}
-              className="rounded-lg border border-border px-4 py-2 text-sm hover:bg-accent disabled:opacity-60"
-            >
+              disabled={state.status === 'working'} variant="outline" size="sm">
               Yes, I received it
-            </button>
+            </Button>
           )}
         </div>
 
@@ -291,14 +287,14 @@ export default function OrderDetail({ orderId }) {
               <label htmlFor="reason" className="text-sm font-medium">
                 What went wrong?
               </label>
-              <textarea
+              <Textarea
                 id="reason"
                 required
                 minLength={3}
                 rows={3}
                 value={returnForm.reason}
                 onChange={(e) => setReturnForm({ ...returnForm, reason: e.target.value })}
-                className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                className="mt-1 w-full"
               />
               <p className="mt-1 text-xs text-muted-foreground">
                 The seller reads this. A line is enough.
@@ -306,20 +302,16 @@ export default function OrderDetail({ orderId }) {
             </div>
 
             <div className="flex gap-3">
-              <button
+              <Button
                 type="submit"
-                disabled={state.status === 'working'}
-                className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-60"
-              >
+                disabled={state.status === 'working'}>
                 {state.status === 'working' ? 'Sending…' : 'Send the request'}
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
-                onClick={() => setReturning(false)}
-                className="text-sm text-muted-foreground"
-              >
+                onClick={() => setReturning(false)} variant="ghost" size="sm">
                 Not now
-              </button>
+              </Button>
             </div>
           </form>
         )}

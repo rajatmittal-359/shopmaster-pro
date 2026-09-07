@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { apiBase } from '@/lib/api';
 import { setSession } from '@/lib/session';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 /**
  * Signing in.
@@ -63,14 +65,14 @@ export default function LoginForm({ next = '/' }) {
         <label htmlFor="email" className="text-sm font-medium">
           Email
         </label>
-        <input
+        <Input
           id="email"
           type="email"
           required
           autoComplete="email"
           value={form.email}
           onChange={set('email')}
-          className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="mt-1 w-full"
         />
       </div>
 
@@ -83,24 +85,23 @@ export default function LoginForm({ next = '/' }) {
             Forgotten it?
           </Link>
         </div>
-        <input
+        <Input
           id="password"
           type="password"
           required
           autoComplete="current-password"
           value={form.password}
           onChange={set('password')}
-          className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="mt-1 w-full"
         />
       </div>
 
-      <button
+      <Button
         type="submit"
         disabled={state.status === 'sending'}
-        className="h-11 w-full rounded-lg bg-primary font-medium text-primary-foreground transition hover:opacity-90 disabled:opacity-60"
-      >
+        className="w-full" size="lg">
         {state.status === 'sending' ? 'Signing in…' : 'Sign in'}
-      </button>
+      </Button>
 
       <div aria-live="polite" className="min-h-5 text-sm">
         {state.status === 'error' && <p className="text-destructive">{state.message}</p>}

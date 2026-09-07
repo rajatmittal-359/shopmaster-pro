@@ -554,6 +554,62 @@ Google Sign-In, role-as-capability, seller onboarding. None started.
 
 ---
 
+## 13a. Before `frontend/` can be deleted
+
+Rajat's plan, confirmed 7 Sep 2026: **the React app goes entirely.** `web/`
+serves the domain, Render runs it, and `frontend/` is removed from the repo.
+That makes this a checklist, not an aspiration - every route the React app
+answers today has to answer somewhere afterwards, or somebody's bookmark, email
+link or WhatsApp message lands on a 404.
+
+The React app answers **37 routes**. Here is the honest state of each group.
+
+| Route in `frontend/` | In `web/` | Note |
+|---|---|---|
+| `/`, `/shop`, `/products/:id`, 6 policy pages | ✅ | Better than before: server-rendered |
+| `/login`, `/register`, `/verify-otp` | ✅ | Verify is a step inside register; `/verify-otp` redirects |
+| `/forgot-password`, `/reset-password` | ✅ | **The reset link in every password email points here.** Built before deletion for exactly that reason |
+| `/customer/cart`, `/customer/checkout` | ✅ | Redirected from the old paths |
+| `/customer/orders`, `/customer/orders/:id` | ✅ | Redirected |
+| `/customer/dashboard` | ✅ | Redirects to `/orders` - that is what people opened it for |
+| `/customer/addresses` | ☐ | Editable only inside checkout today |
+| `/customer/wishlist` | ☐ | API exists, no screen |
+| `/customer/orders/:id/bill` | ☐ | **A Bill of Supply. Legally the document, not a nicety** |
+| `/seller/dashboard`, `/seller/orders`, `/seller/products`, `/seller/products/:id` | ✅ | Plus a new `/seller/products/new` |
+| `/seller/orders/:orderId` | ☐ | The queue covers the actions; the detail view does not exist |
+| `/seller/earnings` | ☐ | `/seller/earnings` and `/seller/payout-details` are unused endpoints |
+| `/seller/settings` | ☐ | Pickup address and free-delivery switch |
+| `/seller/inventory-logs` | ☐ | |
+| `/admin/*` - dashboard, manage-sellers, orders, payouts, categories, coupons, inventory-logs | ☐ ×7 | Section 14.3 sets the order: payouts, disputes, sellers, orders, then the rest |
+
+**Old URLs are kept alive as 308 redirects** in `next.config.mjs`. They are
+behind a login so there is no ranking to lose - but a customer who bookmarked
+their orders page and gets a 404 has no way to know the shop still works.
+
+---
+
+## 13b. What "moving to shadcn" actually meant
+
+The move is not cosmetic and it is not a component library for its own sake:
+
+- **Every button is `<Button>`**, with variants (default, outline, ghost, link,
+  destructive) instead of nine different hand-written class strings that had
+  already started to disagree with each other.
+- **Every text field is `<Input>` / `<Textarea>` with `<Label>`**, so focus
+  rings, invalid states and disabled states are defined once.
+- **Native `<select>` is KEPT deliberately.** shadcn's Select is a rich Base UI
+  component, and on a phone the native element opens the operating system's own
+  picker - faster, familiar, and accessible without any work. A custom
+  dropdown is worth it only where the options need pictures or grouping, and
+  none of ours do.
+- **The codemod that did it is recorded here because it went wrong once:**
+  the first version matched `<button ... >` with a regex, and an `onClick`
+  containing an arrow function has a `>` inside `=>`. It cut five files in
+  half. The second version walks the tag, tracking quotes and brace depth, and
+  only treats a `>` at depth zero as the end. Regexes cannot parse JSX.
+
+---
+
 ## 14. The three panels, and who each one is for
 
 Written 7 Sep 2026, after Rajat pointed out - correctly - that this was the one

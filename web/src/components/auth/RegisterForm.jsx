@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { apiBase } from '@/lib/api';
 import { setSession } from '@/lib/session';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 /**
  * Creating an account, in two steps on one page.
@@ -100,7 +102,7 @@ export default function RegisterForm({ next = '/', verifyEmail = '' }) {
           <label htmlFor="otp" className="text-sm font-medium">
             The code
           </label>
-          <input
+          <Input
             id="otp"
             inputMode="numeric"
             autoComplete="one-time-code"
@@ -111,22 +113,21 @@ export default function RegisterForm({ next = '/', verifyEmail = '' }) {
           />
         </div>
 
-        <button
+        <Button
           type="submit"
           disabled={state.status === 'sending'}
-          className="h-11 w-full rounded-lg bg-primary font-medium text-primary-foreground transition hover:opacity-90 disabled:opacity-60"
-        >
+          className="w-full" size="lg">
           {state.status === 'sending' ? 'Checking…' : 'Verify and continue'}
-        </button>
+        </Button>
 
         <div aria-live="polite" className="min-h-5 text-sm">
           {state.status === 'error' && <p className="text-destructive">{state.message}</p>}
           {state.note && <p className="text-muted-foreground">{state.note}</p>}
         </div>
 
-        <button type="button" onClick={resend} className="text-sm text-brand-ink hover:underline">
+        <Button type="button" onClick={resend} variant="link" size="sm">
           Send the code again
-        </button>
+        </Button>
       </form>
     );
   }
@@ -137,14 +138,14 @@ export default function RegisterForm({ next = '/', verifyEmail = '' }) {
         <label htmlFor="name" className="text-sm font-medium">
           Name
         </label>
-        <input id="name" required autoComplete="name" value={form.name} onChange={set('name')} className={input} />
+        <Input id="name" required autoComplete="name" value={form.name} onChange={set('name')} className={input} />
       </div>
 
       <div>
         <label htmlFor="email" className="text-sm font-medium">
           Email
         </label>
-        <input
+        <Input
           id="email"
           type="email"
           required
@@ -159,7 +160,7 @@ export default function RegisterForm({ next = '/', verifyEmail = '' }) {
         <label htmlFor="password" className="text-sm font-medium">
           Password
         </label>
-        <input
+        <Input
           id="password"
           type="password"
           required
@@ -171,13 +172,12 @@ export default function RegisterForm({ next = '/', verifyEmail = '' }) {
         />
       </div>
 
-      <button
+      <Button
         type="submit"
         disabled={state.status === 'sending'}
-        className="h-11 w-full rounded-lg bg-primary font-medium text-primary-foreground transition hover:opacity-90 disabled:opacity-60"
-      >
+        className="w-full" size="lg">
         {state.status === 'sending' ? 'Creating…' : 'Create account'}
-      </button>
+      </Button>
 
       <div aria-live="polite" className="min-h-5 text-sm">
         {state.status === 'error' && <p className="text-destructive">{state.message}</p>}

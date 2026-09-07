@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { authedFetch } from '@/lib/client';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 /**
  * Choosing where it goes, and adding a new one without leaving the page.
@@ -77,45 +79,44 @@ export default function AddressPicker({ addresses, selectedId, onSelect, onAdded
       )}
 
       {!adding ? (
-        <button
+        <Button
           onClick={() => setAdding(true)}
-          className="mt-3 text-sm text-brand-ink hover:underline"
-        >
+          className="mt-3" variant="link" size="sm">
           Add another address
-        </button>
+        </Button>
       ) : (
         <form onSubmit={save} className="mt-4 space-y-3">
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
               <label htmlFor="label" className="text-sm">Name this address</label>
-              <input id="label" value={form.label} onChange={set('label')} className={field} />
+              <Input id="label" value={form.label} onChange={set('label')} className="mt-1" />
             </div>
             <div>
               <label htmlFor="phoneNumber" className="text-sm">Phone</label>
-              <input
+              <Input
                 id="phoneNumber"
                 required
                 inputMode="numeric"
                 value={form.phoneNumber}
                 onChange={set('phoneNumber')}
-                className={field}
+                className="mt-1"
               />
             </div>
           </div>
 
           <div>
             <label htmlFor="street" className="text-sm">Address</label>
-            <input id="street" required value={form.street} onChange={set('street')} className={field} />
+            <Input id="street" required value={form.street} onChange={set('street')} className="mt-1" />
           </div>
 
           <div className="grid gap-3 sm:grid-cols-3">
             <div>
               <label htmlFor="city" className="text-sm">City</label>
-              <input id="city" required value={form.city} onChange={set('city')} className={field} />
+              <Input id="city" required value={form.city} onChange={set('city')} className="mt-1" />
             </div>
             <div>
               <label htmlFor="state" className="text-sm">State</label>
-              <input id="state" required value={form.state} onChange={set('state')} className={field} />
+              <Input id="state" required value={form.state} onChange={set('state')} className="mt-1" />
             </div>
             <div>
               <label htmlFor="zipCode" className="text-sm">PIN code</label>
@@ -126,23 +127,21 @@ export default function AddressPicker({ addresses, selectedId, onSelect, onAdded
                 pattern="[1-9][0-9]{5}"
                 value={form.zipCode}
                 onChange={(e) => setForm({ ...form, zipCode: e.target.value.replace(/\D/g, '').slice(0, 6) })}
-                className={field}
+                className="mt-1"
               />
             </div>
           </div>
 
           <div className="flex items-center gap-3">
-            <button
+            <Button
               type="submit"
-              disabled={state.status === 'saving'}
-              className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-60"
-            >
+              disabled={state.status === 'saving'}>
               {state.status === 'saving' ? 'Saving…' : 'Save address'}
-            </button>
+            </Button>
             {addresses.length > 0 && (
-              <button type="button" onClick={() => setAdding(false)} className="text-sm text-muted-foreground">
+              <Button type="button" onClick={() => setAdding(false)} variant="ghost" size="sm">
                 Cancel
-              </button>
+              </Button>
             )}
           </div>
 

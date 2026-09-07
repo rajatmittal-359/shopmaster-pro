@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { authedFetch } from '@/lib/client';
+import { Button } from '@/components/ui/button';
 
 /**
  * The work queue. Everything a seller does in a day is here.
@@ -164,26 +165,24 @@ export default function OrderQueue() {
 
                   <div className="mt-3 flex flex-wrap gap-2">
                     {order.returnStage === 'requested' && (
-                      <button
+                      <Button
                         onClick={() => act(order._id, '/return', { action: 'pickup' })}
                         disabled={working}
-                        className={button}
-                      >
+                        className={button} variant="outline" size="sm">
                         Book the pickup
-                      </button>
+                      </Button>
                     )}
                     {['requested', 'picked'].includes(order.returnStage) && (
                       <>
-                        <button
+                        <Button
                           onClick={() => act(order._id, '/return', { action: 'receive' })}
                           disabled={working}
-                          className={button}
-                        >
+                          className={button} variant="outline" size="sm">
                           {order.returnResolution === 'replacement'
                             ? 'Got it back - send the replacement'
                             : 'Got it back - refund'}
-                        </button>
-                        <button
+                        </Button>
+                        <Button
                           onClick={() => {
                             const reason = window.prompt(
                               'Why are you refusing this return? The customer can dispute it, so be specific.'
@@ -191,10 +190,9 @@ export default function OrderQueue() {
                             if (reason) act(order._id, '/return', { action: 'reject', reason });
                           }}
                           disabled={working}
-                          className={button}
-                        >
+                          className={button} variant="outline" size="sm">
                           Refuse it
-                        </button>
+                        </Button>
                       </>
                     )}
                   </div>
@@ -203,7 +201,7 @@ export default function OrderQueue() {
 
               <div className="mt-4 flex flex-wrap gap-2">
                 {!shipped && ['pending', 'processing'].includes(order.status) && (
-                  <button
+                  <Button
                     onClick={() => {
                       // Booking spends from the Shiprocket wallet. Asked once,
                       // out loud, because there is no undo that costs nothing.
@@ -211,47 +209,42 @@ export default function OrderQueue() {
                         act(order._id, '/ship');
                       }
                     }}
-                    disabled={working}
-                    className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground disabled:opacity-60"
-                  >
+                    disabled={working}>
                     {working ? 'Working…' : 'Book courier and ship'}
-                  </button>
+                  </Button>
                 )}
 
                 {shipped && order.status !== 'delivered' && (
-                  <button
+                  <Button
                     onClick={() => act(order._id, '/ship/cancel')}
                     disabled={working}
-                    className={button}
-                  >
+                    className={button} variant="outline" size="sm">
                     Cancel the shipment
-                  </button>
+                  </Button>
                 )}
 
                 {/* Only where the API says this seller may - a hand delivery
                     with no courier to ask. It puts the seller's own word on
                     record, and the customer is asked to confirm it. */}
                 {order.canDeclareDelivered && (
-                  <button
+                  <Button
                     onClick={() => act(order._id, '/status', { status: 'delivered' }, 'PATCH')}
                     disabled={working}
-                    className={button}
-                  >
+                    className={button} variant="outline" size="sm">
                     I delivered this myself
-                  </button>
+                  </Button>
                 )}
 
                 {['pending', 'processing'].includes(order.status) && !shipped && (
-                  <button
+                  <Button
                     onClick={() => {
                       const reason = window.prompt('Why are you cancelling? The customer is told.');
                       if (reason) act(order._id, '/cancel', { reason });
                     }}
                     disabled={working}
-                    className={button}
-                  >
+                    className={button} variant="outline" size="sm">
                     Cancel my items
-                  </button>
+                  </Button>
                 )}
               </div>
 

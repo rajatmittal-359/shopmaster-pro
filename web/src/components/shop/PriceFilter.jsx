@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { shopHref } from '@/lib/shopUrl';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 /**
  * The only filter that cannot be a link: it takes two numbers.
@@ -26,30 +28,28 @@ export default function PriceFilter({ params, range }) {
       <h2 className="font-semibold">Price</h2>
       <form onSubmit={apply} className="mt-2 space-y-2">
         <div className="flex items-center gap-2">
-          <input
+          <Input
             value={min}
             onChange={(e) => setMin(e.target.value.replace(/\D/g, ''))}
             inputMode="numeric"
             placeholder={range ? String(range.min) : 'Min'}
             aria-label="Lowest price"
-            className="w-20 rounded-md border border-border bg-background px-2 py-1.5 text-sm"
+            className="w-20"
           />
           <span className="text-muted-foreground">to</span>
-          <input
+          <Input
             value={max}
             onChange={(e) => setMax(e.target.value.replace(/\D/g, ''))}
             inputMode="numeric"
             placeholder={range ? String(range.max) : 'Max'}
             aria-label="Highest price"
-            className="w-20 rounded-md border border-border bg-background px-2 py-1.5 text-sm"
+            className="w-20"
           />
         </div>
-        <button
-          type="submit"
-          className="rounded-md border border-border px-3 py-1.5 text-sm font-medium hover:bg-accent"
-        >
+        <Button
+          type="submit" variant="outline" size="sm">
           Apply
-        </button>
+        </Button>
       </form>
     </section>
   );

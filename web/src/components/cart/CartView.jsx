@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { authedFetch } from '@/lib/client';
 import { useSession } from '@/lib/session';
+import { Button } from '@/components/ui/button';
 
 /**
  * The basket.
@@ -98,9 +99,9 @@ export default function CartView() {
     return (
       <div>
         <p className="text-destructive">{state.message}</p>
-        <button onClick={load} className="mt-3 text-sm text-brand-ink underline">
+        <Button onClick={load} className="mt-3" variant="link" size="sm">
           Try again
-        </button>
+        </Button>
       </div>
     );
   }
@@ -162,12 +163,10 @@ export default function CartView() {
                     ))}
                   </select>
 
-                  <button
-                    onClick={() => change(product._id, 0)}
-                    className="text-sm text-muted-foreground hover:text-destructive"
-                  >
+                  <Button
+                    onClick={() => change(product._id, 0)} variant="destructive" size="sm">
                     Remove
-                  </button>
+                  </Button>
                 </div>
               </div>
 

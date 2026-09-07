@@ -4,6 +4,9 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { authedFetch } from '@/lib/client';
 import { getCategories } from '@/lib/api';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 
 /**
  * Listing something for sale - the one thing every seller panel is built around
@@ -178,7 +181,7 @@ export default function ProductForm({ productId }) {
           <label htmlFor="name" className={label}>
             Name
           </label>
-          <input id="name" required value={form.name} onChange={set('name')} className={field} />
+          <Input id="name" required value={form.name} onChange={set('name')} className="mt-1" />
           <p className="mt-1 text-xs text-muted-foreground">
             Write the colour into it if there is one - &ldquo;Rose Gold Pearl Ring&rdquo;.
             It is the first thing a shopper reads and the first thing Google
@@ -190,13 +193,13 @@ export default function ProductForm({ productId }) {
           <label htmlFor="description" className={label}>
             Description
           </label>
-          <textarea
+          <Textarea
             id="description"
             required
             rows={5}
             value={form.description}
             onChange={set('description')}
-            className={field}
+            className="mt-1"
           />
           <p className="mt-1 text-xs text-muted-foreground">
             Plain words. Markup is refused by the server - it is how one seller
@@ -213,7 +216,7 @@ export default function ProductForm({ productId }) {
             required
             value={form.category}
             onChange={set('category')}
-            className={field}
+            className="mt-1"
           >
             <option value="">Choose one</option>
             {categories.map((cat) => (
@@ -233,20 +236,20 @@ export default function ProductForm({ productId }) {
             <label htmlFor="price" className={label}>
               Selling price (₹)
             </label>
-            <input
+            <Input
               id="price"
               required
               inputMode="numeric"
               value={form.price}
               onChange={set('price')}
-              className={field}
+              className="mt-1"
             />
           </div>
           <div>
             <label htmlFor="mrp" className={label}>
               MRP (₹)
             </label>
-            <input id="mrp" inputMode="numeric" value={form.mrp ?? ''} onChange={set('mrp')} className={field} />
+            <Input id="mrp" inputMode="numeric" value={form.mrp ?? ''} onChange={set('mrp')} className="mt-1" />
             <p className="mt-1 text-xs text-muted-foreground">
               The price printed on the pack. Legally the most it may be sold
               for - not a bigger number to make the discount look better.
@@ -256,13 +259,13 @@ export default function ProductForm({ productId }) {
             <label htmlFor="stock" className={label}>
               How many
             </label>
-            <input
+            <Input
               id="stock"
               required
               inputMode="numeric"
               value={form.stock}
               onChange={set('stock')}
-              className={field}
+              className="mt-1"
             />
           </div>
         </div>
@@ -272,12 +275,12 @@ export default function ProductForm({ productId }) {
             <label htmlFor="weight" className={label}>
               Parcel weight (kg)
             </label>
-            <input
+            <Input
               id="weight"
               inputMode="decimal"
               value={form.weight ?? ''}
               onChange={set('weight')}
-              className={field}
+              className="mt-1"
             />
             <p className="mt-1 text-xs text-muted-foreground">
               The courier is quoted on this. Guessing low costs you the
@@ -288,12 +291,12 @@ export default function ProductForm({ productId }) {
             <label htmlFor="lowStockThreshold" className={label}>
               Warn me at
             </label>
-            <input
+            <Input
               id="lowStockThreshold"
               inputMode="numeric"
               value={form.lowStockThreshold ?? 10}
               onChange={set('lowStockThreshold')}
-              className={field}
+              className="mt-1"
             />
           </div>
           <div className="flex items-end">
@@ -318,19 +321,19 @@ export default function ProductForm({ productId }) {
             <label htmlFor="color" className={label}>
               Colour
             </label>
-            <input
+            <Input
               id="color"
               value={form.color ?? ''}
               onChange={set('color')}
               placeholder="Rose Gold"
-              className={field}
+              className="mt-1"
             />
           </div>
           <div>
             <label htmlFor="gender" className={label}>
               Made for
             </label>
-            <select id="gender" value={form.gender ?? 'female'} onChange={set('gender')} className={field}>
+            <select id="gender" value={form.gender ?? 'female'} onChange={set('gender')} className="mt-1">
               <option value="female">Women</option>
               <option value="male">Men</option>
               <option value="unisex">Anyone</option>
@@ -340,7 +343,7 @@ export default function ProductForm({ productId }) {
             <label htmlFor="ageGroup" className={label}>
               Age group
             </label>
-            <select id="ageGroup" value={form.ageGroup ?? 'adult'} onChange={set('ageGroup')} className={field}>
+            <select id="ageGroup" value={form.ageGroup ?? 'adult'} onChange={set('ageGroup')} className="mt-1">
               <option value="adult">Adult</option>
               <option value="kids">Kids</option>
               <option value="toddler">Toddler</option>
@@ -355,13 +358,13 @@ export default function ProductForm({ productId }) {
             <label htmlFor="brand" className={label}>
               Brand
             </label>
-            <input id="brand" value={form.brand ?? ''} onChange={set('brand')} className={field} />
+            <Input id="brand" value={form.brand ?? ''} onChange={set('brand')} className="mt-1" />
           </div>
           <div>
             <label htmlFor="sku" className={label}>
               Your own item code
             </label>
-            <input id="sku" value={form.sku ?? ''} onChange={set('sku')} className={field} />
+            <Input id="sku" value={form.sku ?? ''} onChange={set('sku')} className="mt-1" />
           </div>
         </div>
       </section>
@@ -374,7 +377,7 @@ export default function ProductForm({ productId }) {
           more than three of it on a table - it is how a shopper judges the size.
         </p>
 
-        <input type="file" accept="image/*" multiple onChange={addImages} className="text-sm" />
+        <Input type="file" accept="image/*" multiple onChange={addImages} className="text-sm" />
 
         {(form.images?.length > 0 || images.length > 0) && (
           <p className="text-sm text-muted-foreground">
@@ -385,20 +388,16 @@ export default function ProductForm({ productId }) {
       </section>
 
       <div className="flex items-center gap-3">
-        <button
+        <Button
           type="submit"
-          disabled={state.status === 'saving'}
-          className="rounded-lg bg-primary px-5 py-2.5 font-medium text-primary-foreground disabled:opacity-60"
-        >
+          disabled={state.status === 'saving'}>
           {state.status === 'saving' ? 'Saving…' : productId ? 'Save changes' : 'List it'}
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
-          onClick={() => router.push('/seller/products')}
-          className="text-sm text-muted-foreground"
-        >
+          onClick={() => router.push('/seller/products')} variant="ghost" size="sm">
           Cancel
-        </button>
+        </Button>
       </div>
 
       <p aria-live="polite" className="min-h-5 text-sm">
