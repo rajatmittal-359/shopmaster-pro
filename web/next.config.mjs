@@ -41,6 +41,7 @@ const nextConfig = {
       { source: '/customer/dashboard', destination: '/orders', permanent: true },
       { source: '/seller/dashboard', destination: '/seller', permanent: true },
       { source: '/admin/dashboard', destination: '/admin', permanent: true },
+      { source: '/admin/manage-sellers', destination: '/admin/sellers', permanent: true },
       // Verifying is a step inside creating an account here, not its own page.
       { source: '/verify-otp', destination: '/register', permanent: true },
     ];
