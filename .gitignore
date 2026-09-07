@@ -49,3 +49,16 @@ UI-UX-GAP-ANALYSIS.md
 # The undo record for draftProductDescriptions.js - generated, and local to
 # whoever ran it. Re-running rewrites it wholesale.
 backend/drafted-descriptions.json
+
+# Belt and braces for a PUBLIC repository.
+#
+# Nothing sensitive has ever been committed here - 151 commits were scanned and
+# the only hit was a doc mentioning the string "rzp_live_", not a key. These
+# patterns exist so that stays true by accident as well as on purpose: `git add
+# -A` is run often, and on a public repo one careless add is permanent.
+*credential*
+*credentials*
+*.pem
+*.key
+*secret*
+*token*.txt
