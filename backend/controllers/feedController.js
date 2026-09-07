@@ -135,6 +135,25 @@ exports.googleProductFeed = async (req, res) => {
           parts.push(`<g:price>${price.toFixed(2)} INR</g:price>`);
         }
 
+        /*
+         * Google REQUIRES colour, gender and age group for free listings in
+         * category 166, "Apparel & Accessories" - which is where every piece of
+         * jewellery sits. All three were missing, and 17 products sat in
+         * "Under review" while they were.
+         *
+         * Emitted only when the product actually carries them. A product with
+         * no colour recorded is flagged by Merchant Center as missing one
+         * attribute, which is visible and fixable; inventing a colour here
+         * would be a guess nobody could see, and Google disapproves a wrong
+         * attribute exactly as it does a missing one.
+         *
+         * `size` is deliberately absent: Google asks for it only on Clothing
+         * (1604) and Shoes (187).
+         */
+        if (p.color) parts.push(`<g:color>${esc(p.color)}</g:color>`);
+        if (p.gender) parts.push(`<g:gender>${esc(p.gender)}</g:gender>`);
+        if (p.ageGroup) parts.push(`<g:age_group>${esc(p.ageGroup)}</g:age_group>`);
+
         const brand = p.brand || p.sellerId?.name;
         if (brand) parts.push(`<g:brand>${esc(brand)}</g:brand>`);
         if (p.sku) parts.push(`<g:mpn>${esc(p.sku)}</g:mpn>`);

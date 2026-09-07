@@ -233,6 +233,48 @@ const productSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    /**
+     * Three attributes Google REQUIRES for free listings in category 166,
+     * "Apparel & Accessories" - which is where all jewellery sits.
+     *
+     *   support.google.com/merchants/answer/6324487  (color)
+     *   support.google.com/merchants/answer/6324479  (gender)
+     *   support.google.com/merchants/answer/6324463  (age_group)
+     *
+     * They were absent from the feed entirely, with 17 products sitting in
+     * "Under review" at Merchant Center.
+     *
+     * Kept on the PRODUCT rather than defaulted inside the feed builder: a guess
+     * made at feed time is a guess nobody can see or correct, and a wrong
+     * attribute earns a disapproval exactly as a missing one does.
+     *
+     * NOT here: `size`. Google requires it only for Clothing (1604) and Shoes
+     * (187), not jewellery - and this catalogue is adjustable anyway. The advice
+     * to send "One Size" comes from blogs, not from Google.
+     */
+    color: {
+      type: String,
+      trim: true,
+      maxlength: [100, 'Colour cannot exceed 100 characters'],
+    },
+
+    /**
+     * Defaults to female because that is what this shop sells, but it is a
+     * FIELD and not an assumption: a kada or a chain is genuinely unisex, and
+     * the seller is the one who knows.
+     */
+    gender: {
+      type: String,
+      enum: ['male', 'female', 'unisex'],
+      default: 'female',
+    },
+
+    ageGroup: {
+      type: String,
+      enum: ['newborn', 'infant', 'toddler', 'kids', 'adult'],
+      default: 'adult',
+    },
+
       brand: {
     type: String,
     trim: true,
