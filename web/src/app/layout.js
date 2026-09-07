@@ -26,12 +26,22 @@ const geistMono = Geist_Mono({
 export const metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://shopmasterpro.in'),
   title: {
-    default: 'ShopMaster Pro - artificial jewellery from Jaipur',
+    default: 'ShopMaster Pro - a marketplace from Jaipur',
     template: '%s | ShopMaster Pro',
   },
+  /*
+   * NOT "a jewellery shop". Charming Jewels is one seller on this marketplace
+   * and there are others, selling clothing, electronics, home and personal
+   * care. Chrome copy that names one category dates the moment a seller joins
+   * who sells something else - and it misdescribes their products to Google.
+   * Category-specific words belong on the product and the category, never in
+   * the frame around them.
+   */
   description:
-    `Artificial and imitation jewellery from ${BUSINESS.legalName}, Jaipur. ` +
-    'Delivered across India, with returns and refunds you can read before you buy.',
+    'A marketplace from Jaipur, run by ' +
+    `${BUSINESS.legalName}. Jewellery, clothing, home and more from ` +
+    'independent sellers, delivered across India, with returns and refunds you ' +
+    'can read before you buy.',
   alternates: { canonical: '/' },
 };
 

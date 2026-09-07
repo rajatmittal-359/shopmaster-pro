@@ -72,10 +72,11 @@ export default function TermsPage() {
 
       <Section title="Product photographs">
         <p>
-          We photograph our jewellery as honestly as we can, but colour varies
-          between screens, and handmade and artificial jewellery varies slightly
-          from piece to piece. That variation is not a defect. If an item is not
-          what the page described, that is a return and we will treat it as one.
+          Products are photographed as honestly as we can manage, but colour
+          varies between screens, and handmade and artificial goods vary
+          slightly from piece to piece. That variation is not a defect. If an
+          item is not what the page described, that is a return and we will
+          treat it as one.
         </p>
       </Section>
 

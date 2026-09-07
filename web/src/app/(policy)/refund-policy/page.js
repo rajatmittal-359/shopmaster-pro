@@ -67,9 +67,11 @@ export default function RefundPolicyPage() {
 
       <Section title="What cannot be returned">
         <p>
-          Items made or engraved to your order, and pierced jewellery such as
-          earrings and nose pins once the seal is opened &mdash; for hygiene
-          reasons, which is the standard across Indian jewellery retail.
+          Items made or engraved to your order; pierced jewellery such as
+          earrings and nose pins once the seal is opened; and anything else
+          sold sealed for hygiene &mdash; cosmetics, personal care, innerwear,
+          food supplements. This is the standard across Indian retail, and the
+          product page says so before you buy.
         </p>
         <p>
           This does not affect a faulty or wrong item. If we sent the wrong thing,

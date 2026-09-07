@@ -19,8 +19,10 @@ export default function ContactPage() {
       <PolicyHeading title="Contact us" />
 
       <p>
-        We are a small family jewellery business in Jaipur. A person reads every
-        message, so please give us an order number if you have one.
+        ShopMaster Pro is run by a small family business in Jaipur. Some items
+        are ours and others come from independent sellers, but every message
+        reaches a person here first - so please give us an order number if you
+        have one.
       </p>
 
       <Section title="Address">

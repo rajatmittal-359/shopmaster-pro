@@ -100,6 +100,36 @@ maintain it. **Revisit at 16.4.**
 
 **`revalidateTag` now takes two arguments** in Next 16 — `revalidateTag('products', 'max')`. The one-argument form is deprecated and invalidation becomes *eventual*, not immediate. For read-your-writes use `updateTag()` in a Server Action.
 
+### 3.5a The catalogue is NOT one category
+
+Decided 7 Sep 2026, from Rajat: a friend is joining as a seller, and sellers of
+any category may follow - the sample already includes markers, backpacks,
+earbuds, whey protein, LED lights, cables and kurtas. Charming Jewels is one
+seller on this marketplace, not what the marketplace is.
+
+**What follows from that, in the code:**
+
+1. **No category word in the chrome.** The site title, meta description, header,
+   footer and the trust list on the product page must not say "jewellery".
+   They did; fixed. Category-specific wording belongs on the product and the
+   category page, where it is true.
+2. **The category tree stays the only source of categories.** No hard-coded list
+   anywhere in the UI - the filter panel already reads
+   `/public/products/categories/tree` with live counts, so a new category
+   appears by itself.
+3. **The theme stays.** Marigold is a warm brand colour, not a jewellery signal;
+   the mark is a cut stone because the shop that owns the platform sells them,
+   and it is small enough to read as a brand mark rather than a category claim.
+4. **Size becomes a real filter, and we cannot offer it yet.** Baymard lists it
+   among the five essentials and it was excluded here because jewellery is
+   adjustable. Clothing and footwear are not. `Product` has no size field, so
+   this is **owed backend work**, and it is not cosmetic: Google requires `size`
+   for Clothing (1604) and Shoes (187), so those sellers' products will be
+   disapproved in Merchant Center until it exists.
+5. **The feed's `gender` and `age_group` backfill was deliberately limited** to
+   the 17 platform-owned products. Defaulting another seller's formal shoes to
+   `female` would have been invented data.
+
 ### 3.5 What we are deliberately NOT doing
 
 - **`llms.txt`** — Ahrefs studied 137,210 domains: **97% of llms.txt files got zero requests in May 2026**, and *"zero requests came from AI bots for llms.txt files that don't exist. They never go looking."* Google's John Mueller: *"no AI system currently uses llms.txt."* Dead weight.
@@ -503,8 +533,8 @@ Updated as it moves. The order is section 7's.
 | 3 | `sort` on the products API + public delivery estimate | ✅ Built, 791 tests |
 | 4 | `/products/[slug]` — the money page | ✅ Built and rendering live data. Server-rendered; price, stock, description and both JSON-LD blocks are in the HTML |
 | 5 | `/shop` | ✅ Filters, server-side sort, removable chips, numbered pages, a real empty state. Filtered views carry `noindex, follow` |
-| 6 | `/` | ⏳ **next** |
-| 7 | Port the 30 private routes | ☐ |
+| 6 | `/` | ✅ Hero with a CSS-only effect, categories from the live tree, newest products, the shop's real address, and the Organization record |
+| 7 | Port the 30 private routes | ⏳ **next** - starts with sign-in and the cart |
 | 8 | Cutover - see section 12 | ☐ Blocked until Oct 2026 (payment) |
 
 **Owed on the product page, and deliberately not faked:**

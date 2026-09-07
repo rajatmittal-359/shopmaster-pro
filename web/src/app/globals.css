@@ -147,3 +147,36 @@
     @apply font-sans;
   }
 }
+
+/*
+ * The home page's one effect.
+ *
+ * Two soft marigold blooms drifting behind the headline. CSS only - no canvas,
+ * no library, nothing to download - because this sits above the fold on a 4G
+ * phone and anything that has to load first is a slower first paint.
+ *
+ * `prefers-reduced-motion` stops the drift entirely. The colour stays; only the
+ * movement goes. Motion sickness is a real accessibility failure and this is a
+ * decoration, so it is the first thing to give up.
+ */
+@keyframes smp-drift {
+  0%   { transform: translate3d(0, 0, 0) scale(1); }
+  50%  { transform: translate3d(4%, -3%, 0) scale(1.08); }
+  100% { transform: translate3d(0, 0, 0) scale(1); }
+}
+
+.smp-bloom {
+  animation: smp-drift 18s ease-in-out infinite;
+  will-change: transform;
+}
+
+.smp-bloom--slow {
+  animation-duration: 26s;
+  animation-direction: reverse;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .smp-bloom {
+    animation: none;
+  }
+}
