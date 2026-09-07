@@ -554,7 +554,105 @@ Google Sign-In, role-as-capability, seller onboarding. None started.
 
 ---
 
-## 14. What we could not verify
+## 14. The three panels, and who each one is for
+
+Written 7 Sep 2026, after Rajat pointed out - correctly - that this was the one
+part of the plan with no research behind it. The customer research in section 4
+was done; the seller and admin research died on a session limit and was recorded
+as unverified in section 14. This closes that hole.
+
+The audiences narrow at every step, and so does what each panel owes its user:
+
+| Panel | Seen by | What it is judged on |
+|---|---|---|
+| Customer | Everyone, most of them from Google | Whether a stranger trusts it enough to pay |
+| Seller | A handful of people, daily, for hours | Whether the day's work can be finished without leaving the page |
+| Admin | Rajat, and later one or two others | Whether he can find out what happened, and put it right |
+
+### 14.1 What the seller panels of Amazon, Flipkart and Meesho actually contain
+
+Read from their own documentation and guides, not from memory:
+
+- **Amazon Seller Central** — top navigation is Catalog, Inventory, Orders,
+  Advertising, Reports, Performance; the left menu adds Pricing, Growth,
+  Analytics, Shipments, Payments, **Account Health**, Brands and Learn.
+- **Flipkart Seller Hub** — order management (accept, process, message the
+  buyer), inventory and catalogue, and a payment/account-health overview.
+- **Meesho Supplier Panel** — Orders sorted by state (new, dispatched,
+  delivered, cancelled), Catalog with a price recommendation tool, **Payments
+  with settlement schedule, TDS and reconciliation against bank credits**, and
+  **Returns/RTO** with quality flags, where a high RTO rate demotes a listing.
+
+**The shape common to all three: Orders → Catalogue → Payments → Returns →
+Performance.** Everything else is theirs to sell (advertising, brand tools).
+
+### 14.2 What we have, and what is missing
+
+| Their section | Ours | Verdict |
+|---|---|---|
+| Orders by state | ✅ `/seller/orders`, per-fulfilment status, ship / cancel / return actions | Done |
+| Catalogue | ⚠️ list + stock only | **Add/edit product is missing** - a seller cannot list anything without an admin |
+| Payments / settlement | ⚠️ per-order payout state | **No payments PAGE**: no settlement list, no "what is coming and when", no reconciliation. `/seller/earnings` and `/seller/payout-details` exist and nothing calls them |
+| Returns / RTO | ✅ actions in the order card | Done, but no separate view and **no RTO rate** |
+| Performance / account health | ❌ | The one to copy last, and the one that matters when there are three sellers instead of one |
+| Advertising | ❌ | Not ours to build. Deliberately never |
+
+**The single largest gap is a seller cannot add a product.** Every one of the
+three panels is built around that action; ours has an API for it (`POST
+/seller/products`) and no screen.
+
+### 14.3 The admin panel is a different job
+
+Sharetribe and Mirakl describe the operator's panel as: **user management,
+transaction monitoring, dispute handling, commission and product approval,
+vendor onboarding, and settings**. Not a bigger seller panel - a *supervisor's*
+panel.
+
+Our API already has all of it, and none of it has a screen in `web/`:
+
+| What an operator must be able to do | Our endpoint | Screen |
+|---|---|---|
+| Approve, reject, suspend, reactivate a seller | `/admin/sellers/*` | ❌ |
+| Set one seller's commission | `PATCH /admin/sellers/:id/commission` | ❌ |
+| Look at any order, and cancel one | `/admin/orders`, `/admin/orders/:id/cancel` | ❌ |
+| **Decide a dispute** | `POST /admin/orders/:id/dispute/resolve` | ❌ |
+| See who is owed money, and pay them | `/admin/payouts/payable`, `/admin/payouts`, mark paid/failed | ❌ |
+| Categories | `/admin/categories` | ❌ |
+| Coupons | `/admin/coupons` | ❌ |
+| Platform analytics | `/admin/analytics` | ❌ |
+
+**The order these get built, and why:**
+
+1. **Payouts** - real money, owed to real people, and today it is settled by
+   reading the database. Nothing else on this list can lose someone their
+   earnings.
+2. **Disputes** - the referee. A customer and a seller disagreeing has no
+   resolution path in the new app at all.
+3. **Sellers** - approve, suspend, set commission. Needed the day Rajat's friend
+   applies, which is the reason this section exists.
+4. **Orders** - look anything up, cancel when it has gone wrong.
+5. **Categories and coupons** - housekeeping. Rare, and survivable by hand.
+6. **Analytics** - last. It is the only one where being wrong costs nothing.
+
+### 14.4 The rules all three panels share
+
+- **The server decides, the panel draws.** Every button's existence comes from a
+  flag the API sent - `canCancel`, `canReturn`, `canDeclareDelivered`. A button
+  that promises what the API will refuse is worse than no button, and this
+  codebase has shipped that bug twice already.
+- **Server error text is shown verbatim.** "Wallet balance too low" is
+  actionable; "something went wrong" has somebody pressing the same button all
+  afternoon.
+- **Money is shown per seller, never per basket.** In a split order the basket
+  total is partly another seller's money.
+- **Anything that spends money is a button with a confirmation** - booking a
+  courier, booking a return pickup. Never a side effect of a status change.
+- **noindex, nofollow on both panels.** Neither is meant for search, and every
+  crawl of them is crawl budget this shop does not have.
+
+---
+
+## 15. What we could not verify
 
 Written down so nobody later mistakes it for fact:
 
@@ -563,4 +661,4 @@ Written down so nobody later mistakes it for fact:
 - **"Sticky add-to-cart lifts mobile conversion 5–12%"** and **"Baymard thumb-zone research"** — both are widely quoted and **neither exists**. We are adding the sticky bar because all three D2C competitors have it, not because of a number.
 - **Delivery-date conversion lifts (+12% to +25%)** — all vendor case studies, no controlled research.
 - **Legal Metrology (Packaged Commodities) Amendment Rules 2026**, in force 1 July 2026, reportedly require country of origin, net quantity, manufacturer name and address to be displayed by e-commerce entities, and possibly a country-of-origin *filter*. Melorra, Palmonas and Myntra all show such a block today. **The gazette text could not be retrieved. This is a question for a lawyer, and it is on the CA list.**
-- **Logged-out marketplace navigation** and **the seller/admin panel gaps against Amazon, Flipkart, Myntra and Meesho** - both research passes were cut off by a session limit and never returned findings. What section 9.3 says about logged-out browsing is reasoning from competitor behaviour, not a sourced finding. Worth a re-run before the sidebar is built.
+- **Logged-out marketplace navigation** - that research pass was cut off by a session limit and never returned findings. (The seller/admin panel research was re-run on 7 Sep and is now section 14.) What section 9.3 says about logged-out browsing is reasoning from competitor behaviour, not a sourced finding. Worth a re-run before the sidebar is built.
