@@ -294,9 +294,9 @@ favicon are one file rather than four that drift. `web/src/components/brand/Logo
 
 ---
 
-## 9. Signing in
+## 8. Signing in
 
-### 9.1 Google, on our own session — not NextAuth
+### 8.1 Google, on our own session — not NextAuth
 
 **How it works.** Google Identity Services renders the button and One Tap; the
 browser shows the accounts already signed in on that device. On success GIS
@@ -331,7 +331,7 @@ published to **In production**. While it is in *Testing*, sign-in is capped at
 100 users and consent expires every 7 days — customers would be silently logged
 out each week.
 
-### 9.2 What the screens are
+### 8.2 What the screens are
 
 | Screen | What it holds |
 |---|---|
@@ -339,13 +339,13 @@ out each week.
 | Create account | Same two paths. Nothing about selling appears here |
 | Forgot password | Already exists; carried over |
 
-There is no "sign up as a seller" choice anywhere on these screens. See §10.
+There is no "sign up as a seller" choice anywhere on these screens. See section 9.
 
 ---
 
-## 10. One account, two roles
+## 9. One account, two roles
 
-### 10.1 The change
+### 9.1 The change
 
 Today `User.role` is a single enum, so an identity *is* a role and one email
 cannot both buy and sell. Rajat's own family shop is a seller on this platform
@@ -369,7 +369,7 @@ account-type **upgrade**, one way. Auth0, Clerk and WorkOS all model this as a
 membership record attached to a user, never as a field on the user. Nobody
 ships `role: buyer | seller`.
 
-### 10.2 What the interface does with it
+### 9.2 What the interface does with it
 
 One account, one sidebar, and the sidebar's contents come from what the account
 can do:
@@ -381,7 +381,7 @@ can do:
 - Seller (pending) → the switcher shows, disabled, with the application status.
 - Admin → unchanged; it stays a separate area.
 
-### 10.3 Logged out
+### 9.3 Logged out
 
 A visitor who has never signed in sees the customer sidebar and can browse
 `/shop`, open any product, and add to cart. Sign-in is asked for at **checkout**
@@ -394,7 +394,7 @@ has no chance of a Google click converting.
 
 ---
 
-## 11. Becoming a seller — an upgrade, not a signup
+## 10. Becoming a seller — an upgrade, not a signup
 
 Reached from **"Sell on ShopMaster Pro"** inside an account that already exists.
 The person is already signed in, so we ask only for what selling needs.
@@ -414,7 +414,7 @@ nil-rated. **On the CA list.**
 
 ---
 
-## 12. A CMS — not yet
+## 11. A CMS — not yet
 
 Verdict: **premature.** ~50 products and six static pages do not justify one.
 The trigger for a CMS is *a non-technical person who needs to publish*, not a
@@ -426,7 +426,93 @@ and self-host only (and has joined Figma). None of that changes the verdict.
 
 ---
 
-## 13. What we could not verify
+## 12. Hosting the Next app — what to create, when, and what it costs
+
+### What exists today, and it is right
+
+| Service | Type | Plan | Carries |
+|---|---|---|---|
+| `shopmaster-pro` | **Static Site** | Free | `shopmasterpro.in` + `www.shopmasterpro.in`, both verified, both with certificates. Apex redirects to www |
+| `shopmaster-api` (Singapore) | Web Service | Free | `shopmaster-api-sg.onrender.com` |
+| `shopmaster-api` (Virginia) | Web Service | Free | The old API. Delete once Singapore has run clean for a few days |
+
+The DNS is two CNAMEs (`@` and `www`) at Hostinger pointing to
+`shopmaster-pro.onrender.com`, with `216.24.57.1` as the A-record alternative.
+That is exactly how Render's own documentation says to do it, and both are
+showing *Verified · Certificate Issued*. **Nothing here was done wrong.**
+
+The React app reads exactly two environment variables, and both are correct:
+`VITE_API_URL` (the Singapore API) and `VITE_RAZORPAY_KEY_ID`. The Razorpay
+**key id** is public by design — it is meant to be in the browser. The *secret*
+is not here, and must never be.
+
+### Why the Next app cannot simply take a free service
+
+A static site is always on. A **free Web Service is not**: it spins down after
+15 minutes of no traffic, and the next request waits ~50 seconds for it to wake.
+
+Googlebot treats a server that takes 50 seconds as an unhealthy one, and it
+crawls a shop with a handful of visitors a day at exactly the times it is
+asleep. Moving to Next in order to be indexed better, and landing on a service
+that is asleep whenever Google calls, would leave us **worse off than the
+static site we already have**.
+
+> *Recorded earlier and NOT re-verified today: that Render also serves a
+> `Disallow: /` robots.txt for a spun-down free service. The cold start alone
+> settles the decision, so this was not worth re-testing.*
+
+**Static export (`output: 'export'`) is not the way out.** It would give up
+exactly what we moved for: pages rendered per request, on-demand revalidation
+when a price or stock changes, and the API proxying the product page needs.
+
+### So the plan is
+
+| When | What |
+|---|---|
+| **Now → the pages are built** | Nothing on Render. `npm run dev` locally is enough, and every page so far is static HTML anyway |
+| **Optional, any time** | A **free** Web Service named `shopmaster-web`, on its `onrender.com` subdomain, **no custom domain**, so it can be opened on a phone. It must ship `noindex` while it is a preview: two copies of the shop in Google's index is a self-inflicted duplicate-content problem |
+| **Cutover, October 2026 at the earliest** | Upgrade that service to **Starter (~$7/mo)** and move the domain to it. It cannot happen sooner: the card was removed from the workspace and Render will not accept a new one until **1 Oct 2026** |
+
+### The cutover, in order — nothing here is guesswork
+
+1. Next service on **Starter** and confirmed awake on its `onrender.com` URL
+2. Its environment set: `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_RAZORPAY_KEY_ID`,
+   `NEXT_PUBLIC_SITE_URL=https://www.shopmasterpro.in`
+3. `noindex` removed
+4. Move `www.shopmasterpro.in` **and** `shopmasterpro.in` from the static site
+   to the Next service; re-verify both, wait for both certificates
+5. Watch Search Console for a week. **Keep the static site running** — it is
+   free, and it is the way back if something is wrong
+6. Only then delete `frontend/` from the repo
+
+**The one thing that must not change across the cutover: the URLs.** Every
+product URL, every category URL and all six policy URLs stay exactly as they
+are. A redesign that also renames pages throws away whatever ranking those
+pages have earned, and this shop cannot afford to lose any.
+
+---
+
+## 13. Where the work has actually reached
+
+Updated as it moves. The order is section 7's.
+
+| # | Step | State |
+|---|---|---|
+| 1 | Feed: `color`, `gender`, `age_group` | ✅ Live and verified — 17 items, 16 with a colour |
+| 2 | Layout, header, footer, six policy pages | ✅ Built, all static. Not yet on a domain |
+| 3 | `sort` on the products API + public delivery estimate | ✅ Built, 791 tests |
+| 4 | `/products/[slug]` — the money page | ⏳ **next** |
+| 5 | `/shop` | ☐ |
+| 6 | `/` | ☐ |
+| 7 | Port the 30 private routes | ☐ |
+| 8 | Cutover - see section 12 | ☐ Blocked until Oct 2026 (payment) |
+
+Backend work that the interface needs but that ships separately (section 7a):
+Google Sign-In, role-as-capability, seller onboarding. None started.
+
+---
+
+## 14. What we could not verify
 
 Written down so nobody later mistakes it for fact:
 
@@ -435,4 +521,4 @@ Written down so nobody later mistakes it for fact:
 - **"Sticky add-to-cart lifts mobile conversion 5–12%"** and **"Baymard thumb-zone research"** — both are widely quoted and **neither exists**. We are adding the sticky bar because all three D2C competitors have it, not because of a number.
 - **Delivery-date conversion lifts (+12% to +25%)** — all vendor case studies, no controlled research.
 - **Legal Metrology (Packaged Commodities) Amendment Rules 2026**, in force 1 July 2026, reportedly require country of origin, net quantity, manufacturer name and address to be displayed by e-commerce entities, and possibly a country-of-origin *filter*. Melorra, Palmonas and Myntra all show such a block today. **The gazette text could not be retrieved. This is a question for a lawyer, and it is on the CA list.**
-- **Logged-out marketplace navigation** and **the seller/admin panel gaps against Amazon, Flipkart, Myntra and Meesho** - both research passes were cut off by a session limit and never returned findings. What section 10.3 says about logged-out browsing is reasoning from competitor behaviour, not a sourced finding. Worth a re-run before the sidebar is built.
+- **Logged-out marketplace navigation** and **the seller/admin panel gaps against Amazon, Flipkart, Myntra and Meesho** - both research passes were cut off by a session limit and never returned findings. What section 9.3 says about logged-out browsing is reasoning from competitor behaviour, not a sourced finding. Worth a re-run before the sidebar is built.
