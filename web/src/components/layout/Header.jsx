@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import Logo from '@/components/brand/Logo';
 import HeaderAccount from '@/components/layout/HeaderAccount';
+import CategoryBar from '@/components/layout/CategoryBar';
 
 /**
  * The bar every page carries.
@@ -30,6 +31,10 @@ export default function Header() {
           <HeaderAccount />
         </nav>
       </div>
+
+      {/* Inside the sticky header, so the way into every category travels down
+          the page with the shopper rather than being left at the top. */}
+      <CategoryBar />
     </header>
   );
 }
