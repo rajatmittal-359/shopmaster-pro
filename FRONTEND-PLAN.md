@@ -243,6 +243,57 @@ failure impossible to attribute.
 
 ---
 
+## 7a. This is two projects, not one — keep them apart
+
+Half of what follows is **backend architecture**, not front end:
+
+    User.role becomes a capability, not an identity
+    the JWT changes shape
+    roleMiddleware changes
+    Google sign-in is a new auth path
+    the products endpoint gains a sort parameter
+    a public delivery-estimate endpoint appears
+
+The other half is the interface. **They ship in separate commits.** If auth and
+design change together and something breaks, there is no way to tell which one
+did it - and auth is the part where a mistake logs the wrong person into the
+wrong account.
+
+---
+
+## 7b. Third-party services — what we actually need
+
+| Service | Verdict | Why |
+|---|---|---|
+| **Sentry** | **Yes** | There is no error tracking of any kind today. A 500 at checkout is invisible: Render's logs are ephemeral and nobody reads them. Free tier is 5,000 errors a month, which is more than this shop will produce. Smallest effort, largest blind spot removed |
+| **Firebase (FCM)** | **Later, only for web push** | "Your order has shipped" as a browser notification. Free, but needs a service worker and a permission prompt, and it is worth nothing until there are orders to notify about. Not now |
+| **Google Drive API** | **No** | Nothing to put in it. Product images are on Cloudinary, invoices are generated from the order, backups belong to Atlas. It would be a dependency in exchange for nothing |
+| **Gemini** | **Already in** | Writes product descriptions. Free tier ran out at 16 products in one day, so the remaining 35 finish on a later day. Worth paying for only when drafting is a daily job rather than a one-off |
+
+---
+
+## 7c. The brand colour contradiction
+
+`frontend/src/index.css` carries a comment saying:
+
+> *"Marigold is kept deliberately - it is already the brand, and it is Jaipur's
+> own colour, which is where this shop actually is."*
+
+The values beneath it are **Tailwind blue** (`#2563eb`). At some point the ramp
+was replaced and the comment was left behind, so the file argues for one colour
+and ships another.
+
+**Decision: go back to marigold.** Blue is the default every dashboard ships
+with; it says "software". A warm gold says jewellery, and it sits with the
+product photography instead of fighting it. The accessibility work in that
+comment stands either way - the readable step is `-700`, not `-500`.
+
+**The mark:** a cut stone - a table over a pavilion, two facet lines. Drawn as
+SVG in `currentColor` so the header, a black invoice, a dark footer and the
+favicon are one file rather than four that drift. `web/src/components/brand/Logo.jsx`.
+
+---
+
 ## 8. What we could not verify
 
 Written down so nobody later mistakes it for fact:
