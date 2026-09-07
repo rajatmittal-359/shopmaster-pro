@@ -42,7 +42,12 @@ on:
         options: [reconcile, low-stock]
 
 env:
-  API: https://shopmaster-api.onrender.com
+  # The Singapore service. Renaming the old one did NOT free its subdomain -
+  # Render keeps each service's original .onrender.com hostname whatever the
+  # service is called afterwards - so the URL stays -sg even though the service
+  # is now named shopmaster-api. Measured 7 Sep 2026: this one answers in 0.66s
+  # where the Virginia one takes 1.17s for the same query.
+  API: https://shopmaster-api-sg.onrender.com
 
 jobs:
   run:
