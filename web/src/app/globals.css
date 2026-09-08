@@ -480,3 +480,38 @@ body::before {
     transition: none;
   }
 }
+
+/*
+ * THE 300ms RULE
+ *
+ * A skeleton helps only when the wait is roughly 400ms to 3 seconds. Below
+ * that it HURTS: the page flashes a grey ghost of itself and then the real
+ * thing, and a flash reads as a fault rather than as speed. The research is
+ * specific about the shape of this - show nothing at all for the first 300ms,
+ * then the skeleton.
+ *
+ * So every skeleton starts invisible and fades in after 300ms. A page that
+ * answers quickly shows a skeleton for zero frames; only a page that is
+ * genuinely waiting ever shows one.
+ *
+ * Under `prefers-reduced-motion` it simply appears, with no fade - the delay
+ * is the point, the animation is not.
+ */
+@keyframes smp-appear {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.skeleton-in {
+  animation: smp-appear 200ms ease 300ms both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-in {
+    animation: smp-appear 1ms linear 300ms both;
+  }
+}

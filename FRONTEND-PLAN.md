@@ -664,6 +664,37 @@ the same account still has a cart while it is in there.
 
 ---
 
+### 4.13 Loading states
+
+Built 9 Sep 2026, against the research rather than by taste.
+
+**The window that matters.** A skeleton improves perceived speed only when the
+real wait falls roughly between 400ms and 3 seconds. Outside that it does
+nothing, and BELOW it a skeleton actively hurts: the page flashes a grey ghost
+of itself and then the real thing, and a flash reads as a fault. The pattern the
+research describes is nothing at all for the first 300ms, then a skeleton.
+
+So `.skeleton-in` holds every skeleton invisible for 300ms and fades it in. A
+page that answers quickly shows a skeleton for zero frames; only a page that is
+genuinely waiting ever shows one.
+
+**Why skeletons and not spinners.** A spinner draws attention to the waiting; a
+skeleton draws attention to the content about to appear. That shift is the whole
+effect - the same wait is rated substantially shorter.
+
+**They mirror the real page exactly.** Same heading position, same 13rem filter
+column, same grid, same square image ratio, and on the product page the buy
+column in the order it actually appears. A skeleton that does not map to what
+follows is grey boxes moving about, and the layout shift when the content lands
+undoes the effect it existed to create.
+
+Two routes have one: `/shop`, which waits on three calls (products, filters,
+categories) to an API in Singapore that can be cold and is the longest wait on
+the site, and `/products/[slug]`. Verified by slowing the shop page to 1.5s and
+confirming the skeleton renders, then removing the delay.
+
+---
+
 ## 5. Structured data
 
 GIVA's markup is the reference implementation for an Indian jewellery store and

@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { BUSINESS, POLICY_PAGES } from '@/config/policy';
+import { TileMark } from '@/components/brand/Logo';
 
 /**
  * WHY THE FOOTER CARRIES THE ADDRESS AND NOT JUST LINKS
@@ -16,7 +17,14 @@ export default function Footer() {
     <footer className="mt-16 border-t border-border bg-muted/40">
       <div className="mx-auto grid max-w-5xl gap-8 px-4 py-10 text-sm sm:grid-cols-2">
         <div>
-          <p className="font-semibold">{BUSINESS.tradeName}</p>
+          {/* The mark, at the other end of the page from the header's. A brand
+              that appears once looks like a label; twice, it looks like the
+              site belongs to somebody. `idPrefix` because the header's copy has
+              already claimed the gradient ids on this page. */}
+          <p className="flex items-center gap-2 font-semibold">
+            <TileMark idPrefix="footer" className="size-6 shrink-0" />
+            {BUSINESS.tradeName}
+          </p>
           <p className="mt-1 text-muted-foreground">
             A marketplace operated by {BUSINESS.legalName}.
           </p>
