@@ -109,6 +109,59 @@ exports.register = async (req, res) => {
 };
 
 
+/**
+ * Adding "seller" to an account that already exists.
+ *
+ * WHY THIS EXISTS
+ *   Selling used to be chosen at sign-up, and it set `role` - so a customer who
+ *   decided to sell had to register again with a different email and ended up
+ *   with two accounts, two order histories and two passwords for one person.
+ *   Etsy's own words are the test: "You'll use this account to run your shop
+ *   and to buy from other makers on Etsy."
+ *
+ * WHAT IT DOES NOT DO
+ *   It does not approve anybody. It creates the Seller record - which IS the
+ *   application - and an admin approves it exactly as before. Nothing of theirs
+ *   is public until then.
+ *
+ *   It also does not touch `role`. Authorisation reads capabilities from the
+ *   database now, so a shopper who starts selling keeps every customer route
+ *   they had - including their cart and their old orders.
+ */
+exports.becomeSeller = async (req, res) => {
+  try {
+    const businessName = String(req.body?.businessName || '').trim();
+
+    if (businessName.length < 2) {
+      return res.status(400).json({ message: 'What is the shop called?' });
+    }
+
+    const existing = await Seller.findOne({ userId: req.user._id }).select('isApproved status');
+
+    if (existing) {
+      // Not an error worth a 400 in the usual sense - they are simply already
+      // in the queue, and the useful answer is where they are in it.
+      return res.status(409).json({
+        message: existing.isApproved
+          ? 'This account already sells on ShopMaster Pro.'
+          : 'Your application is already with us - an admin is reviewing it.',
+        isApproved: existing.isApproved,
+        status: existing.status,
+      });
+    }
+
+    const seller = await Seller.create({ userId: req.user._id, businessName });
+
+    return res.status(201).json({
+      message: 'Thank you. An admin will review your shop before it goes live.',
+      seller: { businessName: seller.businessName, isApproved: seller.isApproved },
+    });
+  } catch (error) {
+    console.error('BECOME SELLER ERROR:', error.message);
+    return res.status(500).json({ message: error.message });
+  }
+};
+
 // Verify OTP
 exports.verifyOtp = async (req, res) => {
   try {

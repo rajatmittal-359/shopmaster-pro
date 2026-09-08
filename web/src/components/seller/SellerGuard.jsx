@@ -1,7 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { useSession } from '@/lib/session';
+import { useEffect } from 'react';
+import { useSession, setCapabilities } from '@/lib/session';
+import { authedFetch } from '@/lib/client';
 
 /**
  * Nothing in here is a security boundary, and it must not be mistaken for one.
@@ -15,7 +17,30 @@ import { useSession } from '@/lib/session';
  * anywhere else: if it were wrong, the API would still refuse.
  */
 export default function SellerGuard({ children }) {
-  const { signedIn, role } = useSession();
+  const { signedIn, canSell, capabilities } = useSession();
+
+  /*
+   * Ask what this account can do, in case the page was opened directly rather
+   * than reached through the header. Cheap, and it is the same answer the API
+   * will enforce a moment later.
+   */
+  useEffect(() => {
+    if (!signedIn || capabilities) return undefined;
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const me = await authedFetch('/auth/me');
+        if (!cancelled) setCapabilities(me.capabilities);
+      } catch {
+        // Leave it undrawn rather than guess.
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [signedIn, capabilities]);
 
   if (!signedIn) {
     return (
@@ -28,16 +53,16 @@ export default function SellerGuard({ children }) {
     );
   }
 
-  if (role !== 'seller') {
+  if (!canSell) {
     return (
       <div className="rounded-xl border border-border p-6">
         <p className="font-medium">This account does not sell on ShopMaster Pro yet.</p>
         <p className="mt-2 text-sm text-muted-foreground">
-          Selling is something you add to an account you already have - you do
-          not need a second one. Write to us and we will set it up.
+          Selling is something you add to the account you already have - you do
+          not need a second one, and you keep your cart and your orders.
         </p>
-        <Link href="/contact" className="mt-3 inline-block text-sm text-brand-ink hover:underline">
-          Get in touch
+        <Link href="/sell" className="mt-3 inline-block text-sm text-brand-ink hover:underline">
+          Apply to sell
         </Link>
       </div>
     );

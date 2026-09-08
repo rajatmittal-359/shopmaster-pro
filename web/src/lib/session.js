@@ -21,6 +21,16 @@ import { useSyncExternalStore } from 'react';
 const TOKEN = 'smp_token';
 const ROLE = 'smp_role';
 const USER = 'smp_user';
+/*
+ * What this account can do, cached for DRAWING ONLY.
+ *
+ * The server decides authorisation on every request by reading the database -
+ * see backend/utils/capabilities.js. This copy exists so the header does not
+ * have to wait for a round trip before it knows whether to show a Seller link,
+ * and it is refreshed from /auth/me on every load. If it is ever wrong the
+ * worst case is a link that answers 403, not access somebody should not have.
+ */
+const CAPS = 'smp_capabilities';
 
 /** localStorage throws outright in some privacy modes. Never let that crash a page. */
 const read = (key) => {
@@ -53,6 +63,14 @@ export const setSession = ({ token, role, user }) => {
   write(TOKEN, token);
   write(ROLE, role || null);
   write(USER, user ? JSON.stringify(user) : null);
+  // Cleared, not guessed: the next /auth/me says what this account can do.
+  write(CAPS, null);
+  announce();
+};
+
+/** Called after /auth/me answers. */
+export const setCapabilities = (capabilities) => {
+  write(CAPS, capabilities ? JSON.stringify(capabilities) : null);
   announce();
 };
 
@@ -60,6 +78,7 @@ export const clearSession = () => {
   write(TOKEN, null);
   write(ROLE, null);
   write(USER, null);
+  write(CAPS, null);
   announce();
 };
 
@@ -79,21 +98,38 @@ const subscribe = (onChange) => {
  * fresh object each call means every comparison says "changed". So the raw
  * string is the snapshot, and the object is derived from it.
  */
-const snapshot = () => `${read(TOKEN) || ''}|${read(ROLE) || ''}|${read(USER) || ''}`;
+const snapshot = () =>
+  `${read(TOKEN) || ''}|${read(ROLE) || ''}|${read(USER) || ''}|${read(CAPS) || ''}`;
 
 /** The server has no localStorage, so it always renders the signed-out view. */
-const serverSnapshot = () => '||';
+const serverSnapshot = () => '|||';
 
 export function useSession() {
   const raw = useSyncExternalStore(subscribe, snapshot, serverSnapshot);
-  const [token, role, userJson] = raw.split('|');
+  const [token, role, userJson, capsJson] = raw.split('|');
 
-  let user = null;
-  try {
-    user = userJson ? JSON.parse(userJson) : null;
-  } catch {
-    user = null;
-  }
+  const parse = (value) => {
+    try {
+      return value ? JSON.parse(value) : null;
+    } catch {
+      return null;
+    }
+  };
 
-  return { token: token || null, role: role || null, user, signedIn: Boolean(token) };
+  const capabilities = parse(capsJson);
+
+  return {
+    token: token || null,
+    role: role || null,
+    user: parse(userJson),
+    signedIn: Boolean(token),
+    /*
+     * Until /auth/me has answered, `capabilities` is null and the caller should
+     * draw nothing role-specific rather than guess from `role` - guessing is
+     * what the old single-role model did, and it is what this change removes.
+     */
+    capabilities,
+    canSell: Boolean(capabilities?.seller),
+    isAdmin: Boolean(capabilities?.admin) || role === 'admin',
+  };
 }

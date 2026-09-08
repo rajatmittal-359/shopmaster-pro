@@ -375,6 +375,57 @@ There is no "sign up as a seller" choice anywhere on these screens. See section 
 
 ## 9. One account, two roles
 
+### 9.0 BUILT, 8 September 2026 — and what the research actually said
+
+Rajat asked whether the big shops do it this way before agreeing. The honest
+answer is **split**, and two of the names he listed are not marketplaces at all:
+
+| Platform | One account for buying and selling? |
+|---|---|
+| **Amazon** | **Yes.** Their own registration guide says you can create the selling account with the same email and password as your customer account, and Seller Central forums confirm the buyer account then stays linked to the seller account permanently |
+| **Etsy** | **Yes**, explicitly: *"You'll use this account to run your shop and to buy from other makers on Etsy"* |
+| **eBay** | **Yes** - personal to business is a one-way upgrade of the same account |
+| **Flipkart** | **No.** Identity is keyed on mobile + email; a separate seller account needs a different mobile number |
+| **Meesho** | **No.** The supplier panel is its own registration at supplier.meesho.com |
+| **GIVA, Tanishq, V-Mart** | **Not applicable** - single-brand shops. They have no sellers, so they cannot be evidence either way |
+
+So it was not settled by copying. What settled it were our own facts: Charming
+Jewels **sells here and buys here**, and its account was answered 403 by every
+customer route. And a shopper who wanted to sell had to register again with a
+second email, ending up with two order histories and two passwords for one
+person. Amazon and Etsy show the model works at scale; Flipkart and Meesho show
+that a second account is still possible for anyone who wants one - a different
+email is still a different account here too.
+
+**What was built**
+
+- `backend/utils/capabilities.js` - buying is not a role (anybody signed in can
+  buy); selling is a capability granted by the **Seller record**, which is the
+  thing an admin already approves; admin stays a role.
+- `roleMiddleware` asks what an account CAN DO instead of comparing `role` to a
+  list. Same call sites, same downstream gates: `checkSellerStatus` still blocks
+  suspensions and `requireApprovedSeller` still blocks unapproved listing.
+- `POST /auth/become-seller` - selling added to an account that already exists.
+  It creates the application; it does not approve anybody, and it does not touch
+  `role`.
+- `GET /auth/me` returns the capabilities, and the header, both guards and the
+  /sell page draw from them.
+- **An admin is deliberately NOT a shopper.** The platform's own account buying
+  through the platform muddles every report that counts orders.
+
+**A data leak this change would have caused, caught before it shipped:**
+`inventoryController` scoped stock history with `req.user.role === "seller"`.
+Once selling stopped being a role, a seller whose `role` still said "customer" -
+now the normal case - would have fallen through to the ADMIN branch and been
+handed **every other seller's stock movements**. The test is inverted now:
+anybody who is not an admin sees only their own.
+
+**Proved against a running server, not asserted:** a seller adds to a cart
+(200, was 403); a customer is refused a seller route (403); applying returns
+201, applying twice returns 409, and afterwards the account has `seller=true,
+approved=false`, can OPEN the dashboard (200) but cannot list a product (403) -
+and its cart still answers 200. 15 new tests, 821 in total.
+
 ### 9.1 The change
 
 Today `User.role` is a single enum, so an identity *is* a role and one email

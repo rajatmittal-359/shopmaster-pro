@@ -25,10 +25,29 @@ router.post('/login', login);
 // point is that the caller cannot sign in.
 router.post('/forgot-password', forgotPassword);
 router.post('/reset-password', resetPassword);
-router.get('/me', authMiddleware, (req, res) => {
+/**
+ * Who is signed in, and what this account can do.
+ *
+ * The capabilities are read from the database on every call rather than taken
+ * from the token: an admin can suspend a shop at any moment, and a page drawing
+ * seller navigation from a stale token would be offering buttons the API has
+ * already started refusing.
+ */
+router.get('/me', authMiddleware, async (req, res) => {
+  const { capabilitiesFor } = require('../utils/capabilities');
+
   res.json({
     message: 'Protected route accessed',
-    user: req.user
+    user: req.user,
+    capabilities: await capabilitiesFor(req.user),
   });
 });
+
+/**
+ * Add selling to an account that already exists.
+ *
+ * Authenticated, and nothing more: the applicant is whoever is signed in, so
+ * there is no userId in the body for anybody to tamper with.
+ */
+router.post('/become-seller', authMiddleware, require('../controllers/authController').becomeSeller);
 module.exports = router;

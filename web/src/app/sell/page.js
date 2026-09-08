@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Button } from '@/components/ui/button';
+import ApplyToSell from '@/components/seller/ApplyToSell';
 import { POLICY, BUSINESS } from '@/config/policy';
 
 export const metadata = {
@@ -38,13 +38,15 @@ export default function SellPage() {
         products; we bring the shop, the courier and the customers.
       </p>
 
-      <div className="mt-8 flex flex-wrap gap-3">
-        <Button asChild size="lg">
-          <Link href="/register?sell=1">Apply to sell</Link>
-        </Button>
-        <Button asChild variant="outline" size="lg">
-          <Link href="/contact">Ask a question first</Link>
-        </Button>
+      <div className="mt-8">
+        <ApplyToSell />
+        <p className="mt-3 text-sm text-muted-foreground">
+          Rather ask something first?{' '}
+          <Link href="/contact" className="text-brand-ink hover:underline">
+            Talk to us
+          </Link>
+          .
+        </p>
       </div>
 
       <ol className="mt-12 space-y-6">

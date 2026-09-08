@@ -70,7 +70,18 @@ exports.getInventoryLogs = async (req, res) => {
   try {
     const filter = {};
 
-    if (req.user.role === "seller") {
+    /*
+     * Scoped by what the account IS NOT: anybody who is not an admin sees only
+     * their own products' logs.
+     *
+     * This used to read `req.user.role === "seller"`. Once selling became a
+     * capability rather than a role, a seller whose `role` still said
+     * "customer" - which is now the normal case for anyone who started as a
+     * shopper - would have fallen through to the ADMIN branch and been handed
+     * every other seller's stock movements. Inverting the test makes the unsafe
+     * case the one that has to be asked for.
+     */
+    if (!req.capabilities?.admin && req.user.role !== "admin") {
       const ownedProductIds = await Product.find({ sellerId: req.user._id })
         .distinct("_id");
 

@@ -1,7 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { useSession } from '@/lib/session';
+import { useEffect } from 'react';
+import { useSession, setCapabilities } from '@/lib/session';
+import { authedFetch } from '@/lib/client';
 
 /**
  * Same rule as the seller guard, and the same warning: this decides what to
@@ -10,7 +12,25 @@ import { useSession } from '@/lib/session';
  * between a curious customer and somebody else's payout.
  */
 export default function AdminGuard({ children }) {
-  const { signedIn, role } = useSession();
+  const { signedIn, isAdmin, capabilities } = useSession();
+
+  useEffect(() => {
+    if (!signedIn || capabilities) return undefined;
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const me = await authedFetch('/auth/me');
+        if (!cancelled) setCapabilities(me.capabilities);
+      } catch {
+        // The API refuses anyway; this only decides what to draw.
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [signedIn, capabilities]);
 
   if (!signedIn) {
     return (
@@ -23,7 +43,7 @@ export default function AdminGuard({ children }) {
     );
   }
 
-  if (role !== 'admin') {
+  if (!isAdmin) {
     return <p className="text-muted-foreground">This area is for the platform team.</p>;
   }
 
