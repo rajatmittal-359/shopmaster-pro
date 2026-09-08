@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import { getCategories } from '@/lib/api';
 
 /**
  * The strip of categories under the header - the thing Amazon and Flipkart open
@@ -23,8 +22,7 @@ import { getCategories } from '@/lib/api';
  * here by itself and one with nothing in it never does - a tile leading to an
  * empty grid is worse than one tile fewer.
  */
-export default async function CategoryBar() {
-  const categories = await getCategories();
+export default function CategoryBar({ categories = [] }) {
   const shown = categories.filter((c) => c.productCount > 0);
 
   if (shown.length === 0) return null;

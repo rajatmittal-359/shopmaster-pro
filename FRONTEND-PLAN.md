@@ -392,6 +392,52 @@ six.
 
 ---
 
+### 4.6 Navigation — what the research says, and what we had
+
+Researched 9 Sep 2026 after Rajat asked for the sidebar to be looked at
+properly rather than guessed.
+
+**The finding that decides the shape.** Nielsen Norman, Luke Wroblewski and
+Baymard all report the same thing, and it is one of the better-replicated
+results in this field: **what is hidden behind a hamburger gets used far less
+than the same link left in plain sight - often less than half as often.** The
+pattern that beats a fully hidden menu is a **hybrid**: three to five things
+visible, everything else behind the icon.
+
+Baymard's 2025 mobile benchmark also found **69% of e-commerce sites are
+mediocre or worse** on mobile main navigation - so this is a common place to
+lose, not an exotic one.
+
+**The patterns available**, per the same research: a hamburger for compact
+navigation, a bottom tab bar for 3-5 primary sections, a horizontal scrolling
+category strip for flat taxonomies, a full-screen panel for deep hierarchies.
+Most sites combine two.
+
+**What we actually had, and the hole in it.** On a wide screen: a category strip
+with hover panels - fine. On a phone: the same strip scrolling sideways, and the
+subcategory panel was `md:` only. **A phone has no hover.** So on the device
+most of this shop's visitors use, "Earrings" was unreachable from the
+navigation. The shop page's own filter panel had them; the navigation did not.
+
+**What was built**
+
+- A **drawer** holding the category tree as a two-level accordion. Two levels is
+  exactly where an accordion still reads; three or more needs a sliding panel
+  with a back arrow, and our category model is capped at two on purpose.
+- **The parent is a link, not only a toggle.** Shoppers expect the heading
+  itself to be tappable, and a category that merely expands makes them hunt for
+  "all of it".
+- **Shop, Cart and the account stay visible** in the header. That is the hybrid
+  the research recommends, and the reason nothing else moved into the drawer.
+- **No bottom tab bar**, though the research recommends one for 3-5 primary
+  sections: it would sit exactly where the product page's sticky add-to-cart bar
+  already is. Between a bar that navigates and a bar that sells, the one that
+  sells wins.
+- The tree is fetched **once**, in the header, and handed to both the strip and
+  the drawer. Two fetches of the same tree are two chances for them to disagree.
+
+---
+
 ## 5. Structured data
 
 GIVA's markup is the reference implementation for an Indian jewellery store and
