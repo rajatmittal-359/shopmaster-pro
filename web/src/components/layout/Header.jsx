@@ -3,6 +3,8 @@ import Logo from '@/components/brand/Logo';
 import HeaderAccount from '@/components/layout/HeaderAccount';
 import CategoryBar from '@/components/layout/CategoryBar';
 import MobileNav from '@/components/layout/MobileNav';
+import HideOnAuthPages from '@/components/layout/HideOnAuthPages';
+import ThemeToggle from '@/components/layout/ThemeToggle';
 import { getCategories } from '@/lib/api';
 
 /**
@@ -44,12 +46,17 @@ export default async function Header() {
             Contact
           </Link>
           <HeaderAccount />
+          <ThemeToggle />
         </nav>
       </div>
 
       {/* Inside the sticky header, so the way into every category travels down
-          the page with the shopper rather than being left at the top. */}
-      <CategoryBar categories={categories} />
+          the page with the shopper rather than being left at the top - except
+          on the sign-in screens, where eleven categories are eleven ways to
+          abandon what you came to do. */}
+      <HideOnAuthPages>
+        <CategoryBar categories={categories} />
+      </HideOnAuthPages>
     </header>
   );
 }

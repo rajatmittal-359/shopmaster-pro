@@ -56,13 +56,28 @@ function DropdownMenuGroup({
   return <MenuPrimitive.Group data-slot="dropdown-menu-group" {...props} />
 }
 
+/*
+ * A heading inside a menu.
+ *
+ * WHY THIS IS A div AND NOT Base UI's GroupLabel
+ *   Base UI's `Menu.GroupLabel` THROWS unless it sits inside a `Menu.Group` -
+ *   it is the accessible name for that group, so without one there is nothing
+ *   for it to name. The header's account menu used it the way Radix-based
+ *   shadcn always allowed: as a plain heading showing the signed-in email. The
+ *   result was a runtime crash that took the whole header down, and with it
+ *   every page.
+ *
+ *   A heading that labels nothing is a div. When a label really does name a
+ *   group, wrap the items in <DropdownMenuGroup> and Base UI's own GroupLabel
+ *   is the right component - not this one.
+ */
 function DropdownMenuLabel({
   className,
   inset,
   ...props
 }) {
   return (
-    <MenuPrimitive.GroupLabel
+    <div
       data-slot="dropdown-menu-label"
       data-inset={inset}
       className={cn(

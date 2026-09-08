@@ -1,5 +1,6 @@
 import LoginForm from '@/components/auth/LoginForm';
 import GoogleButton from '@/components/auth/GoogleButton';
+import AuthShell from '@/components/auth/AuthShell';
 
 export const metadata = {
   title: 'Sign in',
@@ -29,12 +30,7 @@ export default async function LoginPage({ searchParams }) {
   const next = typeof raw === 'string' && /^\/(?!\/)/.test(raw) ? raw : '/';
 
   return (
-    <div className="mx-auto max-w-sm px-4 py-16">
-      <h1 className="text-2xl font-semibold tracking-tight">Sign in</h1>
-      <p className="mt-1 text-sm text-muted-foreground">
-        To see your orders, your cart and your addresses.
-      </p>
-
+    <AuthShell title="Sign in" subtitle="To see your orders, your cart and your addresses.">
       {/*
         Google FIRST, then the form. Somebody arriving from an Instagram link
         will not stop to invent a password, and the whole point of this button
@@ -42,9 +38,7 @@ export default async function LoginPage({ searchParams }) {
         Google is blocked inside the Instagram and Facebook in-app browsers,
         which is exactly where that traffic comes from.
       */}
-      <div className="mt-6">
-        <GoogleButton next={next} />
-      </div>
+      <GoogleButton next={next} />
 
       <div className="my-6 flex items-center gap-3 text-xs text-muted-foreground">
         <span className="h-px flex-1 bg-border" />
@@ -53,6 +47,6 @@ export default async function LoginPage({ searchParams }) {
       </div>
 
       <LoginForm next={next} />
-    </div>
+    </AuthShell>
   );
 }

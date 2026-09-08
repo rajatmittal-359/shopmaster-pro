@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <linearGradient id="t" x1="8" y1="4" x2="56" y2="60" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#A78BFA"/>
+      <stop offset="0.55" stop-color="#6366F1"/>
+      <stop offset="1" stop-color="#22D3EE"/>
+    </linearGradient>
+    <linearGradient id="g" x1="32" y1="2" x2="32" y2="34" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF" stop-opacity="0.42"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+    <radialGradient id="u" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(32 50) rotate(90) scale(9 17)">
+      <stop stop-color="#1E1B4B" stop-opacity="0.34"/>
+      <stop offset="1" stop-color="#1E1B4B" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect x="2" y="2" width="60" height="60" rx="17" fill="url(#t)"/>
+  <rect x="2" y="2" width="60" height="60" rx="17" fill="url(#g)"/>
+  <ellipse cx="32" cy="50" rx="17" ry="9" fill="url(#u)"/>
+  <path d="M32 13 L47 21.5 L32 30 L17 21.5 Z" fill="#FFFFFF"/>
+  <path d="M16 23.2 L30.6 31.5 L30.6 48.6 L16 40.3 Z" fill="#FFFFFF" fill-opacity="0.82"/>
+  <path d="M48 23.2 L33.4 31.5 L33.4 48.6 L48 40.3 Z" fill="#FFFFFF" fill-opacity="0.6"/>
+  <path d="M32 13 L32 30" stroke="#4338CA" stroke-opacity="0.5" stroke-width="1.6" stroke-linecap="round"/>
+</svg>

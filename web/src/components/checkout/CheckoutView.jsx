@@ -178,7 +178,7 @@ export default function CheckoutView() {
               message: 'Payment cancelled. Nothing was charged - you can try again.',
             }),
         },
-        theme: { color: '#E8A33D' },
+        theme: { color: '#5B4BE8' },
       });
 
       rzp.on('payment.failed', (response) =>

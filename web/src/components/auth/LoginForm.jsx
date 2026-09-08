@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { Eye, EyeOff } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { apiBase } from '@/lib/api';
@@ -27,6 +28,13 @@ export default function LoginForm({ next = '/' }) {
   const router = useRouter();
   const [form, setForm] = useState({ email: '', password: '' });
   const [state, setState] = useState({ status: 'idle' });
+  /*
+   * A password nobody can see is a password typed wrong on a phone keyboard,
+   * and the failure is silent until the form is refused. Every bank and every
+   * large retailer now offers the toggle for that reason. It starts hidden -
+   * the shoulder-surfing case is real too - and it never persists.
+   */
+  const [showPassword, setShowPassword] = useState(false);
 
   const set = (key) => (e) => setForm({ ...form, [key]: e.target.value });
 
@@ -70,6 +78,7 @@ export default function LoginForm({ next = '/' }) {
           type="email"
           required
           autoComplete="email"
+          autoFocus
           value={form.email}
           onChange={set('email')}
           className="mt-1 w-full"
@@ -85,15 +94,27 @@ export default function LoginForm({ next = '/' }) {
             Forgotten it?
           </Link>
         </div>
-        <Input
-          id="password"
-          type="password"
-          required
-          autoComplete="current-password"
-          value={form.password}
-          onChange={set('password')}
-          className="mt-1 w-full"
-        />
+        <div className="relative mt-1">
+          <Input
+            id="password"
+            type={showPassword ? 'text' : 'password'}
+            required
+            autoComplete="current-password"
+            value={form.password}
+            onChange={set('password')}
+            className="w-full pr-10"
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword((shown) => !shown)}
+            // The label says what pressing it DOES, which is what a screen
+            // reader user needs; the icon shows the same thing to everyone else.
+            aria-label={showPassword ? 'Hide password' : 'Show password'}
+            className="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-muted-foreground hover:text-foreground"
+          >
+            {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+          </button>
+        </div>
       </div>
 
       <Button
@@ -119,13 +140,18 @@ export default function LoginForm({ next = '/' }) {
         )}
       </div>
 
-      <p className="text-sm text-muted-foreground">
-        No account yet?{' '}
+      {/*
+       * Separated by a rule rather than left as one more line of small print.
+       * A first-time visitor who cannot find the way to create an account tries
+       * to sign in with an account that does not exist, fails, and leaves.
+       */}
+      <p className="border-t pt-4 text-center text-sm text-muted-foreground">
+        New to ShopMaster Pro?{' '}
         <Link
           href={`/register?next=${encodeURIComponent(next)}`}
-          className="text-brand-ink hover:underline"
+          className="font-medium text-brand-ink hover:underline"
         >
-          Create one
+          Create an account
         </Link>
       </p>
     </form>

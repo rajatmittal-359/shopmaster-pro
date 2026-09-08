@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { useTheme } from 'next-themes';
 import Script from 'next/script';
 import { useRouter } from 'next/navigation';
 import { apiBase } from '@/lib/api';
@@ -32,6 +33,14 @@ export default function GoogleButton({ next = '/' }) {
   const router = useRouter();
   const holder = useRef(null);
   const [state, setState] = useState({ status: 'idle' });
+  /*
+   * Google draws this button, so the only say we have in how it looks is which
+   * of their two themes to ask for. A white button on a dark card is the one
+   * thing on the screen that did not get the memo, so the dark theme asks for
+   * their black one. `resolvedTheme` rather than `theme`, because the default
+   * is `system` and `system` is not a colour.
+   */
+  const { resolvedTheme } = useTheme();
 
   useEffect(() => {
     if (!CLIENT_ID) return undefined;
@@ -74,11 +83,21 @@ export default function GoogleButton({ next = '/' }) {
         client_id: CLIENT_ID,
         callback: signIn,
       });
+      /*
+       * Measured, not hardcoded. Google's button takes a pixel width and will
+       * not stretch, so a fixed 320 sat narrower than the "Sign in" button
+       * directly below it - two buttons of different widths stacked, which is
+       * the single thing that made the screen look unfinished. 400 is the
+       * widest Google accepts; below 200 their own label stops fitting.
+       */
+      const width = Math.min(400, Math.max(200, Math.round(holder.current.offsetWidth)));
       window.google.accounts.id.renderButton(holder.current, {
-        theme: 'outline',
+        theme: resolvedTheme === 'dark' ? 'filled_black' : 'outline',
         size: 'large',
         text: 'continue_with',
-        width: 320,
+        shape: 'rectangular',
+        logo_alignment: 'left',
+        width,
       });
       return undefined;
     }, 100);
@@ -87,7 +106,7 @@ export default function GoogleButton({ next = '/' }) {
       cancelled = true;
       clearInterval(timer);
     };
-  }, [next, router]);
+  }, [next, router, resolvedTheme]);
 
   // Nothing to draw if the server was never given a client id - better an
   // absent button than one that fails when pressed.
@@ -97,9 +116,9 @@ export default function GoogleButton({ next = '/' }) {
     <div className="space-y-2">
       <Script src="https://accounts.google.com/gsi/client" strategy="afterInteractive" />
 
-      {/* Google draws into this. It has its own fixed size, so the wrapper only
-          centres it. */}
-      <div ref={holder} className="flex justify-center" />
+      {/* Google draws into this. The wrapper is full width so the button can be
+          measured against it, and centres whatever Google actually produces. */}
+      <div ref={holder} className="flex w-full justify-center" />
 
       <p aria-live="polite" className="min-h-5 text-center text-sm">
         {state.status === 'sending' && (

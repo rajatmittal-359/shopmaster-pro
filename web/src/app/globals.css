@@ -39,6 +39,9 @@
   --color-secondary-foreground: var(--secondary-foreground);
   --color-secondary: var(--secondary);
   --color-brand-ink: var(--brand-ink);
+  --color-brand-from: var(--brand-from);
+  --color-brand-via: var(--brand-via);
+  --color-brand-to: var(--brand-to);
   --color-primary-foreground: var(--primary-foreground);
   --color-primary: var(--primary);
   --color-popover-foreground: var(--popover-foreground);
@@ -54,86 +57,142 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/*
+ * THE PALETTE
+ *
+ * WHY IT IS NOT MARIGOLD ANY MORE
+ *   The first palette was Jaipur's own colour, and it had one problem that
+ *   could not be designed around: marigold is too light to carry white text,
+ *   so every filled button had to use dark ink on it. That forces a warm,
+ *   soft, slightly retail-catalogue feel through the entire interface, and it
+ *   is the opposite of what this shop is trying to look like.
+ *
+ *   It had a second problem. It is a WARM colour, and it sat on top of product
+ *   photography that is itself warm - jewellery, fabric, skin. The frame
+ *   competed with the goods.
+ *
+ * WHY VIOLET-INDIGO
+ *   It is the colour the software this generation admires actually uses -
+ *   Stripe, Linear, Vercel's accent, Framer. It reads as modern and technical
+ *   rather than as a shop, which is the register the brand wants: a platform,
+ *   not a stall. It is also COOL, so it recedes behind product photography
+ *   instead of fighting it, and it is dark enough to carry white text at
+ *   4.5:1 - which means one button style everywhere instead of two.
+ *
+ * THE GRADIENT
+ *   violet -> indigo -> cyan, three stops of an analogous run. Analogous is
+ *   what reads as depth; a gradient between unrelated hues reads as a mistake.
+ *   It is a TOKEN, not a class written by hand in six places, so every
+ *   gradient surface on the site is the same gradient.
+ *
+ * EVERY COLOUR IS DEFINED IN BOTH MODES
+ *   Nothing here is a one-off hex. Re-theming the whole site is editing this
+ *   block, which is exactly what just happened.
+ */
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
+  --background: oklch(0.995 0.002 286);
+  --foreground: oklch(0.21 0.02 286);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
+  --card-foreground: oklch(0.21 0.02 286);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
+  --popover-foreground: oklch(0.21 0.02 286);
+
   /*
-   * Marigold, not the blue every dashboard ships with. Jaipur's own colour,
-   * and it sits with the product photography instead of fighting it.
-   *
-   * The FOREGROUND on it is ink, not white: marigold light enough to read as
-   * gold is too light to carry white text at 4.5:1. Dark on marigold is 6.2:1,
-   * white on it would be 2.8:1 - which is a button a lot of people cannot read.
+   * L is 0.50 for a reason: it is the point where white text on it reaches
+   * 4.5:1. A more luminous violet looks better in a swatch and fails on a
+   * button, which is where it actually lives.
    */
-  --primary: oklch(0.72 0.15 68);
-  --primary-foreground: oklch(0.2 0.04 60);
-  /* The same hue taken down until it is readable AS TEXT on white (4.8:1).
-     Links and quiet emphasis use this; --primary is for filled surfaces. */
-  --brand-ink: oklch(0.47 0.12 62);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.72 0.15 68);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --primary: oklch(0.5 0.22 286);
+  --primary-foreground: oklch(0.99 0.003 286);
+  /* The same hue as TEXT on white. Links and quiet emphasis use this. */
+  --brand-ink: oklch(0.47 0.2 286);
+
+  /* The brand gradient, as three stops anything can reach for. */
+  --brand-from: oklch(0.62 0.24 305);
+  --brand-via: oklch(0.52 0.23 286);
+  --brand-to: oklch(0.68 0.15 225);
+
+  --secondary: oklch(0.968 0.005 286);
+  --secondary-foreground: oklch(0.26 0.025 286);
+  --muted: oklch(0.968 0.005 286);
+  --muted-foreground: oklch(0.53 0.02 286);
+  --accent: oklch(0.955 0.016 292);
+  --accent-foreground: oklch(0.3 0.08 286);
+  --destructive: oklch(0.58 0.23 27.3);
+  --border: oklch(0.916 0.006 286);
+  --input: oklch(0.916 0.006 286);
+  --ring: oklch(0.5 0.22 286);
+
+  /* A violet-to-cyan ramp, so a chart with five series still looks like one
+     brand rather than five unrelated apps. */
+  --chart-1: oklch(0.5 0.22 286);
+  --chart-2: oklch(0.6 0.2 300);
+  --chart-3: oklch(0.62 0.16 240);
+  --chart-4: oklch(0.68 0.13 220);
+  --chart-5: oklch(0.72 0.1 200);
+
+  --radius: 0.75rem;
+
+  --sidebar: oklch(0.985 0.003 286);
+  --sidebar-foreground: oklch(0.21 0.02 286);
+  --sidebar-primary: oklch(0.5 0.22 286);
+  --sidebar-primary-foreground: oklch(0.99 0.003 286);
+  --sidebar-accent: oklch(0.955 0.016 292);
+  --sidebar-accent-foreground: oklch(0.3 0.08 286);
+  --sidebar-border: oklch(0.916 0.006 286);
+  --sidebar-ring: oklch(0.5 0.22 286);
 }
 
+/*
+ * Dark mode is not an afterthought here - a large share of the people this
+ * brand is aimed at keep every app they use in it. The ground is a cool
+ * near-black rather than pure black: pure black next to a bright violet
+ * vibrates, and it makes every product photograph look like it is floating in
+ * a hole.
+ */
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.78 0.14 70);
-  --primary-foreground: oklch(0.2 0.04 60);
-  /* On a dark ground the readable direction is up, not down. */
-  --brand-ink: oklch(0.82 0.13 72);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
+  --background: oklch(0.17 0.014 286);
+  --foreground: oklch(0.97 0.004 286);
+  --card: oklch(0.214 0.016 286);
+  --card-foreground: oklch(0.97 0.004 286);
+  --popover: oklch(0.214 0.016 286);
+  --popover-foreground: oklch(0.97 0.004 286);
+
+  /* Lifted, because on a dark ground the readable direction is up. White still
+     clears 4.5:1 on it. */
+  --primary: oklch(0.58 0.22 288);
+  --primary-foreground: oklch(0.99 0.003 286);
+  --brand-ink: oklch(0.78 0.15 290);
+
+  --brand-from: oklch(0.68 0.22 305);
+  --brand-via: oklch(0.6 0.22 288);
+  --brand-to: oklch(0.75 0.14 225);
+
+  --secondary: oklch(0.27 0.02 286);
+  --secondary-foreground: oklch(0.97 0.004 286);
+  --muted: oklch(0.27 0.02 286);
+  --muted-foreground: oklch(0.72 0.02 286);
+  --accent: oklch(0.3 0.04 288);
+  --accent-foreground: oklch(0.97 0.004 286);
+  --destructive: oklch(0.7 0.19 22.2);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.6 0.13 66);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --ring: oklch(0.58 0.22 288);
+
+  --chart-1: oklch(0.62 0.22 288);
+  --chart-2: oklch(0.7 0.19 305);
+  --chart-3: oklch(0.7 0.15 245);
+  --chart-4: oklch(0.76 0.12 222);
+  --chart-5: oklch(0.8 0.09 200);
+
+  --sidebar: oklch(0.214 0.016 286);
+  --sidebar-foreground: oklch(0.97 0.004 286);
+  --sidebar-primary: oklch(0.58 0.22 288);
+  --sidebar-primary-foreground: oklch(0.99 0.003 286);
+  --sidebar-accent: oklch(0.3 0.04 288);
+  --sidebar-accent-foreground: oklch(0.97 0.004 286);
   --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --sidebar-ring: oklch(0.58 0.22 288);
 }
 
 @layer base {
@@ -151,7 +210,7 @@
 /*
  * The home page's one effect.
  *
- * Two soft marigold blooms drifting behind the headline. CSS only - no canvas,
+ * Two soft violet blooms drifting behind the headline. CSS only - no canvas,
  * no library, nothing to download - because this sits above the fold on a 4G
  * phone and anything that has to load first is a slower first paint.
  *

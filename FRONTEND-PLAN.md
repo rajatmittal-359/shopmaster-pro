@@ -438,6 +438,95 @@ navigation. The shop page's own filter panel had them; the navigation did not.
 
 ---
 
+### 4.7 The design system - colour, mode, and the logo
+
+Rewritten 9 Sep 2026. Rajat's words: "kuch cool modern gradient type ki cheeze,
+youngster businessman and developer theme vibe... shadcn ki asli power dikhao,
+consistency ke sath".
+
+**Why marigold went.** It was Jaipur's own colour and it had two faults that
+could not be designed around. It is too light to carry white text, so every
+filled button used dark ink on it - which pushes a warm, soft, retail-catalogue
+feel through the whole interface. And it is WARM, sitting on top of product
+photography that is itself warm: jewellery, fabric, skin. The frame competed
+with the goods.
+
+**Why violet-indigo.** It is what the software this generation respects actually
+uses - Stripe's measured indigo, Linear's brand indigo on cool greys, and the
+violet that runs through nearly every AI and developer product. It reads as a
+platform rather than a stall. It is COOL, so it recedes behind product
+photography. And it is dark enough to carry white text at 4.5:1, which means one
+button style everywhere instead of two. `--primary` sits at oklch L 0.50
+precisely because that is where white on it clears the threshold.
+
+**The discipline that came with the research.** Premium interfaces use
+surprisingly little colour: one colour used sparingly hits harder than five used
+everywhere. So the gradient - violet, indigo, cyan, three analogous stops - is a
+TOKEN (`--brand-from/via/to`) used only on brand moments: the mark, the sign-in
+panel, the home blooms. Everything else is neutral, and violet means "this is
+the primary action".
+
+**Dark mode is now real**, not a set of tokens nobody could reach. `next-themes`
+on the class attribute, `system` by default because the best theme is the one
+the person already chose on their phone, and a single toggle in the header. The
+toggle renders BOTH icons and lets the `dark` class hide one - no mounted flag,
+no state, no hole where the button should be, no hydration mismatch.
+
+**The logo.** The gem is gone for a reason that has nothing to do with taste: a
+gem says JEWELLERY, and the promise of this platform is that it sells anything.
+A logo appears on every page, every invoice and every courier label, so it is
+the last place to print one category. It is now an isometric parcel - the one
+object that means commerce without naming a category - on a gradient tile.
+Three faces at three brightnesses, so the depth is geometry rather than a drop
+shadow. The tile because that is what a brand mark is now: roughly 40% of the
+top hundred apps on both stores sit on a gradient one, and it is the only shape
+that survives being a favicon, an app icon and a WhatsApp display picture.
+`icon.svg` means the browser tab carries it too.
+
+**Everything is a token.** Re-theming the entire site is editing one block in
+`globals.css`, which is exactly what this change was. The only hard-coded
+colours left in the app are the two that cannot read CSS: the Razorpay modal's
+theme and `global-error.js`, which renders when the stylesheet itself has
+failed.
+
+---
+
+### 4.8 Sign-in, sign-up and the password screens
+
+**What was wrong.** The form was a 24rem column dropped into the middle of an
+otherwise empty catalogue page, beneath a full category strip. It read as a page
+whose content had failed to load.
+
+**What the research says.** A centred card is the safe default; a split screen
+is what consumer products use, because it turns a purely functional screen into
+the one place you can say what an account is FOR - Flipkart, Myntra and Nykaa
+all do it. The rule attached to it is the one that matters: the panel must be
+short, scannable, and must not compete with the form.
+
+**What was built.** A shared `AuthShell` behind all four screens, so sign-in,
+sign-up, forgotten-password and reset cannot drift apart. Split above `lg`,
+card-only below - a phone has no room for a second column. The panel says three
+true things about what the account does and nothing else. Also:
+
+- **The category strip is hidden on these four routes.** Amazon, Myntra and
+  Meesho all strip catalogue navigation from sign-in, and they are right to: a
+  screen with one job should not offer eleven ways to abandon it. The header
+  stays, because the logo and the cart are how somebody who landed here by
+  accident gets out.
+- **The Google button is measured, not hardcoded.** Google's button takes a
+  pixel width and will not stretch, so a fixed 320 sat narrower than the "Sign
+  in" button below it - two stacked buttons of different widths, which was the
+  single thing making the screen look unfinished. It also switches to Google's
+  black theme in dark mode.
+- **A show/hide toggle on the password.** A password nobody can see is a
+  password typed wrong on a phone keyboard, and the failure is silent until the
+  form is refused.
+- **"New to ShopMaster Pro? Create an account"** separated by a rule rather than
+  left as one more line of small print. A first-time visitor who cannot find it
+  tries to sign in with an account that does not exist, fails, and leaves.
+
+---
+
 ## 5. Structured data
 
 GIVA's markup is the reference implementation for an Indian jewellery store and

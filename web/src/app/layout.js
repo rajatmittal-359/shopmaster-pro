@@ -3,6 +3,7 @@ import './globals.css';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import { BUSINESS } from '@/config/policy';
+import ThemeProvider from '@/components/theme/ThemeProvider';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -46,15 +47,23 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
+    /*
+     * suppressHydrationWarning is required, not optional: next-themes writes
+     * the theme class onto <html> before React hydrates, so the server's markup
+     * and the browser's differ by design on this one element.
+     */
     <html
       lang="en-IN"
+      suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col bg-background text-foreground">
-        <Header />
-        {/* flex-1 so a short page still pushes the footer to the bottom. */}
-        <main className="flex-1">{children}</main>
-        <Footer />
+        <ThemeProvider>
+          <Header />
+          {/* flex-1 so a short page still pushes the footer to the bottom. */}
+          <main className="flex-1">{children}</main>
+          <Footer />
+        </ThemeProvider>
       </body>
     </html>
   );

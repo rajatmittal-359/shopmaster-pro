@@ -1,101 +1,123 @@
 /**
  * The ShopMaster Pro mark.
  *
- * WHAT IT IS
- *   A brilliant-cut stone seen from the front: a table, two crown facets and
- *   three pavilion facets meeting at the culet. Six flat planes, each lit
- *   differently - which is the whole trick. A gem does not read as a gem
- *   because of its outline; it reads as one because neighbouring faces catch
- *   different amounts of light. So the depth here is real geometry, not a drop
- *   shadow stuck under a triangle.
+ * WHY THE GEM WAS REPLACED
+ *   The first mark was a cut stone. It was well drawn and it was wrong: a gem
+ *   says JEWELLERY, and this platform's whole promise is that it sells
+ *   anything - kurtis, bedsheets, cosmetics, whatever the next seller brings.
+ *   A logo is the one piece of the site that appears on every page, every
+ *   invoice and every courier label, so it is the last place a single category
+ *   should be printed. The frame around the products has to stay neutral; the
+ *   category belongs on the product.
  *
- * WHY IT IS NOT A SHOPPING BAG OR A CART
- *   Every marketplace uses one. The mark has to say WHICH shop this is, and a
- *   bag says only "a shop". The stone says what is in the bag.
+ * WHAT IT IS NOW
+ *   A parcel, drawn isometrically, sitting inside a gradient tile.
  *
- * WHY THERE ARE TWO OF THEM
- *   `GemMark` is the faceted one, for the screen. `LogoMark` is the same shape
- *   flattened to a single `currentColor` silhouette, for everywhere a gradient
- *   cannot go or should not: a black-and-white invoice, a courier label, a
- *   favicon at 16px where six facets turn to mud, and any dark surface where
- *   the mark must simply take the colour of the text beside it.
+ *   The parcel because it is the one object that means "commerce" without
+ *   naming a category - a box holds anything, which is precisely the promise -
+ *   and because it is what actually arrives at the door. It is drawn as three
+ *   real faces at three different brightnesses, so the depth is geometry, not a
+ *   drop shadow: the top catches the light, the left face is in half light, the
+ *   right face is in shadow.
+ *
+ *   The tile because that is what a brand mark IS in 2026. Roughly 40% of the
+ *   top hundred apps on both stores now sit on a gradient tile, and the current
+ *   direction - "soft 3D" - is rounded shapes with gentle lighting rather than
+ *   the hard glossy skeuomorphism of 2012. It is also the only shape that
+ *   survives being a favicon, an app icon and a WhatsApp display picture, which
+ *   is where most people will first see this shop.
+ *
+ * WHY VIOLET INTO CYAN
+ *   It is the site's own gradient, and it is the register the brand is aiming
+ *   at: the colour of the software this generation already respects rather
+ *   than the colour of a shop. The run is violet -> indigo -> cyan, which is
+ *   analogous - neighbouring hues, which is what reads as depth. A gradient
+ *   between unrelated colours reads as a mistake.
+ *
+ * THE SEAM
+ *   The two front faces do not touch. A hairline of the tile shows between
+ *   them, so the box is a box at 16px too, where a shared edge would close up
+ *   and leave a flat white blob.
  *
  * WHY IT IS DRAWN AND NOT A PNG
- *   One file instead of four that drift, no asset to lose, no blur on a
- *   high-density phone screen, and it is a few hundred bytes inside the HTML
- *   rather than a request that has to finish before the header stops flashing.
+ *   One file instead of four that drift, no blur on a high-density screen, and
+ *   a few hundred bytes inside the HTML rather than a request that has to
+ *   finish before the header stops flashing.
  */
 
 /**
  * `idPrefix` exists because SVG gradients are referenced by id, and ids are
- * global to the document. Two marks on one page (header and footer) would
- * otherwise declare the same ids twice. They are identical, so nothing breaks
- * visually - but it is invalid HTML, and the day someone gives one of them a
- * different palette it would break silently. Pass a prefix for the second one.
+ * global to the document. Two marks on one page would otherwise declare the
+ * same ids twice. Pass a prefix for the second one.
  */
-export function GemMark({ className = '', idPrefix = 'smp', ...props }) {
+export function TileMark({ className = '', idPrefix = 'smp', ...props }) {
   const id = (name) => `${idPrefix}-${name}`;
 
   return (
-    <svg
-      viewBox="0 0 64 64"
-      role="img"
-      aria-label="ShopMaster Pro"
-      className={className}
-      {...props}
-    >
+    <svg viewBox="0 0 64 64" role="img" aria-label="ShopMaster Pro" className={className} {...props}>
       <defs>
-        {/* Crown - lit from the upper left, so the table is brightest. */}
-        <linearGradient id={id('table')} x1="24" y1="8" x2="40" y2="26" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#FFF0CB" />
-          <stop offset="1" stopColor="#FBCE6D" />
-        </linearGradient>
-        <linearGradient id={id('crownL')} x1="6" y1="8" x2="24" y2="26" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#F8D588" />
-          <stop offset="1" stopColor="#E2A733" />
-        </linearGradient>
-        <linearGradient id={id('crownR')} x1="40" y1="8" x2="58" y2="26" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#EFB44A" />
-          <stop offset="1" stopColor="#C9821B" />
+        {/* Violet into indigo into a cyan tip, lit from the top left. */}
+        <linearGradient id={id('tile')} x1="8" y1="4" x2="56" y2="60" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#A78BFA" />
+          <stop offset="0.5" stopColor="#6366F1" />
+          <stop offset="1" stopColor="#22D3EE" />
         </linearGradient>
 
-        {/* Pavilion - deeper, because it is the part in shadow under the stone. */}
-        <linearGradient id={id('pavL')} x1="6" y1="26" x2="32" y2="58" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#D69A2C" />
-          <stop offset="1" stopColor="#A05E11" />
+        {/* The soft-3D light: strongest at the very top, gone by the middle. */}
+        <linearGradient id={id('gloss')} x1="32" y1="2" x2="32" y2="34" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#FFFFFF" stopOpacity="0.42" />
+          <stop offset="1" stopColor="#FFFFFF" stopOpacity="0" />
         </linearGradient>
-        <linearGradient id={id('pavC')} x1="20" y1="26" x2="32" y2="58" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#F4BE55" />
-          <stop offset="1" stopColor="#C07B18" />
+
+        {/* The bevel: white along the top edge, dark along the bottom. One
+            stroke, so it stays a hairline at every size. */}
+        <linearGradient id={id('bevel')} x1="32" y1="2" x2="32" y2="62" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#FFFFFF" stopOpacity="0.7" />
+          <stop offset="0.5" stopColor="#FFFFFF" stopOpacity="0.05" />
+          <stop offset="1" stopColor="#1E1B4B" stopOpacity="0.45" />
         </linearGradient>
-        <linearGradient id={id('pavR')} x1="58" y1="26" x2="32" y2="58" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#B87A1D" />
-          <stop offset="1" stopColor="#824C09" />
-        </linearGradient>
+
+        {/* Contact shadow inside the tile, under the parcel. */}
+        <radialGradient
+          id={id('under')}
+          cx="0"
+          cy="0"
+          r="1"
+          gradientUnits="userSpaceOnUse"
+          gradientTransform="translate(32 50) rotate(90) scale(9 17)"
+        >
+          <stop stopColor="#1E1B4B" stopOpacity="0.34" />
+          <stop offset="1" stopColor="#1E1B4B" stopOpacity="0" />
+        </radialGradient>
       </defs>
 
-      {/* Crown: table between two shoulder facets. */}
-      <path d="M24 8 H40 L44 26 H20 Z" fill={`url(#${id('table')})`} />
-      <path d="M16 8 H24 L20 26 H6 Z" fill={`url(#${id('crownL')})`} />
-      <path d="M40 8 H48 L58 26 H44 Z" fill={`url(#${id('crownR')})`} />
-
-      {/* Pavilion: three facets running to the culet at (32,58). */}
-      <path d="M6 26 H20 L32 58 Z" fill={`url(#${id('pavL')})`} />
-      <path d="M20 26 H44 L32 58 Z" fill={`url(#${id('pavC')})`} />
-      <path d="M44 26 H58 L32 58 Z" fill={`url(#${id('pavR')})`} />
+      {/* The tile. rx is 28% of the width - Apple's squircle proportion, and
+          the reason it reads as an app icon rather than a rounded rectangle. */}
+      <rect x="2" y="2" width="60" height="60" rx="17" fill={`url(#${id('tile')})`} />
+      <rect x="2" y="2" width="60" height="60" rx="17" fill={`url(#${id('gloss')})`} />
+      <ellipse cx="32" cy="50" rx="17" ry="9" fill={`url(#${id('under')})`} />
 
       {/*
-       * The girdle. A hairline of white along the widest line of the stone is
-       * what real jewellery photography shows, and without it the crown and the
-       * pavilion read as two shapes that happen to touch.
+       * The parcel. Top face at full white, left at 0.82, right at 0.6 - the
+       * three-value split is what the eye reads as a solid object. A single
+       * white silhouette with lines drawn on it never does.
        */}
-      <path d="M6 26 H58" stroke="#FFFFFF" strokeOpacity="0.55" strokeWidth="1.25" />
+      <path d="M32 13 L47 21.5 L32 30 L17 21.5 Z" fill="#FFFFFF" />
+      <path d="M16 23.2 L30.6 31.5 L30.6 48.6 L16 40.3 Z" fill="#FFFFFF" fillOpacity="0.82" />
+      <path d="M48 23.2 L33.4 31.5 L33.4 48.6 L48 40.3 Z" fill="#FFFFFF" fillOpacity="0.6" />
 
       {/*
-       * One specular highlight, top-left, at low opacity. More than one and it
-       * stops looking cut and starts looking plastic.
+       * The tape, across the lid and down the front. It is what separates a
+       * parcel from a plain cube, and it is drawn in the tile's own colour so
+       * it costs nothing at small sizes - it simply disappears.
        */}
-      <path d="M25 10 H31 L28.5 24 H22.5 Z" fill="#FFFFFF" fillOpacity="0.35" />
+      <path
+        d="M32 13 L32 30"
+        stroke="#4338CA"
+        strokeOpacity="0.5"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }
@@ -103,25 +125,24 @@ export function GemMark({ className = '', idPrefix = 'smp', ...props }) {
 /**
  * The flat silhouette: one colour, no gradients, no ids.
  *
- * Same outline as the faceted mark, with the facet lines kept as strokes so it
- * still reads as a cut stone rather than a plain kite.
+ * For everywhere a gradient cannot go or should not - a black-and-white
+ * invoice, a courier label, a dark surface where the mark should simply take
+ * the colour of the text beside it.
  */
 export function LogoMark({ className = '', ...props }) {
   return (
-    <svg
-      viewBox="0 0 64 64"
-      role="img"
-      aria-label="ShopMaster Pro"
-      className={className}
-      {...props}
-    >
-      <path d="M16 8 H48 L58 26 L32 58 L6 26 Z" fill="currentColor" />
+    <svg viewBox="0 0 64 64" role="img" aria-label="ShopMaster Pro" className={className} {...props}>
+      {/* The outline of the whole parcel, filled once. */}
+      <path d="M32 8 L56 21.5 L56 46.5 L32 60 L8 46.5 L8 21.5 Z" fill="currentColor" />
+      {/* The three edges that make it a box rather than a hexagon, knocked out
+          of the fill so this works on any background colour. */}
       <path
-        d="M6 26 H58 M24 8 L20 26 M40 8 L44 26 M20 26 L32 58 M44 26 L32 58"
+        d="M8 21.5 L32 35 L56 21.5 M32 35 L32 60"
         stroke="#FFFFFF"
-        strokeOpacity="0.45"
-        strokeWidth="1.5"
-        strokeLinecap="round"
+        strokeOpacity="0.55"
+        strokeWidth="2.5"
+        strokeLinejoin="round"
+        fill="none"
       />
     </svg>
   );
@@ -139,7 +160,7 @@ export function LogoMark({ className = '', ...props }) {
 export default function Logo({ className = '', markClassName = '', idPrefix = 'smp' }) {
   return (
     <span className={`inline-flex items-center gap-2.5 ${className}`}>
-      <GemMark idPrefix={idPrefix} className={`h-7 w-7 shrink-0 ${markClassName}`} />
+      <TileMark idPrefix={idPrefix} className={`h-8 w-8 shrink-0 ${markClassName}`} />
       <span className="text-[17px] font-semibold leading-none tracking-tight">
         ShopMaster
         <span className="ml-1 font-medium text-brand-ink">Pro</span>
