@@ -1,4 +1,5 @@
 import LoginForm from '@/components/auth/LoginForm';
+import GoogleButton from '@/components/auth/GoogleButton';
 
 export const metadata = {
   title: 'Sign in',
@@ -34,9 +35,24 @@ export default async function LoginPage({ searchParams }) {
         To see your orders, your cart and your addresses.
       </p>
 
+      {/*
+        Google FIRST, then the form. Somebody arriving from an Instagram link
+        will not stop to invent a password, and the whole point of this button
+        is that they do not have to - but the form stays underneath because
+        Google is blocked inside the Instagram and Facebook in-app browsers,
+        which is exactly where that traffic comes from.
+      */}
       <div className="mt-6">
-        <LoginForm next={next} />
+        <GoogleButton next={next} />
       </div>
+
+      <div className="my-6 flex items-center gap-3 text-xs text-muted-foreground">
+        <span className="h-px flex-1 bg-border" />
+        or with your email
+        <span className="h-px flex-1 bg-border" />
+      </div>
+
+      <LoginForm next={next} />
     </div>
   );
 }

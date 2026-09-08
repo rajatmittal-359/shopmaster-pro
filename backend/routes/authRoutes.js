@@ -21,6 +21,13 @@ router.post('/resend-otp', resendOtp);
 // Login
 router.post('/login', login);
 
+/**
+ * Google sign-in. Public, and rate-limited by nothing here on purpose: the
+ * expensive check is Google's own signature verification, which fails fast on
+ * anything that is not a real token.
+ */
+router.post('/google', require('../controllers/authController').googleSignIn);
+
 // Ask for a reset link, and use it. Both are public by definition - the whole
 // point is that the caller cannot sign in.
 router.post('/forgot-password', forgotPassword);

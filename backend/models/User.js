@@ -26,8 +26,45 @@
         },
         password: {
         type: String,
-        required: [true, 'Password is required'],
+        /*
+         * Required unless the account came from Google.
+         *
+         * Somebody who signed in with Google has no password here and never
+         * typed one - demanding a stored password would mean inventing one,
+         * and an invented password is a credential nobody knows and everybody
+         * has to store.
+         *
+         * They can still set one later through the forgot-password flow, which
+         * is the honest way to add a second way in: it proves they own the
+         * mailbox first.
+         */
+        required: [
+            function () {
+            return !this.googleId;
+            },
+            'Password is required',
+        ],
         minlength: [6, 'Password must be at least 6 characters'],
+        select: false
+        },
+
+        /**
+         * Google's own permanent id for this person - the `sub` claim.
+         *
+         * KEYED ON `sub`, NEVER ON EMAIL. An email address can change, and a
+         * Workspace admin can hand a departed employee's address to somebody
+         * new; matching on email is how one person ends up inside another's
+         * account. `sub` never changes and never moves.
+         *
+         * `sparse` because almost nobody has one: a unique index without it
+         * would treat every password account's missing googleId as a duplicate
+         * null and refuse the second signup.
+         */
+        googleId: {
+        type: String,
+        default: null,
+        unique: true,
+        sparse: true,
         select: false
         },
         role: {

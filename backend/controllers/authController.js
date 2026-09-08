@@ -162,6 +162,87 @@ exports.becomeSeller = async (req, res) => {
   }
 };
 
+/**
+ * Signing in with Google.
+ *
+ * THE FLOW
+ *   The browser gets an ID token from Google and posts it here. We verify it,
+ *   then issue OUR OWN session token - the same one the password path issues.
+ *   Google proves who somebody is; it does not become a second source of truth
+ *   for sessions, and every authorisation check in this codebase keeps reading
+ *   the one token it already understands.
+ *
+ * THREE CASES, AND THE ORDER MATTERS
+ *   1. We have seen this Google account before -> sign them in. Matched on
+ *      `sub`, never on email.
+ *   2. The verified email belongs to an existing account -> LINK it. Somebody
+ *      who registered with a password and later presses "Continue with Google"
+ *      expects their orders to still be there, not a second empty account. This
+ *      is only safe because Google has told us the address is verified.
+ *   3. Nobody -> create a customer. No password: they never typed one, and an
+ *      invented one is a credential nobody knows and everybody has to store.
+ *
+ * WHAT IT DOES NOT DO
+ *   It does not make anybody a seller or an admin, whatever Google says. Role
+ *   comes from our own records, and a new account is a customer like any other.
+ */
+exports.googleSignIn = async (req, res) => {
+  try {
+    const { verifyGoogleCredential } = require('../utils/googleIdentity');
+
+    let identity;
+    try {
+      identity = await verifyGoogleCredential(req.body?.credential);
+    } catch (err) {
+      // 401, not 500: nothing is broken here, the credential simply did not
+      // check out - and the message is written to be shown to a person.
+      return res.status(401).json({ message: err.message });
+    }
+
+    let user = await User.findOne({ googleId: identity.googleId });
+
+    if (!user) {
+      user = await User.findOne({ email: identity.email });
+
+      if (user) {
+        user.googleId = identity.googleId;
+        /*
+         * Google has verified the address, which is exactly what our own OTP
+         * proves. Somebody who signed up, never opened the email, and then came
+         * back through Google should not be told to go and find that code.
+         */
+        user.isVerified = true;
+        await user.save();
+      } else {
+        user = await User.create({
+          name: identity.name,
+          email: identity.email,
+          googleId: identity.googleId,
+          isVerified: true,
+          role: 'customer',
+        });
+      }
+    }
+
+    const token = generateToken(user._id, user.role);
+
+    return res.json({
+      message: 'Signed in with Google',
+      token,
+      role: user.role,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
+    });
+  } catch (error) {
+    console.error('GOOGLE SIGN-IN ERROR:', error.message);
+    return res.status(500).json({ message: 'Could not sign you in just now' });
+  }
+};
+
 // Verify OTP
 exports.verifyOtp = async (req, res) => {
   try {

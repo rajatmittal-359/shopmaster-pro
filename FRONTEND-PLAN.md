@@ -511,6 +511,41 @@ favicon are one file rather than four that drift. `web/src/components/brand/Logo
 
 ## 8. Signing in
 
+### 8.0 BUILT, 9 September 2026
+
+Project `shopmaster-pro-508019`, client `ShopMaster Pro web`, origins
+`https://www.shopmasterpro.in`, `https://shopmasterpro.in`,
+`http://localhost:3000`. **No redirect URI** - the ID-token flow has no redirect
+- and **the client secret is not stored anywhere**: verifying an ID token needs
+only the client id, as its audience.
+
+**No Google API had to be enabled.** The consent screen and an OAuth client are
+the whole of it; the API Library is for other products.
+
+What was built: `POST /auth/google` verifies the token with
+`google-auth-library` and issues OUR session, the same one the password path
+issues. Three cases - known Google account signs in, verified email links to an
+existing account, nobody creates a customer. `User.googleId` is `sub`, never
+email, and `password` became conditionally required so a Google account is not
+forced to invent one.
+
+11 tests. Two of them are the ones that matter:
+
+- **A token issued for a DIFFERENT app is still a real Google token.** Without
+  the audience check anybody who can get a token for their own app signs in here
+  as that user.
+- **`email_verified` must be true**, because accounts are LINKED by email:
+  accepting an unverified address would let somebody claim one they do not own
+  and walk into the account that has it.
+
+And one found by running the real library: its own errors quote the token back -
+*"Wrong number of segments in token: eyJ..."* - and that message was on its way
+to the browser as a 401. It is logged now, and the person gets a sentence.
+
+**Still to do:** the consent screen is in *Testing*, so only listed test users
+can sign in and consent expires every 7 days. **Audience → Publish app → In
+production.**
+
 ### 8.1 Google, on our own session — not NextAuth
 
 **How it works.** Google Identity Services renders the button and One Tap; the
