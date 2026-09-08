@@ -120,15 +120,60 @@ seller on this marketplace, not what the marketplace is.
 3. **The theme stays.** Marigold is a warm brand colour, not a jewellery signal;
    the mark is a cut stone because the shop that owns the platform sells them,
    and it is small enough to read as a brand mark rather than a category claim.
-4. **Size becomes a real filter, and we cannot offer it yet.** Baymard lists it
-   among the five essentials and it was excluded here because jewellery is
-   adjustable. Clothing and footwear are not. `Product` has no size field, so
-   this is **owed backend work**, and it is not cosmetic: Google requires `size`
-   for Clothing (1604) and Shoes (187), so those sellers' products will be
-   disapproved in Merchant Center until it exists.
+4. **Size** - ✅ **done, 9 Sep 2026.** See section 3.5b: a row per size grouped
+   by `item_group_id`, which is Google's own model and left the cart, stock
+   reservation and orders untouched. The `size` FILTER on /shop is still to
+   come; the data now exists for it.
 5. **The feed's `gender` and `age_group` backfill was deliberately limited** to
    the 17 platform-owned products. Defaulting another seller's formal shoes to
    `female` would have been invented data.
+
+### 3.5b Sizes and variants — the cheap answer was also the right one
+
+Needed because clothing and footwear sellers are coming (section 3.5a) and
+**Google disapproves Clothing (1604) and Shoes (187) without `size`** - a
+clothing seller's whole catalogue goes dark for free listings.
+
+**What Google actually specifies.** Each variant is a **separate item in the
+feed with its own id**, and `item_group_id` is what groups them. Any apparel
+item that varies by colour, material, pattern or size must be submitted as a
+unique combination, all carrying the same group id. Size must be the **labelled**
+size - "M", not "SM-RED-01".
+
+**So there were two ways to build it, and the market's own model chose for us:**
+
+| | Nested variants inside one product | A row per size, grouped by an id |
+|---|---|---|
+| Matches Google's feed model | needs flattening on the way out | **exactly** |
+| Cart, stock reservation, orders, payouts | all keyed on a product id - **all rewritten** | **untouched** |
+| Per-size stock and price | new fields | already there |
+| Per-size URL, indexable | needs inventing | already there |
+
+The second is what Shopify does under the hood too. It cost two fields.
+
+**What was built**
+
+- `Product.size` (the label) and `Product.variantGroupId`.
+- The feed emits `<g:size>` and `<g:item_group_id>`, each only when set - a
+  group of one is not a group, and claiming otherwise tells Google there are
+  siblings it will never find.
+- The product endpoint returns the sibling sizes with the product, so the page
+  renders them in the same pass rather than shifting after a second request.
+- The size picker is **links, not a control**: each size has its own URL, so a
+  crawler follows every one. Sold-out sizes are shown struck through rather than
+  hidden - hiding reads as "they never made it", and the shopper leaves to look
+  elsewhere for something we simply do not have today.
+- For the seller, **"Add a size"** copies the style - name, description, price,
+  photographs - and clears only the size, the stock and the item code. Retyping
+  a description per size is how the sizes end up describing different products,
+  which is the thing `item_group_id` exists to prevent. Saving the copy also
+  writes the group id back onto the ORIGINAL, which otherwise would not know it
+  had become part of a group.
+
+Six tests. **Jewellery is unaffected**: Google does not ask for size there, and
+an invented "Free Size" would be noise in the feed.
+
+---
 
 ### 3.5 What we are deliberately NOT doing
 

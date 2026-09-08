@@ -249,7 +249,33 @@ router.get('/:productId', async (req, res) => {
       return res.status(404).json({ message: 'Product not found' });
     }
 
-    res.json({ product });
+    /*
+     * The other sizes of this same thing.
+     *
+     * Each size is its own product row - that is how Google models variants and
+     * it kept the cart, stock reservation and orders untouched. The cost is
+     * that the PAGE has to put them back together, so it is done here rather
+     * than by the browser making a second request it would have to know to
+     * make.
+     *
+     * Sold-out sizes are included on purpose: a size selector that silently
+     * omits the one somebody wants reads as "we never made it", and Baymard's
+     * finding on out-of-stock variants is that showing them as unavailable is
+     * what stops the search continuing elsewhere.
+     */
+    let variants = [];
+    if (product.variantGroupId) {
+      variants = await Product.find({
+        variantGroupId: product.variantGroupId,
+        isActive: true,
+        isDeleted: { $ne: true },
+      })
+        .select('name slug size price salePrice saleStartsAt saleEndsAt stock reserved')
+        .sort({ price: 1 })
+        .lean();
+    }
+
+    res.json({ product, variants });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

@@ -47,7 +47,15 @@ const get = async (path, { revalidate = CATALOGUE_TTL } = {}) => {
 /** One product, by slug or by the old ObjectId - the API accepts both. */
 export const getProduct = async (slug) => {
   const data = await get(`/public/products/${encodeURIComponent(slug)}`);
-  return data?.product || null; // __notFound has no .product, so this is null
+  if (!data?.product) return null; // __notFound has no .product either
+
+  /*
+   * The sibling sizes travel with the product because the page needs them in
+   * the same render - fetching them separately would mean the size picker
+   * appearing a moment after the price, which is exactly the sort of shift
+   * that gets counted against the page.
+   */
+  return { ...data.product, variants: data.variants || [] };
 };
 
 /** The reviews shown on a product page. */

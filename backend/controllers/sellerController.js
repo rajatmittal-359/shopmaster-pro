@@ -220,6 +220,8 @@ exports.addProduct = async (req, res) => {
       color,
       gender,
       ageGroup,
+      size,
+      variantGroupId,
     } = req.body;
 
     const categoryError = await validateLeafCategory(category);
@@ -255,6 +257,8 @@ exports.addProduct = async (req, res) => {
       // of men's watches silently ships `female` because a form did not ask.
       gender,
       ageGroup,
+      size,
+      variantGroupId,
     });
 
     // Check the details BEFORE spending anything on the pictures. Uploading
@@ -310,6 +314,8 @@ exports.updateProduct = async (req, res) => {
       color,
       gender,
       ageGroup,
+      size,
+      variantGroupId,
       freeShipping,
       salePrice,
       saleEndsAt,
@@ -364,6 +370,10 @@ exports.updateProduct = async (req, res) => {
     if (color !== undefined) product.color = color || undefined;
     if (gender !== undefined) product.gender = gender || undefined;
     if (ageGroup !== undefined) product.ageGroup = ageGroup || undefined;
+    if (size !== undefined) product.size = size || undefined;
+    // Null, not undefined: clearing this UNGROUPS a product, and that has to be
+    // possible - a size added to the wrong style is a mistake somebody makes.
+    if (variantGroupId !== undefined) product.variantGroupId = variantGroupId || null;
     // Only an explicit boolean flips it, so an absent field never silently
     // turns free delivery off on an existing product.
     if (typeof freeShipping === 'boolean') product.freeShipping = freeShipping;

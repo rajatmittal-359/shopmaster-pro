@@ -154,6 +154,23 @@ exports.googleProductFeed = async (req, res) => {
         if (p.gender) parts.push(`<g:gender>${esc(p.gender)}</g:gender>`);
         if (p.ageGroup) parts.push(`<g:age_group>${esc(p.ageGroup)}</g:age_group>`);
 
+        /*
+         * Size, and the thread that ties one style's sizes together.
+         *
+         * Google REQUIRES size for Clothing (1604) and Shoes (187) - without it
+         * those products are disapproved for free listings, which is why this
+         * exists at all. It is skipped for jewellery, where Google does not ask
+         * and an invented "Free Size" would be noise.
+         *
+         * `item_group_id` is what turns three separate feed items into one
+         * product with three sizes in Google's eyes. Sent only when the seller
+         * has actually grouped them, because a group of one is not a group.
+         */
+        if (p.size) parts.push(`<g:size>${esc(p.size)}</g:size>`);
+        if (p.variantGroupId) {
+          parts.push(`<g:item_group_id>${esc(p.variantGroupId)}</g:item_group_id>`);
+        }
+
         const brand = p.brand || p.sellerId?.name;
         if (brand) parts.push(`<g:brand>${esc(brand)}</g:brand>`);
         if (p.sku) parts.push(`<g:mpn>${esc(p.sku)}</g:mpn>`);

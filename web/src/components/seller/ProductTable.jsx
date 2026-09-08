@@ -112,6 +112,16 @@ export default function ProductTable() {
                   <Link href={`/seller/products/${product._id}`} className="text-brand-ink hover:underline">
                     Edit
                   </Link>
+                  {' · '}
+                  {/* Clothing and shoes need a row per size - Google requires
+                      `size` on them and disapproves without it. This copies the
+                      style so only the size and the count have to be typed. */}
+                  <Link
+                    href={`/seller/products/new?from=${product._id}`}
+                    className="text-brand-ink hover:underline"
+                  >
+                    Add a size
+                  </Link>
                 </p>
               </div>
 

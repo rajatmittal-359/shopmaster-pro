@@ -275,6 +275,45 @@ const productSchema = new mongoose.Schema(
       default: 'adult',
     },
 
+    /**
+     * The size printed on the label - "M", "38", "Free Size".
+     *
+     * REQUIRED BY GOOGLE for Clothing (1604) and Shoes (187): without it those
+     * products are disapproved for free listings. Left empty for jewellery,
+     * which is where the catalogue started and why this did not exist.
+     *
+     * It is the LABELLED size, not an internal code. Google's own guidance is
+     * that "S" belongs in the feed, not "SM-RED-01".
+     */
+    size: {
+      type: String,
+      trim: true,
+      maxlength: [30, 'Size cannot exceed 30 characters'],
+    },
+
+    /**
+     * What ties the sizes of one thing together.
+     *
+     * WHY EACH SIZE IS ITS OWN PRODUCT ROW
+     *   Because that is how Google models it - every size is a separate item in
+     *   the feed with its own id, and `item_group_id` groups them - and because
+     *   the alternative would have cost far more than it bought. Nesting
+     *   variants inside one product means rewriting the cart, stock
+     *   reservation, orders and payouts, all of which are keyed on a product
+     *   id. This way a medium and a large are two rows that already have their
+     *   own stock, their own price and their own reservations, and nothing
+     *   downstream changes at all.
+     *
+     * Any string shared by the group will do; the seller UI generates one from
+     * the first product's id, so it is stable and needs no counter.
+     */
+    variantGroupId: {
+      type: String,
+      trim: true,
+      default: null,
+      index: true,
+    },
+
       brand: {
     type: String,
     trim: true,

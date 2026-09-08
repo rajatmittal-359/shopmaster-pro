@@ -60,6 +60,8 @@ const EMPTY = {
   lowStockThreshold: 10,
   weight: '',
   color: '',
+  size: '',
+  variantGroupId: '',
   gender: 'female',
   ageGroup: 'adult',
   brand: '',
@@ -67,7 +69,7 @@ const EMPTY = {
   freeShipping: false,
 };
 
-export default function ProductForm({ productId }) {
+export default function ProductForm({ productId, copyFromId }) {
   const router = useRouter();
   const [form, setForm] = useState(EMPTY);
   const [images, setImages] = useState([]);
@@ -93,6 +95,31 @@ export default function ProductForm({ productId }) {
             // The API populates category; the form needs the id it will send.
             category: product.category?._id || product.category || '',
           });
+        } else if (copyFromId) {
+          /*
+           * Adding another size of something that already exists.
+           *
+           * Everything about the style is copied - name, description, price,
+           * photographs - and only what genuinely differs is cleared: the size
+           * itself, the stock count, and the seller's own item code. Retyping
+           * a description for each size is how the sizes end up describing
+           * different products, which is exactly what item_group_id is meant
+           * to prevent.
+           */
+          const data = await authedFetch(`/seller/products/${copyFromId}`);
+          const source = data.product || data;
+          if (cancelled) return;
+          setForm({
+            ...EMPTY,
+            ...source,
+            category: source.category?._id || source.category || '',
+            size: '',
+            stock: '',
+            sku: '',
+            // The group is the source's own, or the source itself if it is the
+            // first of its kind. Either way both rows end up carrying it.
+            variantGroupId: source.variantGroupId || String(source._id),
+          });
         }
         setState({ status: 'idle' });
       } catch (err) {
@@ -103,7 +130,7 @@ export default function ProductForm({ productId }) {
     return () => {
       cancelled = true;
     };
-  }, [productId]);
+  }, [productId, copyFromId]);
 
   const set = (key) => (e) =>
     setForm({ ...form, [key]: e.target.type === 'checkbox' ? e.target.checked : e.target.value });
@@ -150,6 +177,8 @@ export default function ProductForm({ productId }) {
       stock: Number(form.stock),
       lowStockThreshold: Number(form.lowStockThreshold) || 10,
       weight: form.weight === '' ? undefined : Number(form.weight),
+      size: form.size || undefined,
+      variantGroupId: form.variantGroupId || undefined,
       ...(images.length ? { images } : {}),
     };
 
@@ -158,6 +187,20 @@ export default function ProductForm({ productId }) {
         await authedFetch(`/seller/products/${productId}`, { method: 'PATCH', body });
       } else {
         await authedFetch('/seller/products', { method: 'POST', body });
+
+        /*
+         * The first product of a style does not know it is part of a group
+         * until a second size exists. So when a copy is saved, the original is
+         * given the same group id - otherwise the feed carries an
+         * item_group_id on one row only, which tells Google there are siblings
+         * it will never find.
+         */
+        if (copyFromId && body.variantGroupId) {
+          await authedFetch(`/seller/products/${copyFromId}`, {
+            method: 'PATCH',
+            body: { variantGroupId: body.variantGroupId },
+          });
+        }
       }
       router.push('/seller/products');
       router.refresh();
@@ -176,6 +219,14 @@ export default function ProductForm({ productId }) {
 
   return (
     <form onSubmit={submit} className="max-w-2xl space-y-6">
+      {copyFromId && (
+        <p className="rounded-xl border border-border bg-muted/40 p-3 text-sm text-muted-foreground">
+          Another size of an existing product. Everything is copied except the
+          size, the stock and your item code - and both sizes are shown together
+          on one page.
+        </p>
+      )}
+
       <section className="space-y-4 rounded-xl border border-border p-4">
         <div>
           <label htmlFor="name" className={label}>
@@ -317,6 +368,25 @@ export default function ProductForm({ productId }) {
         </p>
 
         <div className="grid gap-4 sm:grid-cols-3">
+          <div>
+            <label htmlFor="size" className={label}>
+              Size
+            </label>
+            <Input
+              id="size"
+              value={form.size ?? ''}
+              onChange={set('size')}
+              placeholder="M"
+              className="mt-1"
+            />
+            <p className="mt-1 text-xs text-muted-foreground">
+              Clothing and shoes only, and Google REQUIRES it for those - without
+              it they are disapproved. Write what is on the label (&ldquo;M&rdquo;,
+              &ldquo;38&rdquo;), never an internal code. Leave it empty for
+              jewellery.
+            </p>
+          </div>
+
           <div>
             <label htmlFor="color" className={label}>
               Colour

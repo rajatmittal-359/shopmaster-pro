@@ -10,6 +10,7 @@ import BuyBox from '@/components/product/BuyBox';
 import PincodeCheck from '@/components/product/PincodeCheck';
 import ProductCard from '@/components/product/ProductCard';
 import Stars from '@/components/product/Stars';
+import SizePicker from '@/components/product/SizePicker';
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.shopmasterpro.in';
 
@@ -137,6 +138,10 @@ export default async function ProductPage({ params }) {
             </p>
           </div>
 
+          {/* Sizes, if this style has more than one. Links, not a control -
+              each size is its own row, its own URL and its own stock. */}
+          <SizePicker variants={product.variants} currentId={product._id} />
+
           {product.totalReviews > 0 && (
             <p className="flex items-center gap-2 text-sm">
               <Stars value={product.avgRating} />
@@ -206,6 +211,7 @@ export default async function ProductPage({ params }) {
 
           <dl className="mt-6 grid grid-cols-2 gap-y-2 text-sm sm:grid-cols-3">
             {[
+              ['Size', product.size],
               ['Colour', product.color],
               ['Category', product.category?.name],
               ['Item code', product.sku],
