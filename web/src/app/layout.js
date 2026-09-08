@@ -30,18 +30,17 @@ export const metadata = {
     template: '%s | ShopMaster Pro',
   },
   /*
-   * NOT "a jewellery shop". Charming Jewels is one seller on this marketplace
-   * and there are others, selling clothing, electronics, home and personal
-   * care. Chrome copy that names one category dates the moment a seller joins
-   * who sells something else - and it misdescribes their products to Google.
-   * Category-specific words belong on the product and the category, never in
-   * the frame around them.
+   * NOT "a jewellery shop", and it does not say which seller the platform
+   * owns. Chrome copy naming one category dates the moment a seller joins who
+   * sells something else, and it misdescribes their products to Google.
+   * Category words belong on the product and the category, never in the frame
+   * around them - and the frame's promise is variety, which is the promise
+   * every marketplace makes because it is the one that stays true.
    */
   description:
-    'A marketplace from Jaipur, run by ' +
-    `${BUSINESS.legalName}. Jewellery, clothing, home and more from ` +
-    'independent sellers, delivered across India, with returns and refunds you ' +
-    'can read before you buy.',
+    'Clothing, jewellery, electronics, home and everyday things from sellers ' +
+    'across India. Delivered nationwide, with returns and refunds you can read ' +
+    'before you buy.',
   alternates: { canonical: '/' },
 };
 

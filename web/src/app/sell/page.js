@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import ApplyToSell from '@/components/seller/ApplyToSell';
-import { POLICY, BUSINESS } from '@/config/policy';
+import { POLICY, BUSINESS, COMMISSION_RATE } from '@/config/policy';
 
 export const metadata = {
   title: 'Sell on ShopMaster Pro',
@@ -17,6 +17,18 @@ export const metadata = {
  *   who discovers any of those at payout time is a seller who leaves - and
  *   tells the next one. Every marketplace that grew from nothing did it on
  *   sellers telling each other it was fair.
+ *
+ * WHY THE RATE IS PRINTED HERE AT ALL
+ *   Because everybody worth copying prints theirs. Amazon India publishes a
+ *   category-wise referral schedule (2% to 38%) plus a closing fee, Flipkart a
+ *   rate card (3% to 25%) plus fixed and collection fees, and Meesho makes 0%
+ *   its headline. Against that, one flat number with nothing bolted on is the
+ *   easiest thing we have to say.
+ *
+ *   What none of them publishes is the rate a PARTICULAR shop negotiated, and
+ *   neither do we: an admin can set any seller to something else, and that
+ *   stays between us and them. Publishing exceptions only teaches every other
+ *   seller to ask for one.
  */
 export default function SellPage() {
   const steps = [
@@ -67,9 +79,13 @@ export default function SellPage() {
         <h2 className="font-semibold">The things worth knowing before you start</h2>
         <ul className="mt-3 space-y-2 text-[15px] leading-7 text-muted-foreground">
           <li>
-            <strong className="text-foreground">Commission</strong> is set per shop
-            and shown on your own settings page. It is copied onto each order when
-            it is placed, so a change never re-prices what you have already sold.
+            <strong className="text-foreground">
+              Commission is {COMMISSION_RATE}% of what you sell
+            </strong>{' '}
+            - and nothing else. No listing fee, no closing fee, no fee for
+            collecting the payment. It is copied onto each order at the moment it
+            is placed, so a change never re-prices what you have already sold,
+            and your own rate is always on your settings page.
           </li>
           <li>
             <strong className="text-foreground">Payouts</strong> are released{' '}

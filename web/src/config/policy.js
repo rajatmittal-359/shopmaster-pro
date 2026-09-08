@@ -41,6 +41,18 @@ export const BUSINESS = {
   hours: 'Monday to Saturday, 10am - 7pm IST',
 };
 
+/**
+ * What the platform charges a seller, as a number the public page may state.
+ *
+ * It mirrors DEFAULT_COMMISSION_RATE in backend/utils/commission.js, which is
+ * what a new seller actually gets. Individual shops can be set to something
+ * else by an admin - a negotiated rate, or the platform's own shops at zero -
+ * and that is deliberately NOT advertised anywhere: what one seller pays is
+ * between them and us, and publishing the exceptions invites every other seller
+ * to ask for one.
+ */
+export const COMMISSION_RATE = 8;
+
 /** The policy pages, in the order a footer should list them. */
 export const POLICY_PAGES = [
   ['Contact us', '/contact'],

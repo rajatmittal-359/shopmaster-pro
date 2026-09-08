@@ -4,9 +4,12 @@ import Link from 'next/link';
  * The first screen.
  *
  * WHAT IT SAYS AND WHY
- *   "A marketplace from Jaipur" - not "a jewellery shop". Sellers of every
- *   category are joining, and a headline naming one of them is wrong the day
- *   the second seller arrives.
+ *   "A marketplace from Jaipur" - not "a jewellery shop", and not "our
+ *   jewellery plus other people's things" either. Both are wrong the day the
+ *   catalogue widens, and the second one advertises which seller the platform
+ *   owns, which is nobody's business but ours. The promise is VARIETY - the
+ *   same promise every large marketplace makes - so the categories are listed
+ *   without any of them being claimed.
  *
  * THE EFFECT
  *   Two blurred marigold blooms drifting slowly behind the words. It is CSS -
@@ -32,8 +35,8 @@ export default function Hero() {
         </h1>
 
         <p className="mt-4 max-w-xl text-lg text-muted-foreground">
-          Jewellery from our own shop, and clothing, home and everyday things
-          from independent sellers. One cart, one place to track it, and a
+          Clothing, jewellery, electronics, home and everyday things - from
+          sellers across India. One cart, one place to track it all, and a
           returns policy written in plain words.
         </p>
 

@@ -114,10 +114,9 @@ export default async function Home() {
           <div>
             <h2 className="text-lg font-semibold">The shop behind it</h2>
             <p className="mt-3 text-[15px] leading-7 text-muted-foreground">
-              {BUSINESS.legalName} is a family jewellery shop in Devi Nagar,
-              Jaipur. ShopMaster Pro is the marketplace it runs - our own pieces
-              sit beside goods from independent sellers, and every product page
-              names who is selling it.
+              ShopMaster Pro is run from Devi Nagar, Jaipur by{' '}
+              {BUSINESS.legalName}. Independent sellers list here across every
+              category, and every product page names the seller it comes from.
             </p>
             <p className="mt-3 text-[15px] leading-7 text-muted-foreground">
               You can walk into the shop. That is the point of putting the
