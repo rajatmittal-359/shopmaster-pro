@@ -257,6 +257,45 @@ Straight ports to server components. They already read their numbers from
 
 ---
 
+### 4.5 Order tracking — market first, then the old app
+
+Built 9 Sep 2026, following Rajat's order of work rather than my instinct. I had
+started to port the React app's `ShipmentTimeline` because it looked good; he
+stopped me and asked what the market does first. He was right to.
+
+**What the market says.** Baymard's order-tracking research lists **six details**
+a tracking page owes a customer, and finds only **33% of tested sites** provide
+all six:
+
+| # | Detail | Did we have it? |
+|---|---|---|
+| 1 | **Expected delivery date** | ❌ **It was in the database.** Shiprocket sends `etd` on every tracking event and `applyCourierUpdate` stores it as `expectedDeliveryAt` - the page simply never showed it. 25% of sites fail on this one, and it is the detail users cite most |
+| 2 | Status progress indicator | ❌ Neither app had one |
+| 3 | Carrier name | ✅ |
+| 4 | **Linked** tracking number | ✅ |
+| 5 | Detailed shipping history | ⚠️ The React app had this and had it RIGHT; my Next port had flattened it to a plain list of the last six scans |
+| 6 | What is in the parcel | ✅ |
+
+Baymard also found that sending people to the courier's own site loses control
+of the experience - *"I like that this is built right in; I don't have to copy
+the tracking number."* So the courier link stays a last resort, not the answer.
+
+**What the old app had that the market's generic advice does not.** The React
+component built the history from **real courier scans**, and computed an honest
+*next step*: `shipped` has two different next steps, because `shippedAt` is set
+when the seller BOOKS a courier and the first scan only means the courier's
+system has the manifest - the parcel is on a shelf in both cases. Saying "out
+for delivery" there tells somebody their parcel is minutes away while it sits in
+a house. A four-dot stepper coloured from `order.status` cannot express that.
+
+**So the new one is both, and better than either:** the courier's own expected
+date at the top, a progress indicator derived from THIS parcel's fulfilment (so
+a split order does not report the slowest seller), then the real scan history
+with the honest next step, and the carrier and linked AWB underneath. Six of
+six.
+
+---
+
 ## 5. Structured data
 
 GIVA's markup is the reference implementation for an Indian jewellery store and

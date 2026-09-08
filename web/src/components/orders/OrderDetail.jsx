@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { authedFetch } from '@/lib/client';
 import { useSession } from '@/lib/session';
-import { readable, hasLeftTheSeller } from '@/lib/courierText';
+import ShipmentTimeline from '@/components/orders/ShipmentTimeline';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 
@@ -130,8 +130,6 @@ export default function OrderDetail({ orderId }) {
         const items = (order.items || []).filter(
           (item) => String(item.sellerId) === String(parcel.sellerId)
         );
-        const moving = hasLeftTheSeller(parcel.scans);
-
         return (
           <section key={parcel._id || index} className="rounded-xl border border-border p-4">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -154,6 +152,10 @@ export default function OrderDetail({ orderId }) {
 
             {parcel.awb && (
               <p className="mt-3 text-sm">
+                {/* Carrier and a LINKED tracking number - two of the six. The
+                    number is a link because people recognise it as one, and it
+                    is the last resort rather than the first: everything above
+                    is here so nobody has to leave. */}
                 {parcel.courierName || 'Courier'} · {parcel.awb}
                 {parcel.trackingUrl && (
                   <>
@@ -171,30 +173,16 @@ export default function OrderDetail({ orderId }) {
               </p>
             )}
 
-            {/* The courier's own words, not our summary of them. "Address issue
-                - customer not available" is something a person can act on;
-                "shipped" is not. */}
-            {parcel.scans?.length > 0 && (
-              <ol className="mt-3 space-y-1 border-l border-border pl-4 text-sm text-muted-foreground">
-                {[...parcel.scans]
-                  .slice(-6)
-                  .reverse()
-                  .map((scan, i) => (
-                    <li key={`${scan.at}-${i}`}>
-                      {readable(scan.activity)}
-                      {scan.location ? ` · ${scan.location}` : ''}
-                      {scan.at ? ` · ${when(scan.at, true)}` : ''}
-                    </li>
-                  ))}
-              </ol>
-            )}
-
-            {parcel.awb && !moving && parcel.status === 'shipped' && (
-              // Said plainly rather than left to look like a stalled parcel.
-              <p className="mt-3 text-sm text-muted-foreground">
-                The courier has the label but has not picked it up yet.
-              </p>
-            )}
+            {/*
+              The tracking view, built to what Baymard's order-tracking
+              research says a customer is owed: the expected delivery date, a
+              progress indicator, the carrier, a linked tracking number, the
+              detailed history and what is in the parcel. Only 33% of tested
+              sites carry all six; this page was missing two of them.
+            */}
+            <div className="mt-4">
+              <ShipmentTimeline order={order} fulfilment={parcel} />
+            </div>
 
             {parcel.returnStage && (
               <p className="mt-3 text-sm">
