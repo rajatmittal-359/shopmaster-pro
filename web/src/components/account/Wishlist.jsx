@@ -6,6 +6,7 @@ import { authedFetch } from '@/lib/client';
 import { useSession } from '@/lib/session';
 import ProductCard from '@/components/product/ProductCard';
 import { Button } from '@/components/ui/button';
+import NotForThisAccount from '@/components/common/NotForThisAccount';
 
 /**
  * Saved for later.
@@ -39,7 +40,7 @@ export default function Wishlist() {
         setItems(list.filter(Boolean));
         setState({ status: 'idle' });
       } catch (err) {
-        if (!cancelled) setState({ status: 'error', message: err.message });
+        if (!cancelled) setState({ status: 'error', message: err.message, code: err.status });
       }
     })();
     return () => {
@@ -59,6 +60,13 @@ export default function Wishlist() {
   }
 
   if (state.status === 'loading') return <p className="text-muted-foreground">Loading…</p>;
+  /* 403 is the capability model, not a fault - see NotForThisAccount. */
+  if (state.status === 'error' && state.code === 403) {
+    return (
+      <NotForThisAccount detail="This account is for running the shop, not for buying on it. Saved items belong to a shopping account." />
+    );
+  }
+
   if (state.status === 'error') return <p className="text-destructive">{state.message}</p>;
 
   if (items.length === 0) {
@@ -90,7 +98,7 @@ export default function Wishlist() {
                   await authedFetch(`/customer/wishlist/${product._id}`, { method: 'DELETE' });
                   await load();
                 } catch (err) {
-                  setState({ status: 'error', message: err.message });
+                  setState({ status: 'error', message: err.message, code: err.status });
                 }
               }}
             >

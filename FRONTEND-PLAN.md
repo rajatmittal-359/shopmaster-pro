@@ -527,6 +527,143 @@ true things about what the account does and nothing else. Also:
 
 ---
 
+### 4.9 The mark: a jharokha
+
+Rebuilt 9 Sep 2026. The brief: connect it to Jaipur and to India openly, keep it
+cool and modern, and **do not let it look fake** - "fraud nhi lage".
+
+**What it is.** A jharokha - the arched window that overhangs the front of almost
+every old building in Jaipur, and what Hawa Mahal is five storeys of - lit from
+inside, on a deep violet tile.
+
+**Why this and not a monument or a national symbol.** Three reasons, and the
+third is the one that decides it:
+
+1. It is genuinely his city's own form. Jharokhas are secular, domestic
+   architecture. They are what Jaipur's facades are MADE of, not a landmark
+   traced for decoration.
+2. It means the right thing. A jharokha is a window others look into - and this
+   is a marketplace: a window onto everything other people are selling. A
+   doorway is the oldest sign a shop has.
+3. It survives being small. An arch and a ledge are two shapes; at 16px that is
+   still a window. A skyline or a palace turns to mud.
+
+**Why the opening is pink.** Jaipur was painted terracotta in 1876, on one man's
+order, to welcome a visitor - which is why the world calls it the Pink City, and
+is arguably the most successful piece of city branding ever done. It is the
+correct colour to put inside a Jaipur window, and against deep violet it does the
+job the palette needs: a warm light in a cool frame, so the arch reads as LIT
+rather than as a hole.
+
+**What it replaced, and why both went.** The gem said JEWELLERY, which is the one
+thing the brand must never say. The parcel that replaced it was category-neutral,
+which was right, and anonymous, which was not - every logistics company on earth
+has a box in its logo.
+
+---
+
+### 4.10 The effects layer
+
+Four techniques, shared, each used in few enough places to still read as
+deliberate. The research is consistent on both halves of that: 2026
+glassmorphism is translucency PLUS grain PLUS a gradient border PLUS a soft
+shadow, and any of them applied everywhere stops being an effect.
+
+- **Glass** - `.glass` / `.glass-strong`. Only on things that float above
+  content: the header, dialogs, the drawers, menus, the product page's sticky
+  buy bar. Blur is 16px because above ~20 it stops being frosted glass and starts
+  being a cost on a cheap phone. The fill doubles as the **barrier layer** that
+  keeps text above 4.5:1. There is an `@supports` fallback to opaque, and
+  `prefers-reduced-transparency` is honoured.
+- **Mesh** - `.mesh`. Native CSS has no mesh gradient; the real technique is
+  several radial gradients layered at different positions and sizes. Used on the
+  sign-in panel so a large coloured surface has somewhere for the eye to travel.
+- **Grain** - `.grain`. One inline SVG turbulence filter, `mix-blend-mode:
+  overlay` so it darkens the lights and lightens the darks the way film grain
+  does. A perfectly smooth gradient is the thing that gives a screen away as a
+  screen.
+- **Glow** - `.glow-hover`. A shadow in the brand colour rather than grey. Grey
+  says "raised"; brand-coloured says "live". It is a shadow, so nothing moves and
+  nothing shifts.
+
+**The bug worth remembering.** `backdrop-filter` written by hand in `globals.css`
+was being **silently dropped by the build's CSS transformer** - the site had
+translucent bars and no blur at all, in both modes, for as long as the glass
+existed. The source said the right thing throughout; it was only visible by
+reading the COMPILED stylesheet in the browser. The fix is to ask for the blur
+through Tailwind's own pipeline (`@apply backdrop-blur-lg backdrop-saturate-150`),
+which the transformer keeps. Check compiled CSS, not source, when an effect
+silently does nothing.
+
+---
+
+### 4.11 Search
+
+**The gap.** There was no search box anywhere on the site. The API had supported
+`?search=` from the beginning and nothing in the interface could reach it. That
+was the largest single gap against every reference.
+
+**What the research says.** Search belongs in the header, VISIBLE rather than
+behind an icon, and for anyone hunting a specific thing it beats navigation
+outright. Three quarters of shoppers use autocomplete, and the suggestions that
+work carry images and category context; on a phone the usable ceiling is five or
+six rows, because the list is trapped between the field and the keyboard.
+
+**What was built.**
+
+- `GET /api/public/products/suggest?q=` - a NEW endpoint rather than reusing the
+  catalogue one. That one populates the seller, counts the whole result set for
+  pagination and returns entire product documents - six times while somebody
+  types "earring". This returns the five fields a suggestion row shows.
+- Matching is anchored to a **word boundary**, unlike the catalogue's search.
+  Plain substring matching answered "ear" with "Pearl Maang Tikka" - technically
+  a match, visibly wrong. It still finds "Earrings", "Earbuds" and "Over-Ear",
+  because a hyphen is a boundary.
+- **Categories come back with the products.** Somebody typing "ear" usually wants
+  Earrings, not one pair of them.
+- The sale WINDOW fields travel with the price, so a sale scheduled for next week
+  cannot show as today's price in the suggestions and the normal price on the
+  card two clicks later.
+- A real combobox: arrow keys, Enter, Escape, `aria-activedescendant`, debounce,
+  and every in-flight request aborted on the next keystroke - without that, a slow
+  answer for "ea" lands after the fast one for "earring".
+- The suggestion panel is **solid, not glass**. It is dense and it lands on top of
+  other text; this is exactly where translucency drops below 4.5:1.
+- Results go to `/shop?search=`, which already carries the filters and the sort a
+  searcher reaches for next. A separate results page would be the same grid with
+  fewer tools.
+
+**The phone trade.** The search field gets its own row, and the category strip is
+hidden below `md`. With both, the sticky header ate close to a quarter of a 390px
+screen. The drawer carries the whole category tree, the home page opens on a
+category grid, and search beats browsing for finding a specific thing anyway.
+
+---
+
+### 4.12 The panel sidebars
+
+**What was there.** Both panels were one row of tabs with **no active state** -
+six or seven links that looked identical on every page. "Where am I" is the first
+question navigation has to answer and it was the one thing this could not do.
+Admin had also grown a seventh link and started wrapping onto two rows.
+
+**Why a sidebar.** Every dashboard worth copying uses one - Shopify's admin,
+Stripe's, Linear, Vercel - for three reasons that all apply here: a vertical list
+GROWS without reflowing; it can be GROUPED, so "Payouts" and "Orders & disputes"
+read as money and arguments while "Categories" and "Coupons" read as
+housekeeping; and it answers "where am I" and "where else can I go" at the same
+time, which is what a dashboard is asked constantly and a shop front is not.
+
+**Not on the shop itself.** A shopper wants the products to have the width; an
+operator wants the map. Same site, two different jobs.
+
+Below `lg` it becomes a drawer - 240px of permanent sidebar on a 390px screen is
+a wall, not navigation. Both panels share one `PanelShell`, so they cannot drift
+apart, and both keep a "Back to the shop" link because the capability model means
+the same account still has a cart while it is in there.
+
+---
+
 ## 5. Structured data
 
 GIVA's markup is the reference implementation for an Indian jewellery store and

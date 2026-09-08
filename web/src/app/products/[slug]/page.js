@@ -179,6 +179,10 @@ export default async function ProductPage({ params }) {
             price={price}
             inStock={inStock}
             maxQuantity={available}
+            /* Handed down rather than read from window.location in the client:
+               the two disagreed, which is a hydration mismatch on every product
+               page. */
+            returnTo={`/products/${product.slug || product._id}`}
           />
 
           {/* Baymard: 60% of shoppers look for the return policy ON the product

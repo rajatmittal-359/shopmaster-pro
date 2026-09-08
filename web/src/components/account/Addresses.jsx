@@ -7,6 +7,7 @@ import { useSession } from '@/lib/session';
 import AddressPicker from '@/components/checkout/AddressPicker';
 import { Button } from '@/components/ui/button';
 import ActionDialog from '@/components/common/ActionDialog';
+import NotForThisAccount from '@/components/common/NotForThisAccount';
 
 /**
  * Addresses, outside checkout.
@@ -48,7 +49,7 @@ export default function Addresses() {
         setSelected(list.find((a) => a.isDefault)?._id || list[0]?._id || null);
         setState({ status: 'idle' });
       } catch (err) {
-        if (!cancelled) setState({ status: 'error', message: err.message });
+        if (!cancelled) setState({ status: 'error', message: err.message, code: err.status });
       }
     })();
     return () => {
@@ -67,6 +68,13 @@ export default function Addresses() {
     );
   }
 
+  /* 403 is the capability model, not a fault - see NotForThisAccount. */
+  if (state.status === 'error' && state.code === 403) {
+    return (
+      <NotForThisAccount detail="This account is for running the shop, not for buying on it. Delivery addresses belong to a shopping account." />
+    );
+  }
+
   if (state.status === 'loading') return <p className="text-muted-foreground">Loading…</p>;
 
   const act = async (fn) => {
@@ -75,7 +83,7 @@ export default function Addresses() {
       await fn();
       await load();
     } catch (err) {
-      setState({ status: 'error', message: err.message });
+      setState({ status: 'error', message: err.message, code: err.status });
     }
   };
 

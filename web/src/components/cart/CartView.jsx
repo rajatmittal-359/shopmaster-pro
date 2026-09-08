@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { authedFetch } from '@/lib/client';
 import { useSession } from '@/lib/session';
 import { Button } from '@/components/ui/button';
+import NotForThisAccount from '@/components/common/NotForThisAccount';
 
 /**
  * The basket.
@@ -33,7 +34,7 @@ export default function CartView() {
       setCart(data.cart || { items: [], totalAmount: 0 });
       setState({ status: 'idle' });
     } catch (err) {
-      setState({ status: 'error', message: err.message });
+      setState({ status: 'error', message: err.message, code: err.status });
     }
   };
 
@@ -62,7 +63,7 @@ export default function CartView() {
         setCart(data.cart || { items: [], totalAmount: 0 });
         setState({ status: 'idle' });
       } catch (err) {
-        if (!cancelled) setState({ status: 'error', message: err.message });
+        if (!cancelled) setState({ status: 'error', message: err.message, code: err.status });
       }
     })();
 
@@ -78,7 +79,7 @@ export default function CartView() {
       else await authedFetch('/customer/cart', { method: 'PATCH', body: { productId, quantity } });
       await load();
     } catch (err) {
-      setState({ status: 'error', message: err.message });
+      setState({ status: 'error', message: err.message, code: err.status });
     }
   };
 
@@ -94,6 +95,18 @@ export default function CartView() {
   }
 
   if (state.status === 'loading') return <p className="text-muted-foreground">Loading…</p>;
+
+  /*
+   * A 403 is not a failure to be retried - it is the capability model saying
+   * this account does not shop. An admin used to get "Access denied.
+   * Insufficient permissions." here with a Try again button that could never
+   * work.
+   */
+  if (state.status === 'error' && state.code === 403) {
+    return (
+      <NotForThisAccount detail="This account is for running the shop, not for buying on it. Sign in with a shopping account to use a cart." />
+    );
+  }
 
   if (state.status === 'error') {
     return (

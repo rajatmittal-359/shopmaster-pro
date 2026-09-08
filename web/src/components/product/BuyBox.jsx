@@ -47,7 +47,16 @@ const readToken = () => {
   }
 };
 
-export default function BuyBox({ productId, name, price, inStock, maxQuantity }) {
+export default function BuyBox({
+  productId,
+  name,
+  price,
+  inStock,
+  maxQuantity,
+  /** The path to come back to after signing in. Given by the server - see the
+   *  sign-in link below for why it cannot be read from the browser. */
+  returnTo = '/',
+}) {
   const [quantity, setQuantity] = useState(1);
   const [state, setState] = useState({ status: 'idle' });
   const [saved, setSaved] = useState(false);
@@ -89,7 +98,15 @@ export default function BuyBox({ productId, name, price, inStock, maxQuantity })
     </Button>
   ) : !signedIn ? (
     <a
-      href={`/login?next=${encodeURIComponent(typeof window === 'undefined' ? '/' : window.location.pathname)}`}
+      /*
+       * The path comes from the SERVER as a prop, not from window.location.
+       * Reading the location here meant the server rendered
+       * `?next=/` and the browser rendered `?next=/products/...` - a genuine
+       * hydration mismatch, logged as an error on every product page, and React
+       * does not patch attributes up. The page already knows its own path; it
+       * just was not telling anybody.
+       */
+      href={`/login?next=${encodeURIComponent(returnTo)}`}
       className="flex h-12 w-full items-center justify-center rounded-lg bg-primary font-medium text-primary-foreground"
     >
       Sign in to add to cart
@@ -175,9 +192,11 @@ export default function BuyBox({ productId, name, price, inStock, maxQuantity })
         </p>
       </div>
 
-      {/* The fixed bar. Hidden once the page is wide enough for the button to
+      {/* The fixed bar, on the shared `.glass` so it frosts the same way as the
+          header and the menus rather than being its own one-off blur.
+          Hidden once the page is wide enough for the button to
           stay in view on its own. */}
-      <div className="fixed inset-x-0 bottom-0 z-40 flex items-center gap-3 border-t border-border bg-background/95 px-4 py-3 backdrop-blur md:hidden">
+      <div className="glass fixed inset-x-0 bottom-0 z-40 flex items-center gap-3 border-t px-4 py-3 md:hidden">
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-medium">{name}</p>
           <p className="text-sm text-muted-foreground">₹{price.toLocaleString('en-IN')}</p>

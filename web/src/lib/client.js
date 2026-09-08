@@ -35,6 +35,17 @@ export async function authedFetch(path, { method = 'GET', body, ...rest } = {}) 
   }
 
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.message || 'That did not work. Please try again.');
+  if (!res.ok) {
+    /*
+     * The STATUS travels with the error, not just the message. Callers need to
+     * tell "this failed, try again" apart from "this account is not allowed to
+     * do this, and trying again will never help" - and a 403 on the cart is
+     * exactly the second one: an admin account is deliberately refused a cart,
+     * so offering a retry button is a lie.
+     */
+    const error = new Error(data.message || 'That did not work. Please try again.');
+    error.status = res.status;
+    throw error;
+  }
   return data;
 }

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { authedFetch } from '@/lib/client';
 import { useSession } from '@/lib/session';
+import NotForThisAccount from '@/components/common/NotForThisAccount';
 
 /**
  * What you have bought.
@@ -47,7 +48,7 @@ export default function OrdersList() {
         setOrders(data.orders || []);
         setState({ status: 'idle' });
       } catch (err) {
-        if (!cancelled) setState({ status: 'error', message: err.message });
+        if (!cancelled) setState({ status: 'error', message: err.message, code: err.status });
       }
     })();
 
@@ -68,6 +69,13 @@ export default function OrdersList() {
   }
 
   if (state.status === 'loading') return <p className="text-muted-foreground">Loading…</p>;
+  /* 403 is the capability model, not a fault - see NotForThisAccount. */
+  if (state.status === 'error' && state.code === 403) {
+    return (
+      <NotForThisAccount detail="This account is for running the shop, not for buying on it. Orders placed as a shopper live on a shopping account." />
+    );
+  }
+
   if (state.status === 'error') return <p className="text-destructive">{state.message}</p>;
 
   if (orders.length === 0) {
