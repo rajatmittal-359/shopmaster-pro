@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { authedFetch } from '@/lib/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 
 /**
  * The category tree.
@@ -22,7 +23,18 @@ import { Input } from '@/components/ui/input';
 export default function Categories() {
   const [categories, setCategories] = useState([]);
   const [state, setState] = useState({ status: 'loading' });
-  const [form, setForm] = useState({ name: '', description: '', parentCategory: '' });
+  const [form, setForm] = useState({
+    name: '',
+    description: '',
+    parentCategory: '',
+    /*
+     * The API REFUSES a main category with no subcategories, and it is right
+     * to: products are listed in subcategories, so a main category on its own
+     * is a heading nothing can go under. This form did not send them at all,
+     * which meant creating a main category always failed.
+     */
+    subcategories: '',
+  });
 
   const load = async () => {
     const data = await authedFetch('/admin/categories');
@@ -66,9 +78,16 @@ export default function Categories() {
           name: form.name,
           description: form.description || undefined,
           parentCategory: form.parentCategory || undefined,
+          // One per line, or commas - whichever the person typing prefers.
+          subcategories: form.parentCategory
+            ? undefined
+            : form.subcategories
+                .split(/[\n,]/)
+                .map((n) => n.trim())
+                .filter(Boolean),
         },
       });
-      setForm({ name: '', description: '', parentCategory: '' });
+      setForm({ name: '', description: '', parentCategory: '', subcategories: '' });
     });
   };
 
@@ -114,16 +133,43 @@ export default function Categories() {
           </select>
         </div>
 
+        {!form.parentCategory && (
+          <div>
+            <label htmlFor="subcategories" className="text-sm font-medium">
+              Its subcategories
+            </label>
+            <Textarea
+              id="subcategories"
+              required
+              rows={4}
+              value={form.subcategories}
+              onChange={(e) => setForm({ ...form, subcategories: e.target.value })}
+              placeholder={'Rings\nEarrings\nNecklaces & Pendants'}
+              className="mt-1"
+            />
+            <p className="mt-1 text-xs text-muted-foreground">
+              One per line. A main category needs at least one, because products
+              are listed IN subcategories - a main category on its own is a
+              heading nothing can go under. You can add more later.
+            </p>
+          </div>
+        )}
+
         <Button type="submit" disabled={state.status === 'working'}>
           Add it
         </Button>
         <p className="text-xs text-muted-foreground">
-          Products can only sit on a category with nothing beneath it. Adding a
-          child to a category that already holds products will strand them - move
-          them first.
+          Two levels, no more. A category that already holds products cannot be
+          given children - move those products into a subcategory first, or they
+          are stranded where nobody browsing can reach them.
         </p>
       </form>
 
+      {/*
+        Grouped, not flat. A flat list of forty names with a dash in front of
+        some of them is unreadable, and this is the screen where somebody
+        decides whether a subcategory is missing.
+      */}
       <ul className="divide-y divide-border rounded-xl border border-border">
         {categories.map((cat) => (
           <li key={cat._id} className="flex flex-wrap items-center gap-3 p-3 text-sm">

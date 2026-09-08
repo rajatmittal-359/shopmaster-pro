@@ -194,6 +194,56 @@ Also fixed here:
 - **Applied filters shown as removable values, not a count.** Baymard: 28% of sites omit this entirely, **66% on mobile**.
 - **Numbered pagination with `rel="next"`.** Nobody in the seven uses pure infinite scroll. Load-more is fine for humans but must stay crawlable.
 
+### 4.2a Categories — the research I had not done
+
+Rajat caught this: the listing showed **top-level categories only**, and the
+admin form could not create subcategories at all. He was right that it was not
+researched. It is now, and the finding is not "put the subcategories back" - it
+is that the right answer depends on the size of the catalogue, and the two
+halves pull in opposite directions.
+
+**On large catalogues** (Baymard, *Ecommerce Category Pages* and *Consider
+Providing Intermediary Category Pages*): an intermediary category page earns its
+extra click, and **subcategory tiles must be the FIRST thing on it** - above
+banners, above curated products. **76% of sites bury them.**
+
+**On small catalogues** (Baymard, *DTC UX: Avoid Intermediary Category Pages*):
+the opposite. Intermediary pages *"impede, rather than enhance"* browsing, and
+testers who clicked a subcategory and landed on a page with **no products** were
+disoriented and had to click again. Baymard's advice for a shallow taxonomy is
+to avoid the layer entirely and take people straight to the listing.
+
+**This shop has about fifty products.** So we take the second finding and keep
+what is useful from the first:
+
+1. **No intermediary page.** `/shop?category=jewellery` shows products
+   immediately - which is what it already did, and would have been a mistake to
+   "fix".
+2. **A subcategory row ABOVE the grid**, not instead of it. Selecting Earrings
+   is one tap, and the products stay in view.
+3. **Siblings, not just children.** When a subcategory is selected the row shows
+   the rest of the family, so Rings → Bangles is one tap rather than a trip back
+   up the tree. This is the thing Rajat named: *"jewellery mein log alag-alag
+   category se dhoondhna pasand karte hain."*
+4. **The sidebar expands the branch being viewed** - all categories, with the
+   current one's children indented beneath it. Every subcategory of every
+   category at once is a wall; none at all leaves the hover menu as the only
+   way in, and a phone has no hover.
+5. **Empty subcategories are never shown**, anywhere. Baymard's own warning
+   about over-categorisation is dead-end categories holding a handful of
+   products; with 17 jewellery pieces across 8 subcategories we are close to
+   that line already.
+6. **Menu headings are links.** Shoppers expect the top level of a flyout to be
+   clickable, and ours is.
+
+**What was actually broken, not just missing:** the API *refuses* to create a
+main category without at least one subcategory - products live on leaves, so a
+main category alone is a heading nothing can go under. The admin form never sent
+`subcategories`, so **creating a main category always failed.** It now takes them
+one per line.
+
+---
+
 ### 4.3 `/` — a real home page
 
 Currently a redirect. It becomes a page: what the shop is, the categories, a

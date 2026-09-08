@@ -8,6 +8,7 @@ import FilterPanel from '@/components/shop/FilterPanel';
 import SortSelect from '@/components/shop/SortSelect';
 import AppliedFilters from '@/components/shop/AppliedFilters';
 import Pagination from '@/components/shop/Pagination';
+import SubcategoryRow from '@/components/shop/SubcategoryRow';
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.shopmasterpro.in';
 const PER_PAGE = 24;
@@ -131,6 +132,10 @@ export default async function ShopPage({ searchParams }) {
               <SortSelect params={params} />
             </div>
           </div>
+
+          {/* Above the grid, never instead of it - see the note in the
+              component about small catalogues and intermediary pages. */}
+          <SubcategoryRow categories={categories} params={params} />
 
           {products.length === 0 ? (
             <NoResults params={params} categoryName={category?.name} />

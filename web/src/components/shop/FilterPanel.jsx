@@ -31,17 +31,57 @@ export default function FilterPanel({ params, categories, colors, price }) {
               Everything
             </Link>
           </li>
-          {categories.map((cat) => (
-            <li key={cat._id}>
-              <Link
-                href={shopHref(params, { category: cat.slug })}
-                className={active('category', cat.slug) ? 'font-medium text-brand-ink' : 'text-muted-foreground hover:text-brand-ink'}
-              >
-                {cat.name}{' '}
-                <span className="text-xs text-muted-foreground">({cat.productCount})</span>
-              </Link>
-            </li>
-          ))}
+          {categories.map((cat) => {
+            const children = (cat.children || []).filter((c) => c.productCount > 0);
+            /*
+             * A main category's children are shown when that branch is the one
+             * being looked at - either the parent is selected, or one of its
+             * children is. Showing every subcategory of every category at once
+             * turns a sidebar into a wall; hiding them entirely (which this
+             * panel did at first) means the only way into "Earrings" is the
+             * hover menu, which does not exist on a phone.
+             */
+            const inThisBranch =
+              active('category', cat.slug) || children.some((c) => active('category', c.slug));
+
+            return (
+              <li key={cat._id}>
+                <Link
+                  href={shopHref(params, { category: cat.slug })}
+                  className={
+                    active('category', cat.slug)
+                      ? 'font-medium text-brand-ink'
+                      : 'text-muted-foreground hover:text-brand-ink'
+                  }
+                >
+                  {cat.name}{' '}
+                  <span className="text-xs text-muted-foreground">({cat.productCount})</span>
+                </Link>
+
+                {inThisBranch && children.length > 0 && (
+                  <ul className="mt-1 space-y-1 border-l border-border pl-3">
+                    {children.map((child) => (
+                      <li key={child._id}>
+                        <Link
+                          href={shopHref(params, { category: child.slug })}
+                          className={
+                            active('category', child.slug)
+                              ? 'font-medium text-brand-ink'
+                              : 'text-muted-foreground hover:text-brand-ink'
+                          }
+                        >
+                          {child.name}{' '}
+                          <span className="text-xs text-muted-foreground">
+                            ({child.productCount})
+                          </span>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </li>
+            );
+          })}
         </ul>
       </section>
 
