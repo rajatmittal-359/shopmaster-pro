@@ -70,6 +70,40 @@ describe('colour', () => {
   });
 });
 
+describe('size', () => {
+  it('matches the whole label, so M does not drag in Medium or XM', async () => {
+    const filter = await filterFor({ size: 'M' });
+    const re = new RegExp(filter.size.$regex, filter.size.$options);
+
+    expect(re.test('M')).toBe(true);
+    expect(re.test('m')).toBe(true);
+    expect(re.test('Medium')).toBe(false);
+    expect(re.test('XM')).toBe(false);
+  });
+
+  it('treats a numeric size as text, so 38 does not match 38.5', async () => {
+    const filter = await filterFor({ size: '38' });
+    const re = new RegExp(filter.size.$regex, filter.size.$options);
+
+    expect(re.test('38')).toBe(true);
+    expect(re.test('38.5')).toBe(false);
+  });
+
+  it('escapes the characters real sizes contain', async () => {
+    // "8.5" and "M/L" are labels, not patterns. Unescaped, the dot in 8.5
+    // matches any character.
+    const filter = await filterFor({ size: '8.5' });
+    const re = new RegExp(filter.size.$regex, filter.size.$options);
+
+    expect(re.test('8.5')).toBe(true);
+    expect(re.test('815')).toBe(false);
+  });
+
+  it('is absent when nothing was asked for - jewellery has no sizes', async () => {
+    expect(await filterFor({})).not.toHaveProperty('size');
+  });
+});
+
 describe('search', () => {
   it('escapes the term rather than running it', async () => {
     const filter = await filterFor({ search: 'ring(' });

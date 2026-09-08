@@ -20,7 +20,7 @@ const escapeRegex = (text) => String(text).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'
  *   page. Answering 200 with zero products creates a soft 404, which Google
  *   indexes as real content.
  */
-async function buildCatalogueFilter({ category, search, minPrice, maxPrice, color, minRating }) {
+async function buildCatalogueFilter({ category, search, minPrice, maxPrice, color, size, minRating }) {
   const filter = { isActive: true, stock: { $gt: 0 } };
 
   if (category) {
@@ -60,6 +60,16 @@ async function buildCatalogueFilter({ category, search, minPrice, maxPrice, colo
    */
   if (color) {
     filter.color = { $regex: `^${escapeRegex(String(color).trim())}$`, $options: 'i' };
+  }
+
+  /*
+   * Size is matched whole and case-insensitively, like colour: "M" must not
+   * drag in "XM" or "Medium", and "38" must not match "38.5". It is escaped
+   * because it arrives from the URL - and sizes genuinely contain characters a
+   * regex cares about, like "8.5" and "M/L".
+   */
+  if (size) {
+    filter.size = { $regex: `^${escapeRegex(String(size).trim())}$`, $options: 'i' };
   }
 
   /*

@@ -129,6 +129,7 @@ router.get('/', async (req, res) => {
       minPrice,
       maxPrice,
       color,
+      size,
       minRating,
       sort,
       page = 1,
@@ -136,7 +137,7 @@ router.get('/', async (req, res) => {
     } = req.query;
 
     const built = await buildCatalogueFilter({
-      category, search, minPrice, maxPrice, color, minRating,
+      category, search, minPrice, maxPrice, color, size, minRating,
     });
 
     // A category that does not exist is a 404, not an empty result page.
@@ -190,25 +191,41 @@ router.get('/', async (req, res) => {
  */
 router.get('/filters', async (req, res) => {
   try {
-    const { category, search, minPrice, maxPrice, minRating } = req.query;
+    const { category, search, minPrice, maxPrice, color, size, minRating } = req.query;
 
+    /*
+     * Each facet is counted with every filter EXCEPT ITS OWN. Applying colour
+     * before counting colours would leave the panel showing the one colour
+     * already chosen, with no way back to the others; the same is true of size.
+     */
     const forColours = await buildCatalogueFilter({
-      category, search, minPrice, maxPrice, minRating,
+      category, search, minPrice, maxPrice, size, minRating,
+    });
+    const forSizes = await buildCatalogueFilter({
+      category, search, minPrice, maxPrice, color, minRating,
     });
     if (forColours.notFound) return res.status(404).json({ message: 'Category not found' });
-    if (forColours.empty) return res.json({ colors: [], price: null });
+    if (forColours.empty) return res.json({ colors: [], sizes: [], price: null });
 
     // The price slider's ends come from the category and search alone. Deriving
     // them from the current price filter would shrink the slider each time it
     // was moved, and there would be no way to widen it again.
     const forPrices = await buildCatalogueFilter({ category, search });
 
-    const [colors, priceRange] = await Promise.all([
+    const [colors, sizes, priceRange] = await Promise.all([
       Product.aggregate([
         { $match: forColours.filter },
         { $match: { color: { $nin: [null, ''] } } },
         { $group: { _id: '$color', count: { $sum: 1 } } },
         { $sort: { count: -1, _id: 1 } },
+      ]),
+      Product.aggregate([
+        { $match: forSizes.filter || {} },
+        { $match: { size: { $nin: [null, ''] } } },
+        { $group: { _id: '$size', count: { $sum: 1 } } },
+        // Alphabetical, not by count: a size list reads as a sequence, and
+        // "S, M, L" ordered by popularity is a list nobody can scan.
+        { $sort: { _id: 1 } },
       ]),
       Product.aggregate([
         { $match: forPrices.filter },
@@ -218,6 +235,7 @@ router.get('/filters', async (req, res) => {
 
     res.json({
       colors: colors.map((c) => ({ value: c._id, count: c.count })),
+      sizes: sizes.map((c) => ({ value: c._id, count: c.count })),
       price: priceRange[0]
         ? { min: Math.floor(priceRange[0].min), max: Math.ceil(priceRange[0].max) }
         : null,

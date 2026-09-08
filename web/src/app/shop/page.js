@@ -14,7 +14,17 @@ const SITE = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.shopmasterpro.in';
 const PER_PAGE = 24;
 
 /** Only these come off the URL. Anything else is ignored, not passed through. */
-const READ = ['category', 'search', 'color', 'minRating', 'minPrice', 'maxPrice', 'sort', 'page'];
+const READ = [
+  'category',
+  'search',
+  'color',
+  'size',
+  'minRating',
+  'minPrice',
+  'maxPrice',
+  'sort',
+  'page',
+];
 
 const cleanParams = (raw) => {
   const out = {};
@@ -34,7 +44,14 @@ const cleanParams = (raw) => {
  * are real pages; a price band is not.
  */
 const isFiltered = (params) =>
-  Boolean(params.color || params.minRating || params.minPrice || params.maxPrice || params.sort);
+  Boolean(
+    params.color ||
+      params.size ||
+      params.minRating ||
+      params.minPrice ||
+      params.maxPrice ||
+      params.sort
+  );
 
 export async function generateMetadata({ searchParams }) {
   const params = cleanParams(await searchParams);
@@ -122,6 +139,7 @@ export default async function ShopPage({ searchParams }) {
           params={params}
           categories={categories}
           colors={filters.colors || []}
+          sizes={filters.sizes || []}
           price={filters.price}
         />
 
@@ -164,7 +182,7 @@ export default async function ShopPage({ searchParams }) {
  * "clear everything", and ends with a way back into the catalogue.
  */
 function NoResults({ params, categoryName }) {
-  const applied = ['color', 'minRating', 'minPrice', 'maxPrice'].filter((k) => params[k]);
+  const applied = ['color', 'size', 'minRating', 'minPrice', 'maxPrice'].filter((k) => params[k]);
 
   return (
     <div className="rounded-xl border border-border p-8 text-center">
@@ -186,7 +204,15 @@ function NoResults({ params, categoryName }) {
                 href={shopHref(params, { [key]: '' })}
                 className="rounded-full border border-border px-3 py-1 text-xs hover:bg-accent"
               >
-                Without the {key === 'minRating' ? 'rating' : key === 'color' ? 'colour' : 'price'} filter
+                Without the{' '}
+                {key === 'minRating'
+                  ? 'rating'
+                  : key === 'color'
+                    ? 'colour'
+                    : key === 'size'
+                      ? 'size'
+                      : 'price'}{' '}
+                filter
               </Link>
             ))}
           </div>

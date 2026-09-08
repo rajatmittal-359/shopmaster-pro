@@ -32,6 +32,7 @@ export const FILTER_LABELS = {
   search: (v) => `Search: ${v}`,
   category: (v) => `Category: ${v}`,
   color: (v) => `Colour: ${v}`,
+  size: (v) => `Size: ${v}`,
   minRating: (v) => `${v} stars and up`,
   minPrice: (v) => `Over ₹${Number(v).toLocaleString('en-IN')}`,
   maxPrice: (v) => `Under ₹${Number(v).toLocaleString('en-IN')}`,

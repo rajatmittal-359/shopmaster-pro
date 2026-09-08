@@ -6,8 +6,9 @@ import PriceFilter from '@/components/shop/PriceFilter';
  * The filters, and only these.
  *
  * Baymard's five essentials are Price, Rating, Colour, Size and Brand. Brand is
- * excluded by their own rule on a single-brand site, and Size is meaningless on
- * adjustable jewellery - so what is left is Price, Category, Colour, Rating.
+ * excluded by their own rule on a single-brand site. Size was excluded too
+ * while this was a jewellery shop - and then clothing sellers arrived, so it is
+ * here now, shown only where the current view actually has sizes.
  * 80% of shoppers apply a price filter whatever they are buying; only 47% of
  * sites offer a rating filter at all, which is the largest gap in the industry.
  *
@@ -15,7 +16,7 @@ import PriceFilter from '@/components/shop/PriceFilter';
  * URL that can be shared, bookmarked and crawled - and the panel costs no
  * JavaScript. Only the price box needs a browser, and that is its own island.
  */
-export default function FilterPanel({ params, categories, colors, price }) {
+export default function FilterPanel({ params, categories, colors, sizes = [], price }) {
   const active = (key, value) => String(params[key] || '') === String(value);
 
   return (
@@ -96,6 +97,33 @@ export default function FilterPanel({ params, categories, colors, price }) {
                   className={active('color', c.value) ? 'font-medium text-brand-ink' : 'text-muted-foreground hover:text-brand-ink'}
                 >
                   {c.value} <span className="text-xs">({c.count})</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {/*
+        Size only appears where sizes exist - jewellery has none, and an empty
+        "Size" heading on a page of nose pins is a filter that teaches people
+        the panel is not to be trusted.
+      */}
+      {sizes.length > 0 && (
+        <section>
+          <h2 className="font-semibold">Size</h2>
+          <ul className="mt-2 flex flex-wrap gap-2">
+            {sizes.map((s) => (
+              <li key={s.value}>
+                <Link
+                  href={shopHref(params, { size: active('size', s.value) ? '' : s.value })}
+                  className={`block min-w-10 rounded-md border px-2.5 py-1.5 text-center text-sm ${
+                    active('size', s.value)
+                      ? 'border-primary bg-primary/10 font-medium text-brand-ink'
+                      : 'border-border text-muted-foreground hover:border-primary hover:text-brand-ink'
+                  }`}
+                >
+                  {s.value}
                 </Link>
               </li>
             ))}
