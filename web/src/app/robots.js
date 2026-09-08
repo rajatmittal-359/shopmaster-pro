@@ -24,7 +24,13 @@ export default function robots() {
         allow: '/',
         disallow: [
           '/admin',
-          '/seller',
+          /*
+           * `/seller` is the seller's own dashboard. `/sellers/<id>` is a
+           * PUBLIC shop page and must stay crawlable - "Charming Jewels
+           * Jaipur" is a real search, and the page that answers it should be
+           * ours. The trailing slash keeps the two apart.
+           */
+          '/seller/',
           '/cart',
           '/checkout',
           '/orders',

@@ -112,4 +112,16 @@ export const getCategories = async () => {
   return data?.categories || data?.tree || [];
 };
 
+/**
+ * A seller's public page.
+ *
+ * Cached like the catalogue: it is the same answer for everybody, and a shop's
+ * name and rating do not change by the minute.
+ */
+export const getSeller = async (userId) => {
+  const data = await get(`/public/sellers/${encodeURIComponent(userId)}`);
+  if (!data || data.__notFound) return null;
+  return data;
+};
+
 export const apiBase = API;

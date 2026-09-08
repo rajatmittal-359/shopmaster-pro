@@ -115,8 +115,21 @@ export default async function ProductPage({ params }) {
         <div className="space-y-5">
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">{product.name}</h1>
+            {/* A link, not a label. On a marketplace the seller is who the
+                shopper is actually buying from, and until this page existed
+                they had nowhere to go to find out who that is. */}
             <p className="mt-1 text-sm text-muted-foreground">
-              Sold by {product.sellerId?.name || BUSINESS.legalName}
+              Sold by{' '}
+              {product.sellerId?._id ? (
+                <Link
+                  href={`/sellers/${product.sellerId._id}`}
+                  className="text-brand-ink hover:underline"
+                >
+                  {product.sellerId.name}
+                </Link>
+              ) : (
+                product.sellerId?.name || BUSINESS.legalName
+              )}
             </p>
           </div>
 

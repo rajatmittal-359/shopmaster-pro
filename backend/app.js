@@ -81,6 +81,12 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/seller', sellerRoutes);
 app.use('/api/customer', customerRoutes);
 app.use('/api/public/products', publicCatalogue, productRoutes);
+
+/*
+ * A seller's own public page. Same cache policy as the catalogue: it is the
+ * same answer for everybody and it changes rarely.
+ */
+app.use('/api/public/sellers', publicCatalogue, require('./routes/publicSellerRoutes'));
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/inventory', inventoryRoutes);
 app.use('/api/pincode', require('./routes/pincodeRoutes'));

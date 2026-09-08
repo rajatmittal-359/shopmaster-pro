@@ -53,7 +53,11 @@ export default function SellPage() {
       <div className="mt-8">
         <ApplyToSell />
         <p className="mt-3 text-sm text-muted-foreground">
-          Rather ask something first?{' '}
+          The full terms are in the{' '}
+          <Link href="/selling-policy" className="text-brand-ink hover:underline">
+            selling policy
+          </Link>
+          . Rather ask something first?{' '}
           <Link href="/contact" className="text-brand-ink hover:underline">
             Talk to us
           </Link>

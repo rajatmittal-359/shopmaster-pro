@@ -55,6 +55,7 @@ export const COMMISSION_RATE = 8;
 
 /** The policy pages, in the order a footer should list them. */
 export const POLICY_PAGES = [
+  ['Selling on ShopMaster Pro', '/selling-policy'],
   ['Contact us', '/contact'],
   ['Shipping policy', '/shipping-policy'],
   ['Returns & refunds', '/refund-policy'],
