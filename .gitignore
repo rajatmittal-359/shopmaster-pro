@@ -62,3 +62,8 @@ backend/drafted-descriptions.json
 *.key
 *secret*
 *token*.txt
+
+# Screenshots taken while checking work in the browser. They are evidence for
+# one session, not part of the project.
+*.png
+!web/public/**/*.png
