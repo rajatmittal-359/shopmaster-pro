@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { authedFetch } from '@/lib/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import ActionDialog from '@/components/common/ActionDialog';
 
 /**
  * Who may sell here, and on what terms.
@@ -30,6 +31,8 @@ export default function Sellers() {
   const [sellers, setSellers] = useState([]);
   const [state, setState] = useState({ status: 'loading' });
   const [rate, setRate] = useState({});
+  // { kind: 'reject' | 'suspend', seller }
+  const [asking, setAsking] = useState(null);
 
   const load = async () => {
     const data = await authedFetch('/admin/sellers/pending');
@@ -111,10 +114,7 @@ export default function Sellers() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => {
-                        const why = window.prompt('Why are you turning them down? They are told.');
-                        if (why) patch(seller._id, '/reject', { reason: why });
-                      }}
+                      onClick={() => setAsking({ kind: 'reject', seller })}
                     >
                       Turn down
                     </Button>
@@ -124,12 +124,7 @@ export default function Sellers() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => {
-                        const why = window.prompt(
-                          'Why are you suspending them? Their products come out of the shop; orders already placed still have to be finished.'
-                        );
-                        if (why) patch(seller._id, '/suspend', { reason: why });
-                      }}
+                      onClick={() => setAsking({ kind: 'suspend', seller })}
                     >
                       Suspend
                     </Button>
@@ -179,6 +174,50 @@ export default function Sellers() {
           })}
         </ul>
       )}
+
+      {/*
+        Two different decisions, one dialog. Turning an application down ends
+        it; suspending stops a shop that is already trading, and the difference
+        matters enough to say in the description rather than in a tooltip.
+      */}
+      <ActionDialog
+        open={Boolean(asking)}
+        onOpenChange={(next) => setAsking(next ? asking : null)}
+        title={
+          asking?.kind === 'suspend'
+            ? `Suspend ${asking?.seller?.businessName || 'this shop'}`
+            : `Turn down ${asking?.seller?.businessName || 'this application'}`
+        }
+        description={
+          asking?.kind === 'suspend'
+            ? 'Their products come out of the shop straight away. Orders already placed still have to be delivered, returned and paid out.'
+            : 'They are told, and they can apply again once whatever is wrong is fixed.'
+        }
+        reasons={
+          asking?.kind === 'suspend'
+            ? [
+                'Not dispatching orders',
+                'Repeated cancellations',
+                'Complaints about quality',
+                'Suspected fraud',
+              ]
+            : [
+                'We could not verify the business',
+                'They sell something we do not carry',
+                'The same shop has applied already',
+              ]
+        }
+        requireReason
+        destructive
+        confirmLabel={asking?.kind === 'suspend' ? 'Suspend this shop' : 'Turn it down'}
+        busy={state.status === 'working'}
+        note="The seller sees this."
+        onConfirm={(reason) => {
+          const { kind, seller } = asking;
+          setAsking(null);
+          patch(seller._id, kind === 'suspend' ? '/suspend' : '/reject', { reason });
+        }}
+      />
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { authedFetch } from '@/lib/client';
 import { Button } from '@/components/ui/button';
+import ActionDialog from '@/components/common/ActionDialog';
 
 /**
  * The work queue. Everything a seller does in a day is here.
@@ -31,6 +32,8 @@ export default function OrderQueue() {
   const [orders, setOrders] = useState([]);
   const [state, setState] = useState({ status: 'loading' });
   const [busy, setBusy] = useState(null);
+  // { kind: 'ship' | 'refuse' | 'cancel', order }
+  const [asking, setAsking] = useState(null);
 
   const load = async () => {
     const data = await authedFetch('/seller/orders');
@@ -184,12 +187,7 @@ export default function OrderQueue() {
                             : 'Got it back - refund'}
                         </Button>
                         <Button
-                          onClick={() => {
-                            const reason = window.prompt(
-                              'Why are you refusing this return? The customer can dispute it, so be specific.'
-                            );
-                            if (reason) act(order._id, '/return', { action: 'reject', reason });
-                          }}
+                          onClick={() => setAsking({ kind: 'refuse', order })}
                           disabled={working}
                           className={button} variant="outline" size="sm">
                           Refuse it
@@ -209,13 +207,7 @@ export default function OrderQueue() {
               <div className="mt-4 flex flex-wrap gap-2">
                 {!shipped && ['pending', 'processing'].includes(order.status) && (
                   <Button
-                    onClick={() => {
-                      // Booking spends from the Shiprocket wallet. Asked once,
-                      // out loud, because there is no undo that costs nothing.
-                      if (window.confirm('Book the courier for this parcel now?')) {
-                        act(order._id, '/ship');
-                      }
-                    }}
+                    onClick={() => setAsking({ kind: 'ship', order })}
                     disabled={working}>
                     {working ? 'Working…' : 'Book courier and ship'}
                   </Button>
@@ -244,10 +236,7 @@ export default function OrderQueue() {
 
                 {['pending', 'processing'].includes(order.status) && !shipped && (
                   <Button
-                    onClick={() => {
-                      const reason = window.prompt('Why are you cancelling? The customer is told.');
-                      if (reason) act(order._id, '/cancel', { reason });
-                    }}
+                    onClick={() => setAsking({ kind: 'cancel', order })}
                     disabled={working}
                     className={button} variant="outline" size="sm">
                     Cancel my items
@@ -274,6 +263,66 @@ export default function OrderQueue() {
           );
         })}
       </ul>
+
+      {/*
+        Three actions, one dialog. Booking a courier is the only one that is not
+        destructive but IS irreversible in the way that matters - it spends real
+        money out of the Shiprocket wallet - so it is confirmed without being
+        painted red.
+      */}
+      <ActionDialog
+        open={Boolean(asking)}
+        onOpenChange={(next) => setAsking(next ? asking : null)}
+        title={
+          asking?.kind === 'ship'
+            ? 'Book the courier'
+            : asking?.kind === 'refuse'
+              ? 'Refuse this return'
+              : 'Cancel your items'
+        }
+        description={
+          asking?.kind === 'ship'
+            ? 'A pickup is booked and the cost comes out of the Shiprocket wallet. Have the parcel packed before you press this.'
+            : asking?.kind === 'refuse'
+              ? 'The customer is told, and they can dispute it - the platform then decides and its decision is final.'
+              : 'The customer is refunded for your items and told why. Their other sellers are unaffected.'
+        }
+        reasons={
+          asking?.kind === 'ship'
+            ? []
+            : asking?.kind === 'refuse'
+              ? [
+                  'It never came back',
+                  'It came back used or damaged',
+                  'A different item was sent back',
+                  'It was asked for after the return window closed',
+                ]
+              : [
+                  'It is out of stock',
+                  'It was damaged in storage',
+                  'The price or the listing was wrong',
+                  'I cannot deliver to that address',
+                ]
+        }
+        requireReason={asking?.kind !== 'ship'}
+        destructive={asking?.kind === 'cancel'}
+        confirmLabel={
+          asking?.kind === 'ship'
+            ? 'Book it'
+            : asking?.kind === 'refuse'
+              ? 'Refuse the return'
+              : 'Cancel my items'
+        }
+        busy={busy === asking?.order?._id}
+        note={asking?.kind === 'ship' ? undefined : 'The customer reads this.'}
+        onConfirm={(reason) => {
+          const { kind, order } = asking;
+          setAsking(null);
+          if (kind === 'ship') act(order._id, '/ship');
+          else if (kind === 'refuse') act(order._id, '/return', { action: 'reject', reason });
+          else act(order._id, '/cancel', { reason });
+        }}
+      />
     </div>
   );
 }

@@ -340,6 +340,57 @@ Each of these is documented and each would cost a weekend to find:
 
 ---
 
+### 6a. Asking "why" — the dialog behind every consequential action
+
+Built 9 Sep 2026, in Rajat's order: read the old app, **set it aside**, study
+the market, then map the old thing onto the market's answer.
+
+**What I had shipped, and it was mine, not inherited:** `window.prompt()` and
+`window.confirm()` in **nine places** - cancelling an order, refusing a return,
+suspending a shop, recording a failed transfer, booking a courier, removing an
+address. Browser dialogs cannot be styled or laid out, some browsers block them
+outright, and on a phone a prompt is a system sheet with a tiny single-line
+field - for text a seller is expected to write carefully, because a customer
+will read it back.
+
+**What the market does**
+
+- **Named reasons first, free text second.** Flipkart's cancellation flow gives
+  a list and a *"my reason is not listed"* box. A list is faster, reads back
+  sensibly six months later, and can be counted. Free text alone produces "ok"
+  and "not needed".
+- **The button says what it does.** Nielsen Norman: label a confirmation with a
+  verb and a noun - *"Cancel this order"*, never "OK" or "Yes". Vague labels
+  make people map buttons to actions in their head, and that is where misclicks
+  come from.
+- **No "Are you sure?"** - it asks nothing the dialog has not already said.
+- **Red only where something is destroyed.** Red on everything teaches people to
+  ignore red.
+- For genuinely dangerous operations NN/g suggests requiring a non-standard
+  action (typing a name, say). **Not used here** - nothing in this panel is
+  irreversible enough to earn that friction, and friction spent where it is not
+  needed is friction ignored where it is.
+
+**What survived from the old React app.** Its `ReasonModal` had two things worth
+keeping and both are in the new one: a **minimum length**, because a one-word
+reason makes a dispute impossible to settle afterwards; and a line telling
+whoever is typing that **the other side will read it**, which changes what
+people write.
+
+**The result:** one `ActionDialog`, used by all nine. Reasons are written for
+each action from what actually goes wrong here - "It never came back", "It came
+back used or damaged", "A different item was sent back" for a refused return;
+"Not dispatching orders", "Repeated cancellations" for a suspension.
+
+Booking a courier is the interesting one: not destructive, but **irreversible in
+the way that matters** - it spends real money from the Shiprocket wallet. So it
+is confirmed, and deliberately not painted red.
+
+**Not yet seen rendered in a browser.** It builds and lints, and it is a stock
+shadcn Dialog, but every screen using it is behind a login I have not opened.
+
+---
+
 ## 7. Order of work
 
 Each step ships independently. `frontend/` stays live throughout.

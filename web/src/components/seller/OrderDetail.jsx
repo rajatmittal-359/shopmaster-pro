@@ -6,6 +6,7 @@ import { authedFetch } from '@/lib/client';
 import { money } from '@/lib/money';
 import { orderRef } from '@/lib/orderRef';
 import { Button } from '@/components/ui/button';
+import ActionDialog from '@/components/common/ActionDialog';
 
 /**
  * One order, from the seller's side.
@@ -33,6 +34,7 @@ const when = (iso, withTime = false) =>
 export default function SellerOrderDetail({ orderId }) {
   const [order, setOrder] = useState(null);
   const [state, setState] = useState({ status: 'loading' });
+  const [booking, setBooking] = useState(false);
 
   const load = async () => {
     const data = await authedFetch(`/seller/orders/${orderId}`);
@@ -214,9 +216,7 @@ export default function SellerOrderDetail({ orderId }) {
         <div className="mt-3 flex flex-wrap gap-2">
           {!shipped && ['pending', 'processing'].includes(order.status) && (
             <Button
-              onClick={() => {
-                if (window.confirm('Book the courier for this parcel now?')) act('/ship');
-              }}
+              onClick={() => setBooking(true)}
             >
               Book courier and ship
             </Button>
@@ -251,6 +251,19 @@ export default function SellerOrderDetail({ orderId }) {
           </Link>
         </p>
       </section>
+
+      <ActionDialog
+        open={booking}
+        onOpenChange={setBooking}
+        title="Book the courier"
+        description="A pickup is booked and the cost comes out of the Shiprocket wallet. Have the parcel packed before you press this."
+        confirmLabel="Book it"
+        busy={state.status === 'working'}
+        onConfirm={() => {
+          setBooking(false);
+          act('/ship');
+        }}
+      />
     </div>
   );
 }

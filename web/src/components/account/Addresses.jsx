@@ -6,6 +6,7 @@ import { authedFetch } from '@/lib/client';
 import { useSession } from '@/lib/session';
 import AddressPicker from '@/components/checkout/AddressPicker';
 import { Button } from '@/components/ui/button';
+import ActionDialog from '@/components/common/ActionDialog';
 
 /**
  * Addresses, outside checkout.
@@ -25,6 +26,7 @@ export default function Addresses() {
   const [addresses, setAddresses] = useState([]);
   const [selected, setSelected] = useState(null);
   const [state, setState] = useState({ status: 'loading' });
+  const [removing, setRemoving] = useState(false);
 
   const load = async () => {
     const data = await authedFetch('/customer/addresses');
@@ -110,22 +112,26 @@ export default function Addresses() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => {
-              if (
-                window.confirm(
-                  'Remove this address? Orders already sent to it keep their own copy, so nothing about them changes.'
-                )
-              ) {
-                act(() =>
-                  authedFetch(`/customer/addresses/${selected}`, { method: 'DELETE' })
-                );
-              }
-            }}
+            onClick={() => setRemoving(true)}
           >
             Remove it
           </Button>
         </div>
       )}
+
+      <ActionDialog
+        open={removing}
+        onOpenChange={setRemoving}
+        title="Remove this address"
+        description="Orders already sent to it keep their own copy, so nothing about them changes."
+        confirmLabel="Remove it"
+        destructive
+        busy={state.status === 'working'}
+        onConfirm={() => {
+          setRemoving(false);
+          act(() => authedFetch(`/customer/addresses/${selected}`, { method: 'DELETE' }));
+        }}
+      />
     </div>
   );
 }

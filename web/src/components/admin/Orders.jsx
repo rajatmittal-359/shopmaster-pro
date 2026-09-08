@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { authedFetch } from '@/lib/client';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import ActionDialog from '@/components/common/ActionDialog';
 
 /**
  * Everything that has been ordered, and the one screen that can settle an
@@ -34,6 +35,7 @@ export default function AdminOrders() {
   const [state, setState] = useState({ status: 'loading' });
   const [deciding, setDeciding] = useState(null);
   const [decision, setDecision] = useState(BLANK_DECISION);
+  const [cancelling, setCancelling] = useState(null);
 
   const load = async (onlyMine = needsMe) => {
     const data = await authedFetch(`/admin/orders?limit=50${onlyMine ? '&needsMe=true' : ''}`);
@@ -135,17 +137,7 @@ export default function AdminOrders() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => {
-                        const why = window.prompt('Why are you cancelling this order?');
-                        if (why) {
-                          run(() =>
-                            authedFetch(`/admin/orders/${order._id}/cancel`, {
-                              method: 'POST',
-                              body: { reason: why },
-                            })
-                          );
-                        }
-                      }}
+                      onClick={() => setCancelling(order._id)}
                     >
                       Cancel the order
                     </Button>
@@ -238,6 +230,36 @@ export default function AdminOrders() {
           })}
         </ul>
       )}
+
+      {/*
+        The reasons come from what actually goes wrong on this platform, and
+        the button says what it does. A named reason survives being read six
+        months later; "ok" typed into a browser prompt does not.
+      */}
+      <ActionDialog
+        open={Boolean(cancelling)}
+        onOpenChange={(next) => setCancelling(next ? cancelling : null)}
+        title="Cancel this order"
+        description="The customer is refunded and every seller on it is told. This cannot be undone."
+        reasons={[
+          'The seller cannot fulfil it',
+          'The customer asked us to',
+          'Suspected fraud',
+          'Placed twice by mistake',
+        ]}
+        requireReason
+        destructive
+        confirmLabel="Cancel this order"
+        busy={state.status === 'working'}
+        note="The customer and the seller both see this reason."
+        onConfirm={(reason) => {
+          const id = cancelling;
+          setCancelling(null);
+          run(() =>
+            authedFetch(`/admin/orders/${id}/cancel`, { method: 'POST', body: { reason } })
+          );
+        }}
+      />
     </div>
   );
 }

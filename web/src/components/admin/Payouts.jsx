@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { authedFetch } from '@/lib/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import ActionDialog from '@/components/common/ActionDialog';
 
 /**
  * Paying sellers what they are owed.
@@ -35,6 +36,7 @@ export default function Payouts() {
   const [history, setHistory] = useState([]);
   const [state, setState] = useState({ status: 'loading' });
   const [reference, setReference] = useState({});
+  const [failing, setFailing] = useState(null);
 
   const load = async () => {
     const [owed, past] = await Promise.all([
@@ -179,17 +181,7 @@ export default function Payouts() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => {
-                        const why = window.prompt('What went wrong with the transfer?');
-                        if (why) {
-                          run(() =>
-                            authedFetch(`/admin/payouts/${payout._id}/failed`, {
-                              method: 'PATCH',
-                              body: { reason: why },
-                            })
-                          );
-                        }
-                      }}
+                      onClick={() => setFailing(payout._id)}
                     >
                       The transfer failed
                     </Button>
@@ -210,6 +202,34 @@ export default function Payouts() {
           </ul>
         )}
       </section>
+
+      {/*
+        Recording a failed transfer is not destructive - it is bookkeeping, and
+        the seller reads it to know why they have not been paid. Hence a normal
+        button, not a red one: red on everything teaches people to ignore red.
+      */}
+      <ActionDialog
+        open={Boolean(failing)}
+        onOpenChange={(next) => setFailing(next ? failing : null)}
+        title="Record a failed transfer"
+        description="The payout goes back to unpaid, and the seller is told why."
+        reasons={[
+          'The account details are wrong',
+          'The bank rejected it',
+          'I have not made the transfer yet',
+        ]}
+        requireReason
+        confirmLabel="Record the failure"
+        busy={state.status === 'working'}
+        note="The seller sees this on their earnings page."
+        onConfirm={(reason) => {
+          const id = failing;
+          setFailing(null);
+          run(() =>
+            authedFetch(`/admin/payouts/${id}/failed`, { method: 'PATCH', body: { reason } })
+          );
+        }}
+      />
     </div>
   );
 }
