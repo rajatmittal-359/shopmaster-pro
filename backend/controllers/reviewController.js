@@ -76,24 +76,41 @@ exports.createOrUpdateReview = async (req, res) => {
       return res.status(404).json({ message: 'Product not found or inactive' });
     }
 
-    // ✅ Verified buyer check (delivered OR returned)
-const order = await Order.findOne({
-  customerId: req.user._id,
-  status: { $in: ['delivered', 'returned'] },
-});
+        /*
+     * Only somebody who actually received this product may review it.
+     *
+     * THE BUG THIS REPLACES
+     *   The query used to be `Order.findOne({ customerId, status })` - ONE
+     *   arbitrary delivered order belonging to this customer - and then looked
+     *   for the product inside it. A customer with more than one delivered
+     *   order was refused whenever Mongo happened to return a different one:
+     *   "You can only review products you have successfully received", said to
+     *   somebody holding the product. It got worse the more they bought, which
+     *   is exactly backwards.
+     *
+     *   The product is now part of the QUERY, so it finds the order that
+     *   actually contains it, whichever one that is.
+     *
+     * `items.status: 'active'` keeps out cancelled lines, and `$elemMatch`
+     * makes both conditions apply to the SAME item - without it an order
+     * containing this product AND some other active item would pass.
+     */
+    const order = await Order.findOne({
+      customerId: req.user._id,
+      status: { $in: ['delivered', 'returned'] },
+      items: {
+        $elemMatch: {
+          productId: product._id,
+          status: 'active',
+        },
+      },
+    });
 
-// ✅ Verify specific item was delivered & not cancelled
-const purchasedItem = order?.items.find(
-  (item) =>
-    item.productId.toString() === String(product._id) &&
-    item.status === 'active' // Only active items (not cancelled)
-);
-
-if (!purchasedItem) {
-  return res.status(400).json({
-    message: 'You can only review products you have successfully received',
-  });
-}
+    if (!order) {
+      return res.status(400).json({
+        message: 'You can only review products you have successfully received',
+      });
+    }
 
     // ✅ Create / Update single review per product
     let review = await Review.findOne({

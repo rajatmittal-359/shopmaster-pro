@@ -58,6 +58,57 @@ Found in this repo, not assumed:
 
 ---
 
+## 2a. Who to look at, for what — the reference map
+
+Rajat's point, 9 Sep 2026: he names the shops he knows; choosing the right
+references is my job, not his. So this is written down once, with what each one
+is actually good for and which ones are **not** worth copying for a shop this
+size.
+
+### The ones we take from, and what for
+
+| Reference | Take this | Do NOT take |
+|---|---|---|
+| **Amazon (India)** | Seller Central's shape - Orders → Catalogue → Payments → Returns → **Account Health**; a published category-wise fee schedule; one account that buys and sells | Its intermediary category pages and its density. Amazon's answers assume millions of SKUs |
+| **Flipkart** | Cancellation and return flows built on **named reasons** with "my reason is not listed"; a published rate card | Separate buyer and seller identities - it is their scale that forces that |
+| **Meesho** | Payments as a first-class seller screen: settlement schedule, TDS, reconciliation against bank credits. And **RTO as a metric that has consequences** | The 0% commission model. It is funded by ads and logistics margin we do not have |
+| **Myntra** | Size selection and the returns experience on apparel | Its scale-only features - lookbooks, try-ons |
+| **Etsy** | The account model in one sentence: *"You'll use this account to run your shop and to buy from other makers"*. **Seller identity is a page**, with a rating and a story | Its handmade-only policy framing |
+| **eBay** | Feedback on the SELLER, not only the product, and the **verified-purchase label** on it | Auctions, and the reputation complexity underneath |
+| **GIVA, Tanishq** | Jewellery photography and product-page trust cues - materials, plating, care | Anything about sellers. They are single-brand shops with none |
+| **Sharetribe / Mirakl** | What the OPERATOR's panel owes: approvals, commission, disputes, payouts, oversight. And the metric that matters early - **liquidity** | Their enterprise scope |
+| **Baymard** | The only source here that is research rather than observation: category pages, filters, tracking, returns, images | Nothing - but check whether a finding is about large catalogues or small ones. They differ, and twice the answer for us was the opposite of the headline |
+
+### What that reading says about a marketplace at OUR stage
+
+Three findings keep repeating across the marketplace guides, and all three are
+about the beginning, not scale:
+
+1. **Liquidity first, and liquidity comes from a niche.** The advice is to be
+   deep in one thing before being wide in many. We are the opposite shape right
+   now - 51 products across nine categories, with 17 in jewellery. The catalogue
+   should get *deeper* where we already have sellers rather than wider.
+2. **Trust is the hardest thing a new marketplace buys, and reviews are how it
+   buys it.** Verified-purchase flags are named specifically. We have reviews
+   and no flag.
+3. **Write the seller rules before the first outside seller goes live** -
+   quality guidelines, performance expectations, and how disputes are decided.
+   Doing it after the first argument is both a customer problem and a legal one.
+   Rahul is the first outside seller. This is now, not later.
+
+### What we are missing, in the order it costs us
+
+| Gap | Why it matters | Size |
+|---|---|---|
+| **Verified-purchase badge** | Named by every trust source. `Review` has no flag, so an honest review looks the same as an invented one | Small |
+| **A seller has no page** | Etsy and eBay both make the seller a place you can visit, with a rating. We print a name on a product and nothing else - in a marketplace that is where trust is supposed to accumulate | Medium |
+| **Seller rules, written** | We enforce them in code (approval, suspension, disputes) with nothing a seller can read first | Small, and mostly writing |
+| **Seller performance / RTO** | Meesho demotes on RTO; we do not measure it at all | Medium |
+| **Buyer protection, said plainly** | Our returns policy is good and is filed under "policy". Marketplaces say it on the product page, where the doubt is | Small |
+| **Buyer-seller messaging** | Etsy and eBay both have it | Large - not now |
+
+---
+
 ## 3. Decisions, with the reason attached
 
 ### 3.1 JavaScript, not TypeScript

@@ -236,6 +236,18 @@ export default async function ProductPage({ params }) {
           )}
         </h2>
 
+        {/*
+          Said once, above the reviews, because it is TRUE of every one of them:
+          the API refuses a review from anybody without a delivered order
+          containing this product. Every marketplace trust guide names
+          verified-purchase flags specifically, and the strongest version of
+          that flag is not a badge on some reviews - it is the sentence that
+          applies to all of them.
+        */}
+        <p className="mt-2 text-sm text-muted-foreground">
+          Only people who bought this and received it can review it.
+        </p>
+
         {reviews.length === 0 ? (
           <p className="mt-3 text-sm text-muted-foreground">
             No reviews yet. The first five matter more than every one after them,
@@ -269,6 +281,9 @@ export default async function ProductPage({ params }) {
                   <div className="flex items-center gap-2">
                     <Stars value={r.rating} />
                     <span className="text-sm font-medium">{r.userId?.name || 'A customer'}</span>
+                    <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">
+                      Verified purchase
+                    </span>
                     <span className="text-xs text-muted-foreground">
                       {new Date(r.createdAt).toLocaleDateString('en-IN', {
                         day: 'numeric',
