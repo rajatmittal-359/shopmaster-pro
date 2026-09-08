@@ -1,5 +1,5 @@
-import Link from 'next/link';
 import AdminGuard from '@/components/admin/AdminGuard';
+import PanelShell from '@/components/panel/PanelShell';
 
 export const metadata = {
   title: { default: 'Admin', template: '%s · Admin · ShopMaster Pro' },
@@ -13,33 +13,42 @@ export const metadata = {
  * because that is real money owed to real people, disputes next because a
  * customer and a seller disagreeing has no other resolution path, then the
  * housekeeping.
+ *
+ * The GROUPS say that out loud. Seven flat links could not - and by the seventh
+ * they had started wrapping onto a second row anyway.
  */
-const LINKS = [
-  ['/admin', 'Overview'],
-  ['/admin/payouts', 'Payouts'],
-  ['/admin/orders', 'Orders & disputes'],
-  ['/admin/sellers', 'Sellers'],
-  ['/admin/categories', 'Categories'],
-  ['/admin/coupons', 'Coupons'],
-  ['/admin/inventory', 'Stock history'],
+const GROUPS = [
+  {
+    items: [{ href: '/admin', label: 'Overview', icon: 'LayoutDashboard', end: true }],
+  },
+  {
+    label: 'Money',
+    items: [{ href: '/admin/payouts', label: 'Payouts', icon: 'IndianRupee' }],
+  },
+  {
+    label: 'Needs a person',
+    items: [
+      { href: '/admin/orders', label: 'Orders & disputes', icon: 'MessageSquareWarning' },
+      { href: '/admin/sellers', label: 'Sellers', icon: 'Store' },
+    ],
+  },
+  {
+    label: 'Catalogue',
+    items: [
+      { href: '/admin/categories', label: 'Categories', icon: 'FolderTree' },
+      { href: '/admin/coupons', label: 'Coupons', icon: 'TicketPercent' },
+    ],
+  },
+  {
+    label: 'Records',
+    items: [{ href: '/admin/inventory', label: 'Stock history', icon: 'History' }],
+  },
 ];
 
 export default function AdminLayout({ children }) {
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8">
-      <nav className="mb-6 flex flex-wrap gap-1 border-b border-border text-sm">
-        {LINKS.map(([href, label]) => (
-          <Link
-            key={href}
-            href={href}
-            className="border-b-2 border-transparent px-3 py-2 text-muted-foreground transition hover:border-primary hover:text-brand-ink"
-          >
-            {label}
-          </Link>
-        ))}
-      </nav>
-
+    <PanelShell title="Admin" groups={GROUPS}>
       <AdminGuard>{children}</AdminGuard>
-    </div>
+    </PanelShell>
   );
 }

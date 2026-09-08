@@ -2,7 +2,7 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const router = express.Router();
-const { buildCatalogueFilter } = require('../utils/catalogueFilter');
+const { buildCatalogueFilter, escapeRegex } = require('../utils/catalogueFilter');
 const Product = require('../models/Product');
 const Category = require('../models/Category');
 
@@ -170,6 +170,107 @@ router.get('/', async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
+  }
+});
+
+/**
+ * ✅ GET search suggestions (PUBLIC)
+ *  URL: /api/public/products/suggest?q=ring
+ *
+ * WHY A SEPARATE ENDPOINT AND NOT `GET /?search=&limit=6`
+ *   This one fires on nearly every keystroke. The catalogue endpoint populates
+ *   the seller, counts the whole result set for pagination, and returns entire
+ *   product documents - description, every image, every variant field. That is
+ *   a lot of database and a lot of bytes to throw away in order to draw six
+ *   lines of text, and it happens six times while somebody types "earring".
+ *   This returns the five fields a suggestion row actually shows.
+ *
+ * WHY CATEGORIES COME BACK TOO
+ *   Baymard's autocomplete research is specific about this: suggestions that
+ *   carry category context - "Earrings", not just five product names - let
+ *   somebody jump to the whole set rather than picking one product and then
+ *   hunting for its siblings. Somebody typing "ear" usually wants the category.
+ *
+ * WHY SIX
+ *   The mobile ceiling. On a phone the list is trapped between the field above
+ *   and the keyboard below, and the research puts the usable limit at five or
+ *   six. There is no point computing more than can be seen.
+ */
+router.get('/suggest', async (req, res) => {
+  try {
+    const q = String(req.query.q || '').trim();
+
+    // Two characters is where a prefix stops matching most of the catalogue.
+    // Below that the "suggestions" are just the newest products, which teaches
+    // nothing and costs a query per keystroke.
+    if (q.length < 2) return res.json({ products: [], categories: [] });
+
+    /*
+     * Anchored to a WORD BOUNDARY, which the catalogue's own search is not.
+     * Plain substring matching answers "ear" with "Pearl Maang Tikka" and
+     * "White Pearl Necklace" - technically a match, and visibly wrong in a
+     * list of six that is supposed to look like it understood the question.
+     * `ear` still finds "Earrings", "Earbuds" and "Over-Ear", because a
+     * hyphen counts as one too.
+     *
+     * Written with a real escaped backslash rather than inside a template
+     * literal: in backticks, backslash-b is the BACKSPACE character, and Mongo
+     * then searches for a control code that appears in no product name on
+     * earth. It returned zero results and looked exactly like an empty
+     * catalogue.
+     */
+    const rx = { $regex: '\\b' + escapeRegex(q), $options: 'i' };
+    const browsable = await Category.getBrowsableIds();
+
+    const [products, categories] = await Promise.all([
+      Product.find({
+        isActive: true,
+        isDeleted: { $ne: true },
+        stock: { $gt: 0 },
+        category: { $in: browsable },
+        // Name, brand and tags only. NOT description: a product whose
+        // description happens to contain the word is a poor suggestion, and
+        // it is how "gift" returns everything in the shop.
+        $or: [{ name: rx }, { brand: rx }, { tags: rx }],
+      })
+        .select('name slug price salePrice saleStartsAt saleEndsAt mrp images category')
+        .populate('category', 'name')
+        .sort({ totalReviews: -1, createdAt: -1 })
+        .limit(6)
+        .lean(),
+
+      Category.find({ _id: { $in: browsable }, name: rx })
+        .select('name slug')
+        .limit(3)
+        .lean(),
+    ]);
+
+    return res.json({
+      // Built field by field: this response is public and a `.lean()` document
+      // grows new fields every time somebody edits the model.
+      products: products.map((p) => ({
+        _id: p._id,
+        name: p.name,
+        slug: p.slug,
+        price: p.price,
+        /*
+         * The sale WINDOW comes too, not just the sale price. priceOf() on the
+         * front end checks it, and without these two fields a sale scheduled
+         * for next week would be shown as today's price in the suggestions and
+         * as the normal price on the card two clicks later.
+         */
+        salePrice: p.salePrice,
+        saleStartsAt: p.saleStartsAt,
+        saleEndsAt: p.saleEndsAt,
+        mrp: p.mrp,
+        image: p.images?.[0] || null,
+        categoryName: p.category?.name || null,
+      })),
+      categories: categories.map((c) => ({ _id: c._id, name: c.name, slug: c.slug })),
+    });
+  } catch (error) {
+    console.error('SUGGEST ERROR:', error.message);
+    return res.status(500).json({ message: error.message });
   }
 });
 

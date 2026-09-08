@@ -42,6 +42,9 @@
   --color-brand-from: var(--brand-from);
   --color-brand-via: var(--brand-via);
   --color-brand-to: var(--brand-to);
+  --color-glass: var(--glass);
+  --color-glass-strong: var(--glass-strong);
+  --color-glass-border: var(--glass-border);
   --color-primary-foreground: var(--primary-foreground);
   --color-primary: var(--primary);
   --color-popover-foreground: var(--popover-foreground);
@@ -107,10 +110,22 @@
   /* The same hue as TEXT on white. Links and quiet emphasis use this. */
   --brand-ink: oklch(0.47 0.2 286);
 
-  /* The brand gradient, as three stops anything can reach for. */
-  --brand-from: oklch(0.62 0.24 305);
-  --brand-via: oklch(0.52 0.23 286);
-  --brand-to: oklch(0.68 0.15 225);
+  /*
+   * THE BRAND GRADIENT, as three stops anything can reach for.
+   *
+   * Deliberately DARK. The first version ran bright violet into cyan and the
+   * sign-in panel came out as a huge, luminous purple wall - correct hue,
+   * wrong weight. Deep violet into indigo into a blue that never reaches cyan
+   * reads as expensive rather than as a highlighter, it lets white text sit on
+   * it comfortably, and it stops the largest coloured surface on the site from
+   * being the loudest thing on it.
+   *
+   * The same three values in both modes, on purpose: the brand does not change
+   * colour when the interface does.
+   */
+  --brand-from: oklch(0.38 0.19 302);
+  --brand-via: oklch(0.29 0.14 288);
+  --brand-to: oklch(0.33 0.12 254);
 
   --secondary: oklch(0.968 0.005 286);
   --secondary-foreground: oklch(0.26 0.025 286);
@@ -132,6 +147,39 @@
   --chart-5: oklch(0.72 0.1 200);
 
   --radius: 0.75rem;
+
+  /*
+   * GLASS
+   *
+   * Three values, because a glass surface is three decisions and every one of
+   * them has a failure mode:
+   *
+   *   --glass        the fill. The research settles on 10-40% transparency;
+   *                  this sits at the opaque end of that on purpose, because
+   *                  it doubles as the BARRIER LAYER - the solid-ish fill that
+   *                  keeps text on the panel above 4.5:1 no matter what is
+   *                  scrolling underneath. Glass that fails to be readable is
+   *                  not a style, it is a bug.
+   *   --glass-border a hairline lighter than the fill. It is what reads as an
+   *                  EDGE; without it a blurred panel looks like a smudge.
+   *   the blur       16px, applied in `.glass` below. Above about 20 it stops
+   *                  being frosted glass and starts being a cost, and it is
+   *                  the expensive part on a cheap phone - which is what most
+   *                  of this shop's visitors are holding. Saturation is lifted
+   *                  with it, because blurring alone greys out what is behind
+   *                  and that is what makes glass look like a photocopy.
+   *
+   * rgba here rather than oklch because these are composited over unknown
+   * content, and alpha over a live backdrop is the whole point.
+   */
+  --glass: rgba(255, 255, 255, 0.72);
+  --glass-strong: rgba(255, 255, 255, 0.86);
+  --glass-border: rgba(255, 255, 255, 0.7);
+
+  /* The aurora sitting behind everything. Kept as tokens so the two blooms
+     can be recoloured with the rest of the palette. */
+  --aurora-1: rgba(139, 92, 246, 0.1);
+  --aurora-2: rgba(34, 211, 238, 0.07);
 
   --sidebar: oklch(0.985 0.003 286);
   --sidebar-foreground: oklch(0.21 0.02 286);
@@ -164,9 +212,10 @@
   --primary-foreground: oklch(0.99 0.003 286);
   --brand-ink: oklch(0.78 0.15 290);
 
-  --brand-from: oklch(0.68 0.22 305);
-  --brand-via: oklch(0.6 0.22 288);
-  --brand-to: oklch(0.75 0.14 225);
+  /* Unchanged from light mode - see the note there. */
+  --brand-from: oklch(0.38 0.19 302);
+  --brand-via: oklch(0.29 0.14 288);
+  --brand-to: oklch(0.33 0.12 254);
 
   --secondary: oklch(0.27 0.02 286);
   --secondary-foreground: oklch(0.97 0.004 286);
@@ -184,6 +233,16 @@
   --chart-3: oklch(0.7 0.15 245);
   --chart-4: oklch(0.76 0.12 222);
   --chart-5: oklch(0.8 0.09 200);
+
+  /* Dark glass is a DARKENING pane, not a lightening one: a pale film over a
+     dark page reads as fog. The border stays light because that is the only
+     thing separating one dark panel from the dark behind it. */
+  --glass: rgba(23, 21, 36, 0.72);
+  --glass-strong: rgba(23, 21, 36, 0.88);
+  --glass-border: rgba(255, 255, 255, 0.1);
+
+  --aurora-1: rgba(139, 92, 246, 0.16);
+  --aurora-2: rgba(34, 211, 238, 0.1);
 
   --sidebar: oklch(0.214 0.016 286);
   --sidebar-foreground: oklch(0.97 0.004 286);
@@ -205,6 +264,95 @@
   html {
     @apply font-sans;
   }
+}
+
+/*
+ * FROSTED GLASS
+ *
+ * WHERE IT IS ALLOWED
+ *   Small, mostly static things that float above content: the header, dialogs,
+ *   the mobile drawer, menus, and the product page's sticky buy bar. That is
+ *   the rule the research gives - biggest visual return for the least cost -
+ *   and it is also the only place glass MEANS anything. A glass card sitting
+ *   in the page flow is a card with a bug.
+ *
+ * WHY IT IS ONE CLASS AND NOT A STRING OF UTILITIES REPEATED EIGHT TIMES
+ *   Because then it is one decision. Every floating surface on the site is the
+ *   same glass, and changing it is changing this block.
+ *
+ * THE THREE THINGS THAT MAKE IT SAFE
+ *   1. `saturate` before `blur`. Blurring alone greys out whatever is behind;
+ *      lifting saturation is what keeps it looking like glass over colour
+ *      rather than glass over a photocopy.
+ *   2. An @supports fallback. Firefox users with the flag off, and older
+ *      Androids, get NO blur - and without this, they get 28% transparent text
+ *      instead. The fallback is simply the opaque colour.
+ *   3. `prefers-reduced-transparency`. It is a real setting people turn on
+ *      because moving, semi-transparent surfaces make them ill or unreadable,
+ *      and it costs one media query to honour.
+ */
+.glass {
+  background-color: var(--glass);
+  border-color: var(--glass-border);
+  /*
+   * @apply, not a hand-written `backdrop-filter`.
+   *
+   * The build's CSS transformer DROPS a backdrop-filter declaration written by
+   * hand in this file - silently, with no warning, leaving a translucent bar
+   * and no blur at all. It keeps the ones Tailwind generates itself, because
+   * those are emitted through its own custom-property machinery. So the effect
+   * is asked for the way the framework expects, and it survives the build.
+   *
+   * This was found by reading the COMPILED stylesheet in the browser, not the
+   * source. Worth remembering: the source said the right thing the whole time.
+   */
+  @apply backdrop-blur-lg backdrop-saturate-150;
+}
+
+.glass-strong {
+  background-color: var(--glass-strong);
+  border-color: var(--glass-border);
+  @apply backdrop-blur-lg backdrop-saturate-150;
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass,
+  .glass-strong {
+    background-color: var(--background);
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .glass,
+  .glass-strong {
+    background-color: var(--background);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+
+/*
+ * THE AURORA
+ *
+ * Two enormous, very faint blooms fixed behind the entire site. It exists for
+ * one reason: frosted glass has nothing to frost over a flat white page. The
+ * research is blunt about it - glass needs a background with some energy in it,
+ * or the effect is invisible and you have paid for a blur that does nothing.
+ *
+ * It is a fixed pseudo-element on the body, so it does not scroll, does not
+ * repaint, and costs one layer. `pointer-events: none` so it can never eat a
+ * tap, and the alpha is low enough that product photography sits on it
+ * unchanged - the moment it tints a white kurta, it is too strong.
+ */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(60rem 40rem at 12% -8%, var(--aurora-1), transparent 60%),
+    radial-gradient(50rem 36rem at 92% 8%, var(--aurora-2), transparent 60%);
 }
 
 /*
@@ -237,5 +385,98 @@
 @media (prefers-reduced-motion: reduce) {
   .smp-bloom {
     animation: none;
+  }
+}
+
+/*
+ * THE EFFECTS LAYER
+ *
+ * Four techniques, each one doing a job the others cannot, and each one used in
+ * few enough places that it still reads as deliberate. The research is
+ * consistent that these work TOGETHER - 2026 glassmorphism is translucency
+ * plus grain plus a gradient border plus a soft shadow, not blur on its own -
+ * and equally consistent that any of them applied everywhere stops being an
+ * effect and becomes a texture nobody sees.
+ */
+
+/*
+ * 1. MESH GRADIENT
+ *
+ * Native CSS has no mesh gradient. The way it is actually done is several
+ * radial gradients at different positions and sizes, layered - which is what
+ * this is. Three blooms over the brand gradient, so a large coloured panel has
+ * depth and drift rather than one flat diagonal ramp.
+ */
+.mesh {
+  background-color: var(--brand-via);
+  background-image:
+    radial-gradient(42rem 32rem at 8% 12%, var(--brand-from), transparent 62%),
+    radial-gradient(38rem 30rem at 88% 78%, var(--brand-to), transparent 60%),
+    radial-gradient(30rem 26rem at 62% 6%, oklch(0.42 0.18 322 / 0.5), transparent 62%);
+}
+
+/*
+ * 2. GRAIN
+ *
+ * A smooth gradient is the one thing that gives a screen away as a screen -
+ * real surfaces have noise in them, and without it a big gradient panel looks
+ * like a rendering rather than a material. This is one inline SVG turbulence
+ * filter, so it costs no request and no image file.
+ *
+ * `mix-blend-mode: overlay` rather than a flat alpha: overlay lets the grain
+ * darken the light parts and lighten the dark ones, which is how film grain
+ * behaves. A flat overlay just fogs the panel.
+ */
+.grain::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.5;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/*
+ * 3. GRADIENT BORDER
+ *
+ * A one-pixel border cannot hold a gradient directly. The trick is two
+ * backgrounds in one box: the fill painted into the padding box, the gradient
+ * painted into the border box, and `background-origin` keeping them apart. It
+ * is the only way to do this that does not need a wrapper element or a
+ * pseudo-element sitting on top of the content.
+ */
+.gradient-ring {
+  border: 1px solid transparent;
+  background-image:
+    linear-gradient(var(--card), var(--card)),
+    linear-gradient(135deg, var(--brand-from), var(--brand-to));
+  background-origin: border-box;
+  background-clip: padding-box, border-box;
+}
+
+/*
+ * 4. GLOW ON APPROACH
+ *
+ * A coloured shadow rather than a grey one, and only on hover. Grey shadows say
+ * "this is raised"; a shadow in the brand colour says "this is live". It is the
+ * cheapest way to make a grid of cards feel responsive, and it is a shadow -
+ * so it never moves anything and never causes layout to shift.
+ */
+.glow-hover {
+  transition:
+    box-shadow 200ms ease,
+    transform 200ms ease;
+}
+
+.glow-hover:hover {
+  box-shadow:
+    0 1px 2px oklch(0 0 0 / 0.06),
+    0 12px 28px -12px var(--brand-via);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .glow-hover {
+    transition: none;
   }
 }

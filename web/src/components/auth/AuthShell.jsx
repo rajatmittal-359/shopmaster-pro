@@ -23,11 +23,21 @@ import { LogoMark } from '@/components/brand/Logo';
  *   Below `lg` the panel is gone entirely and the card is the whole screen.
  *   A phone has no room for a second column, and the form is the job.
  *
- * WHY THE PANEL USES THE BRAND GRADIENT
- *   It is the site's own three stops - violet, indigo, cyan - read from the
- *   same tokens every other gradient surface reads from, so re-theming the
- *   site re-themes this too. The text on it is white, which the palette is
- *   built to carry.
+ * WHY THE PANEL LOOKS THE WAY IT DOES
+ *   Three techniques, stacked, all from the shared layer so nothing here is a
+ *   one-off:
+ *
+ *   - a MESH rather than a single diagonal ramp. Several radial blooms at
+ *     different sizes, which is how a mesh gradient is actually built in CSS,
+ *     and it gives a panel this large somewhere for the eye to travel.
+ *   - GRAIN over the top. A perfectly smooth gradient is the thing that gives
+ *     a screen away as a screen; film grain is what makes it read as a
+ *     material.
+ *   - the MARK, oversized and cropped, as the only illustration.
+ *
+ *   The stops are deliberately dark. The first version was luminous violet and
+ *   the panel became the loudest thing on the site; deep violet into indigo
+ *   reads as expensive instead, and white text sits on it comfortably.
  *
  * THE THREE LINES ARE THINGS THIS SITE ACTUALLY DOES
  *   Real courier scans, saved addresses at checkout, a returns policy written
@@ -62,13 +72,13 @@ export default function AuthShell({ title, subtitle, children, footer = null }) 
           reader user should land on the form, not on a sales pitch. */}
       <aside
         aria-hidden="true"
-        className="relative hidden overflow-hidden bg-linear-to-br from-brand-from via-brand-via to-brand-to p-12 text-white lg:flex lg:flex-col lg:justify-center"
+        className="mesh grain relative hidden overflow-hidden p-12 text-white lg:flex lg:flex-col lg:justify-center"
       >
-        {/* The flat mark, oversized and bled off the corner. It is texture, not
-            a second logo - which is why it is cropped, and why it is the
+        {/* The window, oversized and bled off the corner. It is texture, not a
+            second logo - which is why it is cropped, and why it is the flat
             silhouette rather than the tile: a second tile on the same screen
             reads as a mistake. */}
-        <LogoMark className="pointer-events-none absolute -right-20 -bottom-24 h-96 w-96 text-white/8" />
+        <LogoMark className="pointer-events-none absolute -right-16 -bottom-28 h-96 w-96 text-white/8" />
 
         <div className="relative max-w-md">
           <p className="text-sm font-medium tracking-wide uppercase opacity-70">ShopMaster Pro</p>

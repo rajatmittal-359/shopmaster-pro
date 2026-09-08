@@ -74,7 +74,7 @@ export default async function Home() {
               <Link
                 key={cat._id}
                 href={`/shop?category=${cat.slug}`}
-                className="rounded-xl border border-border p-4 transition hover:border-primary hover:bg-accent"
+                className="glow-hover rounded-xl border border-border p-4 hover:border-primary hover:bg-accent"
               >
                 <p className="font-medium">{cat.name}</p>
                 <p className="text-sm text-muted-foreground">

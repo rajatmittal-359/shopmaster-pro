@@ -1,5 +1,5 @@
-import Link from 'next/link';
 import SellerGuard from '@/components/seller/SellerGuard';
+import PanelShell from '@/components/panel/PanelShell';
 
 export const metadata = {
   title: { default: 'Seller', template: '%s · Seller · ShopMaster Pro' },
@@ -13,32 +13,39 @@ export const metadata = {
  * search, and a dashboard indexed by Google is a dashboard whose URLs strangers
  * find - which is not an authorisation failure by itself, but every one of
  * those visits is a wasted crawl of a shop that has little crawl budget.
+ *
+ * GROUPED, because a flat list of six says nothing about what any of them is
+ * for. Selling is the daily work, money is the reason for doing it, and the
+ * last two are the things you open once a month.
  */
-const LINKS = [
-  ['/seller', 'Dashboard'],
-  ['/seller/orders', 'Orders'],
-  ['/seller/products', 'Products'],
-  ['/seller/earnings', 'Earnings'],
-  ['/seller/inventory', 'Stock history'],
-  ['/seller/settings', 'Settings'],
+const GROUPS = [
+  {
+    items: [{ href: '/seller', label: 'Dashboard', icon: 'LayoutDashboard', end: true }],
+  },
+  {
+    label: 'Selling',
+    items: [
+      { href: '/seller/orders', label: 'Orders', icon: 'Package' },
+      { href: '/seller/products', label: 'Products', icon: 'Tag' },
+    ],
+  },
+  {
+    label: 'Money',
+    items: [{ href: '/seller/earnings', label: 'Earnings', icon: 'IndianRupee' }],
+  },
+  {
+    label: 'Records',
+    items: [
+      { href: '/seller/inventory', label: 'Stock history', icon: 'History' },
+      { href: '/seller/settings', label: 'Settings', icon: 'Settings' },
+    ],
+  },
 ];
 
 export default function SellerLayout({ children }) {
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8">
-      <nav className="mb-6 flex gap-1 border-b border-border text-sm">
-        {LINKS.map(([href, label]) => (
-          <Link
-            key={href}
-            href={href}
-            className="border-b-2 border-transparent px-3 py-2 text-muted-foreground transition hover:border-primary hover:text-brand-ink"
-          >
-            {label}
-          </Link>
-        ))}
-      </nav>
-
+    <PanelShell title="Seller" groups={GROUPS}>
       <SellerGuard>{children}</SellerGuard>
-    </div>
+    </PanelShell>
   );
 }

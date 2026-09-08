@@ -1,49 +1,57 @@
 /**
  * The ShopMaster Pro mark.
  *
- * WHY THE GEM WAS REPLACED
- *   The first mark was a cut stone. It was well drawn and it was wrong: a gem
- *   says JEWELLERY, and this platform's whole promise is that it sells
- *   anything - kurtis, bedsheets, cosmetics, whatever the next seller brings.
- *   A logo is the one piece of the site that appears on every page, every
- *   invoice and every courier label, so it is the last place a single category
- *   should be printed. The frame around the products has to stay neutral; the
- *   category belongs on the product.
+ * WHAT IT IS
+ *   A jharokha - the arched window that overhangs the front of almost every old
+ *   building in Jaipur, and the thing Hawa Mahal is made of, five storeys of
+ *   them - lit from inside, on a deep violet tile.
  *
- * WHAT IT IS NOW
- *   A parcel, drawn isometrically, sitting inside a gradient tile.
+ * WHY A JHAROKHA
+ *   The brief was to connect the mark to Jaipur and to India without it looking
+ *   borrowed or fake. Three reasons this is the honest way to do that:
  *
- *   The parcel because it is the one object that means "commerce" without
- *   naming a category - a box holds anything, which is precisely the promise -
- *   and because it is what actually arrives at the door. It is drawn as three
- *   real faces at three different brightnesses, so the depth is geometry, not a
- *   drop shadow: the top catches the light, the left face is in half light, the
- *   right face is in shadow.
+ *   1. It is genuinely his city's own form. Jharokhas are what give Jaipur its
+ *      facades. They are secular, domestic architecture - not a monument
+ *      borrowed for decoration, and not a national symbol pressed into a logo.
+ *   2. It MEANS the right thing. A jharokha is a window you look out of and
+ *      others look into, and this is a marketplace: a window onto everything
+ *      other people are selling. A doorway is the oldest sign a shop has.
+ *   3. It survives being small. An arch and a ledge are two shapes. At 16px
+ *      that still reads as a window; a skyline or a palace turns to mud.
  *
- *   The tile because that is what a brand mark IS in 2026. Roughly 40% of the
- *   top hundred apps on both stores now sit on a gradient tile, and the current
- *   direction - "soft 3D" - is rounded shapes with gentle lighting rather than
- *   the hard glossy skeuomorphism of 2012. It is also the only shape that
- *   survives being a favicon, an app icon and a WhatsApp display picture, which
- *   is where most people will first see this shop.
+ * WHY THE OPENING IS PINK
+ *   Jaipur was painted terracotta in 1876, on one man's order, to welcome a
+ *   visitor - and that single decision is why the world calls it the Pink City.
+ *   It is one of the most successful pieces of city branding ever done, and it
+ *   is the correct colour to put inside a Jaipur window. Against deep violet it
+ *   also does the job the palette needs: a warm light inside a cool frame,
+ *   which is what makes the arch read as LIT rather than as a hole.
  *
- * WHY VIOLET INTO CYAN
- *   It is the site's own gradient, and it is the register the brand is aiming
- *   at: the colour of the software this generation already respects rather
- *   than the colour of a shop. The run is violet -> indigo -> cyan, which is
- *   analogous - neighbouring hues, which is what reads as depth. A gradient
- *   between unrelated colours reads as a mistake.
- *
- * THE SEAM
- *   The two front faces do not touch. A hairline of the tile shows between
- *   them, so the box is a box at 16px too, where a shared edge would close up
- *   and leave a flat white blob.
+ * WHY THE PARCEL WENT
+ *   It was category-neutral, which was right, and anonymous, which was not.
+ *   Every logistics company on earth has a box in its logo. This one could not
+ *   belong to anybody else.
  *
  * WHY IT IS DRAWN AND NOT A PNG
  *   One file instead of four that drift, no blur on a high-density screen, and
  *   a few hundred bytes inside the HTML rather than a request that has to
  *   finish before the header stops flashing.
  */
+
+/**
+ * The arch, as one path, shared by both marks.
+ *
+ * Two quadratic curves meeting at a POINT rather than a dome - which is what
+ * separates a Rajput-Mughal arch from a Roman one, and it is the whole
+ * difference between "Jaipur" and "generic archway".
+ */
+const ARCH = 'M15 50 L15 29 Q15 15 32 9 Q49 15 49 29 L49 50 Z';
+
+/**
+ * The ledge the window sits on. Wider than the arch, because a jharokha
+ * PROJECTS from the wall - that overhang is the entire point of one.
+ */
+const LEDGE = 'M11 50 H53 A1.9 1.9 0 0 1 53 53.8 H11 A1.9 1.9 0 0 1 11 50 Z';
 
 /**
  * `idPrefix` exists because SVG gradients are referenced by id, and ids are
@@ -56,68 +64,75 @@ export function TileMark({ className = '', idPrefix = 'smp', ...props }) {
   return (
     <svg viewBox="0 0 64 64" role="img" aria-label="ShopMaster Pro" className={className} {...props}>
       <defs>
-        {/* Violet into indigo into a cyan tip, lit from the top left. */}
-        <linearGradient id={id('tile')} x1="8" y1="4" x2="56" y2="60" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#A78BFA" />
-          <stop offset="0.5" stopColor="#6366F1" />
-          <stop offset="1" stopColor="#22D3EE" />
+        {/* The tile: deep violet into indigo. Dark on purpose - a pale tile
+            leaves the pink nothing to glow against. */}
+        <linearGradient id={id('tile')} x1="6" y1="2" x2="58" y2="62" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#5B21B6" />
+          <stop offset="0.55" stopColor="#3B1F87" />
+          <stop offset="1" stopColor="#221459" />
         </linearGradient>
 
-        {/* The soft-3D light: strongest at the very top, gone by the middle. */}
-        <linearGradient id={id('gloss')} x1="32" y1="2" x2="32" y2="34" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#FFFFFF" stopOpacity="0.42" />
-          <stop offset="1" stopColor="#FFFFFF" stopOpacity="0" />
-        </linearGradient>
-
-        {/* The bevel: white along the top edge, dark along the bottom. One
-            stroke, so it stays a hairline at every size. */}
-        <linearGradient id={id('bevel')} x1="32" y1="2" x2="32" y2="62" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#FFFFFF" stopOpacity="0.7" />
-          <stop offset="0.5" stopColor="#FFFFFF" stopOpacity="0.05" />
-          <stop offset="1" stopColor="#1E1B4B" stopOpacity="0.45" />
-        </linearGradient>
-
-        {/* Contact shadow inside the tile, under the parcel. */}
+        {/* One soft light in the top-left corner. It is what stops a flat
+            rectangle from looking like a flat rectangle. */}
         <radialGradient
-          id={id('under')}
+          id={id('sheen')}
           cx="0"
           cy="0"
           r="1"
           gradientUnits="userSpaceOnUse"
-          gradientTransform="translate(32 50) rotate(90) scale(9 17)"
+          gradientTransform="translate(16 8) rotate(52) scale(46)"
         >
-          <stop stopColor="#1E1B4B" stopOpacity="0.34" />
-          <stop offset="1" stopColor="#1E1B4B" stopOpacity="0" />
+          <stop stopColor="#C4B5FD" stopOpacity="0.45" />
+          <stop offset="1" stopColor="#C4B5FD" stopOpacity="0" />
         </radialGradient>
+
+        {/* The lit opening: Jaipur pink falling to terracotta, brightest at the
+            top where the light would come from. */}
+        <linearGradient
+          id={id('glow')}
+          x1="32"
+          y1="10"
+          x2="32"
+          y2="50"
+          gradientUnits="userSpaceOnUse"
+        >
+          <stop stopColor="#FFE4EE" />
+          <stop offset="0.45" stopColor="#F9A8C8" />
+          <stop offset="1" stopColor="#E8734F" />
+        </linearGradient>
       </defs>
 
-      {/* The tile. rx is 28% of the width - Apple's squircle proportion, and
-          the reason it reads as an app icon rather than a rounded rectangle. */}
       <rect x="2" y="2" width="60" height="60" rx="17" fill={`url(#${id('tile')})`} />
-      <rect x="2" y="2" width="60" height="60" rx="17" fill={`url(#${id('gloss')})`} />
-      <ellipse cx="32" cy="50" rx="17" ry="9" fill={`url(#${id('under')})`} />
+      <rect x="2" y="2" width="60" height="60" rx="17" fill={`url(#${id('sheen')})`} />
 
       {/*
-       * The parcel. Top face at full white, left at 0.82, right at 0.6 - the
-       * three-value split is what the eye reads as a solid object. A single
-       * white silhouette with lines drawn on it never does.
-       */}
-      <path d="M32 13 L47 21.5 L32 30 L17 21.5 Z" fill="#FFFFFF" />
-      <path d="M16 23.2 L30.6 31.5 L30.6 48.6 L16 40.3 Z" fill="#FFFFFF" fillOpacity="0.82" />
-      <path d="M48 23.2 L33.4 31.5 L33.4 48.6 L48 40.3 Z" fill="#FFFFFF" fillOpacity="0.6" />
-
-      {/*
-       * The tape, across the lid and down the front. It is what separates a
-       * parcel from a plain cube, and it is drawn in the tile's own colour so
-       * it costs nothing at small sizes - it simply disappears.
+       * The frame: the same arch, very slightly larger, behind the lit one.
+       * That hairline is what makes the opening read as SET INTO the wall
+       * rather than painted onto it.
        */}
       <path
-        d="M32 13 L32 30"
-        stroke="#4338CA"
-        strokeOpacity="0.5"
-        strokeWidth="1.6"
+        d={ARCH}
+        transform="translate(32 31) scale(1.09) translate(-32 -31)"
+        fill="#EDE9FE"
+        fillOpacity="0.2"
+      />
+      <path d={ARCH} fill={`url(#${id('glow')})`} />
+
+      {/*
+       * Two mullions. A jharokha is a SCREEN, not a hole - the verticals are
+       * what stop this reading as a plain arch. Drawn in the tile's own colour
+       * so that at favicon size they close up and vanish rather than turning
+       * into noise.
+       */}
+      <path
+        d="M26.5 50 V20.5 M37.5 50 V20.5"
+        stroke="#3B1F87"
+        strokeOpacity="0.42"
+        strokeWidth="1.7"
         strokeLinecap="round"
       />
+
+      <path d={LEDGE} fill="#F5F3FF" fillOpacity="0.95" />
     </svg>
   );
 }
@@ -132,18 +147,8 @@ export function TileMark({ className = '', idPrefix = 'smp', ...props }) {
 export function LogoMark({ className = '', ...props }) {
   return (
     <svg viewBox="0 0 64 64" role="img" aria-label="ShopMaster Pro" className={className} {...props}>
-      {/* The outline of the whole parcel, filled once. */}
-      <path d="M32 8 L56 21.5 L56 46.5 L32 60 L8 46.5 L8 21.5 Z" fill="currentColor" />
-      {/* The three edges that make it a box rather than a hexagon, knocked out
-          of the fill so this works on any background colour. */}
-      <path
-        d="M8 21.5 L32 35 L56 21.5 M32 35 L32 60"
-        stroke="#FFFFFF"
-        strokeOpacity="0.55"
-        strokeWidth="2.5"
-        strokeLinejoin="round"
-        fill="none"
-      />
+      <path d={ARCH} fill="currentColor" />
+      <path d={LEDGE} fill="currentColor" />
     </svg>
   );
 }

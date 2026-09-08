@@ -28,7 +28,9 @@ export default function CategoryBar({ categories = [] }) {
   if (shown.length === 0) return null;
 
   return (
-    <nav aria-label="Categories" className="border-b border-border bg-background">
+    // No background of its own: it sits INSIDE the frosted header, and an
+    // opaque strip here would punch a solid hole through the glass.
+    <nav aria-label="Categories" className="border-b border-border">
       <ul className="mx-auto flex max-w-5xl gap-1 overflow-x-auto px-4 text-sm md:overflow-visible">
         {shown.map((cat) => {
           const children = (cat.children || []).filter((c) => c.productCount > 0);
@@ -43,7 +45,7 @@ export default function CategoryBar({ categories = [] }) {
               </Link>
 
               {children.length > 0 && (
-                <div className="invisible absolute left-0 top-full z-50 hidden min-w-56 rounded-b-xl border border-t-0 border-border bg-background p-3 opacity-0 shadow-lg transition group-focus-within:visible group-focus-within:opacity-100 group-hover:visible group-hover:opacity-100 md:block">
+                <div className="glass-strong invisible absolute top-full left-0 z-50 hidden min-w-56 rounded-b-xl border border-t-0 p-3 opacity-0 shadow-lg transition group-focus-within:visible group-focus-within:opacity-100 group-hover:visible group-hover:opacity-100 md:block">
                   <ul className="space-y-1">
                     {children.map((child) => (
                       <li key={child._id}>

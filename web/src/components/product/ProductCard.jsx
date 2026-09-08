@@ -7,6 +7,10 @@ import { priceOf } from '@/lib/pricing';
  *
  * The price comes from priceOf(), the same function the product page and the
  * cart use, so a card can never advertise a number the next page contradicts.
+ *
+ * `glow-hover` rather than a grey shadow: a shadow in the brand colour says
+ * "this is live", where a grey one only says "this is raised". It is the
+ * shared class, so every card on the site lights the same way.
  */
 export default function ProductCard({ product, sizes = '(max-width: 768px) 50vw, 25vw' }) {
   const { price, was, percentOff } = priceOf(product);
@@ -15,7 +19,7 @@ export default function ProductCard({ product, sizes = '(max-width: 768px) 50vw,
   return (
     <Link
       href={`/products/${product.slug || product._id}`}
-      className="group block overflow-hidden rounded-xl border border-border transition hover:shadow-sm"
+      className="glow-hover group block overflow-hidden rounded-xl border border-border"
     >
       <div className="relative aspect-square bg-muted">
         {image ? (
