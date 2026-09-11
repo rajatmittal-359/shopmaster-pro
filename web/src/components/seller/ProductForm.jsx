@@ -7,6 +7,8 @@ import { getCategories } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Sparkles, Loader2 } from 'lucide-react';
+import AiPhotoTools from '@/components/seller/AiPhotoTools';
 
 /**
  * Listing something for sale - the one thing every seller panel is built around
@@ -28,6 +30,16 @@ import { Textarea } from '@/components/ui/textarea';
  *   Which is what the API accepts - it uploads to Cloudinary itself. Base64
  *   inflates a file by about a third, so the count is capped at five (the
  *   model's own limit) and the size is checked before anything is sent.
+ *
+ * PHOTOS FIRST, THEN THE WORDS
+ *   The photographs section moved to the top, because the form now starts
+ *   from a picture: add a photo, press "Write it for me", and the name,
+ *   description, category, colour, size and tags are filled in from what the
+ *   model can see - as SUGGESTIONS the seller edits before saving. That is
+ *   Amazon's "generate listing content" and Shopify Magic, and it exists
+ *   because this form is where small sellers give up. Every photo also
+ *   carries an "Improve" menu - white background, shown in use, another
+ *   angle, or a scene in the seller's own words.
  */
 const MAX_IMAGES = 5;
 const MAX_FILE_MB = 5;
@@ -75,6 +87,9 @@ export default function ProductForm({ productId, copyFromId }) {
   const [images, setImages] = useState([]);
   const [categories, setCategories] = useState([]);
   const [state, setState] = useState({ status: 'loading' });
+  const [keywords, setKeywords] = useState('');
+  const [ai, setAi] = useState({ status: 'idle' }); // idle | writing | done | error
+  const [usage, setUsage] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -84,6 +99,11 @@ export default function ProductForm({ productId, copyFromId }) {
         const tree = await getCategories();
         if (cancelled) return;
         setCategories(leavesOf(tree));
+
+        // Today's AI allowance. A failure here must not block the form.
+        authedFetch('/seller/ai/usage')
+          .then((u) => !cancelled && setUsage(u))
+          .catch(() => {});
 
         if (productId) {
           const data = await authedFetch(`/seller/products/${productId}`);
@@ -164,6 +184,61 @@ export default function ProductForm({ productId, copyFromId }) {
     }
   };
 
+  /* Every photo the product has or is about to have, saved ones first. */
+  const photos = [
+    ...(form.images || []).map((src) => ({ src, kind: 'existing' })),
+    ...images.map((src) => ({ src, kind: 'new' })),
+  ];
+
+  const acceptAiPhoto = (url, { asFirst }) => {
+    const existing = form.images || [];
+    setForm({ ...form, images: asFirst ? [url, ...existing] : [...existing, url] });
+  };
+
+  const removePhoto = (photo) => {
+    if (photo.kind === 'existing') {
+      setForm({ ...form, images: (form.images || []).filter((u) => u !== photo.src) });
+    } else {
+      setImages(images.filter((u) => u !== photo.src));
+    }
+  };
+
+  /*
+   * Ask the model to fill the form from the first photo and whatever has been
+   * typed so far. Every field it returns REPLACES the current value - this is
+   * a draft to edit, and the button is pressed deliberately.
+   */
+  const writeForMe = async () => {
+    setAi({ status: 'writing' });
+    try {
+      const first = photos[0];
+      const body = {
+        name: form.name,
+        keywords,
+        price: form.price ? Number(form.price) : undefined,
+        categoryId: form.category || undefined,
+        ...(first?.kind === 'existing' ? { imageUrl: first.src } : {}),
+        ...(first?.kind === 'new' ? { imageDataUrl: first.src } : {}),
+      };
+      const { draft, warnings, usage: u } = await authedFetch('/seller/ai/listing', { method: 'POST', body });
+      setForm((f) => ({
+        ...f,
+        name: draft.name || f.name,
+        description: draft.description || f.description,
+        category: draft.categoryId || f.category,
+        color: draft.color || f.color,
+        size: draft.size || f.size,
+        gender: draft.gender || f.gender,
+        ageGroup: draft.ageGroup || f.ageGroup,
+        tags: draft.tags?.length ? draft.tags : f.tags,
+      }));
+      if (u) setUsage(u);
+      setAi({ status: 'done', warnings: warnings || [] });
+    } catch (err) {
+      setAi({ status: 'error', message: err.message });
+    }
+  };
+
   const submit = async (e) => {
     e.preventDefault();
     setState({ status: 'saving' });
@@ -179,7 +254,13 @@ export default function ProductForm({ productId, copyFromId }) {
       weight: form.weight === '' ? undefined : Number(form.weight),
       size: form.size || undefined,
       variantGroupId: form.variantGroupId || undefined,
-      ...(images.length ? { images } : {}),
+      /*
+       * Saved photos (URLs) and new ones (base64) go together, in order. The
+       * server keeps URLs that are ours and uploads the rest. Sending only the
+       * new ones - which is what this did - REPLACED the saved photos with
+       * them on every edit that added a picture.
+       */
+      images: [...(form.images || []), ...images],
     };
 
     try {
@@ -226,6 +307,77 @@ export default function ProductForm({ productId, copyFromId }) {
           on one page.
         </p>
       )}
+
+      <section className="space-y-3 rounded-xl border border-border p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h2 className="font-semibold">Photographs</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Up to five. The first one shows in search and on the card. A phone
+              photo is fine to start with - <strong>Improve</strong> under any photo
+              puts it on a white background, shows it in use, or makes the scene you
+              describe.
+            </p>
+          </div>
+          {usage && (
+            <p className="shrink-0 text-right text-xs text-muted-foreground">
+              AI today
+              <br />
+              {usage.remaining.images} photos · {usage.remaining.premiumImages} premium
+              <br />
+              {usage.remaining.texts} drafts
+            </p>
+          )}
+        </div>
+
+        <Input type="file" accept="image/*" multiple onChange={addImages} className="text-sm" />
+
+        <AiPhotoTools
+          photos={photos}
+          productName={form.name || 'product'}
+          onAccept={acceptAiPhoto}
+          onRemove={removePhoto}
+          onUsage={setUsage}
+        />
+      </section>
+
+      <section className="space-y-3 rounded-xl border border-primary/30 bg-primary/5 p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="flex items-center gap-2 font-semibold">
+              <Sparkles className="size-4 text-brand-ink" />
+              Let AI write the listing
+            </h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              From the first photo and a few words. Everything it fills in is a
+              draft - read it, change what is wrong, then save.
+            </p>
+          </div>
+          <Button
+            type="button"
+            onClick={writeForMe}
+            disabled={ai.status === 'writing' || (photos.length === 0 && !form.name)}
+          >
+            {ai.status === 'writing' ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
+            {ai.status === 'writing' ? 'Writing…' : 'Write it for me'}
+          </Button>
+        </div>
+        <Input
+          value={keywords}
+          onChange={(e) => setKeywords(e.target.value)}
+          placeholder="A few words help: kundan, bridal, green stone · or: cotton kurti, block print, summer"
+          className="text-sm"
+        />
+        {ai.status === 'done' && (
+          <p className="text-sm text-brand-ink">
+            Filled in. Check the name, description and category before saving.
+            {ai.warnings?.length > 0 && (
+              <span className="block text-muted-foreground">{ai.warnings.join(' ')}</span>
+            )}
+          </p>
+        )}
+        {ai.status === 'error' && <p className="text-sm text-destructive">{ai.message}</p>}
+      </section>
 
       <section className="space-y-4 rounded-xl border border-border p-4">
         <div>
@@ -437,24 +589,6 @@ export default function ProductForm({ productId, copyFromId }) {
             <Input id="sku" value={form.sku ?? ''} onChange={set('sku')} className="mt-1" />
           </div>
         </div>
-      </section>
-
-      <section className="space-y-3 rounded-xl border border-border p-4">
-        <h2 className="font-semibold">Photographs</h2>
-        <p className="text-sm text-muted-foreground">
-          Up to five. The first one is what shows in search and on the card, so
-          make it the clearest. One photograph of the piece being WORN is worth
-          more than three of it on a table - it is how a shopper judges the size.
-        </p>
-
-        <Input type="file" accept="image/*" multiple onChange={addImages} className="text-sm" />
-
-        {(form.images?.length > 0 || images.length > 0) && (
-          <p className="text-sm text-muted-foreground">
-            {(form.images?.length || 0) + images.length} attached
-            {form.images?.length > 0 && productId ? ' (existing ones are kept)' : ''}
-          </p>
-        )}
       </section>
 
       <div className="flex items-center gap-3">

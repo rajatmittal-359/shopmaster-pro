@@ -74,7 +74,12 @@ const generate = async (prompt, opts = {}) => {
    * fetched - no CDN variant, no redirect, no surprise.
    */
   const parts = [];
-  if (opts.imageUrl) {
+  if (opts.imageDataUrl) {
+    // Already bytes in hand - a photo the seller has picked but not yet saved.
+    const m = /^data:(image\/[a-z0-9.+-]+);base64,(.+)$/i.exec(opts.imageDataUrl);
+    if (!m) return { ok: false, reason: 'That is not an image' };
+    parts.push({ inlineData: { mimeType: m[1], data: m[2] } });
+  } else if (opts.imageUrl) {
     try {
       const res = await fetch(opts.imageUrl);
       if (!res.ok) return { ok: false, reason: `Could not fetch the image (${res.status})` };

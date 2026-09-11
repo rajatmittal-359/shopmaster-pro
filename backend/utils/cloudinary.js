@@ -51,6 +51,20 @@ const uploadImage = async (file, folder = 'shopmaster-products') => {
 };
 
 
+/**
+ * Is this URL a file in OUR Cloudinary account?
+ *
+ * Used wherever a URL is accepted in place of an upload: a product may only
+ * point at pictures this account controls, and the AI endpoints may only be
+ * pointed at our own files (anything else would let a request aim our fetch,
+ * and the providers, at an arbitrary address).
+ */
+const isOwnUrl = (url) => {
+  const cloud = process.env.CLOUDINARY_CLOUD_NAME;
+  return Boolean(cloud) && typeof url === 'string' &&
+    url.startsWith(`https://res.cloudinary.com/${cloud}/image/upload/`);
+};
+
 // Delete image from Cloudinary
 const deleteImage = async (publicId) => {
   try {
@@ -135,4 +149,5 @@ const deleteVideo = async (publicId) => {
   }
 };
 
-module.exports = { uploadImage, deleteImage, uploadVideo, deleteVideo };
+module.exports = {
+  isOwnUrl, uploadImage, deleteImage, uploadVideo, deleteVideo };

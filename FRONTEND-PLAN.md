@@ -756,6 +756,125 @@ tile is a link: the first thing a visitor sees is the first thing they can buy.
 
 ---
 
+### 4.16 AI for sellers - the strategy, the providers, and where each one goes
+
+Built 11-12 Sep 2026. Rajat's plan in his words: give sellers AI that saves
+the work a small seller cannot pay for, from free APIs, "pehle achi quality
+wala de denge, agar koi zyada generate karwa raha hai to usse karta-reh wala
+doosra". And his question that shaped this section: *"itni saari API le li -
+sabse best strategy kya rahegi, kab kya reliable rahega? Product hai
+ShopMaster."*
+
+#### The principle: task -> model, never feature -> provider
+
+No feature names a provider. A feature says *"clean this photo, standard
+tier"*; `backend/utils/ai/` decides who answers, in what order, and what to do
+when one says no. A provider can vanish and one file changes.
+
+#### Reliability ranking, for production
+
+| | Provider | Trust | Role |
+|---|---|---|---|
+| 1 | **Cloudflare Workers AI** | Highest - enterprise infrastructure, free tier stable for years, no card | **Spine of the standard path**: FLUX.2 klein 4B (~80 edits/day), klein 9B, dev |
+| 2 | **Gemini** | High - Google, but free-tier models have been withdrawn mid-use (2.5-flash), so the model is pinned and calls retry | Spine of text and vision: listing drafts, reading the photo |
+| 3 | **NVIDIA NIM** | Fair - a developer catalogue, "for testing", one-time credits, 6-month key | Reserve tank for text-to-image |
+| 4 | **Pollinations** | Lowest - a small Berlin org, no SLA, Pollen rules can change; but it hosts **the best model** | **Premium bonus, never the only path**: gpt-image-2 (#3 in the world), kontext editing |
+
+**The rule that follows:** the standard path never depends on Pollinations. If
+it disappeared tomorrow, every seller would still get klein-4b/9b edits and
+Gemini drafts; only the *premium* label would degrade. That is the difference
+between a free stack that behaves like a product and one that behaves like a
+demo.
+
+#### What the free allowances actually are
+
+Measured, not read off a blog. The first afternoon of testing spent
+Cloudflare's whole day on eight images, because "230 free images a day" - the
+figure every article repeats - is FLUX.1 schnell's. At Cloudflare's published
+per-tile rates, at 1024x1024:
+
+| Model | Neurons / image | Free per day |
+|---|---|---|
+| flux-2-dev | ~3,750-5,600 | ~2 |
+| flux-2-klein-9b | ~1,364 | ~7 |
+| **flux-2-klein-4b** | **~125** | **~80** |
+| flux-1-schnell | ~58 | ~170 (text-only) |
+
+Pollinations: gpt-image-2 costs ~0.034 Pollen and the daily grant is ~0.25,
+so **~7 premium images a day, platform-wide**. Gemini text: free, with the
+model pinned.
+
+#### The tiers, as built
+
+| Tier | Edit chain (a seller's photo in) | Generate chain (words only, admin) |
+|---|---|---|
+| premium | gpt-image-2 -> klein-9b -> klein-4b -> kontext | gpt-image-2 -> flux-2-dev -> nvidia flux.1-dev -> schnell |
+| standard | klein-4b -> kontext | klein-4b -> nvidia -> schnell |
+| fast | klein-4b -> kontext | schnell |
+
+A quota or upstream failure moves to the next entry. An *input* failure stops:
+a bad request is bad everywhere. A seller's first two images of the day take
+the premium chain while the platform has premium left; after that, standard.
+
+#### The modes are what a seller actually asks for
+
+`clean` (white studio background), `lifestyle` (shown in use), `angle`
+(another view), `custom` (the seller's own scene - "a model wearing these,
+side profile, soft light"). All four are EDITS: the photo goes in as a
+reference and every prompt opens with the same sentence - the product itself
+must not change. A redrawn product is worse than no picture. `generate` (from
+words) is admin-only: banners and category art, never a product.
+
+#### Guardrails that make it a product
+
+- **Caps**, per seller per day (60 drafts, 20 images, 2 premium) and platform
+  (6 premium), read before the call and charged after a success.
+- **Nothing saves itself.** Every result is a preview with Use / Discard. The
+  form is the human in the loop.
+- **Only our own Cloudinary URLs** are accepted as input - anything else would
+  let a request point our fetch, and the providers, at an arbitrary address.
+- **Keys live on the server only.** `POLLINATIONS_API_KEY`,
+  `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN`, `NVIDIA_API_KEY`,
+  `GEMINI_API_KEY` - in `backend/.env` locally and in Render's environment in
+  production. Never in the repo, never in the browser.
+- **Usage is visible.** `GET /api/admin/ai/usage` shows the day's spend by
+  provider and by seller.
+
+#### When to start paying
+
+When the admin usage page shows a provider above ~70% three days running. The
+first paid line should be **Cloudflare Workers Paid ($5/month = ~450k neurons
+= ~3,600 klein-4b edits/month)** - the cheapest scale path by far. Pollen
+top-ups only if premium demand actually appears.
+
+#### Verified live, 12 Sep 2026
+
+- Listing from the photo alone: "Oxidised Silver Toned Pearl Maang Tikka",
+  colour Silver, category Jewellery -> Maang Tikka, nothing invented.
+- klein-9b edit of a 600px phone photo of beaded earrings: same beads, same
+  hooks, white background, 1024px, 3 seconds.
+- flux-2-dev text-to-image: a listing-quality kundan chandbali on white.
+- All quotas were then exhausted by testing; the seller sees "Today's free AI
+  image allowance is used up across the whole platform. It refills overnight."
+
+#### Still to build (in priority order)
+
+1. **Embeddings search** - Gemini embeddings (free) or Cloudflare bge, stored
+   in MongoDB Atlas Vector Search on the existing cluster. Search that
+   understands "shaadi ke liye kaan ka" and a real "similar products" row.
+   The largest customer-visible win left.
+2. **Voice input for sellers** - Groq Whisper (free, fast) or Cloudflare
+   Whisper: describe the product in Hindi, the form fills itself. Typing is
+   the blocker for the sellers this platform is for.
+3. **Text fallback** - Groq / NVIDIA LLMs behind Gemini, the same chain
+   pattern as images.
+4. **Real 3D** - image-to-3D (Tripo3D free tier, Hunyuan3D on Hugging Face)
+   producing a `.glb`, shown with `<model-viewer>`. A separate feature; single
+   photos of shoes, bags and bottles work well, jewellery less so.
+5. Admin usage page in the panel (the endpoint exists).
+
+---
+
 ## 5. Structured data
 
 GIVA's markup is the reference implementation for an Indian jewellery store and

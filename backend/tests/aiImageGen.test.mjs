@@ -142,7 +142,7 @@ describe('what stops the chain', () => {
   it('refuses an edit without a photo, and a generate without words, before calling anyone', async () => {
     const spy = deps({ cloudflare: async () => { throw new Error('should not be called'); } });
     await expect(runImage({ mode: 'clean' }, spy)).rejects.toThrow(/imageUrl/);
-    await expect(runImage({ mode: 'generate', prompt: '   ' }, spy)).rejects.toThrow(/prompt/);
+    await expect(runImage({ mode: 'generate', prompt: '   ' }, spy)).rejects.toThrow(/description/);
     await expect(runImage({ mode: 'hologram' }, spy)).rejects.toThrow(/mode/);
   });
 });
@@ -169,6 +169,33 @@ describe('the prompts', () => {
       })
     );
     expect(seen).toBe('a Diwali banner');
+  });
+});
+
+describe('the custom scene', () => {
+  it("puts the seller's words after the keep-the-product rule, never instead of it", async () => {
+    let seen;
+    await runImage(
+      { mode: 'custom', tier: 'standard', imageUrl: CLOUDINARY, productName: 'jhumkas',
+        prompt: 'a model wearing them, side profile, soft evening light' },
+      deps({ cloudflare: async (m, args) => { seen = args.prompt; return { buffer: PNG, mime: 'image/png' }; } })
+    );
+    expect(seen).toMatch(/^Keep the exact product from image 0 completely unchanged/);
+    expect(seen).toContain('a model wearing them, side profile, soft evening light');
+    expect(seen).toMatch(/no text or logos added/);
+  });
+
+  it('refuses a custom scene with nothing described', async () => {
+    await expect(runImage({ mode: 'custom', imageUrl: CLOUDINARY, prompt: '  ' }, deps())).rejects.toThrow(/description/);
+  });
+
+  it('caps a runaway description', async () => {
+    let seen;
+    await runImage(
+      { mode: 'custom', imageUrl: CLOUDINARY, prompt: 'x'.repeat(2000) },
+      deps({ cloudflare: async (m, args) => { seen = args.prompt; return { buffer: PNG, mime: 'image/png' }; } })
+    );
+    expect(seen.length).toBeLessThan(900);
   });
 });
 

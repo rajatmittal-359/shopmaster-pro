@@ -269,6 +269,17 @@ exports.addProduct = async (req, res) => {
 
     if (images && images.length > 0) {
       for (const img of images) {
+        /*
+         * A picture the AI already made lives on our Cloudinary and arrives as
+         * a URL, not a data URL. It is kept as-is - re-uploading it would
+         * store the same bytes twice - but ONLY when it is our own account's;
+         * anything else is uploaded, so a product can never point at a file
+         * somebody else controls.
+         */
+        if (cloudinary.isOwnUrl(img)) {
+          product.images.push(img);
+          continue;
+        }
         const uploaded = await cloudinary.uploadImage(img);
         product.images.push(uploaded.url);
       }
@@ -395,9 +406,12 @@ exports.updateProduct = async (req, res) => {
         if (typeof img === "string" && img.startsWith("data:image/")) {
           const uploaded = await cloudinary.uploadImage(img);
           finalImages.push(uploaded.url);
-        } else if (typeof img === "string" && img.trim() !== "") {
+        } else if (cloudinary.isOwnUrl(img)) {
+          // Already ours (an existing photo, or an AI draft). Kept as-is.
           finalImages.push(img);
         }
+        // Anything else - another site's URL, an empty string - is dropped:
+        // a product may only point at pictures this account controls.
       }
 
       product.images = finalImages;

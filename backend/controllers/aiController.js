@@ -46,11 +46,12 @@ const CAPS = {
  * an arbitrary address, and Cloudinary's resize-on-URL trick only works on
  * Cloudinary anyway.
  */
-const ownImage = (url) => {
-  const cloud = process.env.CLOUDINARY_CLOUD_NAME;
-  if (!cloud || typeof url !== 'string') return false;
-  return url.startsWith(`https://res.cloudinary.com/${cloud}/image/upload/`);
-};
+const ownImage = (url) => cloudinary.isOwnUrl(url);
+
+/** A photo still in the browser: base64, an image, and not absurdly large. */
+const MAX_DATA_URL = 5 * 1024 * 1024 * 1.4; // 5 MB of image, base64-inflated
+const isImageDataUrl = (s) =>
+  typeof s === 'string' && /^data:image\/[a-z0-9.+-]+;base64,/i.test(s) && s.length <= MAX_DATA_URL;
 
 const usageFor = async (userId) => {
   const [mine, all] = await Promise.all([AiUsage.read('user', String(userId)), AiUsage.read('global', 'all')]);
@@ -93,9 +94,12 @@ const writeListing = async (req, res) => {
       });
     }
 
-    const { name, keywords, price, categoryId, imageUrl } = req.body || {};
+    const { name, keywords, price, categoryId, imageUrl, imageDataUrl } = req.body || {};
     if (imageUrl && !ownImage(imageUrl)) {
-      return res.status(400).json({ message: 'Upload the photo to the product first, then ask for a draft.' });
+      return res.status(400).json({ message: 'That photo is not one of yours.' });
+    }
+    if (imageDataUrl && !isImageDataUrl(imageDataUrl)) {
+      return res.status(400).json({ message: 'That photo could not be read. JPEG, PNG or WebP under 5MB.' });
     }
 
     // Leaf categories only, by name: a model picks "Earrings", not an ObjectId.
@@ -112,6 +116,7 @@ const writeListing = async (req, res) => {
       categoryName: chosen?.name,
       categoryOptions: leaves.map((c) => c.name),
       imageUrl,
+      imageDataUrl,
       brand: req.seller?.businessName,
     });
 
@@ -139,7 +144,8 @@ const writeListing = async (req, res) => {
  */
 const makeImage = async (req, res) => {
   try {
-    const { mode, imageUrl, productName, tier: askedTier } = req.body || {};
+    const { mode, productName, tier: askedTier, imageDataUrl } = req.body || {};
+    let { imageUrl } = req.body || {};
     const isAdmin = req.user?.role === 'admin' || req.capabilities?.admin;
 
     if (!MODES.includes(mode)) {
@@ -148,8 +154,19 @@ const makeImage = async (req, res) => {
     if (mode === 'generate' && !isAdmin) {
       return res.status(403).json({ message: 'Product pictures are made from your photo, not from words.' });
     }
-    if (mode !== 'generate' && !ownImage(imageUrl)) {
-      return res.status(400).json({ message: 'Upload the photo to the product first, then improve it.' });
+    if (mode !== 'generate') {
+      /*
+       * A photo the seller has picked but not saved yet arrives as a data URL.
+       * The providers need a URL (or bytes fetched from one), so it goes to
+       * the drafts folder first - and that upload also gives the seller's
+       * original a home if they decide to keep both.
+       */
+      if (!imageUrl && isImageDataUrl(imageDataUrl)) {
+        imageUrl = (await cloudinary.uploadImage(imageDataUrl, 'shopmaster-ai-drafts')).url;
+      }
+      if (!ownImage(imageUrl)) {
+        return res.status(400).json({ message: 'Add a photo first, then improve it.' });
+      }
     }
 
     const usage = await usageFor(req.user._id);
@@ -192,7 +209,21 @@ const makeImage = async (req, res) => {
       usage: await usageFor(req.user._id),
     });
   } catch (error) {
-    if (error.attempts) console.error('AI IMAGE CHAIN:', JSON.stringify(error.attempts));
+    if (error.attempts) {
+      /*
+       * The chain's own message names providers and models - right for the
+       * log, wrong for a seller. They need to know one of two things: the
+       * day's free allowance is gone (come back tomorrow), or the service is
+       * having a moment (try again shortly).
+       */
+      console.error('AI IMAGE CHAIN:', JSON.stringify(error.attempts));
+      const allQuota = error.attempts.every((a) => a.kind === 'quota');
+      return res.status(error.statusCode || 503).json({
+        message: allQuota
+          ? "Today's free AI image allowance is used up across the whole platform. It refills overnight - try again tomorrow morning."
+          : 'The AI image service is busy right now. Try again in a minute.',
+      });
+    }
     sendError(res, error);
   }
 };

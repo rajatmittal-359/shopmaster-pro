@@ -110,18 +110,21 @@ Fill in the listing. RULES, in order of importance:
  * @param {number} [input.price]
  * @param {string} [input.categoryName]
  * @param {string[]} [input.categoryOptions]
- * @param {string} [input.imageUrl]
+ * @param {string} [input.imageUrl]      a photo already on Cloudinary
+ * @param {string} [input.imageDataUrl]  a photo still in the browser, base64
  * @param {string} [input.brand]         the seller's shop name, to check it stayed out
  * @param {object} [deps]                `generate` is replaceable in tests
  * @returns {Promise<{ok: true, draft: object, warnings: string[]}|{ok: false, reason: string}>}
  */
 const draftListing = async (input, deps = { generate }) => {
-  if (!input.name && !input.imageUrl) {
+  if (!input.name && !input.imageUrl && !input.imageDataUrl) {
     return { ok: false, reason: 'Give a product name or a photo to start from.' };
   }
 
-  const answer = await deps.generate(promptFor({ ...input, hasImage: Boolean(input.imageUrl) }), {
+  const hasImage = Boolean(input.imageUrl || input.imageDataUrl);
+  const answer = await deps.generate(promptFor({ ...input, hasImage }), {
     imageUrl: input.imageUrl,
+    imageDataUrl: input.imageDataUrl,
     responseSchema: RESPONSE_SCHEMA,
     temperature: 0.6,
   });

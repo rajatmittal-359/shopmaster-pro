@@ -27,6 +27,10 @@
  *     clean      same product, pure white studio background
  *     lifestyle  same product, shown in use
  *     angle      same product, another view
+ *     custom     same product, in whatever scene the seller describes -
+ *                "a model wearing these jhumkas, side profile, soft light".
+ *                Their words go AFTER the keep-the-product rule, never
+ *                instead of it
  *     generate   from words alone - for banners and category art, not
  *                for products, because a product picture must be of the
  *                product that ships
@@ -72,7 +76,18 @@ const EDIT_PROMPTS = {
     `${KEEP}Photograph the same ${name} from a different angle - a three-quarter view - ` +
     `on the same clean white studio background, same lighting, so it can sit beside the original ` +
     `as a second listing photo.`,
+  /*
+   * The seller's own idea. Their words are appended, never substituted: the
+   * rule that the product must not change is ours and comes first, and a
+   * closing line keeps it a photograph rather than a poster with text on it.
+   */
+  custom: (name, wish) =>
+    `${KEEP}Now photograph the ${name} exactly as described: ${wish}. ` +
+    `Photorealistic, high quality, no text or logos added, the ${name} clearly visible and in focus.`,
 };
+
+/** How much a seller may type into a custom scene. Enough for a sentence or three. */
+const MAX_WISH = 400;
 
 /* ------------------------------------------------------------------------ */
 /* Chains                                                                   */
@@ -119,7 +134,7 @@ const CHAINS = {
 };
 
 const TIERS = Object.keys(CHAINS.generate);
-const MODES = ['clean', 'lifestyle', 'angle', 'generate'];
+const MODES = ['clean', 'lifestyle', 'angle', 'custom', 'generate'];
 
 /* ------------------------------------------------------------------------ */
 /* Reference handling                                                       */
@@ -145,7 +160,8 @@ const fetchReference = async (url) => {
  * @param {object} args
  * @param {'clean'|'lifestyle'|'angle'|'generate'} args.mode
  * @param {'premium'|'standard'|'fast'} [args.tier]
- * @param {string} [args.prompt]        required for `generate`; ignored for edits
+ * @param {string} [args.prompt]        required for `generate`; for `custom`, the seller's
+ *                                      description of the scene; ignored by other edits
  * @param {string} [args.imageUrl]      required for edits: the seller's photo
  * @param {string} [args.productName]   used in the edit prompts
  * @param {number} [args.seed]
@@ -161,9 +177,12 @@ async function runImage(
 
   const isEdit = mode !== 'generate';
   if (isEdit && !imageUrl) throw new ProviderError('imageGen', 'input', 'an edit needs imageUrl');
-  if (!isEdit && !prompt?.trim()) throw new ProviderError('imageGen', 'input', 'generate needs a prompt');
+  if ((!isEdit || mode === 'custom') && !prompt?.trim()) {
+    throw new ProviderError('imageGen', 'input', `${mode} needs a description`);
+  }
 
-  const finalPrompt = isEdit ? EDIT_PROMPTS[mode](productName) : prompt.trim();
+  const wish = mode === 'custom' ? prompt.trim().slice(0, MAX_WISH).replace(/\s+/g, ' ') : null;
+  const finalPrompt = isEdit ? EDIT_PROMPTS[mode](productName, wish) : prompt.trim();
   const chain = CHAINS[isEdit ? 'edit' : 'generate'][tier];
 
   // Fetched once, lazily, only if some entry in the chain wants bytes.
@@ -216,4 +235,4 @@ async function runImage(
   throw e;
 }
 
-module.exports = { runImage, CHAINS, MODES, TIERS, EDIT_PROMPTS, smallVersionOf };
+module.exports = { runImage, CHAINS, MODES, TIERS, EDIT_PROMPTS, MAX_WISH, smallVersionOf };
