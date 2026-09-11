@@ -51,6 +51,12 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
  * @param {string} [opts.model]
  * @param {number} [opts.attempts]      total tries, including the first
  * @param {number} [opts.temperature]
+ * @param {string} [opts.imageUrl]      a picture for the model to look at,
+ *                                      fetched here and sent inline
+ * @param {object} [opts.responseSchema] ask for JSON in exactly this shape.
+ *                                      Sets responseMimeType too, so the
+ *                                      answer is parseable, not prose with
+ *                                      JSON somewhere inside it
  * @returns {Promise<{ok: true, text: string}|{ok: false, reason: string, status?: number}>}
  */
 const generate = async (prompt, opts = {}) => {
@@ -62,6 +68,25 @@ const generate = async (prompt, opts = {}) => {
   const model = opts.model || DEFAULT_MODEL;
   const attempts = opts.attempts ?? 4;
 
+  /*
+   * The picture goes INLINE as base64, not as a URL. Gemini will not fetch
+   * arbitrary URLs, and inlining means what the model saw is exactly what we
+   * fetched - no CDN variant, no redirect, no surprise.
+   */
+  const parts = [];
+  if (opts.imageUrl) {
+    try {
+      const res = await fetch(opts.imageUrl);
+      if (!res.ok) return { ok: false, reason: `Could not fetch the image (${res.status})` };
+      const mimeType = (res.headers.get('content-type') || 'image/jpeg').split(';')[0];
+      const data = Buffer.from(await res.arrayBuffer()).toString('base64');
+      parts.push({ inlineData: { mimeType, data } });
+    } catch (err) {
+      return { ok: false, reason: `Could not fetch the image: ${err.message}` };
+    }
+  }
+  parts.push({ text: prompt });
+
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
     let response;
     try {
@@ -69,8 +94,11 @@ const generate = async (prompt, opts = {}) => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
+          contents: [{ parts }],
           generationConfig: {
+            ...(opts.responseSchema
+              ? { responseMimeType: 'application/json', responseSchema: opts.responseSchema }
+              : {}),
             // Low, not zero. Fifty descriptions at temperature 0 come out in
             // the same shape as each other, which is the problem being fixed.
             temperature: opts.temperature ?? 0.7,

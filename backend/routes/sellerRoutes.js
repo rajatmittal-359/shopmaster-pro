@@ -65,6 +65,16 @@ router.post(
   require('../controllers/sellerController').settleReturn
 );
 
+/*
+ * The AI a seller can reach. Approved sellers only - these spend a free
+ * allowance that belongs to the whole platform, and an unapproved account has
+ * no products to improve yet.
+ */
+const ai = require('../controllers/aiController');
+router.get('/ai/usage', requireApprovedSeller, ai.getUsage);
+router.post('/ai/listing', requireApprovedSeller, ai.writeListing);
+router.post('/ai/image', requireApprovedSeller, ai.makeImage);
+
 // A seller's own shop settings: whether they absorb delivery, and the address a
 // courier collects from.
 const sellerCtrl = require('../controllers/sellerController');
