@@ -2,66 +2,45 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { Sparkles, Loader2 } from 'lucide-react';
 import { authedFetch } from '@/lib/client';
 import { getCategories } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Sparkles, Loader2 } from 'lucide-react';
-import AiPhotoTools from '@/components/seller/AiPhotoTools';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import MediaManager from '@/components/seller/MediaManager';
+import RichTextEditor from '@/components/seller/RichTextEditor';
+import CategoryPicker from '@/components/seller/CategoryPicker';
 
 /**
- * Listing something for sale - the one thing every seller panel is built around
- * and the one thing ours could not do. The API has had `POST /seller/products`
- * all along; there was no screen.
+ * Listing something for sale.
  *
- * WHY COLOUR IS ON THIS FORM AND NOT OPTIONAL-LOOKING
- *   Google requires `color`, `gender` and `age_group` for free listings in
- *   category 166, which is where jewellery and accessories sit. A product
- *   created without a colour is not a smaller listing - it is one Merchant
- *   Center holds in "Under review", silently, until somebody goes looking.
- *   Seventeen of ours sat there.
+ * THE SHAPE, FROM THE REFERENCES
+ *   Shopify's product form, in its order: media first, then title and
+ *   description, then organisation (category), then pricing, inventory and
+ *   shipping, then the details a channel needs. Amazon adds the discipline on
+ *   photographs: numbered slots, MAIN first, white background there, product
+ *   filling the frame. This form is those two, at the size of a shop with
+ *   five photos and no variants tab.
+ *
+ * WHAT THE AI IS HERE, AND WHAT IT IS NOT
+ *   A seller takes a normal photo and uploads it - that is theirs to do, and
+ *   the form works entirely without AI. The AI is offered in two places, both
+ *   visible and both optional: on every photo (white background, in use,
+ *   another angle, or a scene they describe), and once at the top - "Write
+ *   it for me" - which fills the words from the first photo. Everything it
+ *   produces is a draft the seller sees and changes before saving.
+ *
+ * WHY COLOUR, GENDER AND AGE GROUP ARE HERE AT ALL
+ *   Google requires them for free listings in category 166 (jewellery and
+ *   accessories). A product created without a colour is one Merchant Center
+ *   holds in "Under review", silently. Seventeen of ours sat there.
  *
  * WHY THE CATEGORY LIST IS LEAVES ONLY
  *   The API refuses a parent category (validateLeafCategory), so offering one
- *   would be offering a choice that always fails. Products live on leaves.
- *
- * IMAGES ARE SENT AS BASE64
- *   Which is what the API accepts - it uploads to Cloudinary itself. Base64
- *   inflates a file by about a third, so the count is capped at five (the
- *   model's own limit) and the size is checked before anything is sent.
- *
- * PHOTOS FIRST, THEN THE WORDS
- *   The photographs section moved to the top, because the form now starts
- *   from a picture: add a photo, press "Write it for me", and the name,
- *   description, category, colour, size and tags are filled in from what the
- *   model can see - as SUGGESTIONS the seller edits before saving. That is
- *   Amazon's "generate listing content" and Shopify Magic, and it exists
- *   because this form is where small sellers give up. Every photo also
- *   carries an "Improve" menu - white background, shown in use, another
- *   angle, or a scene in the seller's own words.
+ *   would be offering a choice that always fails.
  */
-const MAX_IMAGES = 5;
-const MAX_FILE_MB = 5;
-
-/** Depth-first, keeping only categories that have no children. */
-const leavesOf = (categories, trail = []) =>
-  categories.flatMap((cat) => {
-    const path = [...trail, cat.name];
-    const children = cat.children || [];
-    return children.length === 0
-      ? [{ _id: cat._id, label: path.join(' → ') }]
-      : leavesOf(children, path);
-  });
-
-const readAsDataUrl = (file) =>
-  new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = () => reject(new Error(`Could not read ${file.name}`));
-    reader.readAsDataURL(file);
-  });
-
 const EMPTY = {
   name: '',
   description: '',
@@ -79,21 +58,60 @@ const EMPTY = {
   brand: '',
   sku: '',
   freeShipping: false,
+  tags: [],
 };
+
+const GENDERS = { female: 'Women', male: 'Men', unisex: 'Anyone' };
+const AGES = { adult: 'Adult', kids: 'Kids', toddler: 'Toddler', infant: 'Infant', newborn: 'Newborn' };
+
+/** Depth-first, keeping only categories that have no children. */
+const leavesOf = (categories, trail = []) =>
+  categories.flatMap((cat) => {
+    const path = [...trail, cat.name];
+    const children = cat.children || [];
+    return children.length === 0 ? [{ _id: cat._id, label: path.join(' → ') }] : leavesOf(children, path);
+  });
+
+/** A small, consistent field: label above, hint below. */
+function Field({ id, label, hint, children, className = '' }) {
+  return (
+    <div className={className}>
+      <Label htmlFor={id}>{label}</Label>
+      <div className="mt-1.5">{children}</div>
+      {hint && <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">{hint}</p>}
+    </div>
+  );
+}
+
+function Card({ title, lead, aside, children }) {
+  return (
+    <section className="space-y-5 rounded-xl border bg-card p-5">
+      {(title || aside) && (
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            {title && <h2 className="font-semibold">{title}</h2>}
+            {lead && <p className="mt-1 text-sm text-muted-foreground">{lead}</p>}
+          </div>
+          {aside}
+        </div>
+      )}
+      {children}
+    </section>
+  );
+}
 
 export default function ProductForm({ productId, copyFromId }) {
   const router = useRouter();
   const [form, setForm] = useState(EMPTY);
-  const [images, setImages] = useState([]);
+  const [photos, setPhotos] = useState([]); // [{ src, kind: 'existing' | 'new' }], in display order
   const [categories, setCategories] = useState([]);
   const [state, setState] = useState({ status: 'loading' });
   const [keywords, setKeywords] = useState('');
-  const [ai, setAi] = useState({ status: 'idle' }); // idle | writing | done | error
+  const [ai, setAi] = useState({ status: 'idle' });
   const [usage, setUsage] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
-
     (async () => {
       try {
         const tree = await getCategories();
@@ -105,29 +123,24 @@ export default function ProductForm({ productId, copyFromId }) {
           .then((u) => !cancelled && setUsage(u))
           .catch(() => {});
 
+        const load = async (id) => {
+          const data = await authedFetch(`/seller/products/${id}`);
+          return data.product || data;
+        };
+
         if (productId) {
-          const data = await authedFetch(`/seller/products/${productId}`);
-          const product = data.product || data;
+          const product = await load(productId);
           if (cancelled) return;
-          setForm({
-            ...EMPTY,
-            ...product,
-            // The API populates category; the form needs the id it will send.
-            category: product.category?._id || product.category || '',
-          });
+          setForm({ ...EMPTY, ...product, category: product.category?._id || product.category || '' });
+          setPhotos((product.images || []).map((src) => ({ src, kind: 'existing' })));
         } else if (copyFromId) {
           /*
-           * Adding another size of something that already exists.
-           *
-           * Everything about the style is copied - name, description, price,
-           * photographs - and only what genuinely differs is cleared: the size
-           * itself, the stock count, and the seller's own item code. Retyping
-           * a description for each size is how the sizes end up describing
-           * different products, which is exactly what item_group_id is meant
-           * to prevent.
+           * Another size of an existing product. Everything about the style is
+           * copied and only what genuinely differs is cleared: the size, the
+           * stock, the seller's own code. Both rows carry the same group id so
+           * the feed and the product page know they are siblings.
            */
-          const data = await authedFetch(`/seller/products/${copyFromId}`);
-          const source = data.product || data;
+          const source = await load(copyFromId);
           if (cancelled) return;
           setForm({
             ...EMPTY,
@@ -136,17 +149,15 @@ export default function ProductForm({ productId, copyFromId }) {
             size: '',
             stock: '',
             sku: '',
-            // The group is the source's own, or the source itself if it is the
-            // first of its kind. Either way both rows end up carrying it.
             variantGroupId: source.variantGroupId || String(source._id),
           });
+          setPhotos((source.images || []).map((src) => ({ src, kind: 'existing' })));
         }
         setState({ status: 'idle' });
       } catch (err) {
         if (!cancelled) setState({ status: 'error', message: err.message });
       }
     })();
-
     return () => {
       cancelled = true;
     };
@@ -154,60 +165,8 @@ export default function ProductForm({ productId, copyFromId }) {
 
   const set = (key) => (e) =>
     setForm({ ...form, [key]: e.target.type === 'checkbox' ? e.target.checked : e.target.value });
+  const setValue = (key) => (value) => setForm((f) => ({ ...f, [key]: value }));
 
-  const addImages = async (e) => {
-    const files = Array.from(e.target.files || []);
-    const room = MAX_IMAGES - images.length - (form.images?.length || 0);
-
-    if (files.length > room) {
-      setState({ status: 'error', message: `Five photographs at most - room for ${room} more.` });
-      return;
-    }
-
-    const tooBig = files.find((f) => f.size > MAX_FILE_MB * 1024 * 1024);
-    if (tooBig) {
-      // Said before the upload rather than after it fails. A phone photograph
-      // is often 6-8 MB straight from the camera.
-      setState({
-        status: 'error',
-        message: `${tooBig.name} is over ${MAX_FILE_MB}MB. Shrink it and try again.`,
-      });
-      return;
-    }
-
-    try {
-      const encoded = await Promise.all(files.map(readAsDataUrl));
-      setImages([...images, ...encoded]);
-      setState({ status: 'idle' });
-    } catch (err) {
-      setState({ status: 'error', message: err.message });
-    }
-  };
-
-  /* Every photo the product has or is about to have, saved ones first. */
-  const photos = [
-    ...(form.images || []).map((src) => ({ src, kind: 'existing' })),
-    ...images.map((src) => ({ src, kind: 'new' })),
-  ];
-
-  const acceptAiPhoto = (url, { asFirst }) => {
-    const existing = form.images || [];
-    setForm({ ...form, images: asFirst ? [url, ...existing] : [...existing, url] });
-  };
-
-  const removePhoto = (photo) => {
-    if (photo.kind === 'existing') {
-      setForm({ ...form, images: (form.images || []).filter((u) => u !== photo.src) });
-    } else {
-      setImages(images.filter((u) => u !== photo.src));
-    }
-  };
-
-  /*
-   * Ask the model to fill the form from the first photo and whatever has been
-   * typed so far. Every field it returns REPLACES the current value - this is
-   * a draft to edit, and the button is pressed deliberately.
-   */
   const writeForMe = async () => {
     setAi({ status: 'writing' });
     try {
@@ -241,10 +200,10 @@ export default function ProductForm({ productId, copyFromId }) {
 
   const submit = async (e) => {
     e.preventDefault();
+    if (photos.length === 0) return setState({ status: 'error', message: 'Add at least one photograph.' });
+    if (!form.category) return setState({ status: 'error', message: 'Choose a category.' });
     setState({ status: 'saving' });
 
-    // Numbers as numbers. Sending "499" as a string works today because
-    // Mongoose casts it, and stops working the day a validator compares it.
     const body = {
       ...form,
       price: Number(form.price),
@@ -254,13 +213,8 @@ export default function ProductForm({ productId, copyFromId }) {
       weight: form.weight === '' ? undefined : Number(form.weight),
       size: form.size || undefined,
       variantGroupId: form.variantGroupId || undefined,
-      /*
-       * Saved photos (URLs) and new ones (base64) go together, in order. The
-       * server keeps URLs that are ours and uploads the rest. Sending only the
-       * new ones - which is what this did - REPLACED the saved photos with
-       * them on every edit that added a picture.
-       */
-      images: [...(form.images || []), ...images],
+      // In display order. The server keeps URLs that are ours and uploads the rest.
+      images: photos.map((p) => p.src),
     };
 
     try {
@@ -268,14 +222,6 @@ export default function ProductForm({ productId, copyFromId }) {
         await authedFetch(`/seller/products/${productId}`, { method: 'PATCH', body });
       } else {
         await authedFetch('/seller/products', { method: 'POST', body });
-
-        /*
-         * The first product of a style does not know it is part of a group
-         * until a second size exists. So when a copy is saved, the original is
-         * given the same group id - otherwise the feed carries an
-         * item_group_id on one row only, which tells Google there are siblings
-         * it will never find.
-         */
         if (copyFromId && body.variantGroupId) {
           await authedFetch(`/seller/products/${copyFromId}`, {
             method: 'PATCH',
@@ -286,327 +232,226 @@ export default function ProductForm({ productId, copyFromId }) {
       router.push('/seller/products');
       router.refresh();
     } catch (err) {
-      // The server's own words - "Selling price cannot be above the MRP" is
-      // something a seller can fix in ten seconds.
       setState({ status: 'error', message: err.message });
     }
   };
 
   if (state.status === 'loading') return <p className="text-muted-foreground">Loading…</p>;
 
-  const field =
-    'mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring';
-  const label = 'text-sm font-medium';
+  const errorLine = (message) => setState((s) => ({ ...s, status: message ? 'error' : 'idle', message }));
 
   return (
-    <form onSubmit={submit} className="max-w-2xl space-y-6">
+    <form onSubmit={submit} className="max-w-3xl space-y-5">
       {copyFromId && (
-        <p className="rounded-xl border border-border bg-muted/40 p-3 text-sm text-muted-foreground">
-          Another size of an existing product. Everything is copied except the
-          size, the stock and your item code - and both sizes are shown together
-          on one page.
+        <p className="rounded-xl border bg-muted/40 p-3 text-sm text-muted-foreground">
+          Another size of an existing product. Everything is copied except the size, the stock and
+          your item code - and both sizes are shown together on one page.
         </p>
       )}
 
-      <section className="space-y-3 rounded-xl border border-border p-4">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h2 className="font-semibold">Photographs</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Up to five. The first one shows in search and on the card. A phone
-              photo is fine to start with - <strong>Improve</strong> under any photo
-              puts it on a white background, shows it in use, or makes the scene you
-              describe.
-            </p>
-          </div>
-          {usage && (
-            <p className="shrink-0 text-right text-xs text-muted-foreground">
-              AI today
+      {/* 1. MEDIA */}
+      <Card
+        title="Photographs"
+        lead="Up to five. The first is the main photo - it shows on the card and in search, and a white background works best there."
+        aside={
+          usage && (
+            <p className="shrink-0 rounded-lg bg-muted px-2.5 py-1.5 text-right text-xs leading-tight text-muted-foreground">
+              <span className="font-medium text-foreground">AI today</span>
               <br />
               {usage.remaining.images} photos · {usage.remaining.premiumImages} premium
               <br />
               {usage.remaining.texts} drafts
             </p>
-          )}
-        </div>
-
-        <Input type="file" accept="image/*" multiple onChange={addImages} className="text-sm" />
-
-        <AiPhotoTools
+          )
+        }
+      >
+        <MediaManager
           photos={photos}
+          onChange={setPhotos}
           productName={form.name || 'product'}
-          onAccept={acceptAiPhoto}
-          onRemove={removePhoto}
           onUsage={setUsage}
+          onError={errorLine}
         />
-      </section>
+      </Card>
 
-      <section className="space-y-3 rounded-xl border border-primary/30 bg-primary/5 p-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 className="flex items-center gap-2 font-semibold">
-              <Sparkles className="size-4 text-brand-ink" />
-              Let AI write the listing
-            </h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              From the first photo and a few words. Everything it fills in is a
-              draft - read it, change what is wrong, then save.
-            </p>
-          </div>
+      {/* 2. WORDS */}
+      <Card
+        title="Title and description"
+        aside={
           <Button
             type="button"
+            variant="outline"
             onClick={writeForMe}
             disabled={ai.status === 'writing' || (photos.length === 0 && !form.name)}
+            className="shrink-0 border-primary/40 text-brand-ink hover:bg-primary/5"
           >
             {ai.status === 'writing' ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
             {ai.status === 'writing' ? 'Writing…' : 'Write it for me'}
           </Button>
-        </div>
-        <Input
-          value={keywords}
-          onChange={(e) => setKeywords(e.target.value)}
-          placeholder="A few words help: kundan, bridal, green stone · or: cotton kurti, block print, summer"
-          className="text-sm"
-        />
-        {ai.status === 'done' && (
-          <p className="text-sm text-brand-ink">
-            Filled in. Check the name, description and category before saving.
-            {ai.warnings?.length > 0 && (
-              <span className="block text-muted-foreground">{ai.warnings.join(' ')}</span>
-            )}
-          </p>
-        )}
-        {ai.status === 'error' && <p className="text-sm text-destructive">{ai.message}</p>}
-      </section>
-
-      <section className="space-y-4 rounded-xl border border-border p-4">
-        <div>
-          <label htmlFor="name" className={label}>
-            Name
-          </label>
-          <Input id="name" required value={form.name} onChange={set('name')} className="mt-1" />
-          <p className="mt-1 text-xs text-muted-foreground">
-            Write the colour into it if there is one - &ldquo;Rose Gold Pearl Ring&rdquo;.
-            It is the first thing a shopper reads and the first thing Google
-            matches.
-          </p>
-        </div>
-
-        <div>
-          <label htmlFor="description" className={label}>
-            Description
-          </label>
-          <Textarea
-            id="description"
-            required
-            rows={5}
-            value={form.description}
-            onChange={set('description')}
-            className="mt-1"
+        }
+      >
+        <div className="rounded-lg border border-primary/20 bg-primary/5 p-3">
+          <Label htmlFor="keywords" className="text-xs text-muted-foreground">
+            A few words for the AI (optional) - it reads the first photo too
+          </Label>
+          <Input
+            id="keywords"
+            value={keywords}
+            onChange={(e) => setKeywords(e.target.value)}
+            placeholder="kundan, bridal, green stone · or: cotton kurti, block print, summer"
+            className="mt-1.5 bg-background"
           />
-          <p className="mt-1 text-xs text-muted-foreground">
-            Plain words. Markup is refused by the server - it is how one seller
-            could otherwise run code in a shopper&rsquo;s browser.
-          </p>
+          {ai.status === 'done' && (
+            <p className="mt-2 text-sm text-brand-ink">
+              Filled in below. Read it, change what is wrong, then save.
+              {ai.warnings?.length > 0 && (
+                <span className="block text-muted-foreground">{ai.warnings.join(' ')}</span>
+              )}
+            </p>
+          )}
+          {ai.status === 'error' && <p className="mt-2 text-sm text-destructive">{ai.message}</p>}
         </div>
 
-        <div>
-          <label htmlFor="category" className={label}>
-            Category
-          </label>
-          <select
-            id="category"
-            required
-            value={form.category}
-            onChange={set('category')}
-            className="mt-1"
+        <Field
+          id="name"
+          label="Title"
+          hint="Put the colour in it if there is one - “Rose Gold Pearl Ring”. It is the first thing a shopper reads and the first thing Google matches."
+        >
+          <Input id="name" required value={form.name} onChange={set('name')} className="h-10" />
+        </Field>
+
+        <Field
+          id="description"
+          label="Description"
+          hint="Two or three short paragraphs. What it is, what it goes with, when to wear or use it. Bullets for the details."
+        >
+          <RichTextEditor
+            id="description"
+            value={form.description}
+            onChange={setValue('description')}
+            placeholder="Describe it the way you would to a customer standing in front of you…"
+          />
+        </Field>
+      </Card>
+
+      {/* 3. ORGANISATION */}
+      <Card title="Category">
+        <Field id="category" label="Where it sits in the shop" hint="Type to search. Shoppers browse by these, and Google reads them.">
+          <CategoryPicker id="category" options={categories} value={form.category} onChange={setValue('category')} />
+        </Field>
+      </Card>
+
+      {/* 4. PRICING & INVENTORY */}
+      <Card title="Price and stock">
+        <div className="grid gap-5 sm:grid-cols-3">
+          <Field id="price" label="Selling price (₹)">
+            <Input id="price" required inputMode="numeric" value={form.price} onChange={set('price')} className="h-10" />
+          </Field>
+          <Field
+            id="mrp"
+            label="MRP (₹)"
+            hint="The price printed on the pack - legally the most it may be sold for, not a bigger number to flatter the discount."
           >
-            <option value="">Choose one</option>
-            {categories.map((cat) => (
-              <option key={cat._id} value={cat._id}>
-                {cat.label}
-              </option>
-            ))}
-          </select>
-        </div>
-      </section>
-
-      <section className="space-y-4 rounded-xl border border-border p-4">
-        <h2 className="font-semibold">Price and stock</h2>
-
-        <div className="grid gap-4 sm:grid-cols-3">
-          <div>
-            <label htmlFor="price" className={label}>
-              Selling price (₹)
-            </label>
-            <Input
-              id="price"
-              required
-              inputMode="numeric"
-              value={form.price}
-              onChange={set('price')}
-              className="mt-1"
-            />
-          </div>
-          <div>
-            <label htmlFor="mrp" className={label}>
-              MRP (₹)
-            </label>
-            <Input id="mrp" inputMode="numeric" value={form.mrp ?? ''} onChange={set('mrp')} className="mt-1" />
-            <p className="mt-1 text-xs text-muted-foreground">
-              The price printed on the pack. Legally the most it may be sold
-              for - not a bigger number to make the discount look better.
-            </p>
-          </div>
-          <div>
-            <label htmlFor="stock" className={label}>
-              How many
-            </label>
-            <Input
-              id="stock"
-              required
-              inputMode="numeric"
-              value={form.stock}
-              onChange={set('stock')}
-              className="mt-1"
-            />
-          </div>
+            <Input id="mrp" inputMode="numeric" value={form.mrp ?? ''} onChange={set('mrp')} className="h-10" />
+          </Field>
+          <Field id="stock" label="How many">
+            <Input id="stock" required inputMode="numeric" value={form.stock} onChange={set('stock')} className="h-10" />
+          </Field>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-3">
-          <div>
-            <label htmlFor="weight" className={label}>
-              Parcel weight (kg)
-            </label>
-            <Input
-              id="weight"
-              inputMode="decimal"
-              value={form.weight ?? ''}
-              onChange={set('weight')}
-              className="mt-1"
-            />
-            <p className="mt-1 text-xs text-muted-foreground">
-              The courier is quoted on this. Guessing low costs you the
-              difference at the door.
-            </p>
-          </div>
-          <div>
-            <label htmlFor="lowStockThreshold" className={label}>
-              Warn me at
-            </label>
+        <div className="grid gap-5 sm:grid-cols-3">
+          <Field id="weight" label="Parcel weight (kg)" hint="The courier is quoted on this. Guessing low costs you the difference at the door.">
+            <Input id="weight" inputMode="decimal" value={form.weight ?? ''} onChange={set('weight')} className="h-10" />
+          </Field>
+          <Field id="lowStockThreshold" label="Warn me at">
             <Input
               id="lowStockThreshold"
               inputMode="numeric"
               value={form.lowStockThreshold ?? 10}
               onChange={set('lowStockThreshold')}
-              className="mt-1"
+              className="h-10"
             />
-          </div>
-          <div className="flex items-end">
+          </Field>
+          <div className="flex items-end pb-1">
             <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={Boolean(form.freeShipping)} onChange={set('freeShipping')} />
+              <input
+                type="checkbox"
+                checked={Boolean(form.freeShipping)}
+                onChange={set('freeShipping')}
+                className="size-4 accent-primary"
+              />
               I pay the delivery
             </label>
           </div>
         </div>
-      </section>
+      </Card>
 
-      <section className="space-y-4 rounded-xl border border-border p-4">
-        <h2 className="font-semibold">What Google needs</h2>
-        <p className="text-sm text-muted-foreground">
-          These three decide whether the product appears in Google Shopping for
-          free. Leave the colour blank and it sits in &ldquo;Under review&rdquo; instead -
-          which looks exactly like nothing happening.
-        </p>
+      {/* 5. DETAILS THE CHANNELS NEED */}
+      <Card
+        title="Details"
+        lead="Colour, who it is for and the age group decide whether it appears in Google Shopping for free. Leave colour empty and it sits in “Under review” instead."
+      >
+        <div className="grid gap-5 sm:grid-cols-2">
+          <Field id="color" label="Colour">
+            <Input id="color" value={form.color ?? ''} onChange={set('color')} placeholder="Rose Gold" className="h-10" />
+          </Field>
+          <Field
+            id="size"
+            label="Size"
+            hint="Clothing and shoes only - Google requires it for those. Write what is on the label (“M”, “38”). Leave empty for jewellery."
+          >
+            <Input id="size" value={form.size ?? ''} onChange={set('size')} placeholder="M" className="h-10" />
+          </Field>
 
-        <div className="grid gap-4 sm:grid-cols-3">
-          <div>
-            <label htmlFor="size" className={label}>
-              Size
-            </label>
-            <Input
-              id="size"
-              value={form.size ?? ''}
-              onChange={set('size')}
-              placeholder="M"
-              className="mt-1"
-            />
-            <p className="mt-1 text-xs text-muted-foreground">
-              Clothing and shoes only, and Google REQUIRES it for those - without
-              it they are disapproved. Write what is on the label (&ldquo;M&rdquo;,
-              &ldquo;38&rdquo;), never an internal code. Leave it empty for
-              jewellery.
-            </p>
-          </div>
+          <Field id="gender" label="Made for">
+            <Select items={GENDERS} value={form.gender ?? 'female'} onValueChange={setValue('gender')}>
+              <SelectTrigger id="gender" className="h-10 w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(GENDERS).map(([v, l]) => (
+                  <SelectItem key={v} value={v}>
+                    {l}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Field>
+          <Field id="ageGroup" label="Age group">
+            <Select items={AGES} value={form.ageGroup ?? 'adult'} onValueChange={setValue('ageGroup')}>
+              <SelectTrigger id="ageGroup" className="h-10 w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(AGES).map(([v, l]) => (
+                  <SelectItem key={v} value={v}>
+                    {l}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Field>
 
-          <div>
-            <label htmlFor="color" className={label}>
-              Colour
-            </label>
-            <Input
-              id="color"
-              value={form.color ?? ''}
-              onChange={set('color')}
-              placeholder="Rose Gold"
-              className="mt-1"
-            />
-          </div>
-          <div>
-            <label htmlFor="gender" className={label}>
-              Made for
-            </label>
-            <select id="gender" value={form.gender ?? 'female'} onChange={set('gender')} className="mt-1">
-              <option value="female">Women</option>
-              <option value="male">Men</option>
-              <option value="unisex">Anyone</option>
-            </select>
-          </div>
-          <div>
-            <label htmlFor="ageGroup" className={label}>
-              Age group
-            </label>
-            <select id="ageGroup" value={form.ageGroup ?? 'adult'} onChange={set('ageGroup')} className="mt-1">
-              <option value="adult">Adult</option>
-              <option value="kids">Kids</option>
-              <option value="toddler">Toddler</option>
-              <option value="infant">Infant</option>
-              <option value="newborn">Newborn</option>
-            </select>
-          </div>
+          <Field id="brand" label="Brand" hint="Optional. Leave it empty if there is no brand on the product.">
+            <Input id="brand" value={form.brand ?? ''} onChange={set('brand')} className="h-10" />
+          </Field>
+          <Field id="sku" label="Your own item code" hint="Whatever you use in your own stock book.">
+            <Input id="sku" value={form.sku ?? ''} onChange={set('sku')} className="h-10" />
+          </Field>
         </div>
+      </Card>
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div>
-            <label htmlFor="brand" className={label}>
-              Brand
-            </label>
-            <Input id="brand" value={form.brand ?? ''} onChange={set('brand')} className="mt-1" />
-          </div>
-          <div>
-            <label htmlFor="sku" className={label}>
-              Your own item code
-            </label>
-            <Input id="sku" value={form.sku ?? ''} onChange={set('sku')} className="mt-1" />
-          </div>
-        </div>
-      </section>
-
-      <div className="flex items-center gap-3">
-        <Button
-          type="submit"
-          disabled={state.status === 'saving'}>
+      <div className="sticky bottom-0 z-10 -mx-1 flex items-center gap-3 border-t bg-background/95 px-1 py-3 backdrop-blur">
+        <Button type="submit" disabled={state.status === 'saving'} size="lg">
           {state.status === 'saving' ? 'Saving…' : productId ? 'Save changes' : 'List it'}
         </Button>
-        <Button
-          type="button"
-          onClick={() => router.push('/seller/products')} variant="ghost" size="sm">
+        <Button type="button" onClick={() => router.push('/seller/products')} variant="ghost">
           Cancel
         </Button>
+        <p aria-live="polite" className="text-sm">
+          {state.status === 'error' && <span className="text-destructive">{state.message}</span>}
+        </p>
       </div>
-
-      <p aria-live="polite" className="min-h-5 text-sm">
-        {state.status === 'error' && <span className="text-destructive">{state.message}</span>}
-      </p>
     </form>
   );
 }
