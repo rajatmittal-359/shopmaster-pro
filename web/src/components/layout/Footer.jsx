@@ -19,10 +19,9 @@ export default function Footer() {
         <div>
           {/* The mark, at the other end of the page from the header's. A brand
               that appears once looks like a label; twice, it looks like the
-              site belongs to somebody. `idPrefix` because the header's copy has
-              already claimed the gradient ids on this page. */}
+              site belongs to somebody. */}
           <p className="flex items-center gap-2 font-semibold">
-            <TileMark idPrefix="footer" className="size-6 shrink-0" />
+            <TileMark size={48} className="size-6 shrink-0" />
             {BUSINESS.tradeName}
           </p>
           <p className="mt-1 text-muted-foreground">

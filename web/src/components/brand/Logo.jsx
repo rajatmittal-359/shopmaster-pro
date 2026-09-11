@@ -1,10 +1,24 @@
+import Image from 'next/image';
+
 /**
  * The ShopMaster Pro mark.
  *
  * WHAT IT IS
  *   A jharokha - the arched window that overhangs the front of almost every old
  *   building in Jaipur, and the thing Hawa Mahal is made of, five storeys of
- *   them - lit from inside, on a deep violet tile.
+ *   them - carved sandstone, lit pink from inside, on a tile that runs the
+ *   brand gradient: Jaipur pink into royal violet into royal blue.
+ *
+ * HOW IT WAS MADE
+ *   Rendered by gpt-image-2 through Pollinations on 11 Sep 2026, from a prompt
+ *   written for a MARK - no text, dark ground, legible at 32px, palette by hex.
+ *   Six drafts, two concepts each; this was `jharokha-2`. The prompt and the
+ *   export pipeline live in scripts/brand/, so it can be regenerated or
+ *   re-exported at any size without anyone redrawing it.
+ *
+ *   The hand-drawn SVG jharokha below (LogoMark) is kept as the FLAT version -
+ *   one colour, for invoices, courier labels and anywhere a photograph cannot
+ *   go. Same window, same proportions, so the two read as one brand.
  *
  * WHY A JHAROKHA
  *   The brief was to connect the mark to Jaipur and to India without it looking
@@ -54,86 +68,27 @@ const ARCH = 'M15 50 L15 29 Q15 15 32 9 Q49 15 49 29 L49 50 Z';
 const LEDGE = 'M11 50 H53 A1.9 1.9 0 0 1 53 53.8 H11 A1.9 1.9 0 0 1 11 50 Z';
 
 /**
- * `idPrefix` exists because SVG gradients are referenced by id, and ids are
- * global to the document. Two marks on one page would otherwise declare the
- * same ids twice. Pass a prefix for the second one.
+ * The rendered tile, as a picture.
+ *
+ * `next/image` with fixed dimensions so the header never shifts while it loads,
+ * and `priority` because it is in the first paint of every page. The 512px
+ * master is served resized by Next, so a 32px header costs a 32px file.
+ *
+ * `idPrefix` is accepted and ignored: callers from the SVG era still pass it,
+ * and a picture has no gradient ids to collide.
  */
-export function TileMark({ className = '', idPrefix = 'smp', ...props }) {
-  const id = (name) => `${idPrefix}-${name}`;
-
+export function TileMark({ className = '', size = 32, priority = false, ...props }) {
+  const { idPrefix: _ignored, ...rest } = props;
   return (
-    <svg viewBox="0 0 64 64" role="img" aria-label="ShopMaster Pro" className={className} {...props}>
-      <defs>
-        {/* The tile: deep violet into indigo. Dark on purpose - a pale tile
-            leaves the pink nothing to glow against. */}
-        <linearGradient id={id('tile')} x1="6" y1="2" x2="58" y2="62" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#5B21B6" />
-          <stop offset="0.55" stopColor="#3B1F87" />
-          <stop offset="1" stopColor="#221459" />
-        </linearGradient>
-
-        {/* One soft light in the top-left corner. It is what stops a flat
-            rectangle from looking like a flat rectangle. */}
-        <radialGradient
-          id={id('sheen')}
-          cx="0"
-          cy="0"
-          r="1"
-          gradientUnits="userSpaceOnUse"
-          gradientTransform="translate(16 8) rotate(52) scale(46)"
-        >
-          <stop stopColor="#C4B5FD" stopOpacity="0.45" />
-          <stop offset="1" stopColor="#C4B5FD" stopOpacity="0" />
-        </radialGradient>
-
-        {/* The lit opening: Jaipur pink falling to terracotta, brightest at the
-            top where the light would come from. */}
-        <linearGradient
-          id={id('glow')}
-          x1="32"
-          y1="10"
-          x2="32"
-          y2="50"
-          gradientUnits="userSpaceOnUse"
-        >
-          <stop stopColor="#FFE4EE" />
-          <stop offset="0.45" stopColor="#F9A8C8" />
-          <stop offset="1" stopColor="#E8734F" />
-        </linearGradient>
-      </defs>
-
-      <rect x="2" y="2" width="60" height="60" rx="17" fill={`url(#${id('tile')})`} />
-      <rect x="2" y="2" width="60" height="60" rx="17" fill={`url(#${id('sheen')})`} />
-
-      {/*
-       * The frame: the same arch, very slightly larger, behind the lit one.
-       * That hairline is what makes the opening read as SET INTO the wall
-       * rather than painted onto it.
-       */}
-      <path
-        d={ARCH}
-        transform="translate(32 31) scale(1.09) translate(-32 -31)"
-        fill="#EDE9FE"
-        fillOpacity="0.2"
-      />
-      <path d={ARCH} fill={`url(#${id('glow')})`} />
-
-      {/*
-       * Two mullions. A jharokha is a SCREEN, not a hole - the verticals are
-       * what stop this reading as a plain arch. Drawn in the tile's own colour
-       * so that at favicon size they close up and vanish rather than turning
-       * into noise.
-       */}
-      <path
-        d="M26.5 50 V20.5 M37.5 50 V20.5"
-        stroke="#3B1F87"
-        strokeOpacity="0.42"
-        strokeWidth="1.7"
-        strokeLinecap="round"
-      />
-
-      <path d={LEDGE} fill="#F5F3FF" fillOpacity="0.95" />
-    </svg>
+    <Image
+      src="/brand/mark-512.png"
+      alt="ShopMaster Pro"
+      width={size}
+      height={size}
+      priority={priority}
+      className={className}
+      {...rest}
+    />
   );
 }
 
@@ -162,10 +117,10 @@ export function LogoMark({ className = '', ...props }) {
  * wordmark that flashes on a slow connection, and most of this shop's visitors
  * are on 4G.
  */
-export default function Logo({ className = '', markClassName = '', idPrefix = 'smp' }) {
+export default function Logo({ className = '', markClassName = '' }) {
   return (
     <span className={`inline-flex items-center gap-2.5 ${className}`}>
-      <TileMark idPrefix={idPrefix} className={`h-8 w-8 shrink-0 ${markClassName}`} />
+      <TileMark size={64} priority className={`h-8 w-8 shrink-0 ${markClassName}`} />
       <span className="text-[17px] font-semibold leading-none tracking-tight">
         ShopMaster
         <span className="ml-1 font-medium text-brand-ink">Pro</span>

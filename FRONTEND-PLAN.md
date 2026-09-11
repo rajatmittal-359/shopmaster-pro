@@ -715,12 +715,19 @@ turns muddy. `--brand-rose` exists as the one warm accent. The dark ground took
 a violet cast (Lawrencium's lesson): a little chroma in the background is what
 makes the gradient look like it belongs on it rather than pasted over grey.
 
-**The logo is still open.** Rajat wants it generated with Gemini. The key on
-file is free-tier, and image generation has NO free-tier allotment (the quota
-comes back as `none`, which is an absence, not a rate limit). Billing has to be
-linked to the project first. `web/scripts/brand/generate-logo.mjs` is ready:
-five concepts, prompt written for a MARK (no text, dark ground, legible at
-32px, palette by hex), output to a gitignored drafts folder.
+**The logo, resolved the same evening.** Gemini image generation has no
+free-tier allotment and Google Cloud refused Rajat's HDFC debit card (Indian
+debit cards and recurring international billing). Pollinations' gateway offers
+`gpt-image-2` on a registered free key - GitHub sign-in, no card - and its
+daily Pollen grant covered seven renders before running dry, with no charge
+possible because no payment method exists. Six drafts across three concepts;
+`jharokha-2` won: a carved sandstone jharokha lit pink from inside on the brand
+gradient tile. `scripts/brand/export-mark.mjs` crops the tile out of the
+render, cuts the corners at the iOS squircle radius, and writes every size the
+site needs (512/192/64 in `public/brand/`, plus `icon.png` and
+`apple-icon.png`). The hand-drawn SVG jharokha stays as the flat mark for
+invoices and labels. `hawa-mahal-bag-2` - a 3D bag whose top is three jharokhas
+- is kept in `public/brand/` as an illustration for the seller page.
 
 ---
 

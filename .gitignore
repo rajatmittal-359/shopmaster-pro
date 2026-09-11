@@ -67,3 +67,5 @@ backend/drafted-descriptions.json
 # one session, not part of the project.
 *.png
 !web/public/**/*.png
+!web/src/app/icon.png
+!web/src/app/apple-icon.png
