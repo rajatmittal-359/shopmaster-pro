@@ -1340,7 +1340,9 @@ Updated as it moves. The order is section 7's.
 | 5 | `/shop` | ✅ Filters, server-side sort, removable chips, numbered pages, a real empty state. Filtered views carry `noindex, follow` |
 | 6 | `/` | ✅ Hero with a CSS-only effect, categories from the live tree, newest products, the shop's real address, and the Organization record |
 | 7 | Port the 30 private routes | ✅ **Done.** Customer, seller and admin - 36 pages, every React route mapped. See section 13a |
-| 8 | Cutover - see section 12 | ☐ Blocked until Oct 2026 (payment) |
+| 7a | Backend the interface needed | ✅ Google Sign-In, role-as-capability, become-a-seller, public seller pages, verified-buyer review check - all built and tested (sections 8.0, 9.0) |
+| 7b | Things the React app never had | ✅ Search with suggestions (4.11), mobile drawer (4.6), panel sidebars (4.12), dark mode + new palette + jharokha mark (4.7, 4.9, 4.14), loading states (4.13), AI listing and photo tools for sellers (4.16), product form to the Shopify/Amazon standard |
+| 8 | Cutover - see section 12 | ☐ **The only thing left.** Blocked until Oct 2026 (paid Render web service). Production still serves the React app; `web/` runs on localhost only |
 
 **Owed on the product page, and deliberately not faked:**
 
@@ -1348,14 +1350,16 @@ Updated as it moves. The order is section 7's.
   no such field. Rather than print a badge that means nothing, the reviews show
   name, date, rating and text only. Adding the flag is backend work: set it when
   the reviewer has a delivered order containing that product.
-- **"Sign in to add to cart" points at `/login`, which does not exist yet.** It
-  arrives with step 7. Nothing is live on the domain until step 8, so no
-  customer can reach the dead link.
 - **No image showing a piece worn, and no dimension slide.** Both are Baymard
   findings worth acting on and both need photography, not code.
 
-Backend work that the interface needs but that ships separately (section 7a):
-Google Sign-In, role-as-capability, seller onboarding. None started.
+Backend work that the interface needed (section 7a) - Google Sign-In,
+role-as-capability, seller onboarding - is done; see the table above.
+
+**Still open, and Rajat's call:** the seller RTO/performance page (when), a
+buyer-protection line on the product page (copy), buyer-seller messaging
+(large; later). The verified-purchase badge is a small backend flag and can be
+done any time.
 
 ---
 
