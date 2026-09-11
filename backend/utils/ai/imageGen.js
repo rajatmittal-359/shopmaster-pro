@@ -26,7 +26,6 @@
  *
  *     clean      same product, pure white studio background
  *     lifestyle  same product, shown in use
- *     angle      same product, another view
  *     custom     same product, in whatever scene the seller describes -
  *                "a model wearing these jhumkas, side profile, soft light".
  *                Their words go AFTER the keep-the-product rule, never
@@ -72,10 +71,6 @@ const EDIT_PROMPTS = {
     `${KEEP}Show the ${name} in natural use in a tasteful real-life setting appropriate to what it is, ` +
     `photographed like a premium Indian lifestyle brand: soft daylight, shallow depth of field, ` +
     `warm neutral tones, nothing that competes with the product.`,
-  angle: (name) =>
-    `${KEEP}Photograph the same ${name} from a different angle - a three-quarter view - ` +
-    `on the same clean white studio background, same lighting, so it can sit beside the original ` +
-    `as a second listing photo.`,
   /*
    * The seller's own idea. Their words are appended, never substituted: the
    * rule that the product must not change is ours and comes first, and a
@@ -134,7 +129,7 @@ const CHAINS = {
 };
 
 const TIERS = Object.keys(CHAINS.generate);
-const MODES = ['clean', 'lifestyle', 'angle', 'custom', 'generate'];
+const MODES = ['clean', 'lifestyle', 'custom', 'generate'];
 
 /* ------------------------------------------------------------------------ */
 /* Reference handling                                                       */

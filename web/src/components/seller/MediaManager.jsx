@@ -45,10 +45,20 @@ import PhotoCropper from '@/components/seller/PhotoCropper';
  */
 const MAX = 5;
 
+/*
+ * Three, and each one traced to a platform that offers it (12 Sep 2026):
+ *   White background  Shopify Magic's remove-background; Amazon's main-image
+ *                     rule; Meesho-side tools like SellerShip
+ *   Show it in use    Amazon Seller Central's own "lifestyle scene" generator;
+ *                     Studiofy / Seller7 for Meesho and Flipkart sellers
+ *   Describe          Shopify Magic's text-prompted background ("in a sunny
+ *                     park, bench under a tree")
+ * "Another angle" was here too, and was nobody's - it came from a guess, not
+ * a reference, and was removed for exactly that reason.
+ */
 const AI_MODES = [
   { key: 'clean', label: 'White background', hint: 'Listing-ready studio shot' },
   { key: 'lifestyle', label: 'Show it in use', hint: 'On a person, a table, a bed' },
-  { key: 'angle', label: 'Another angle', hint: 'A second view for the gallery' },
 ];
 
 /**

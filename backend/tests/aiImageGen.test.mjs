@@ -94,7 +94,7 @@ describe('the standard edit chain', () => {
   it('fetches the reference once, even when two Cloudflare steps run', async () => {
     let fetched = 0;
     await runImage(
-      { mode: 'angle', tier: 'premium', imageUrl: CLOUDINARY },
+      { mode: 'lifestyle', tier: 'premium', imageUrl: CLOUDINARY },
       deps({
         pollinations: refuse('pollinations', 'quota'),
         fetchReference: async () => {
