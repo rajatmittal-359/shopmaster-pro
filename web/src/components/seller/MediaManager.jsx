@@ -44,7 +44,6 @@ import PhotoCropper from '@/components/seller/PhotoCropper';
  *   remove it themselves. That is the human in the loop.
  */
 const MAX = 5;
-const MAX_MB = 5;
 
 const AI_MODES = [
   { key: 'clean', label: 'White background', hint: 'Listing-ready studio shot' },
@@ -52,16 +51,55 @@ const AI_MODES = [
   { key: 'angle', label: 'Another angle', hint: 'A second view for the gallery' },
 ];
 
-const readAsDataUrl = (file) =>
+/**
+ * A phone photograph straight from the camera is 6-12 MB and 4000px on a
+ * side. The server takes 5 MB and the card shows 400px. So instead of telling
+ * the seller "too big, shrink it and try again" - which is where a lot of
+ * sellers stop - the browser shrinks it here: longest side 2000px, JPEG at
+ * 0.88. That is more than any card, gallery or feed will ever ask for, and it
+ * turns a 9 MB photo into about 600 KB before it goes anywhere.
+ *
+ * PNGs with transparency come out on white, which is what a listing wants.
+ */
+const MAX_SIDE = 2000;
+const HARD_LIMIT_MB = 40; // beyond this it is not a photo, it is a mistake
+
+const prepareImage = (file) =>
   new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = () => reject(new Error(`Could not read ${file.name}`));
-    reader.readAsDataURL(file);
+    const url = URL.createObjectURL(file);
+    const img = new window.Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const scale = Math.min(1, MAX_SIDE / Math.max(img.naturalWidth, img.naturalHeight));
+      const w = Math.round(img.naturalWidth * scale);
+      const h = Math.round(img.naturalHeight * scale);
+      const c = document.createElement('canvas');
+      c.width = w;
+      c.height = h;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, w, h);
+      ctx.drawImage(img, 0, 0, w, h);
+      resolve(c.toDataURL('image/jpeg', 0.88));
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error(`${file.name} could not be read as a photo.`));
+    };
+    img.src = url;
   });
 
 export default function MediaManager({ photos, onChange, productName, onUsage, onError }) {
   const inputRef = useRef(null);
+  const [localError, setLocalError] = useState('');
+  const [adding, setAdding] = useState(false);
+  // Shown right here, beside the photos, AND passed up: an error about a
+  // photo that appears only in the save bar at the bottom is an error nobody
+  // sees.
+  const say = (message) => {
+    setLocalError(message);
+    onError?.(message);
+  };
   const [busy, setBusy] = useState(null); // { index, mode }
   const [preview, setPreview] = useState(null); // { fromIndex, url, tier }
   const [custom, setCustom] = useState(null); // { index, text }
@@ -72,17 +110,22 @@ export default function MediaManager({ photos, onChange, productName, onUsage, o
   const room = MAX - photos.length;
 
   const addFiles = async (fileList) => {
-    const files = Array.from(fileList || []).filter((f) => f.type.startsWith('image/'));
+    const all = Array.from(fileList || []);
+    const files = all.filter((f) => f.type.startsWith('image/'));
+    if (all.length && files.length === 0) return say('Those are not photos. JPEG, PNG or WebP.');
     if (files.length === 0) return;
-    if (files.length > room) return onError(`Five photographs at most - room for ${room} more.`);
-    const tooBig = files.find((f) => f.size > MAX_MB * 1024 * 1024);
-    if (tooBig) return onError(`${tooBig.name} is over ${MAX_MB}MB. Shrink it and try again.`);
+    if (files.length > room) return say(`Five photographs at most - room for ${room} more.`);
+    const absurd = files.find((f) => f.size > HARD_LIMIT_MB * 1024 * 1024);
+    if (absurd) return say(`${absurd.name} is over ${HARD_LIMIT_MB}MB - that is not a photo file.`);
+    setAdding(true);
     try {
-      const encoded = await Promise.all(files.map(readAsDataUrl));
+      const encoded = await Promise.all(files.map(prepareImage));
       onChange([...photos, ...encoded.map((src) => ({ src, kind: 'new' }))]);
-      onError('');
+      say('');
     } catch (err) {
-      onError(err.message);
+      say(err.message);
+    } finally {
+      setAdding(false);
     }
   };
 
@@ -143,10 +186,10 @@ export default function MediaManager({ photos, onChange, productName, onUsage, o
             over ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/60 hover:bg-accent/40'
           }`}
         >
-          <ImagePlus className="size-6 text-brand-ink" />
-          <span className="text-sm font-medium">Drop photos here, or click to choose</span>
+          {adding ? <Loader2 className="size-6 animate-spin text-brand-ink" /> : <ImagePlus className="size-6 text-brand-ink" />}
+          <span className="text-sm font-medium">{adding ? 'Preparing…' : 'Drop photos here, or click to choose'}</span>
           <span className="text-xs text-muted-foreground">
-            JPEG, PNG or WebP · up to {MAX_MB}MB each · square works best · {room} more
+            JPEG, PNG or WebP · any size, large ones are shrunk here · {room} more
           </span>
         </button>
       )}
@@ -167,12 +210,19 @@ export default function MediaManager({ photos, onChange, productName, onUsage, o
         {Array.from({ length: MAX }).map((_, i) => {
           const photo = photos[i];
           if (!photo) {
+            // An empty slot is a way in, not a placeholder - the seller asked
+            // where "add" was when the drop zone was the only door.
             return (
-              <li
-                key={`empty-${i}`}
-                className="flex aspect-square items-center justify-center rounded-lg border border-dashed text-xs text-muted-foreground"
-              >
-                {i === 0 ? 'Main' : i + 1}
+              <li key={`empty-${i}`}>
+                <button
+                  type="button"
+                  onClick={() => inputRef.current?.click()}
+                  aria-label={`Add photo ${i + 1}`}
+                  className="flex aspect-square w-full flex-col items-center justify-center gap-1 rounded-lg border border-dashed text-muted-foreground transition hover:border-primary/60 hover:bg-accent/40 hover:text-brand-ink"
+                >
+                  <ImagePlus className="size-4" />
+                  <span className="text-[11px]">{i === 0 ? 'Add main photo' : 'Add'}</span>
+                </button>
               </li>
             );
           }
@@ -280,6 +330,8 @@ export default function MediaManager({ photos, onChange, productName, onUsage, o
           );
         })}
       </ul>
+
+      {localError && <p className="text-sm text-destructive">{localError}</p>}
 
       {custom && (
         <div className="rounded-xl border bg-muted/40 p-3">
