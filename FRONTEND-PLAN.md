@@ -724,6 +724,31 @@ five concepts, prompt written for a MARK (no text, dark ground, legible at
 
 ---
 
+### 4.15 Show first, say second
+
+11 Sep 2026. Rajat: "har koi itna zyada padhne wala nahi hota - agar interest
+aata hai visually pehle, tab wo aage padhta hai."
+
+That is the finding of every home-page study, stated plainly. People do not
+arrive to read; they arrive to see whether there is anything here for them, and
+decide in a glance. Two screens were built the other way round and have been
+turned around:
+
+- **Home.** The hero was a headline, a paragraph and two buttons, with the
+  first product below the fold. Now: one line of copy, half the padding, and
+  the right half of the first screen is a wall of six live products. Category
+  tiles were a name in a box; each now carries the newest photograph in that
+  category with the name on a scrim.
+- **Sign-in.** The left panel was three short paragraphs about what an account
+  does. Now: one line and the same product wall. The three things the
+  paragraphs said are still true and still on the policy pages - they were
+  never why anybody signed in.
+
+`ProductMosaic` is shared between the two, fetches nothing itself, and every
+tile is a link: the first thing a visitor sees is the first thing they can buy.
+
+---
+
 ## 5. Structured data
 
 GIVA's markup is the reference implementation for an Indian jewellery store and

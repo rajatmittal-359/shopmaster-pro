@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { getProducts, getCategories } from '@/lib/api';
 import { serialiseJsonLd } from '@/lib/jsonLd';
 import { POLICY, BUSINESS } from '@/config/policy';
@@ -57,6 +58,19 @@ export default async function Home() {
   // empty grid is worse than one tile fewer.
   const shown = categories.filter((c) => c.productCount > 0).slice(0, 8);
 
+  /*
+   * One photograph per category tile - the newest product in it. Categories
+   * carry no image of their own, and a tile that is a name in a box is a tile
+   * nobody looks at; a tile that is a photograph is the reason the eye stops.
+   * Eight small cached calls, in parallel, on the server.
+   */
+  const covers = await Promise.all(
+    shown.map(async (cat) => {
+      const res = await getProducts({ category: cat.slug, limit: 1, sort: 'newest' });
+      return res?.products?.[0]?.images?.[0] || null;
+    })
+  );
+
   return (
     <>
       <script
@@ -64,22 +78,35 @@ export default async function Home() {
         dangerouslySetInnerHTML={{ __html: serialiseJsonLd(organisation) }}
       />
 
-      <Hero />
+      <Hero products={products} />
 
       {shown.length > 0 && (
-        <section className="mx-auto max-w-5xl px-4 py-12">
+        <section className="mx-auto max-w-5xl px-4 py-10">
           <h2 className="text-lg font-semibold">Browse by category</h2>
           <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {shown.map((cat) => (
+            {shown.map((cat, i) => (
               <Link
                 key={cat._id}
                 href={`/shop?category=${cat.slug}`}
-                className="glow-hover rounded-xl border border-border p-4 hover:border-primary hover:bg-accent"
+                className="glow-hover group relative block aspect-[4/3] overflow-hidden rounded-xl border border-border bg-muted"
               >
-                <p className="font-medium">{cat.name}</p>
-                <p className="text-sm text-muted-foreground">
-                  {cat.productCount} {cat.productCount === 1 ? 'item' : 'items'}
-                </p>
+                {covers[i] && (
+                  <Image
+                    src={covers[i]}
+                    alt=""
+                    fill
+                    sizes="(max-width: 640px) 50vw, 25vw"
+                    className="object-cover transition duration-500 group-hover:scale-105"
+                  />
+                )}
+                {/* The name sits on a gradient scrim over the bottom of the
+                    photo, so it reads on a light photo and a dark one alike. */}
+                <span className="absolute inset-x-0 bottom-0 bg-linear-to-t from-black/70 via-black/30 to-transparent p-3 pt-8 text-white">
+                  <span className="block font-medium">{cat.name}</span>
+                  <span className="block text-xs opacity-80">
+                    {cat.productCount} {cat.productCount === 1 ? 'item' : 'items'}
+                  </span>
+                </span>
               </Link>
             ))}
           </div>
@@ -87,7 +114,7 @@ export default async function Home() {
       )}
 
       {products.length > 0 && (
-        <section className="mx-auto max-w-5xl px-4 pb-12">
+        <section className="mx-auto max-w-5xl px-4 pb-10">
           <div className="flex items-baseline justify-between">
             <h2 className="text-lg font-semibold">Just added</h2>
             <Link href="/shop" className="text-sm text-brand-ink hover:underline">

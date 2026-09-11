@@ -1,6 +1,6 @@
 import Link from 'next/link';
-import { PackageCheck, RotateCcw, Store } from 'lucide-react';
-import { LogoMark } from '@/components/brand/Logo';
+import { getProducts } from '@/lib/api';
+import ProductMosaic from '@/components/home/ProductMosaic';
 
 /**
  * The frame every sign-in screen sits in.
@@ -23,45 +23,29 @@ import { LogoMark } from '@/components/brand/Logo';
  *   Below `lg` the panel is gone entirely and the card is the whole screen.
  *   A phone has no room for a second column, and the form is the job.
  *
- * WHY THE PANEL LOOKS THE WAY IT DOES
- *   Three techniques, stacked, all from the shared layer so nothing here is a
- *   one-off:
+ * WHAT IS IN THE PANEL, AND WHAT WAS
+ *   It used to be three short paragraphs about what an account does. Rajat's
+ *   objection was correct: nobody arrives at a sign-in screen to read. They
+ *   want in, fast, and what persuades them the shop is worth entering is the
+ *   GOODS, not a description of the account. So the panel is now a wall of real
+ *   product photographs from the live catalogue and one line of text. The
+ *   three things the paragraphs said are all still true, and all still on the
+ *   policy pages - they were never the reason anybody signed in.
  *
- *   - a MESH rather than a single diagonal ramp. Several radial blooms at
- *     different sizes, which is how a mesh gradient is actually built in CSS,
- *     and it gives a panel this large somewhere for the eye to travel.
- *   - GRAIN over the top. A perfectly smooth gradient is the thing that gives
- *     a screen away as a screen; film grain is what makes it read as a
- *     material.
- *   - the MARK, oversized and cropped, as the only illustration.
+ * HOW THE PANEL IS BUILT
+ *   Mesh gradient rather than a single ramp, grain over it so it reads as a
+ *   material, and the products on top. All from the shared effects layer, so
+ *   nothing here is a one-off. The stops are deliberately dark, so white text
+ *   and colourful photographs both sit on it comfortably.
  *
- *   The stops are deliberately dark. The first version was luminous violet and
- *   the panel became the loudest thing on the site; deep violet into indigo
- *   reads as expensive instead, and white text sits on it comfortably.
- *
- * THE THREE LINES ARE THINGS THIS SITE ACTUALLY DOES
- *   Real courier scans, saved addresses at checkout, a returns policy written
- *   down. Nothing here is a promise the software does not keep.
+ * WHY THIS IS async
+ *   It fetches six products. Cached for five minutes like every catalogue
+ *   call, so four sign-in screens cost one request between them.
  */
-const POINTS = [
-  {
-    icon: PackageCheck,
-    title: 'Follow every order',
-    body: 'Real courier scans and an expected delivery date, not just "shipped".',
-  },
-  {
-    icon: RotateCcw,
-    title: 'Returns you can read first',
-    body: 'The window, the refund and who pays the courier - written down before you buy.',
-  },
-  {
-    icon: Store,
-    title: 'One account buys and sells',
-    body: 'Start selling later without a second login, a second cart or a second password.',
-  },
-];
+export default async function AuthShell({ title, subtitle, children, footer = null }) {
+  const latest = await getProducts({ limit: 6, sort: 'newest' });
+  const products = latest?.products || [];
 
-export default function AuthShell({ title, subtitle, children, footer = null }) {
   return (
     // Fills the screen under the header: an auth screen that ends halfway down
     // with a strip of page below it looks unfinished, and the footer has
@@ -74,31 +58,15 @@ export default function AuthShell({ title, subtitle, children, footer = null }) 
         aria-hidden="true"
         className="mesh grain relative hidden overflow-hidden p-12 text-white lg:flex lg:flex-col lg:justify-center"
       >
-        {/* The window, oversized and bled off the corner. It is texture, not a
-            second logo - which is why it is cropped, and why it is the flat
-            silhouette rather than the tile: a second tile on the same screen
-            reads as a mistake. */}
-        <LogoMark className="pointer-events-none absolute -right-16 -bottom-28 h-96 w-96 text-white/8" />
-
-        <div className="relative max-w-md">
+        <div className="relative mx-auto w-full max-w-md">
           <p className="text-sm font-medium tracking-wide uppercase opacity-70">ShopMaster Pro</p>
-          <h2 className="mt-3 text-4xl leading-[1.1] font-semibold tracking-tight text-balance">
-            One account for everything you buy here.
+          <h2 className="mt-2 text-3xl leading-tight font-semibold tracking-tight text-balance">
+            Everything from sellers across India, delivered to your door.
           </h2>
 
-          <ul className="mt-10 space-y-7">
-            {POINTS.map(({ icon: Icon, title: heading, body }) => (
-              <li key={heading} className="flex gap-4">
-                <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full bg-white/20 ring-1 ring-white/25">
-                  <Icon className="size-4.5" strokeWidth={2} />
-                </span>
-                <div>
-                  <p className="font-medium">{heading}</p>
-                  <p className="mt-0.5 text-sm opacity-80">{body}</p>
-                </div>
-              </li>
-            ))}
-          </ul>
+          {/* The goods. Six live listings, each one a link - the first thing a
+              visitor sees is also the first thing they can buy. */}
+          <ProductMosaic products={products} className="mt-8" />
         </div>
       </aside>
 
