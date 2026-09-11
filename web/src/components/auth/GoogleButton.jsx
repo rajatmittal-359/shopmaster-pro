@@ -32,6 +32,7 @@ const CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
 export default function GoogleButton({ next = '/' }) {
   const router = useRouter();
   const holder = useRef(null);
+  const signInRef = useRef(null);
   const [state, setState] = useState({ status: 'idle' });
   /*
    * Google draws this button, so the only say we have in how it looks is which
@@ -79,10 +80,22 @@ export default function GoogleButton({ next = '/' }) {
       if (!window.google?.accounts?.id || !holder.current) return undefined;
 
       clearInterval(timer);
-      window.google.accounts.id.initialize({
-        client_id: CLIENT_ID,
-        callback: signIn,
-      });
+      /*
+       * initialize() once per page. The effect re-runs when the theme flips
+       * (the button has to be redrawn in Google's other colour) and under
+       * React's development double-invoke, and Google logs a warning every
+       * time initialize() is called again. The callback is looked up through a
+       * ref so the single initialised instance always calls the CURRENT one.
+       */
+      signInRef.current = signIn;
+      if (!window.__smpGsiInitialised) {
+        window.google.accounts.id.initialize({
+          client_id: CLIENT_ID,
+          callback: (response) => signInRef.current?.(response),
+        });
+        window.__smpGsiInitialised = true;
+      }
+      holder.current.replaceChildren();
       /*
        * Measured, not hardcoded. Google's button takes a pixel width and will
        * not stretch, so a fixed 320 sat narrower than the "Sign in" button

@@ -695,6 +695,35 @@ confirming the skeleton renders, then removing the delay.
 
 ---
 
+### 4.14 The royal palette, and where it came from
+
+11 Sep 2026. Rajat: "purple pink (for Jaipur) and blue combination sometimes do
+magic - I feel so", and gradienthunt.com as the reference.
+
+**The references, read rather than remembered.** gradienthunt's most-liked page
+was rendered in a browser and its 30 top gradients pulled from the DOM - the
+purple->magenta radial (#500C8B -> #A10A90), pink->deep navy (#F915D7 ->
+#160062), violet->near-black and royal-blue->midnight all sit near the top.
+uiGradients' 382-entry catalogue was filtered by hue to the 96 that read as
+royal; the ones that matter are "Celestial" (#C33764 -> #1D2671), "Lawrencium"
+(#0f0c29 -> #302b63), "Amin" (#8E2DE2 -> #4A00E0) and "Cosmic Fusion".
+
+**What was chosen.** `--brand-from/via/to` are now Jaipur pink -> royal violet
+-> royal blue (oklch L 0.50 / 0.40 / 0.34), with a violet stop between the pink
+and the blue so they never meet directly - that meeting is where a gradient
+turns muddy. `--brand-rose` exists as the one warm accent. The dark ground took
+a violet cast (Lawrencium's lesson): a little chroma in the background is what
+makes the gradient look like it belongs on it rather than pasted over grey.
+
+**The logo is still open.** Rajat wants it generated with Gemini. The key on
+file is free-tier, and image generation has NO free-tier allotment (the quota
+comes back as `none`, which is an absence, not a rate limit). Billing has to be
+linked to the project first. `web/scripts/brand/generate-logo.mjs` is ready:
+five concepts, prompt written for a MARK (no text, dark ground, legible at
+32px, palette by hex), output to a gitignored drafts folder.
+
+---
+
 ## 5. Structured data
 
 GIVA's markup is the reference implementation for an Indian jewellery store and

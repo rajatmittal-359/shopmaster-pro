@@ -42,6 +42,7 @@
   --color-brand-from: var(--brand-from);
   --color-brand-via: var(--brand-via);
   --color-brand-to: var(--brand-to);
+  --color-brand-rose: var(--brand-rose);
   --color-glass: var(--glass);
   --color-glass-strong: var(--glass-strong);
   --color-glass-border: var(--glass-border);
@@ -113,19 +114,28 @@
   /*
    * THE BRAND GRADIENT, as three stops anything can reach for.
    *
-   * Deliberately DARK. The first version ran bright violet into cyan and the
-   * sign-in panel came out as a huge, luminous purple wall - correct hue,
-   * wrong weight. Deep violet into indigo into a blue that never reaches cyan
-   * reads as expensive rather than as a highlighter, it lets white text sit on
-   * it comfortably, and it stops the largest coloured surface on the site from
-   * being the loudest thing on it.
+   * Jaipur pink -> royal violet -> royal blue. Chosen on 11 Sep 2026 from two
+   * reference sets rather than by taste: gradienthunt's most-liked gradients
+   * (where the purple->magenta and pink->deep-navy pairs sit at the top) and
+   * uiGradients' catalogue, filtered to the 96 that read as royal. The pair
+   * this is closest to is uiGradients' "Celestial" (#C33764 -> #1D2671), with a
+   * violet stop between so the pink and the blue never meet directly - that
+   * meeting is where a gradient turns muddy.
+   *
+   * Why these three: pink is Jaipur's own colour, violet is the site's primary,
+   * royal blue is what keeps the whole thing from reading as a cosmetics brand.
+   * Together they are the "purple, pink and blue" that Rajat asked for, kept
+   * dark enough (L 0.34-0.50) that white text clears 4.5:1 on every stop.
    *
    * The same three values in both modes, on purpose: the brand does not change
    * colour when the interface does.
    */
-  --brand-from: oklch(0.38 0.19 302);
-  --brand-via: oklch(0.29 0.14 288);
-  --brand-to: oklch(0.33 0.12 254);
+  --brand-from: oklch(0.5 0.19 352);
+  --brand-via: oklch(0.4 0.2 296);
+  --brand-to: oklch(0.34 0.15 268);
+  /* Jaipur pink on its own, for the one place a warm accent is wanted:
+     the lit opening of the mark, a sale badge, the bloom behind a hero. */
+  --brand-rose: oklch(0.62 0.21 356);
 
   --secondary: oklch(0.968 0.005 286);
   --secondary-foreground: oklch(0.26 0.025 286);
@@ -178,8 +188,8 @@
 
   /* The aurora sitting behind everything. Kept as tokens so the two blooms
      can be recoloured with the rest of the palette. */
-  --aurora-1: rgba(139, 92, 246, 0.1);
-  --aurora-2: rgba(34, 211, 238, 0.07);
+  --aurora-1: rgba(224, 69, 123, 0.09);
+  --aurora-2: rgba(67, 56, 202, 0.1);
 
   --sidebar: oklch(0.985 0.003 286);
   --sidebar-foreground: oklch(0.21 0.02 286);
@@ -199,11 +209,14 @@
  * a hole.
  */
 .dark {
-  --background: oklch(0.17 0.014 286);
+  /* Midnight with a violet cast (uiGradients' "Lawrencium" is the reference:
+     #0f0c29 -> #302b63). A little chroma in the dark ground is what makes the
+     brand gradient look like it belongs on it rather than pasted over grey. */
+  --background: oklch(0.165 0.028 290);
   --foreground: oklch(0.97 0.004 286);
-  --card: oklch(0.214 0.016 286);
+  --card: oklch(0.21 0.03 290);
   --card-foreground: oklch(0.97 0.004 286);
-  --popover: oklch(0.214 0.016 286);
+  --popover: oklch(0.21 0.03 290);
   --popover-foreground: oklch(0.97 0.004 286);
 
   /* Lifted, because on a dark ground the readable direction is up. White still
@@ -213,9 +226,12 @@
   --brand-ink: oklch(0.78 0.15 290);
 
   /* Unchanged from light mode - see the note there. */
-  --brand-from: oklch(0.38 0.19 302);
-  --brand-via: oklch(0.29 0.14 288);
-  --brand-to: oklch(0.33 0.12 254);
+  --brand-from: oklch(0.5 0.19 352);
+  --brand-via: oklch(0.4 0.2 296);
+  --brand-to: oklch(0.34 0.15 268);
+  /* Jaipur pink on its own, for the one place a warm accent is wanted:
+     the lit opening of the mark, a sale badge, the bloom behind a hero. */
+  --brand-rose: oklch(0.62 0.21 356);
 
   --secondary: oklch(0.27 0.02 286);
   --secondary-foreground: oklch(0.97 0.004 286);
@@ -241,8 +257,8 @@
   --glass-strong: rgba(23, 21, 36, 0.88);
   --glass-border: rgba(255, 255, 255, 0.1);
 
-  --aurora-1: rgba(139, 92, 246, 0.16);
-  --aurora-2: rgba(34, 211, 238, 0.1);
+  --aurora-1: rgba(224, 69, 123, 0.16);
+  --aurora-2: rgba(67, 56, 202, 0.22);
 
   --sidebar: oklch(0.214 0.016 286);
   --sidebar-foreground: oklch(0.97 0.004 286);
@@ -412,7 +428,7 @@ body::before {
   background-image:
     radial-gradient(42rem 32rem at 8% 12%, var(--brand-from), transparent 62%),
     radial-gradient(38rem 30rem at 88% 78%, var(--brand-to), transparent 60%),
-    radial-gradient(30rem 26rem at 62% 6%, oklch(0.42 0.18 322 / 0.5), transparent 62%);
+    radial-gradient(28rem 24rem at 70% 10%, oklch(from var(--brand-rose) l c h / 0.35), transparent 62%);
 }
 
 /*
