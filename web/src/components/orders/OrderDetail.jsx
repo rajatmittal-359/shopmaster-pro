@@ -282,11 +282,43 @@ export default function OrderDetail({ orderId }) {
               </p>
             )}
 
+            {/* Said in words, with what to DO. In India the pickup rider brings
+                the label (Amazon, Flipkart, every reverse courier) - so the
+                answer to "what do I attach?" is "nothing; keep it packed with
+                the tag on". The page used to say only "Return: picked". */}
             {parcel.returnStage && (
-              <p className="mt-3 text-sm">
-                Return: <strong className="capitalize">{parcel.returnStage}</strong>
-                {parcel.returnResolution === 'replacement' && ' · a replacement is being sent'}
-              </p>
+              <div className="mt-3 rounded-lg border p-3 text-sm">
+                <p>
+                  <strong>
+                    {parcel.returnResolution === 'replacement' ? 'Exchange' : 'Return'}
+                    {' · '}
+                    {{
+                      requested: 'waiting for the seller to book the pickup',
+                      picked: 'pickup booked',
+                      received: 'received by the seller',
+                      rejected: 'refused by the seller',
+                    }[parcel.returnStage] || parcel.returnStage}
+                  </strong>
+                </p>
+                {['requested', 'picked'].includes(parcel.returnStage) && (
+                  <p className="mt-1 text-muted-foreground">
+                    Keep it in its original packing with the tag on. The pickup rider brings the label - you do not print anything.
+                    {parcel.returnAwb ? ` Pickup reference ${parcel.returnAwb}.` : ''}
+                  </p>
+                )}
+                {parcel.returnStage === 'received' && (
+                  <p className="mt-1 text-muted-foreground">
+                    {parcel.returnResolution === 'replacement'
+                      ? 'The replacement is on its way, delivered free.'
+                      : `Your refund goes back the way you paid, within ${REFUND_DAYS}.`}
+                  </p>
+                )}
+                {parcel.returnStage === 'rejected' && !parcel.disputeStatus && (
+                  <p className="mt-1 text-muted-foreground">
+                    If you disagree, use <em>Something&apos;s wrong</em> below - an admin decides, not the seller.
+                  </p>
+                )}
+              </div>
             )}
 
             {parcel.disputeStatus === 'open' && (

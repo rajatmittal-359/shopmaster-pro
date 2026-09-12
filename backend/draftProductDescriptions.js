@@ -12,7 +12,8 @@
  *   where it was.
  *
  *   node draftProductDescriptions.js                 draft, write the JSON, change nothing
- *   node draftProductDescriptions.js --apply         write the drafts to the database
+ *   node draftProductDescriptions.js --apply         write the SAVED drafts to the database - no Gemini call
+ *   node draftProductDescriptions.js --draft --apply draft and write in one pass (the old behaviour)
  *   node draftProductDescriptions.js --revert        put the originals back
  *   node draftProductDescriptions.js --limit 3       just the first few, for a look
  *   node draftProductDescriptions.js --all           include products that already have real copy
@@ -40,6 +41,11 @@ const valueOf = (flag, fallback) => {
 };
 
 const APPLY = has('--apply');
+// --apply on its own used to DRAFT AGAIN and then write - so a draft run followed
+// by an apply run paid Gemini twice, and on 12 Sep 2026 the second pass hit the
+// daily quota after one product. Now --apply reads the file the draft run
+// wrote; only --draft (or no flag) talks to Gemini.
+const REDRAFT = has('--draft') || !APPLY;
 const REVERT = has('--revert');
 const ALL = has('--all');
 const LIMIT = valueOf('--limit', 0);
@@ -81,12 +87,38 @@ const revert = async () => {
   console.log(`Restored ${restored} description${restored === 1 ? '' : 's'}.`);
 };
 
+/** Puts the drafts already in the JSON live, without asking Gemini again. */
+const applySaved = async () => {
+  if (!fs.existsSync(OUT)) {
+    console.error(`Nothing to apply - ${OUT} does not exist. Run without flags first to draft.`);
+    process.exit(1);
+  }
+  const saved = JSON.parse(fs.readFileSync(OUT, 'utf8'));
+  const ready = saved.drafts.filter((row) => row.after && !row.error);
+  let written = 0;
+  for (const row of ready) {
+    const result = await Product.updateOne(
+      { _id: row._id, description: row.before },
+      { $set: { description: row.after } }
+    );
+    if (result.modifiedCount) written += 1;
+  }
+  console.log(`Applied ${written} of ${ready.length} saved draft${ready.length === 1 ? '' : 's'} (drafted ${saved.generatedAt}).`);
+  console.log('Rows whose description changed since the draft were left alone.');
+};
+
 const run = async () => {
   await mongoose.connect(process.env.MONGO_URI);
   console.log(`Connected to: ${mongoose.connection.name}`);
 
   if (REVERT) {
     await revert();
+    await mongoose.disconnect();
+    return;
+  }
+
+  if (APPLY && !REDRAFT) {
+    await applySaved();
     await mongoose.disconnect();
     return;
   }
