@@ -44,6 +44,7 @@ const GROUPS = [
     items: [
       { href: "/admin/categories", label: "Categories", icon: "FolderTree" },
       { href: "/admin/coupons", label: "Coupons", icon: "TicketPercent" },
+      { href: "/admin/google", label: "Google", icon: "Globe" },
     ],
   },
   {

@@ -135,6 +135,14 @@ export default function Overview() {
       <SearchQueries base="/admin" days={90} />
 
       <p className="text-sm text-muted-foreground">
+        Which product pages Google has indexed and which items Shopping has approved:{' '}
+        <Link href="/admin/google" className="text-brand-ink hover:underline">
+          Google
+        </Link>
+        .
+      </p>
+
+      <p className="text-sm text-muted-foreground">
         Anything waiting on you is in{' '}
         <Link href="/admin/orders" className="text-brand-ink hover:underline">
           Orders and disputes

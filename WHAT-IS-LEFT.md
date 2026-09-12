@@ -61,8 +61,8 @@ product word; 2 pages indexed, 8 not.
 | # | What | Free? | Rajat does | Claude builds | State |
 |---|---|---|---|---|---|
 | G1 | Search Console API — what people typed, per page, position | ✅ | done (service account is a user) | admin card ✅; seller: per-product queries in the listing panel | ✅ both |
-| G2 | URL Inspection API — is each product page indexed, last crawl | ✅ same account | — | "Google indexed: yes/no" per product ✅; admin list of not-indexed ☐ | seller ✅ |
-| G3 | Merchant Center API — per-product approved / disapproved + reason | ✅ verified (17 approved) | done | seller sees Google's verdict on the product ✅; admin sees all ☐ | seller ✅ |
+| G2 | URL Inspection API — is each product page indexed, last crawl | ✅ same account | — | "Google indexed: yes/no" per product ✅; admin list `/admin/google` ✅ (52 checked 12 Sep: 0 indexed — the new URLs are not live until cutover, the page says so) | ✅ both |
+| G3 | Merchant Center API — per-product approved / disapproved + reason | ✅ verified (17 approved) | done | seller sees Google's verdict on the product ✅; admin sees all on `/admin/google` ✅ (17 approved, 35 not in the feed — other sellers' products; feed is Charming Jewels only, by design) | ✅ both |
 | G4 | Product structured data for merchant listings — `OfferShippingDetails` (₹100, 1–2 + 3–7 days, IN), `MerchantReturnPolicy` (7 days, customer pays courier), `aggregateRating` only where reviews exist, seller = the shop | ✅ code | — | `web/src/lib/productSchema.js`, verified on a local product page 12 Sep | ✅ |
 | G5 | Listing quality panel — score, checklist (title/photos/colour/size/description), AI keywords, Google preview, G1–G3 data inline | ✅ (Gemini/nano) | — | product form | ✅ 12 Sep (plan §4.30) |
 | G6 | GA4 property + Data API — traffic, product views, add-to-cart funnel | ✅ | **create GA4 property, send Measurement ID** | events on the storefront; admin panel card | ☐ |

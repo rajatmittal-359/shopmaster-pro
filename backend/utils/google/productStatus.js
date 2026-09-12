@@ -80,4 +80,95 @@ const productGoogleStatus = async (product, deps = {}) => {
   };
 };
 
-module.exports = { productGoogleStatus, inspect, merchantStatus, productUrl };
+/**
+ * Every product's Merchant Center status in one listing call (pages of 250)
+ * instead of one call per product - keyed by our product id.
+ */
+const parseMerchant = (r) => {
+  const statuses = (r.destinationStatuses || []).map((d) => d.status);
+  const status = statuses.includes('disapproved')
+    ? 'disapproved'
+    : statuses.includes('pending')
+      ? 'pending'
+      : statuses.length
+        ? 'approved'
+        : 'unknown';
+  const issues = (r.itemLevelIssues || []).map((i) => ({ code: i.code, severity: i.servability, text: i.description, detail: i.detail, help: i.documentation }));
+  return { status, issues };
+};
+
+const merchantStatuses = async (deps = {}) => {
+  const mc = process.env.MERCHANT_CENTER_ID;
+  if (!mc || !configured()) return { ok: false, reason: 'not connected', byId: new Map() };
+  const token = await accessToken(SCOPES.merchant, deps);
+  const byId = new Map();
+  let pageToken = '';
+  do {
+    const url = `https://shoppingcontent.googleapis.com/content/v2.1/${mc}/productstatuses?maxResults=250${pageToken ? `&pageToken=${pageToken}` : ''}`;
+    const res = await (deps.fetch || fetch)(url, { headers: { Authorization: `Bearer ${token}` } });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) return { ok: false, status: res.status, reason: data?.error?.message || `merchant ${res.status}`, byId };
+    for (const r of data.resources || []) byId.set(String(r.productId).split(':').pop(), parseMerchant(r));
+    pageToken = data.nextPageToken || '';
+  } while (pageToken);
+  return { ok: true, byId };
+};
+
+/**
+ * The whole catalogue against Google: for the admin's "which pages are not
+ * indexed, which items are disapproved" list. Inspections run six at a time
+ * (quota is 600/min, 2000/day per property) and are remembered per URL for
+ * twelve hours - Google's index does not move faster than that.
+ */
+const TWELVE_HOURS = 12 * 60 * 60 * 1000;
+const inspectCache = new Map();
+const inspectCached = async (url, deps) => {
+  const hit = inspectCache.get(url);
+  if (hit && Date.now() - hit.at < TWELVE_HOURS) return hit.result;
+  const result = await (deps.inspect || inspect)(url).catch((e) => ({ ok: false, reason: e.message }));
+  if (result.ok) inspectCache.set(url, { at: Date.now(), result });
+  return result;
+};
+
+const catalogueGoogleStatus = async (products, deps = {}) => {
+  const mer = await (deps.merchantStatuses || merchantStatuses)(deps).catch((e) => ({ ok: false, reason: e.message, byId: new Map() }));
+  const rows = new Array(products.length);
+  let next = 0;
+  const worker = async () => {
+    while (next < products.length) {
+      const i = next++;
+      const p = products[i];
+      const url = productUrl(p);
+      const idx = await inspectCached(url, deps);
+      const m = mer.byId.get(String(p._id));
+      rows[i] = {
+        id: String(p._id),
+        name: p.name,
+        slug: p.slug,
+        sellerName: p.sellerName || p.sellerId?.name || null,
+        url,
+        index: idx.ok
+          ? { indexed: idx.verdict === 'PASS', state: idx.coverageState || null, lastCrawl: idx.lastCrawl || null }
+          : { indexed: null, state: null, lastCrawl: null, reason: idx.reason },
+        merchant: !mer.ok
+          ? { status: 'unknown', issues: [], reason: mer.reason }
+          : m || { status: 'not in feed', issues: [] },
+      };
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(6, products.length) }, worker));
+  const count = (fn) => rows.filter(fn).length;
+  const summary = {
+    total: rows.length,
+    indexed: count((r) => r.index.indexed === true),
+    notIndexed: count((r) => r.index.indexed === false),
+    indexUnknown: count((r) => r.index.indexed === null),
+    approved: count((r) => r.merchant.status === 'approved'),
+    disapproved: count((r) => r.merchant.status === 'disapproved'),
+    pending: count((r) => r.merchant.status === 'pending'),
+    notInFeed: count((r) => r.merchant.status === 'not in feed'),
+  };
+  return { ok: true, rows, summary, merchantReason: mer.ok ? null : mer.reason };
+};
+
+module.exports = { productGoogleStatus, catalogueGoogleStatus, merchantStatuses, inspect, merchantStatus, productUrl };

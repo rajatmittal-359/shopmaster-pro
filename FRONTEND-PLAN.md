@@ -1980,3 +1980,11 @@ Written down so nobody later mistakes it for fact:
 - **Delivery-date conversion lifts (+12% to +25%)** — all vendor case studies, no controlled research.
 - **Legal Metrology (Packaged Commodities) Amendment Rules 2026**, in force 1 July 2026, reportedly require country of origin, net quantity, manufacturer name and address to be displayed by e-commerce entities, and possibly a country-of-origin *filter*. Melorra, Palmonas and Myntra all show such a block today. **The gazette text could not be retrieved. This is a question for a lawyer, and it is on the CA list.**
 - **Logged-out marketplace navigation** - that research pass was cut off by a session limit and never returned findings. (The seller/admin panel research was re-run on 7 Sep and is now section 14.) What section 9.3 says about logged-out browsing is reasoning from competitor behaviour, not a sourced finding. Worth a re-run before the sidebar is built.
+
+### 4.31 Admin → Google (12 Sep 2026)
+
+**Reference:** Search Console's *Pages* report (counts on top, table sorted problems-first) and Merchant Center's *Needs attention* list, joined on our product id. **Goal:** liquidity — a product page Google has not indexed or Shopping has disapproved sells to nobody, and until today nobody could see which ones.
+
+- `GET /admin/google/products` — one Merchant Center listing call + URL Inspection per product (6 at a time, per-URL memory 12 h, whole answer 6 h; first request answers `202 building`, the page polls). Three tiles (in the index / approved for Shopping / checked when + *Ask Google again*), then the table: product · seller · Google index (with Google's own coverage state) · Shopping (with the issue text and Google's "how to fix" link) · last crawl. Tabs *Needs attention* / *All products*.
+- Honest about the cutover: today every row is "URL is unknown to Google" because the `/products/<slug>` addresses go live in October; the tile says exactly that instead of showing a red zero.
+- Also today: Atlas Search behind the suggest box and the shop search (`utils/atlasSearch.js`, regex fallback), the Shopping | Selling | Admin RoleSwitch in both headers, `backupDb.js` / `ensureSearchIndex.js`, product schema names the shop as the seller (G4 verified).

@@ -66,3 +66,46 @@ exports.sellerQueries = async (req, res) => {
     sendError(res, error);
   }
 };
+
+/**
+ * The catalogue against Google, for the admin: which product pages are not
+ * indexed, which items Merchant Center has disapproved and why. Problems
+ * first. Fifty inspections take a minute, longer than a proxy waits, so the
+ * first request starts the work and answers `building`; the page asks again
+ * until the answer is there. Remembered for six hours; `?refresh=1` rebuilds.
+ */
+let catalogueCache = { at: 0, result: null, building: null };
+const buildCatalogue = async () => {
+  const products = await Product.find({ isActive: true, isDeleted: { $ne: true } })
+    .select('name slug sellerId')
+    .populate('sellerId', 'name')
+    .lean();
+  const { catalogueGoogleStatus } = require('../utils/google/productStatus');
+  const result = await catalogueGoogleStatus(products);
+  const weight = (r) => (r.merchant.status === 'disapproved' ? 0 : r.index.indexed === false ? 1 : r.merchant.status === 'not in feed' ? 2 : r.index.indexed === null ? 3 : 4);
+  result.rows.sort((a, b) => weight(a) - weight(b) || a.name.localeCompare(b.name));
+  result.at = new Date().toISOString();
+  return result;
+};
+
+exports.adminGoogleProducts = async (req, res) => {
+  try {
+    const fresh = catalogueCache.result && Date.now() - catalogueCache.at < SIX_HOURS;
+    if (fresh && !req.query.refresh) return res.json({ ...catalogueCache.result, cached: true });
+    if (!catalogueCache.building) {
+      catalogueCache.building = buildCatalogue()
+        .then((result) => {
+          catalogueCache = { at: Date.now(), result, building: null };
+        })
+        .catch((err) => {
+          catalogueCache.building = null;
+          console.error('Google catalogue status failed:', err.message);
+        });
+    }
+    // An old answer while the new one builds beats a spinner.
+    if (catalogueCache.result) return res.json({ ...catalogueCache.result, cached: true, building: true });
+    res.status(202).json({ ok: true, building: true, rows: [], summary: null });
+  } catch (error) {
+    sendError(res, error);
+  }
+};
