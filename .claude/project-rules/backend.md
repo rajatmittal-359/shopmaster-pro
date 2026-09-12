@@ -42,7 +42,7 @@ Liquidity · Trust · Seller recruitment · October 2026 cutover with nothing th
 - Auth: `middlewares/authMiddleware.js`, `roleMiddleware.js`, `checkSellerStatus.js` (`requireApprovedSeller`); capabilities in `utils/capabilities.js` (one account, roles as capabilities, `/auth/switch-context`).
 - Money: `sellerMoneyFor(order, sellerId)` in `sellerController` (subtotal / stamped commission / earning); refunds via `utils/refund`; payout state via `sellerPayoutStateFor`, `returnWindowFor` (`utils/payout.js`).
 - Truth helpers: `utils/cancelOrder.js` (`CANCELLABLE`, `canCancelOrder`, `cancellableItemIds`, `cancelOrderFor`), `utils/deliveryTruth.js` (`sellerMayDeclareDelivered`, `customerMayDispute`, `payoutBlockedReason`), `applyCourierUpdate` (forward-only).
-- Input: `escapeRegex`, whitelisted `SORTS` map in `routes/productRoutes.js`, HTML allowlist validator on `Product.description`, `cloudinary.isOwnUrl`.
+- Input: `escapeRegex`, whitelisted `SORTS` map in `controllers/productController.js`, HTML allowlist validator on `Product.description`, `cloudinary.isOwnUrl`.
 - Cache: `middlewares/cacheControl.js` (`noStore` global, `publicCatalogue` on public routes). CORS from `FRONTEND_URL`.
 - Tests: vitest, `tests/setup.mjs` sets dummy keys and a never-connected `MONGO_URI`; 910 tests, no database, under a minute. Paid APIs (Gemini, Cloudflare, Pollinations, HF, Razorpay, Shiprocket, Brevo) always mocked.
 - AI: `utils/ai/{providers,catalog,imageGen,status,listing}.js`; quotas are real — test with mocks, 2–3 real heavy calls a day at most.
