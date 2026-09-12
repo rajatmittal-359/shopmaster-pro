@@ -37,7 +37,8 @@ describe('row', () => {
     expect(o.generic_redemption_code).toBe('JAIPUR15');
     expect(o.long_title.length).toBeLessThanOrEqual(60);
     expect(o.long_title).toContain('15% off');
-    expect(o.promotion_effective_dates).toBe('2026-09-13T05:30:00+05:30/2026-10-10T23:59:59+05:30');
+    // Starts at the coupon's validFrom (stable across fetches), not at fetch time.
+    expect(o.promotion_effective_dates).toBe('2026-09-10T05:30:00+05:30/2026-10-10T23:59:59+05:30');
     expect(o.redemption_channel).toBe('online');
     expect(o.promotion_destination).toBe('free_listings');
     expect(o.coupon_value_type).toBe('percent_off');
@@ -52,6 +53,8 @@ describe('row', () => {
     expect(o.coupon_value_type).toBe('money_off');
     expect(o.money_off_amount).toBe('100.00 INR');
     expect(o.promotion_effective_dates.split('/')[1]).toMatch(/^2027-03-1\dT/);
+    // Same input, same row - the property Google's updater needs.
+    expect(row({ ...base, code: 'CJ100', type: 'flat', value: 100, validUntil: null })).toEqual(r);
   });
 });
 

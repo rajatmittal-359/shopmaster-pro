@@ -65,10 +65,17 @@ const COLUMNS = [
   'minimum_purchase_amount',
 ];
 
-const row = (c, { now = new Date() } = {}) => {
-  const from = c.validFrom && new Date(c.validFrom) > now ? c.validFrom : now;
-  // No end date on the coupon: Google requires one, so promise six months and
-  // let the next fetch extend it.
+const row = (c) => {
+  /*
+   * STABLE DATES, OR GOOGLE REJECTS THE SECOND FETCH
+   *   The first version wrote "start = now" on every fetch. Google created the
+   *   promotions on the first fetch and refused the second as "Promotion
+   *   invalid Update" - a promotion's start cannot move once it exists. So the
+   *   start is the coupon's own validFrom (a past start is fine; it is simply
+   *   live) and a missing end is derived from that same fixed point, never
+   *   from the clock. Both values are identical on every fetch.
+   */
+  const from = c.validFrom || c.createdAt || new Date(0);
   const to = c.validUntil || new Date(new Date(from).getTime() + 183 * 86400000);
   return [
     `smp_${String(c.code).toLowerCase()}`.slice(0, 50),
@@ -87,6 +94,6 @@ const row = (c, { now = new Date() } = {}) => {
 };
 
 /** Tab-separated text: a header, then one line per coupon. */
-const tsv = (coupons, opts) => [COLUMNS, ...coupons.map((c) => row(c, opts))].map((r) => r.map((v) => String(v ?? '').replace(/[\t\n\r]/g, ' ')).join('\t')).join('\n') + '\n';
+const tsv = (coupons) => [COLUMNS, ...coupons.map((c) => row(c))].map((r) => r.map((v) => String(v ?? '').replace(/[\t\n\r]/g, ' ')).join('\t')).join('\n') + '\n';
 
 module.exports = { eligible, row, tsv, title, istStamp, COLUMNS };
