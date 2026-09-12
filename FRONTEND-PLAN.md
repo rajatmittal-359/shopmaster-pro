@@ -1062,6 +1062,32 @@ review with Edit and Remove (confirmed). `router.refresh()` after a save, and
 the reviews fetch is uncached so the list and the rating bars update at once.
 915 tests.
 
+### 4.22 The product video, back
+
+12 Sep 2026. Gate: the cutover — the React app could upload one clip per
+product and play it; `web/` had neither, and `Product.video` was waiting in
+the model with the upload path (`cloudinary.uploadVideo`, poster from the
+first frame, delete-on-replace) already built and tested.
+
+**References.** Amazon and Flipkart both put the clip **in the thumbnail
+strip** with a play badge — never a separate section — and neither autoplays
+it. Amazon's seller form has a separate "Upload video" slot beside the image
+slots with the limits written where you press.
+
+**Built.** `Gallery` takes `video`; it becomes the **second** tile (visible
+without scrolling the strip, while the first photograph stays the LCP element
+and what Google indexes), `preload="none"`, native controls, poster until
+play. `VideoSlot` under the photos in the product form: add / replace / remove
+with Undo, 7 MB cap stated up front (the JSON body limit less base64's third),
+local preview of a newly chosen file; the form says exactly one of keep /
+replace / remove on save (`undefined` / data URL / `null` — the server's
+existing contract). The stored `video` object is no longer spread back into
+the PATCH body.
+
+With this, `WHAT-IS-LEFT.md` §1 — what the React app could do that `web/`
+could not — is **empty**, pending Rajat's own browser check of the review form
+(as a customer with a delivered order) and one video upload.
+
 ---
 
 ## 5. Structured data

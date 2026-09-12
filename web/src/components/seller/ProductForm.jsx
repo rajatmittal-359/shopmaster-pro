@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import MediaManager from '@/components/seller/MediaManager';
+import VideoSlot from '@/components/seller/VideoSlot';
 import RichTextEditor from '@/components/seller/RichTextEditor';
 import CategoryPicker from '@/components/seller/CategoryPicker';
 
@@ -104,6 +105,8 @@ export default function ProductForm({ productId, copyFromId }) {
   const router = useRouter();
   const [form, setForm] = useState(EMPTY);
   const [photos, setPhotos] = useState([]); // [{ src, kind: 'existing' | 'new' }], in display order
+  // One optional clip: keep / replace / remove, said exactly once on save (see VideoSlot).
+  const [video, setVideo] = useState({ existing: null, next: null, nextFile: null, removed: false });
   const [categories, setCategories] = useState([]);
   const [state, setState] = useState({ status: 'loading' });
   const [keywords, setKeywords] = useState('');
@@ -131,8 +134,9 @@ export default function ProductForm({ productId, copyFromId }) {
         if (productId) {
           const product = await load(productId);
           if (cancelled) return;
-          setForm({ ...EMPTY, ...product, category: product.category?._id || product.category || '' });
+          setForm({ ...EMPTY, ...product, video: undefined, category: product.category?._id || product.category || '' });
           setPhotos((product.images || []).map((src) => ({ src, kind: 'existing' })));
+          setVideo({ existing: product.video?.url ? product.video : null, next: null, nextFile: null, removed: false });
         } else if (copyFromId) {
           /*
            * Another size of an existing product. Everything about the style is
@@ -215,6 +219,8 @@ export default function ProductForm({ productId, copyFromId }) {
       variantGroupId: form.variantGroupId || undefined,
       // In display order. The server keeps URLs that are ours and uploads the rest.
       images: photos.map((p) => p.src),
+      // A data URL replaces, null removes, undefined keeps - the server's contract.
+      video: video.next ? video.next : video.removed ? null : undefined,
     };
 
     try {
@@ -272,6 +278,7 @@ export default function ProductForm({ productId, copyFromId }) {
           onUsage={setUsage}
           onError={errorLine}
         />
+        <VideoSlot value={video} onChange={setVideo} />
       </Card>
 
       {/* 2. WORDS */}

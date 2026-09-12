@@ -111,7 +111,7 @@ export default async function ProductPage({ params }) {
       </nav>
 
       <div className="grid gap-8 md:grid-cols-2">
-        <Gallery images={product.images} name={product.name} />
+        <Gallery images={product.images} video={product.video} name={product.name} />
 
         <div className="space-y-5">
           <div>

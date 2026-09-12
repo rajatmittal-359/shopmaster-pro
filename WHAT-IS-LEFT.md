@@ -27,10 +27,6 @@ cancellation reason were built on 12 Sep (plan §4.20); 1.1 review writing on
 12 Sep (plan §4.21) — which also closed 2.1: every review is verified by
 construction, the label was already honest.**
 
-| # | What | Backend | React | Size |
-|---|---|---|---|---|
-| 1.4 | **Product video.** One clip per product, uploaded from the seller form (base64, 7 MB cap), played in the product gallery. `Product.video` is still in the model | upload path in `sellerController` | `MyProductsPage.jsx`, `ProductDetailsPage.jsx` | Medium — a slot in `MediaManager`, a player in `Gallery` |
-
 Checked and **present** in `web/` (no action): wishlist, addresses, coupons,
 COD and Razorpay, the address-specific delivery speeds (same-day when Borzo
 will take it), pincode check, the bill of supply, confirm-receipt, return and
