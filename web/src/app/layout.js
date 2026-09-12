@@ -8,6 +8,7 @@ import { Toaster } from '@/components/ui/sonner';
 import ShopChrome from '@/components/layout/ShopChrome';
 import { Suspense } from 'react';
 import GoogleAnalytics from '@/components/analytics/GoogleAnalytics';
+import GoogleOneTap from '@/components/auth/GoogleOneTap';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -68,6 +69,8 @@ export default function RootLayout({ children }) {
               a shop's header on top of a dashboard is neither. */}
           <ShopChrome>
             <Header />
+            {/* One Tap for signed-out visitors - storefront only, never in the panels. */}
+            <GoogleOneTap />
           </ShopChrome>
           {/* flex-1 so a short page still pushes the footer to the bottom. */}
           <main className="flex-1">{children}</main>

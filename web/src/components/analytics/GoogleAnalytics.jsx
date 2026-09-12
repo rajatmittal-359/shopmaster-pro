@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useSyncExternalStore } from 'react';
 import Script from 'next/script';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { GA_ID } from '@/lib/analytics';
@@ -18,22 +18,28 @@ import { GA_ID } from '@/lib/analytics';
  * localhost, so a day of building pages never counts as forty visitors.
  */
 
-const isLocal = () => typeof window !== 'undefined' && /^(localhost|127\.0\.0\.1|\[::1\])$/.test(window.location.hostname);
+const isLocal = () => /^(localhost|127\.0\.0\.1|\[::1\])$/.test(window.location.hostname);
+// Read through useSyncExternalStore so the server renders "off" and the
+// browser decides - no hydration mismatch, no tag in localhost HTML.
+const noop = () => () => {};
+const useOnRealHost = () => useSyncExternalStore(noop, () => !isLocal(), () => false);
+
 export default function GoogleAnalytics() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const realHost = useOnRealHost();
 
   useEffect(() => {
-    if (!GA_ID || isLocal() || typeof window.gtag !== 'function') return;
+    if (!GA_ID || !realHost || typeof window.gtag !== 'function') return;
     const query = searchParams?.toString();
     window.gtag('event', 'page_view', {
       page_path: query ? `${pathname}?${query}` : pathname,
       page_location: window.location.href,
       page_title: document.title,
     });
-  }, [pathname, searchParams]);
+  }, [pathname, searchParams, realHost]);
 
-  if (!GA_ID || isLocal()) return null;
+  if (!GA_ID || !realHost) return null;
 
   return (
     <>

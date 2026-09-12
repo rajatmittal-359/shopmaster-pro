@@ -4,8 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useTheme } from 'next-themes';
 import Script from 'next/script';
 import { useRouter } from 'next/navigation';
-import { apiBase } from '@/lib/api';
-import { setSession } from '@/lib/session';
+import { GOOGLE_CLIENT_ID as CLIENT_ID, ensureGsi, exchangeGoogleCredential, gsiReady } from '@/lib/googleSignIn';
 
 /**
  * "Continue with Google".
@@ -27,8 +26,6 @@ import { setSession } from '@/lib/session';
  *   outright. Instagram is where this shop's traffic comes from, so Google can
  *   never be the only door.
  */
-const CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
-
 export default function GoogleButton({ next = '/' }) {
   const router = useRouter();
   const holder = useRef(null);
@@ -51,15 +48,7 @@ export default function GoogleButton({ next = '/' }) {
     const signIn = async (response) => {
       setState({ status: 'sending' });
       try {
-        const res = await fetch(`${apiBase}/auth/google`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ credential: response.credential }),
-        });
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(data.message || 'Could not sign you in with Google');
-
-        setSession({ token: data.token, role: data.role, user: data.user });
+        await exchangeGoogleCredential(response.credential);
         router.replace(next);
         router.refresh();
       } catch (err) {
@@ -77,24 +66,18 @@ export default function GoogleButton({ next = '/' }) {
     const timer = setInterval(() => {
       tries += 1;
       if (cancelled || tries > 40) return clearInterval(timer);
-      if (!window.google?.accounts?.id || !holder.current) return undefined;
+      if (!gsiReady() || !holder.current) return undefined;
 
       clearInterval(timer);
       /*
-       * initialize() once per page. The effect re-runs when the theme flips
-       * (the button has to be redrawn in Google's other colour) and under
-       * React's development double-invoke, and Google logs a warning every
-       * time initialize() is called again. The callback is looked up through a
-       * ref so the single initialised instance always calls the CURRENT one.
+       * initialize() once per page - lib/googleSignIn owns that, and hands the
+       * credential to whichever surface registered last (this button, or the
+       * One Tap prompt on the storefront). The effect re-runs when the theme
+       * flips (the button has to be redrawn in Google's other colour), so the
+       * handler is registered again each time; the SDK is not.
        */
       signInRef.current = signIn;
-      if (!window.__smpGsiInitialised) {
-        window.google.accounts.id.initialize({
-          client_id: CLIENT_ID,
-          callback: (response) => signInRef.current?.(response),
-        });
-        window.__smpGsiInitialised = true;
-      }
+      ensureGsi((response) => signInRef.current?.(response));
       holder.current.replaceChildren();
       /*
        * Measured, not hardcoded. Google's button takes a pixel width and will
