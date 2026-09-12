@@ -1112,6 +1112,24 @@ URL + poster + duration, the gallery showed the play tile second and played
 it with the poster; the clip was then removed through the same contract
 (`video: null`) so the public test product carries nothing silly.
 
+### 4.24 Evidence where the verdict is; failed attempts where they can be acted on
+
+12 Sep 2026. Gate: trust — an admin was deciding "delivered but nothing came"
+without the courier's proof, and a seller never learned a delivery had
+failed. All of it was already in the database (`podUrl`, `ndrReason/At/
+Attempts`, `nprReason`, `disputeReason`, `deliveryConfirmedBy`); nothing
+displayed it. Amazon's A-to-z shows the claim, the carrier's proof and the
+attempts on one screen; Seller Central flags failed attempts on the order;
+the customer's page says "delivery attempted".
+
+Built, small: an evidence block per parcel on the admin order card (customer
+says · delivered when/by whom/courier · POD link or "none" · failed attempts ·
+not collected); the seller queue gets an amber "Delivery attempt failed
+(n times): reason — call the customer after two" and a red "not collected —
+book again"; the customer's parcel says the courier tried and will try again.
+The seller payload now carries the four fields. No new endpoints, no new
+tests needed beyond the existing 919.
+
 ---
 
 ## 5. Structured data

@@ -273,6 +273,23 @@ export default function OrderQueue() {
                   </p>
                 )}
 
+                {/* The courier tried and failed, or never collected. Amazon's
+                    Seller Central surfaces both on the order; ours recorded them
+                    and showed nobody. Two failed attempts is when to ring the
+                    customer, so the count is on the line. */}
+                {order.ndrReason && !CLOSED.includes(order.status) && (
+                  <p className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-sm">
+                    <strong>Delivery attempt failed</strong>
+                    {order.ndrAttempts > 1 ? ` (${order.ndrAttempts} times)` : ''}: {order.ndrReason}
+                    {order.ndrAt ? ` · ${when(order.ndrAt)}` : ''}. The courier tries again; if it fails twice, call the customer.
+                  </p>
+                )}
+                {order.nprReason && !shipped && (
+                  <p className="mt-3 rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
+                    The courier did not collect the parcel: {order.nprReason}. Book the pickup again.
+                  </p>
+                )}
+
                 {/* The courier refused, and the reason is the only useful thing
                     here - a seller cannot act on "booking failed". */}
                 {order.bookingFailedReason && (

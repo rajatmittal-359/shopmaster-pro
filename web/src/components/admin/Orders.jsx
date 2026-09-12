@@ -115,15 +115,60 @@ export default function AdminOrders() {
                 </div>
 
                 {(order.fulfilments || []).map((parcel, i) => (
-                  <p key={parcel._id || i} className="mt-2 text-sm text-muted-foreground">
-                    Parcel {i + 1}: {parcel.status}
-                    {parcel.returnStage ? ` · return ${parcel.returnStage}` : ''}
-                    {parcel.replacementStage ? ` · replacement ${parcel.replacementStage}` : ''}
-                    {parcel.disputeStatus === 'open' ? ' · DISPUTE OPEN' : ''}
-                    {parcel.bookingFailedReason
-                      ? ` · booking failed: ${parcel.bookingFailedReason}`
-                      : ''}
-                  </p>
+                  <div key={parcel._id || i} className="mt-2 text-sm">
+                    <p className="text-muted-foreground">
+                      Parcel {i + 1}: {parcel.status}
+                      {parcel.returnStage ? ` · return ${parcel.returnStage}` : ''}
+                      {parcel.replacementStage ? ` · replacement ${parcel.replacementStage}` : ''}
+                      {parcel.disputeStatus === 'open' ? ' · DISPUTE OPEN' : ''}
+                      {parcel.bookingFailedReason
+                        ? ` · booking failed: ${parcel.bookingFailedReason}`
+                        : ''}
+                    </p>
+
+                    {/* The referee's evidence, on the same screen as the verdict.
+                        Every one of these was stored and shown to nobody, so a
+                        dispute was two people's word. Amazon's A-to-z shows the
+                        claim, the carrier's proof and the attempts together. */}
+                    {(parcel.disputeStatus || parcel.podUrl || parcel.ndrReason || parcel.nprReason) && (
+                      <dl className="mt-1 grid gap-x-4 gap-y-1 rounded-lg border bg-muted/40 p-3 sm:grid-cols-[auto_1fr]">
+                        {parcel.disputeReason && (
+                          <>
+                            <dt className="text-muted-foreground">Customer says</dt>
+                            <dd>{parcel.disputeReason}{parcel.disputeRaisedAt ? ` (${when(parcel.disputeRaisedAt)})` : ''}</dd>
+                          </>
+                        )}
+                        <dt className="text-muted-foreground">Delivered</dt>
+                        <dd>
+                          {parcel.deliveredAt ? when(parcel.deliveredAt) : 'not yet'}
+                          {parcel.deliveryConfirmedBy ? ` · confirmed by ${parcel.deliveryConfirmedBy}` : ''}
+                          {parcel.courierName ? ` · ${parcel.courierName}${parcel.awb ? ` ${parcel.awb}` : ''}` : ''}
+                        </dd>
+                        <dt className="text-muted-foreground">Proof of delivery</dt>
+                        <dd>
+                          {parcel.podUrl ? (
+                            <a href={parcel.podUrl} target="_blank" rel="noopener noreferrer" className="text-brand-ink hover:underline">
+                              Open the courier&apos;s POD
+                            </a>
+                          ) : (
+                            <span className="text-muted-foreground">none from the courier</span>
+                          )}
+                        </dd>
+                        {parcel.ndrReason && (
+                          <>
+                            <dt className="text-muted-foreground">Failed attempts</dt>
+                            <dd>{parcel.ndrAttempts || 1} · {parcel.ndrReason}{parcel.ndrAt ? ` (${when(parcel.ndrAt)})` : ''}</dd>
+                          </>
+                        )}
+                        {parcel.nprReason && (
+                          <>
+                            <dt className="text-muted-foreground">Not collected</dt>
+                            <dd>{parcel.nprReason}</dd>
+                          </>
+                        )}
+                      </dl>
+                    )}
+                  </div>
                 ))}
 
                 <div className="mt-3 flex flex-wrap gap-2">

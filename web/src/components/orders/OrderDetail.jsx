@@ -271,6 +271,17 @@ export default function OrderDetail({ orderId }) {
               <ShipmentTimeline order={order} fulfilment={parcel} />
             </div>
 
+            {/* Amazon says "delivery attempted" the moment the courier records
+                it. Ours recorded it and said nothing, which is how "where is my
+                parcel" calls start. */}
+            {parcel.ndrReason && parcel.status !== 'delivered' && (
+              <p className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-sm">
+                <strong>The courier tried to deliver and could not</strong>
+                {parcel.ndrAt ? ` on ${when(parcel.ndrAt)}` : ''}: {parcel.ndrReason}. They will try again
+                {parcel.ndrAttempts > 1 ? ' - please keep your phone reachable' : ''}.
+              </p>
+            )}
+
             {parcel.returnStage && (
               <p className="mt-3 text-sm">
                 Return: <strong className="capitalize">{parcel.returnStage}</strong>

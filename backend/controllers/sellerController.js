@@ -624,6 +624,10 @@ exports.getMyOrders = async (req, res) => {
         disputeStatus: fulfilment?.disputeStatus || null,
         bookingFailedReason: fulfilment?.bookingFailedReason || null,
         bookingFailedKind: fulfilment?.bookingFailedKind || null,
+        ndrReason: fulfilment?.ndrReason || null,
+        ndrAt: fulfilment?.ndrAt || null,
+        ndrAttempts: fulfilment?.ndrAttempts || 0,
+        nprReason: fulfilment?.nprReason || null,
         canDeclareDelivered: truth.sellerMayDeclareDelivered(order, fulfilment).allowed,
 
         /**
@@ -752,6 +756,10 @@ exports.getOrderDetails = async (req, res) => {
       /** A booking that failed and has not been retried since. */
       bookingFailedReason: fulfilment?.bookingFailedReason || null,
       bookingFailedKind: fulfilment?.bookingFailedKind || null,
+      ndrReason: fulfilment?.ndrReason || null,
+      ndrAt: fulfilment?.ndrAt || null,
+      ndrAttempts: fulfilment?.ndrAttempts || 0,
+      nprReason: fulfilment?.nprReason || null,
       bookingAttempts: fulfilment?.bookingAttempts || 0,
       disputeStatus: fulfilment?.disputeStatus || null,
       disputeReason: fulfilment?.disputeReason || null,

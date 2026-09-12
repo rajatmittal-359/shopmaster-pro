@@ -46,8 +46,6 @@ a page — the React app defined these in its services and no screen used them.
 
 | # | What | Decided where | Blocked on |
 |---|---|---|---|
-| 2.2 | **NDR / failed delivery has no screen.** `ndrReason` is recorded by the webhook; nothing shows it to the seller or admin | OPS backlog | — |
-| 2.3 | **POD and NPR evidence on the admin dispute screen.** `podUrl` and `nprReason` are stored; the referee cannot see them | OPS backlog | — |
 | 2.4 | **No return label is ever produced.** Nothing calls Shiprocket's label endpoint; the customer is told nothing about what to attach. Also why Merchant Center's "return label" field is unanswered | OPS backlog | — |
 | 2.5 | **Seller cancellation carries no penalty** (Amazon 2–10 %, Flipkart ₹60) | OPS backlog | A policy number from Rajat |
 | 2.6 | **35 seeded products still share the old description.** `node draftProductDescriptions.js --apply` on a day with Gemini quota. None reach the feed, so nothing customer-facing waits on it | OPS backlog | Quota |
