@@ -25,7 +25,7 @@ Liquidity · Trust · Seller recruitment · October 2026 cutover with nothing th
    `res.status(500).json({ message: err.message })`. The message is the shop
    talking to a person, and it says what to do next.
 7. **User input never reaches Mongoose raw.** Sort keys through a whitelist
-   (`SORTS[sort]`), regex through `escapeRegex`, HTML through the model's
+   (`SORTS[sort]` in `controllers/productController.js`), regex through `escapeRegex`, HTML through the model's
    allowlist validator (refuse, don't clean), ids through `isValidObjectId`.
 8. **Idempotent where the world retries.** Razorpay and Shiprocket webhooks
    arrive twice; a state machine that only moves forward (`applyCourierUpdate`
@@ -46,7 +46,7 @@ Liquidity · Trust · Seller recruitment · October 2026 cutover with nothing th
 - Cache: `middlewares/cacheControl.js` (`noStore` global, `publicCatalogue` on public routes). CORS from `FRONTEND_URL`.
 - Tests: vitest, `tests/setup.mjs` sets dummy keys and a never-connected `MONGO_URI`; 910 tests, no database, under a minute. Paid APIs (Gemini, Cloudflare, Pollinations, HF, Razorpay, Shiprocket, Brevo) always mocked.
 - AI: `utils/ai/{providers,catalog,imageGen,status,listing}.js`; quotas are real — test with mocks, 2–3 real heavy calls a day at most.
-- Known structural debts (do not add to them): `routes/productRoutes.js` carries 403 lines of logic (open 2.11); no `helmet`, no rate limiting, no validation layer yet (open 2.10).
+- Rate limits: `middlewares/rateLimits.js` (`authLimiter`, `checkoutLimiter`, `aiLimiter`; off under test unless `RATE_LIMIT_TEST=1`); `helmet` and `trust proxy` in `app.js`. Public catalogue handlers live in `controllers/productController.js`; `routes/productRoutes.js` is 15 lines. No request-validation layer yet (by hand, per controller).
 
 ## Record after building
 WHY block above the behaviour; `FRONTEND-PLAN.md` §4 if the interface changed, `OPS-AND-MANUAL-ACTIONS.md` changelog if operations did; `WHAT-IS-LEFT.md` row.

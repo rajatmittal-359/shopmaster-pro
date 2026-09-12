@@ -49,7 +49,6 @@ a page — the React app defined these in its services and no screen used them.
 | 2.5 | **Seller cancellation carries no penalty** (Amazon 2–10 %, Flipkart ₹60) | OPS backlog | A policy number from Rajat |
 | 2.6 | **14 seeded products still share the old description** (was 35; 21 done 12 Sep). Next day with quota: `node draftProductDescriptions.js` then `--apply` (apply now reads the file, no second Gemini pass). None reach the feed | OPS backlog | Gemini daily quota |
 | 2.9 | **Sentry** — the one blind spot: a 500 at checkout is invisible | Plan §7b | Rajat's DSN |
-| 2.11 | **`productRoutes.js` carries 403 lines of business logic** — the one structural leftover from the 5 Sep review. Move to a `productController`; behaviour unchanged, tests already cover it | `docs/archive/CODE-STRUCTURE-REVIEW.md` item 1 | Time |
 
 ## 3. Rajat's call — researched, waiting on a decision
 
