@@ -1,8 +1,9 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import Image from 'next/image';
-import { Sparkles, X, Check, Loader2, Wand2, Crop, ChevronLeft, ChevronRight, ImagePlus } from 'lucide-react';
+import { Sparkles, X, Check, Loader2, Wand2, Crop, ChevronLeft, ChevronRight, ImagePlus, Cpu } from 'lucide-react';
 import { authedFetch } from '@/lib/client';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -13,6 +14,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import PhotoCropper from '@/components/seller/PhotoCropper';
 
 /**
@@ -38,10 +40,19 @@ import PhotoCropper from '@/components/seller/PhotoCropper';
  *   most sellers are holding.
  *
  * THE AI IS A MENU ON EACH PHOTO, NOT A SEPARATE PLACE
- *   White background, shown in use, another angle, or the seller's own scene.
- *   The result is a preview beside the original with Use / Discard. The
- *   original is never replaced by the AI; if the seller wants it gone they
- *   remove it themselves. That is the human in the loop.
+ *   White background, shown in use, or the seller's own scene. The result is
+ *   a preview beside the original with Use / Discard, and the caption names
+ *   WHICH model made it. The original is never replaced by the AI; if the
+ *   seller wants it gone they remove it themselves. That is the human in the
+ *   loop.
+ *
+ * THE MODEL IS THE SELLER'S TO CHOOSE
+ *   "Automatic" lets the server pick the best available. The picker beside it
+ *   lists every editing model with what is left today; a model that has hit
+ *   its limit is shown but disabled, with the reason. Nothing is hidden about
+ *   what is doing the work - that was Rajat's requirement, and it is the
+ *   difference between a feature that feels broken when spent and one that
+ *   tells you it is spent.
  */
 const MAX = 5;
 
@@ -99,8 +110,22 @@ const prepareImage = (file) =>
     img.src = url;
   });
 
-export default function MediaManager({ photos, onChange, productName, onUsage, onError }) {
+export default function MediaManager({ photos, onChange, productName, onUsage, onError, base = '/seller' }) {
   const inputRef = useRef(null);
+  const [catalog, setCatalog] = useState(null); // { models } from /ai/catalog
+  const [modelId, setModelId] = useState('auto');
+
+  useEffect(() => {
+    let cancelled = false;
+    authedFetch(`${base}/ai/catalog`)
+      .then((d) => !cancelled && setCatalog(d))
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [base]);
+
+  const editModels = (catalog?.models || []).filter((m) => m.can.includes('edit'));
   const [localError, setLocalError] = useState('');
   const [adding, setAdding] = useState(false);
   // Shown right here, beside the photos, AND passed up: an error about a
@@ -156,12 +181,26 @@ export default function MediaManager({ photos, onChange, productName, onUsage, o
     setCustom(null);
     onError('');
     try {
-      const body = { mode, productName, ...(wish ? { prompt: wish } : {}) };
+      const body = {
+        mode,
+        productName,
+        ...(wish ? { prompt: wish } : {}),
+        ...(modelId !== 'auto' ? { modelId } : {}),
+      };
       if (photo.kind === 'new') body.imageDataUrl = photo.src;
       else body.imageUrl = photo.src;
-      const result = await authedFetch('/seller/ai/image', { method: 'POST', body });
-      setPreview({ fromIndex: index, url: result.url, tier: result.tier });
+      const result = await authedFetch(`${base}/ai/image`, { method: 'POST', body });
+      setPreview({
+        fromIndex: index,
+        url: result.url,
+        tier: result.tier,
+        modelLabel: result.modelLabel,
+        providerLabel: result.providerLabel,
+        quality: result.quality,
+      });
       if (result.usage) onUsage?.(result.usage);
+      // The ledger moved; refresh what is left so the picker stays truthful.
+      authedFetch(`${base}/ai/catalog`).then(setCatalog).catch(() => {});
     } catch (err) {
       onError(err.message);
     } finally {
@@ -214,6 +253,54 @@ export default function MediaManager({ photos, onChange, productName, onUsage, o
           e.target.value = '';
         }}
       />
+
+      {/* WHICH MODEL. Automatic by default; every editing model by name,
+          with what is left, disabled with a reason when spent. */}
+      {editModels.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2 text-sm">
+          <Cpu className="size-4 text-muted-foreground" />
+          <span className="text-muted-foreground">AI model for edits:</span>
+          <Select
+            items={{ auto: 'Automatic (best available)', ...Object.fromEntries(editModels.map((m) => [m.id, m.label])) }}
+            value={modelId}
+            onValueChange={setModelId}
+          >
+            <SelectTrigger className="h-8 min-w-56" aria-label="AI model for edits">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="auto">
+                <span className="flex flex-col">
+                  <span>Automatic</span>
+                  <span className="text-xs text-muted-foreground">Best available answers, falls back if one is spent</span>
+                </span>
+              </SelectItem>
+              {editModels.map((m) => (
+                <SelectItem key={m.id} value={m.id} disabled={!m.available}>
+                  <span className="flex flex-col">
+                    <span>
+                      {m.label}
+                      <span className="ml-1.5 text-xs text-muted-foreground">{m.providerLabel}</span>
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {m.available
+                        ? m.unlimited
+                          ? 'Unlimited'
+                          : m.remaining != null
+                            ? `${m.remaining} left today`
+                            : 'Available'
+                        : m.reason}
+                    </span>
+                  </span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Link href={`${base}/ai`} className="text-xs text-brand-ink hover:underline">
+            All models &amp; limits
+          </Link>
+        </div>
+      )}
 
       {/* THE SLOTS. Five, always shown, so the seller can see what is empty. */}
       <ul className="grid grid-cols-3 gap-3 sm:grid-cols-5">
@@ -392,7 +479,9 @@ export default function MediaManager({ photos, onChange, productName, onUsage, o
                 <Image src={preview.url} alt="" fill unoptimized className="object-cover" sizes="200px" />
               </div>
               <figcaption className="mt-1 text-xs text-muted-foreground">
-                AI · {preview.tier === 'premium' ? 'premium' : 'standard'} quality
+                Made by <span className="text-foreground">{preview.modelLabel}</span>
+                {preview.providerLabel ? ` · ${preview.providerLabel}` : ''}
+                {preview.quality ? ` · ${preview.quality} quality` : ''}
               </figcaption>
             </figure>
           </div>

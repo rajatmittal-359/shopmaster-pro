@@ -27,58 +27,94 @@ const refuse = (provider, kind) => async () => {
 
 const CLOUDINARY = 'https://res.cloudinary.com/demo/image/upload/v1/shopmaster-products/a.jpg';
 
+const noBooks = { success: async () => {}, exhausted: async () => {} };
 const deps = (over = {}) => ({
   cloudflare: ok('cloudflare'),
   pollinations: ok('pollinations'),
   nvidia: ok('nvidia'),
+  huggingface: ok('huggingface'),
   fetchReference: async () => PNG,
+  book: noBooks,
   ...over,
 });
 
 describe('the premium edit chain', () => {
-  it('asks gpt-image-2 first', async () => {
-    const calls = [];
-    const made = await runImage(
-      { mode: 'clean', tier: 'premium', imageUrl: CLOUDINARY },
-      deps({
-        pollinations: async (model) => {
-          calls.push(model);
-          return { buffer: PNG, mime: 'image/png' };
-        },
-      })
-    );
-    expect(calls).toEqual(['gpt-image-2']);
-    expect(made.provider).toBe('pollinations');
-    expect(made.model).toBe('gpt-image-2');
+  it('asks Hugging Face Kontext first - the most faithful edit seen in testing', async () => {
+    const made = await runImage({ mode: 'clean', tier: 'premium', imageUrl: CLOUDINARY }, deps());
+    expect(made.provider).toBe('huggingface');
+    expect(made.model).toBe('hf-flux-kontext-dev');
+    expect(made.modelLabel).toBe('FLUX.1 Kontext dev');
   });
 
-  it('falls to Cloudflare klein-9b when the Pollen is spent', async () => {
-    // The everyday case by mid-morning: ~7 premium images a day, platform-wide.
+  it('falls to gpt-image-2, then Cloudflare klein-9b, as each says quota', async () => {
     const made = await runImage(
       { mode: 'clean', tier: 'premium', imageUrl: CLOUDINARY },
-      deps({ pollinations: refuse('pollinations', 'quota') })
+      deps({ huggingface: refuse('huggingface', 'quota'), pollinations: refuse('pollinations', 'quota') })
     );
     expect(made.provider).toBe('cloudflare');
-    expect(made.model).toBe('flux-2-klein-9b');
-    expect(made.attempts.map((a) => a.ok)).toEqual([false, true]);
+    expect(made.model).toBe('cf-flux-2-klein-9b');
+    expect(made.attempts.map((a) => a.ok)).toEqual([false, false, true]);
   });
 
-  it('keeps going through klein-4b to kontext when Cloudflare neurons are spent too', async () => {
+  it('keeps going through klein-4b to kontext-pro when Cloudflare neurons are spent too', async () => {
     let pollinationsCalls = 0;
     const made = await runImage(
       { mode: 'clean', tier: 'premium', imageUrl: CLOUDINARY },
       deps({
+        huggingface: refuse('huggingface', 'quota'),
         cloudflare: refuse('cloudflare', 'quota'),
-        pollinations: async (model) => {
+        pollinations: async (remote) => {
           pollinationsCalls += 1;
-          if (model === 'gpt-image-2') throw new ProviderError('pollinations', 'quota', 'no pollen', 402);
+          if (remote === 'openai/gpt-image-2') throw new ProviderError('pollinations', 'quota', 'no pollen', 402);
           return { buffer: PNG, mime: 'image/jpeg' };
         },
       })
     );
-    expect(made.model).toBe('flux-1-kontext-pro');
+    expect(made.model).toBe('pl-flux-kontext-pro');
     expect(pollinationsCalls).toBe(2);
-    expect(made.attempts).toHaveLength(4);
+    expect(made.attempts).toHaveLength(5);
+  });
+
+  it('records the cost of a success and the exhaustion of a refusal', async () => {
+    const ledger = [];
+    await runImage(
+      { mode: 'clean', tier: 'premium', imageUrl: CLOUDINARY },
+      deps({
+        huggingface: refuse('huggingface', 'quota'),
+        book: {
+          success: async (step) => ledger.push(['ok', step.id, step.cost]),
+          exhausted: async (step) => ledger.push(['out', step.id]),
+        },
+      })
+    );
+    expect(ledger).toEqual([
+      ['out', 'hf-flux-kontext-dev'],
+      ['ok', 'pl-gpt-image-2', 0.034],
+    ]);
+  });
+});
+
+describe('choosing a model by hand', () => {
+  it('uses exactly that model and refuses honestly rather than substituting', async () => {
+    const made = await runImage({ mode: 'clean', modelId: 'cf-flux-2-klein-4b', imageUrl: CLOUDINARY }, deps());
+    expect(made.model).toBe('cf-flux-2-klein-4b');
+    expect(made.attempts).toHaveLength(1);
+
+    const err = await runImage(
+      { mode: 'clean', modelId: 'cf-flux-2-klein-4b', imageUrl: CLOUDINARY },
+      deps({ cloudflare: refuse('cloudflare', 'quota') })
+    ).catch((e) => e);
+    expect(err.statusCode).toBe(503);
+    expect(err.message).toMatch(/FLUX.2 klein 4B refused/);
+    expect(err.attempts).toHaveLength(1);
+  });
+
+  it('refuses a model that cannot do the job, before calling anyone', async () => {
+    // schnell generates from words; it cannot take the seller's photo.
+    await expect(
+      runImage({ mode: 'clean', modelId: 'cf-flux-1-schnell', imageUrl: CLOUDINARY }, deps())
+    ).rejects.toThrow(/cannot edit a photo/);
+    await expect(runImage({ mode: 'clean', modelId: 'nope', imageUrl: CLOUDINARY }, deps())).rejects.toThrow(/unknown model/);
   });
 });
 
@@ -86,9 +122,12 @@ describe('the standard edit chain', () => {
   it('starts at klein-4b, the eighty-a-day model, never at 9b or dev', async () => {
     // The whole reason the chains were rebalanced: the first afternoon spent
     // the day's neurons on eight FLUX.2 dev images.
-    expect(CHAINS.edit.standard[0]).toEqual({ provider: 'cloudflare', model: 'flux-2-klein-4b', reference: 'buffer' });
-    expect(CHAINS.edit.standard.map((s) => s.model)).not.toContain('flux-2-dev');
-    expect(CHAINS.edit.standard.map((s) => s.model)).not.toContain('flux-2-klein-9b');
+    expect(CHAINS.edit.standard[0]).toBe('cf-flux-2-klein-4b');
+    expect(CHAINS.edit.standard).not.toContain('cf-flux-2-dev');
+    expect(CHAINS.edit.standard).not.toContain('cf-flux-2-klein-9b');
+    // And never the least reliable provider as the FIRST step of any standard chain.
+    expect(CHAINS.edit.standard[0].startsWith('pl-')).toBe(false);
+    expect(CHAINS.generate.standard[0].startsWith('pl-')).toBe(false);
   });
 
   it('fetches the reference once, even when two Cloudflare steps run', async () => {
@@ -96,13 +135,14 @@ describe('the standard edit chain', () => {
     await runImage(
       { mode: 'lifestyle', tier: 'premium', imageUrl: CLOUDINARY },
       deps({
+        huggingface: refuse('huggingface', 'quota'),
         pollinations: refuse('pollinations', 'quota'),
         fetchReference: async () => {
           fetched += 1;
           return PNG;
         },
-        cloudflare: async (model) => {
-          if (model === 'flux-2-klein-9b') throw new ProviderError('cloudflare', 'upstream', 'flaky', 500);
+        cloudflare: async (remote) => {
+          if (remote.endsWith('klein-9b')) throw new ProviderError('cloudflare', 'upstream', 'flaky', 500);
           return { buffer: PNG, mime: 'image/png' };
         },
       })
@@ -118,7 +158,7 @@ describe('what stops the chain', () => {
       runImage(
         { mode: 'clean', tier: 'premium', imageUrl: CLOUDINARY },
         deps({
-          pollinations: refuse('pollinations', 'input'),
+          huggingface: refuse('huggingface', 'input'),
           cloudflare: async () => {
             cloudflareCalled = true;
             return { buffer: PNG, mime: 'image/png' };
@@ -136,7 +176,7 @@ describe('what stops the chain', () => {
     ).catch((e) => e);
     expect(err.statusCode).toBe(503);
     expect(err.attempts.map((a) => a.kind)).toEqual(['quota', 'quota']);
-    expect(err.message).toMatch(/cloudflare\/flux-2-klein-4b: quota/);
+    expect(err.message).toMatch(/cloudflare\/cf-flux-2-klein-4b: quota/);
   });
 
   it('refuses an edit without a photo, and a generate without words, before calling anyone', async () => {

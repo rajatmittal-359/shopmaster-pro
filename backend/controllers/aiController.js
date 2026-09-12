@@ -32,6 +32,9 @@ const cloudinary = require('../utils/cloudinary');
 const { sendError } = require('../utils/apiError');
 const { runImage, MODES } = require('../utils/ai/imageGen');
 const { draftListing } = require('../utils/ai/listing');
+const { snapshot } = require('../utils/ai/status');
+const { byId } = require('../utils/ai/catalog');
+const User = require('../models/User');
 
 const CAPS = {
   textsPerSellerPerDay: 60,
@@ -53,28 +56,95 @@ const MAX_DATA_URL = 5 * 1024 * 1024 * 1.4; // 5 MB of image, base64-inflated
 const isImageDataUrl = (s) =>
   typeof s === 'string' && /^data:image\/[a-z0-9.+-]+;base64,/i.test(s) && s.length <= MAX_DATA_URL;
 
-const usageFor = async (userId) => {
+/**
+ * WHO IS EXEMPT FROM THE CAPS
+ *   The admin, and the platform's own shop (Charming Jewels - the same person).
+ *   Rajat's rule: while there are no other sellers, that account uses the AI
+ *   freely, even if it leaves nothing for anyone else that day; the caps are
+ *   for the sellers who come later. The exempt account can put the caps back
+ *   on itself with one toggle (`aiLimitsLikeSeller`) whenever it wants to feel
+ *   what a seller feels, or to leave the allowances alone.
+ *
+ *   Exemption is read from the DATABASE per request - the Seller record and
+ *   the User flag - never from the token, same as every other authorisation
+ *   decision here.
+ */
+const isExempt = async (req) => {
+  const admin = req.user?.role === 'admin' || req.capabilities?.admin;
+  const ownShop = Boolean(req.seller?.isPlatformOwned);
+  if (!admin && !ownShop) return false;
+  const u = await User.findById(req.user._id).select('aiLimitsLikeSeller').lean();
+  return !u?.aiLimitsLikeSeller;
+};
+
+const usageFor = async (userId, exempt = false) => {
   const [mine, all] = await Promise.all([AiUsage.read('user', String(userId)), AiUsage.read('global', 'all')]);
+  const INF = null; // "no cap" - the interface reads null as unlimited
   return {
     today: AiUsage.today(),
+    exempt,
     mine: { texts: mine.texts, images: mine.images, premiumImages: mine.premiumImages },
     platform: { premiumImages: all.premiumImages, images: all.images },
-    caps: CAPS,
-    remaining: {
-      texts: Math.max(0, CAPS.textsPerSellerPerDay - mine.texts),
-      images: Math.max(0, CAPS.imagesPerSellerPerDay - mine.images),
-      premiumImages: Math.max(
-        0,
-        Math.min(CAPS.premiumPerSellerPerDay - mine.premiumImages, CAPS.premiumPerPlatformPerDay - all.premiumImages)
-      ),
-    },
+    caps: exempt ? null : CAPS,
+    remaining: exempt
+      ? { texts: INF, images: INF, premiumImages: INF }
+      : {
+          texts: Math.max(0, CAPS.textsPerSellerPerDay - mine.texts),
+          images: Math.max(0, CAPS.imagesPerSellerPerDay - mine.images),
+          premiumImages: Math.max(
+            0,
+            Math.min(CAPS.premiumPerSellerPerDay - mine.premiumImages, CAPS.premiumPerPlatformPerDay - all.premiumImages)
+          ),
+        },
   };
 };
 
 /** GET /api/seller/ai/usage */
 const getUsage = async (req, res) => {
   try {
-    res.json(await usageFor(req.user._id));
+    res.json(await usageFor(req.user._id, await isExempt(req)));
+  } catch (error) {
+    sendError(res, error);
+  }
+};
+
+/**
+ * GET /api/seller/ai/catalog  (also mounted under /admin)
+ *
+ * Everything the interface needs to show the picker: every provider, every
+ * model, which are available right now, why not, how many more, and when
+ * they come back - plus this account's own allowance. One call.
+ */
+const getCatalog = async (req, res) => {
+  try {
+    const exempt = await isExempt(req);
+    const [state, usage] = await Promise.all([snapshot({ live: true }), usageFor(req.user._id, exempt)]);
+    const admin = req.user?.role === 'admin' || req.capabilities?.admin;
+    res.json({
+      ...state,
+      // Sellers do not see the text-to-image models: a product picture is
+      // made from the seller's photo, and words-only generation is for
+      // banners and category art.
+      models: state.models.filter((m) => admin || m.can.includes('edit') || m.can.includes('text')),
+      usage,
+      canToggleLimits: admin || Boolean(req.seller?.isPlatformOwned),
+      limitsLikeSeller: !exempt && (admin || Boolean(req.seller?.isPlatformOwned)),
+    });
+  } catch (error) {
+    sendError(res, error);
+  }
+};
+
+/** PATCH /api/seller/ai/limits  body: { likeSeller: boolean } - exempt accounts only. */
+const setLimits = async (req, res) => {
+  try {
+    const admin = req.user?.role === 'admin' || req.capabilities?.admin;
+    if (!admin && !req.seller?.isPlatformOwned) {
+      return res.status(403).json({ message: 'Only an exempt account can change this.' });
+    }
+    const likeSeller = Boolean(req.body?.likeSeller);
+    await User.updateOne({ _id: req.user._id }, { $set: { aiLimitsLikeSeller: likeSeller } });
+    res.json({ limitsLikeSeller: likeSeller, usage: await usageFor(req.user._id, !likeSeller) });
   } catch (error) {
     sendError(res, error);
   }
@@ -86,8 +156,9 @@ const getUsage = async (req, res) => {
  */
 const writeListing = async (req, res) => {
   try {
-    const usage = await usageFor(req.user._id);
-    if (usage.remaining.texts === 0) {
+    const exempt = await isExempt(req);
+    const usage = await usageFor(req.user._id, exempt);
+    if (!exempt && usage.remaining.texts === 0) {
       return res.status(429).json({
         message: `You have used today's ${CAPS.textsPerSellerPerDay} AI drafts. It resets at midnight.`,
         usage,
@@ -128,7 +199,7 @@ const writeListing = async (req, res) => {
     res.json({
       draft: { ...result.draft, categoryId: match ? match._id : null },
       warnings: result.warnings,
-      usage: await usageFor(req.user._id),
+      usage: await usageFor(req.user._id, exempt),
     });
   } catch (error) {
     sendError(res, error);
@@ -144,9 +215,10 @@ const writeListing = async (req, res) => {
  */
 const makeImage = async (req, res) => {
   try {
-    const { mode, productName, tier: askedTier, imageDataUrl } = req.body || {};
+    const { mode, productName, tier: askedTier, imageDataUrl, modelId } = req.body || {};
     let { imageUrl } = req.body || {};
     const isAdmin = req.user?.role === 'admin' || req.capabilities?.admin;
+    const exempt = await isExempt(req);
 
     if (!MODES.includes(mode)) {
       return res.status(400).json({ message: `mode must be one of ${MODES.join(', ')}` });
@@ -169,8 +241,8 @@ const makeImage = async (req, res) => {
       }
     }
 
-    const usage = await usageFor(req.user._id);
-    if (usage.remaining.images === 0) {
+    const usage = await usageFor(req.user._id, exempt);
+    if (!exempt && usage.remaining.images === 0) {
       return res.status(429).json({
         message: `You have used today's ${CAPS.imagesPerSellerPerDay} AI images. It resets at midnight.`,
         usage,
@@ -178,14 +250,29 @@ const makeImage = async (req, res) => {
     }
 
     /*
-     * Premium while it lasts, then standard. A seller may ask for standard
-     * outright (it is faster); nobody can ask for premium past the cap.
+     * A chosen model is honoured as chosen. A capped account may pick any
+     * model that edits, but a premium one only while it has premium left -
+     * so the picker offers them, and the cap decides. An exempt account
+     * picks anything.
      */
-    const tier = askedTier === 'standard' || usage.remaining.premiumImages === 0 ? 'standard' : 'premium';
+    let chosen = null;
+    if (modelId) {
+      chosen = byId[modelId];
+      if (!chosen) return res.status(400).json({ message: 'That model is not in the catalogue.' });
+      if (!exempt && chosen.quality === 'best' && usage.remaining.premiumImages === 0) {
+        return res.status(429).json({ message: `Today's premium images are used up - pick a standard model, or wait for the reset.`, usage });
+      }
+    }
+
+    // Otherwise: premium while it lasts, then standard. Exempt accounts
+    // always get the premium chain.
+    const tier =
+      askedTier === 'standard' || (!exempt && usage.remaining.premiumImages === 0) ? 'standard' : 'premium';
 
     const made = await runImage({
       mode,
       tier,
+      modelId: chosen?.id,
       imageUrl,
       productName: String(productName || 'product').slice(0, 80),
       prompt: req.body?.prompt,
@@ -195,18 +282,23 @@ const makeImage = async (req, res) => {
     const dataUrl = `data:${made.mime};base64,${made.buffer.toString('base64')}`;
     const uploaded = await cloudinary.uploadImage(dataUrl, 'shopmaster-ai-drafts');
 
-    // The premium quota is charged only when the premium MODEL answered - a
-    // fallback to Cloudflare inside the premium chain is a standard image.
-    const premiumUsed = made.model === 'gpt-image-2';
+    // The premium quota is charged only when a 'best' MODEL answered - a
+    // fallback to klein inside the premium chain is a standard image.
+    const answered = byId[made.model];
+    const premiumUsed = answered?.quality === 'best';
     await AiUsage.record(req.user._id, { kind: 'image', provider: made.provider, premium: premiumUsed });
 
     res.json({
       url: uploaded.url,
       publicId: uploaded.publicId,
       provider: made.provider,
+      providerLabel: answered ? require('../utils/ai/catalog').PROVIDERS[answered.provider].label : made.provider,
       model: made.model,
+      modelLabel: made.modelLabel || made.model,
+      quality: answered?.quality || 'good',
       tier: premiumUsed ? 'premium' : 'standard',
-      usage: await usageFor(req.user._id),
+      attempts: made.attempts,
+      usage: await usageFor(req.user._id, exempt),
     });
   } catch (error) {
     if (error.attempts) {
@@ -242,4 +334,4 @@ const adminUsage = async (req, res) => {
   }
 };
 
-module.exports = { getUsage, writeListing, makeImage, adminUsage, CAPS, ownImage };
+module.exports = { getUsage, getCatalog, setLimits, writeListing, makeImage, adminUsage, CAPS, ownImage };

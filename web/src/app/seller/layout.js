@@ -38,6 +38,7 @@ const GROUPS = [
     items: [
       { href: '/seller/inventory', label: 'Stock history', icon: 'History' },
       { href: '/seller/settings', label: 'Settings', icon: 'Settings' },
+      { href: '/seller/ai', label: 'AI Studio', icon: 'Sparkles' },
     ],
   },
 ];

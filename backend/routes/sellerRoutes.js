@@ -72,6 +72,8 @@ router.post(
  */
 const ai = require('../controllers/aiController');
 router.get('/ai/usage', requireApprovedSeller, ai.getUsage);
+router.get('/ai/catalog', requireApprovedSeller, ai.getCatalog);
+router.patch('/ai/limits', requireApprovedSeller, ai.setLimits);
 router.post('/ai/listing', requireApprovedSeller, ai.writeListing);
 router.post('/ai/image', requireApprovedSeller, ai.makeImage);
 

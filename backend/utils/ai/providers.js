@@ -97,14 +97,16 @@ async function cloudflare(model, { prompt, images = [], width = 1024, height = 1
   const token = process.env.CLOUDFLARE_API_TOKEN;
   if (!account || !token) throw new ProviderError('cloudflare', 'upstream', 'not configured');
 
-  const id = CF_MODELS[model];
+  // Either our short alias or the provider's own id, so the catalogue can
+  // hand over `remote` directly.
+  const id = CF_MODELS[model] || (model.startsWith('@cf/') ? model : null);
   if (!id) throw new ProviderError('cloudflare', 'input', `unknown model ${model}`);
 
   const url = `https://api.cloudflare.com/client/v4/accounts/${account}/ai/run/${id}`;
   const headers = { Authorization: `Bearer ${token}` };
 
   let res;
-  if (model === 'flux-1-schnell') {
+  if (id === '@cf/black-forest-labs/flux-1-schnell') {
     // The one that still takes JSON.
     res = await fetch(url, {
       method: 'POST',
@@ -168,7 +170,7 @@ async function pollinations(model, { prompt, imageUrl, width = 1024, height = 10
   const key = process.env.POLLINATIONS_API_KEY;
   if (!key) throw new ProviderError('pollinations', 'upstream', 'not configured');
 
-  const id = POLLINATIONS_MODELS[model];
+  const id = POLLINATIONS_MODELS[model] || (model.includes('/') ? model : null);
   if (!id) throw new ProviderError('pollinations', 'input', `unknown model ${model}`);
 
   const url = new URL(`https://gen.pollinations.ai/image/${encodeURIComponent(prompt)}`);
@@ -217,4 +219,48 @@ async function nvidia({ prompt, width = 1024, height = 1024, steps = 30, seed = 
   return { buffer: Buffer.from(b64, 'base64'), mime: 'image/png' };
 }
 
-module.exports = { ProviderError, cloudflare, pollinations, nvidia, CF_MODELS, POLLINATIONS_MODELS };
+/* ------------------------------------------------------------------------ */
+/* Hugging Face Inference Providers (routed to fal-ai)                       */
+/* ------------------------------------------------------------------------ */
+
+/**
+ * FLUX.1 Kontext dev through Hugging Face's router, which fronts fal-ai. The
+ * most faithful edit seen in testing - same beads, same hooks, white
+ * background, four seconds - on the free account's $0.10 a month, which is
+ * about three images. A reserve for the picture that matters, not a daily
+ * path.
+ *
+ * The router speaks fal's own request shape: `image_url` may be a data URL,
+ * and the answer is JSON with a hosted URL to fetch. Two round trips per
+ * image, both short.
+ */
+async function huggingface(model, { prompt, imageBytes, seed }) {
+  const key = process.env.HF_TOKEN;
+  if (!key) throw new ProviderError('huggingface', 'upstream', 'not configured');
+  if (!imageBytes) throw new ProviderError('huggingface', 'input', 'Kontext needs a reference image');
+
+  const res = await fetch(`https://router.huggingface.co/fal-ai/${model}`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      prompt,
+      image_url: `data:image/jpeg;base64,${imageBytes.toString('base64')}`,
+      num_inference_steps: 28,
+      guidance_scale: 2.5,
+      ...(seed != null ? { seed } : {}),
+    }),
+  });
+  if (!res.ok) {
+    const body = await readError(res);
+    throw new ProviderError('huggingface', classify(res.status, body), `${res.status} ${body}`, res.status);
+  }
+  const data = await res.json();
+  const url = data?.images?.[0]?.url;
+  if (!url) throw new ProviderError('huggingface', 'upstream', 'no image in response');
+  const img = await fetch(url);
+  if (!img.ok) throw new ProviderError('huggingface', 'upstream', `could not fetch result (${img.status})`);
+  return { buffer: Buffer.from(await img.arrayBuffer()), mime: (img.headers.get('content-type') || 'image/jpeg').split(';')[0] };
+}
+
+module.exports = { ProviderError, cloudflare, pollinations, nvidia, huggingface, CF_MODELS, POLLINATIONS_MODELS };
+

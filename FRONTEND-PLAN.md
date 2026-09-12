@@ -875,6 +875,51 @@ top-ups only if premium demand actually appears.
 
 ---
 
+### 4.17 AI Studio - one interface over every provider, and who is capped
+
+12 Sep 2026. Rajat: *"jo bhi use kare - admin, seller, customer, Claude Code -
+sabko ek interface milna chahiye: kitne AI hain, kya-kya model, select karne
+ka option; limit reached ho to dikhe par disabled, kab chalu hoga bhi dikhe,
+limit kya hai bhi dikhe."* And: the admin and Charming Jewels (the same
+person) are uncapped; other sellers get a limited share; a toggle lets the
+admin put the seller caps on himself whenever he wants.
+
+**The catalogue** (`backend/utils/ai/catalog.js`) is the single list: every
+provider with its unit, period, published limit and reliability rank; every
+model with what it can do, what it costs in that unit, its quality band and,
+where ranked, its ELO. Chains, the picker, the status page and the ledger all
+read from it.
+
+**The ledger** (`AiProviderState`) is how we know what is left, because only
+Pollinations reports a balance over its API. Every success adds the model's
+published cost to the provider's period; every 429/402 marks the provider
+exhausted for the period. A provider's own refusal always wins over our
+arithmetic, and every reset time that is arithmetic is labelled "estimated"
+in the interface. Cloudflare was observed to reset on a rolling ~24h, not at
+midnight UTC as documented, so its estimate is exhaustedAt + 24h.
+
+**What was corrected the same morning.** Pollinations has NO daily grant on
+the free tier - the 0.25 seen the day before was a one-time quest reward.
+Quests total ~2 Pollen ≈ 58 gpt-image-2 images, once. Hugging Face's free
+$0.10/month buys ~3 Kontext dev edits - the most faithful edits seen, and a
+reserve. So the only daily free editing path is Cloudflare klein-4b (~80/day),
+and the plan says so plainly instead of the "~7 premium a day" that was never
+verified across two days.
+
+**AI Studio** (`/seller/ai`, `/admin/ai`): the account's allowance (∞ when
+exempt), every model as a card - available or disabled with the reason and
+the return time - and a provider table with allowance, used, left, reset and
+status. The photo Edit menu gained a model picker: Automatic, or any editing
+model by name with what is left; spent ones shown disabled with why. The
+result caption names the model and provider that made it.
+
+**Exemption** is read per request from the database - admin role, or the
+platform-owned Seller record - and can be switched off by the account itself
+with `aiLimitsLikeSeller`. A chosen model is honoured as chosen: it answers or
+refuses honestly, never substitutes.
+
+---
+
 ## 5. Structured data
 
 GIVA's markup is the reference implementation for an Indian jewellery store and

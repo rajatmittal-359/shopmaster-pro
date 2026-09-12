@@ -83,8 +83,12 @@ router.patch('/payouts/:payoutId/paid', settlePayout);
 router.patch('/payouts/:payoutId/failed', failPayout);
 
 // Today's AI spend across the platform, and who used it. Read-only.
-router.get('/ai/usage', require('../controllers/aiController').adminUsage);
+const ai = require('../controllers/aiController');
+router.get('/ai/usage', ai.adminUsage);
+router.get('/ai/catalog', ai.getCatalog);
+router.patch('/ai/limits', ai.setLimits);
+router.post('/ai/listing', ai.writeListing);
 // Banners and category art from words - the one image mode sellers do not get.
-router.post('/ai/image', require('../controllers/aiController').makeImage);
+router.post('/ai/image', ai.makeImage);
 
 module.exports = router;

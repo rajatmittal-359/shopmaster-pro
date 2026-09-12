@@ -47,7 +47,10 @@
  *   as-is; if it is too large the provider says 'input' and the next one gets
  *   a turn.
  */
-const { ProviderError, cloudflare, pollinations, nvidia } = require('./providers');
+const { ProviderError, cloudflare, pollinations, nvidia, huggingface } = require('./providers');
+const { byId, MODELS } = require('./catalog');
+const AiProviderState = require('../../models/AiProviderState');
+const { periodKeyFor } = require('./catalog');
 
 /* ------------------------------------------------------------------------ */
 /* Prompts                                                                  */
@@ -92,39 +95,24 @@ const MAX_WISH = 400;
  * Each entry: which provider function, which model, and whether it can take a
  * reference image. Order is quality first, then availability.
  */
+/**
+ * Chains are ordered lists of CATALOGUE ids (see catalog.js). Quality first,
+ * then availability; the standard path never depends on the least reliable
+ * provider. A caller may also name ONE id explicitly - the picker in the
+ * interface does exactly that - in which case the chain is that one model
+ * and nothing else: a person who chose a model wants that model or an honest
+ * refusal, not a silent substitute.
+ */
 const CHAINS = {
   edit: {
-    premium: [
-      { provider: 'pollinations', model: 'gpt-image-2', reference: 'url' },
-      { provider: 'cloudflare', model: 'flux-2-klein-9b', reference: 'buffer' },
-      { provider: 'cloudflare', model: 'flux-2-klein-4b', reference: 'buffer' },
-      { provider: 'pollinations', model: 'flux-1-kontext-pro', reference: 'url' },
-    ],
-    standard: [
-      { provider: 'cloudflare', model: 'flux-2-klein-4b', reference: 'buffer' },
-      { provider: 'pollinations', model: 'flux-1-kontext-pro', reference: 'url' },
-    ],
-    fast: [
-      { provider: 'cloudflare', model: 'flux-2-klein-4b', reference: 'buffer' },
-      { provider: 'pollinations', model: 'flux-1-kontext-pro', reference: 'url' },
-    ],
+    premium: ['hf-flux-kontext-dev', 'pl-gpt-image-2', 'cf-flux-2-klein-9b', 'cf-flux-2-klein-4b', 'pl-flux-kontext-pro'],
+    standard: ['cf-flux-2-klein-4b', 'pl-flux-kontext-pro'],
+    fast: ['cf-flux-2-klein-4b', 'pl-flux-kontext-pro'],
   },
   generate: {
-    premium: [
-      { provider: 'pollinations', model: 'gpt-image-2' },
-      { provider: 'cloudflare', model: 'flux-2-dev' },
-      { provider: 'nvidia', model: 'flux-1-dev' },
-      { provider: 'pollinations', model: 'flux-1-schnell' },
-    ],
-    standard: [
-      { provider: 'cloudflare', model: 'flux-2-klein-4b' },
-      { provider: 'nvidia', model: 'flux-1-dev' },
-      { provider: 'pollinations', model: 'flux-1-schnell' },
-    ],
-    fast: [
-      { provider: 'cloudflare', model: 'flux-1-schnell' },
-      { provider: 'pollinations', model: 'flux-1-schnell' },
-    ],
+    premium: ['pl-gpt-image-2', 'cf-flux-2-dev', 'nv-flux-1-dev', 'pl-flux-1-schnell'],
+    standard: ['cf-flux-2-klein-4b', 'nv-flux-1-dev', 'pl-flux-1-schnell'],
+    fast: ['cf-flux-1-schnell', 'pl-flux-1-schnell'],
   },
 };
 
@@ -164,8 +152,8 @@ const fetchReference = async (url) => {
  * @returns {Promise<{buffer: Buffer, mime: string, provider: string, model: string, tier: string, attempts: object[]}>}
  */
 async function runImage(
-  { mode, tier = 'standard', prompt, imageUrl, productName = 'product', seed },
-  deps = { cloudflare, pollinations, nvidia, fetchReference }
+  { mode, tier = 'standard', modelId, prompt, imageUrl, productName = 'product', seed },
+  deps = { cloudflare, pollinations, nvidia, huggingface, fetchReference, book: bookkeeping }
 ) {
   if (!MODES.includes(mode)) throw new ProviderError('imageGen', 'input', `unknown mode ${mode}`);
   if (!TIERS.includes(tier)) throw new ProviderError('imageGen', 'input', `unknown tier ${tier}`);
@@ -178,13 +166,26 @@ async function runImage(
 
   const wish = mode === 'custom' ? prompt.trim().slice(0, MAX_WISH).replace(/\s+/g, ' ') : null;
   const finalPrompt = isEdit ? EDIT_PROMPTS[mode](productName, wish) : prompt.trim();
-  const chain = CHAINS[isEdit ? 'edit' : 'generate'][tier];
+
+  let chain;
+  if (modelId) {
+    const m = byId[modelId];
+    if (!m) throw new ProviderError('imageGen', 'input', `unknown model ${modelId}`);
+    if (!m.can.includes(isEdit ? 'edit' : 'generate')) {
+      throw new ProviderError('imageGen', 'input', `${m.label} cannot ${isEdit ? 'edit a photo' : 'generate from words'}`);
+    }
+    chain = [modelId];
+  } else {
+    chain = CHAINS[isEdit ? 'edit' : 'generate'][tier];
+  }
 
   // Fetched once, lazily, only if some entry in the chain wants bytes.
   let referenceBytes = null;
   const attempts = [];
 
-  for (const step of chain) {
+  for (const id of chain) {
+    const step = byId[id];
+    if (!step) continue;
     try {
       let result;
       if (step.provider === 'cloudflare') {
@@ -193,22 +194,27 @@ async function runImage(
           if (!referenceBytes) referenceBytes = await deps.fetchReference(imageUrl);
           images = [referenceBytes];
         }
-        result = await deps.cloudflare(step.model, { prompt: finalPrompt, images, seed });
+        result = await deps.cloudflare(step.remote, { prompt: finalPrompt, images, seed });
       } else if (step.provider === 'pollinations') {
-        result = await deps.pollinations(step.model, {
+        result = await deps.pollinations(step.remote, {
           prompt: finalPrompt,
           imageUrl: isEdit ? imageUrl : undefined,
           seed,
         });
+      } else if (step.provider === 'huggingface') {
+        if (!referenceBytes) referenceBytes = await deps.fetchReference(imageUrl);
+        result = await deps.huggingface(step.remote, { prompt: finalPrompt, imageBytes: referenceBytes, seed });
       } else {
         result = await deps.nvidia({ prompt: finalPrompt, seed: seed ?? 0 });
       }
 
-      attempts.push({ provider: step.provider, model: step.model, ok: true });
-      return { ...result, provider: step.provider, model: step.model, tier, attempts };
+      attempts.push({ provider: step.provider, model: step.id, ok: true });
+      await deps.book?.success(step);
+      return { ...result, provider: step.provider, model: step.id, modelLabel: step.label, tier, attempts };
     } catch (err) {
       const kind = err instanceof ProviderError ? err.kind : 'upstream';
-      attempts.push({ provider: step.provider, model: step.model, ok: false, kind, message: err.message });
+      attempts.push({ provider: step.provider, model: step.id, ok: false, kind, message: err.message });
+      if (kind === 'quota') await deps.book?.exhausted(step, err.message);
 
       // A bad request is bad everywhere. Stop, and say so.
       if (kind === 'input') {
@@ -222,7 +228,7 @@ async function runImage(
   }
 
   const e = new Error(
-    `Every provider in the ${tier} chain refused. ` +
+    (modelId ? `${byId[modelId].label} refused. ` : `Every provider in the ${tier} chain refused. `) +
       attempts.map((a) => `${a.provider}/${a.model}: ${a.kind}`).join('; ')
   );
   e.statusCode = 503;
@@ -230,4 +236,31 @@ async function runImage(
   throw e;
 }
 
-module.exports = { runImage, CHAINS, MODES, TIERS, EDIT_PROMPTS, MAX_WISH, smallVersionOf };
+/**
+ * The books. Every success adds the model's published cost to the provider's
+ * period; every quota refusal marks the provider exhausted for the period.
+ * That is what status.js reads to say "available" or "back at 5:30".
+ * Failures here are swallowed - a broken ledger must never fail a seller's
+ * image.
+ */
+const bookkeeping = {
+  async success(step) {
+    try {
+      const period = periodKeyFor(step.provider, { day: AiProviderState.day(), month: AiProviderState.month() });
+      await AiProviderState.spend(step.provider, period, { model: step.id, cost: step.cost });
+      await AiProviderState.markAlive(step.provider, period);
+    } catch (err) {
+      console.error('AI LEDGER:', err.message);
+    }
+  },
+  async exhausted(step, message) {
+    try {
+      const period = periodKeyFor(step.provider, { day: AiProviderState.day(), month: AiProviderState.month() });
+      await AiProviderState.markExhausted(step.provider, period, message);
+    } catch (err) {
+      console.error('AI LEDGER:', err.message);
+    }
+  },
+};
+
+module.exports = { runImage, CHAINS, MODES, TIERS, EDIT_PROMPTS, MAX_WISH, smallVersionOf, MODELS };

@@ -43,6 +43,10 @@ const GROUPS = [
     label: 'Records',
     items: [{ href: '/admin/inventory', label: 'Stock history', icon: 'History' }],
   },
+  {
+    label: 'AI',
+    items: [{ href: '/admin/ai', label: 'AI Studio', icon: 'Sparkles' }],
+  },
 ];
 
 export default function AdminLayout({ children }) {

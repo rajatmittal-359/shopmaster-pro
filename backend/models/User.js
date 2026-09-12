@@ -72,6 +72,19 @@
         enum: ['admin', 'seller', 'customer'],
         default: 'customer'
         },
+
+        /**
+         * An account that is EXEMPT from the AI caps (the admin, and the
+         * platform's own shop) can switch the caps back on for itself - to feel
+         * what a seller feels, or once its own catalogue is done and the free
+         * allowances should be left for everyone else. Off means unlimited;
+         * on means "treat me like any seller". Meaningless on accounts that
+         * were never exempt.
+         */
+        aiLimitsLikeSeller: {
+        type: Boolean,
+        default: false
+        },
         isVerified: {
         type: Boolean,
         default: false
