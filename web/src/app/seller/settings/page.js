@@ -1,11 +1,12 @@
 import SellerSettings from '@/components/seller/Settings';
+import PageHeader from '@/components/panel/PageHeader';
 
 export const metadata = { title: 'Settings' };
 
 export default function SellerSettingsPage() {
   return (
     <>
-      <h1 className="mb-6 text-2xl font-semibold tracking-tight">Settings</h1>
+      <PageHeader title="Settings" lead="Where the courier collects, and what you charge for delivery." />
       <SellerSettings />
     </>
   );

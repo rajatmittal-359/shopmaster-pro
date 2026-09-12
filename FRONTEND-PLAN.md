@@ -955,6 +955,54 @@ every image the Studio makes is recorded (`AiDraft`), the Studio's result has
 photos section has **Add from your AI pictures**, and the Studio's strip shows
 recent pictures after a reload rather than only this tab's memory.
 
+### 4.19 The seller's daily pages, to the product form's standard
+
+12 Sep 2026. Rajat brought three design resources - a clone of
+`awesome-design-md` (74 DESIGN.md files from Stitch: Linear, Stripe, Shopify,
+Airbnb...), the `ui-ux-pro-max` plugin (119 searchable UX rules) and the
+`taste-skill` plugin (a redesign audit). What each was good for:
+
+- **awesome-design-md** - the *format*, not any one file. ShopMaster now has
+  its own `web/DESIGN.md` in that shape: frontmatter with the live tokens
+  (oklch palette, Geist scale, radii, glass, elevation), then the reasons -
+  why not marigold, why one typeface, where glass is allowed and where it is
+  not, the do's and don'ts. It is the file to hand any tool or person before
+  they touch a page. The clone itself is gitignored.
+- **ui-ux-pro-max** - the audit. Its rules against the seller Dashboard,
+  Orders and Settings found exactly what the product form had already fixed
+  elsewhere: placeholder-only labels (Forms, priority 8), "Loading…" text
+  where a layout-shaped skeleton belongs (Feedback), no empty states, no
+  deep link to a filtered view (Navigation), a status told by a word alone
+  with no colour agreeing with it.
+- **taste-skill / redesign-skill** - a second opinion on the same three
+  pages; useful for its checklist of missing states (hover, empty, error,
+  loading). Its taste advice ("avoid purple gradients", "avoid Lucide") is
+  generic and was ignored where DESIGN.md had already decided otherwise.
+
+What was built, each from a reference:
+
+- **Dashboard** (Shopify Home, Seller Central home): a *setup guide* for a
+  shop that cannot ship yet - pickup address, first product - that removes
+  itself when both are done (Charming Jewels itself had no pickup address; the
+  guide found it). Three metrics with icons, then **Waiting on you**: the
+  orders themselves, not a count, each row a link. Low stock with a dot that
+  agrees with the words. A skeleton that mirrors the layout, a retry on error.
+- **Orders** (Shopify Orders, Amazon Manage Orders): stage tabs with counts -
+  To pack / Shipped / Returns / All - kept in the URL (`?tab=`) so the
+  dashboard links straight to the pile; a search box for the order number a
+  customer reads out; a status badge in words and colour; every line with its
+  **product picture** (`getMyOrders` now populates `items.productId images`);
+  action errors as toasts in the server's own words.
+- **Settings** (Shopify settings, Baymard): label above every field, hint
+  below, `autocomplete` on the address so a phone fills it; a real switch for
+  shop-wide free delivery; a save bar that is disabled until something changed
+  and offers Discard; only the changed part is sent, so a new seller can flip
+  the delivery switch before typing an address.
+
+Shared: `PageHeader` (title, one line, optional action) and `PanelCard` (the
+product form's card) so every panel page is one material; `ui/switch.jsx` on
+Base UI.
+
 ---
 
 ## 5. Structured data
@@ -1423,7 +1471,7 @@ Updated as it moves. The order is section 7's.
 | 6 | `/` | ✅ Hero with a CSS-only effect, categories from the live tree, newest products, the shop's real address, and the Organization record |
 | 7 | Port the 30 private routes | ✅ **Done.** Customer, seller and admin - 36 pages, every React route mapped. See section 13a |
 | 7a | Backend the interface needed | ✅ Google Sign-In, role-as-capability, become-a-seller, public seller pages, verified-buyer review check - all built and tested (sections 8.0, 9.0) |
-| 7b | Things the React app never had | ✅ Search with suggestions (4.11), mobile drawer (4.6), panel sidebars (4.12), dark mode + new palette + jharokha mark (4.7, 4.9, 4.14), loading states (4.13), AI listing and photo tools for sellers (4.16), product form to the Shopify/Amazon standard |
+| 7b | Things the React app never had | ✅ Search with suggestions (4.11), mobile drawer (4.6), panel sidebars (4.12), dark mode + new palette + jharokha mark (4.7, 4.9, 4.14), loading states (4.13), AI listing and photo tools for sellers (4.16), product form to the Shopify/Amazon standard, seller Dashboard/Orders/Settings to the same standard (4.19), `web/DESIGN.md` |
 | 8 | Cutover - see section 12 | ☐ **The only thing left.** Blocked until Oct 2026 (paid Render web service). Production still serves the React app; `web/` runs on localhost only |
 
 **Owed on the product page, and deliberately not faked:**

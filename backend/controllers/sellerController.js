@@ -575,12 +575,24 @@ exports.getMyOrders = async (req, res) => {
       ],
     })
       .populate("customerId", "name email")
+      // The picture is what a seller recognises a line by - Amazon's Manage
+      // Orders and Shopify's order cards both lead with it. Order items snapshot
+      // the name and price but not the image, so it comes from the product.
+      .populate("items.productId", "images")
       .sort({ createdAt: -1 });
 
     const sellerOrders = orders.map((order) => {
-      const sellerItems = order.items.filter(
-        (item) => item.sellerId.toString() === req.user._id.toString()
-      );
+      const sellerItems = order.items
+        .filter((item) => item.sellerId.toString() === req.user._id.toString())
+        .map((item) => {
+          const plain = item.toObject ? item.toObject() : { ...item };
+          const product = item.productId && typeof item.productId === "object" ? item.productId : null;
+          return {
+            ...plain,
+            productId: product ? product._id : item.productId,
+            image: product?.images?.[0] || null,
+          };
+        });
 
       // What this seller is owed for their own lines. The order's totalAmount
       // belongs to the whole basket, which in a multi-seller order is other
