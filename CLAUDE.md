@@ -20,6 +20,7 @@ it sells anything, and nothing in the frame may name a category.
 | `OPS-AND-MANUAL-ACTIONS.md` (gitignored) | Everything outside the code: accounts, DNS, courier, payments, and **Rajat's own checklist** — the list at the top is the current one | A dashboard fact changes or Rajat ticks a box |
 | `FRONTEND-PLAN.md` | Why every page looks the way it does — the references, the decisions, the reasons. §13 is the progress table | A page is built or a decision is made |
 | `web/DESIGN.md` | Tokens and rules of the visual system. Hand it to any tool or person before they touch a page | A token or rule changes |
+| `.claude/skills/redesign/` | **`/redesign`** — the project's own skill: a page's screenshot → checklist + live references + judgment + Rajat's note → options → his pick → build. Its `checklist.md` is the distilled audit | A rule proves itself or fails in practice |
 | `README.md` | The front door for a stranger | Rarely |
 | `docs/archive/` (gitignored) | The 5 Sep gap analyses. Superseded by the plan; kept for the record | Never |
 | `private/` (gitignored) | Test credentials, Brevo domain notes, the Google client secret. Never commit, never print | — |

@@ -16,7 +16,9 @@ bearertoken.txt
 *.tok
 
 # Local tooling
-.claude/
+# Local Claude settings stay out; the project's own skills are part of the repo
+.claude/*
+!.claude/skills/
 
 # Build outputs
 dist/
