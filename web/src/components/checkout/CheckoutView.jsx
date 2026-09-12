@@ -139,7 +139,7 @@ export default function CheckoutView() {
         const data = await authedFetch('/customer/checkout-cod', { method: 'POST', body });
         if (!data.order?._id) throw new Error(data.message || 'Order could not be placed');
         purchase({ orderId: data.order.orderNumber || data.order._id, value: payable, shipping: totals?.shippingCharges, coupon: coupon?.code, items: totals?.items });
-        router.push('/orders');
+        router.push(`/orders?placed=${data.order._id}`);
         return;
       }
 
@@ -171,7 +171,7 @@ export default function CheckoutView() {
               },
             });
             purchase({ orderId: started.dbOrderId, value: payable, shipping: totals?.shippingCharges, coupon: coupon?.code, items: totals?.items });
-            router.push('/orders');
+            router.push(`/orders?placed=${started.dbOrderId}`);
           } catch (err) {
             setState({
               status: 'error',

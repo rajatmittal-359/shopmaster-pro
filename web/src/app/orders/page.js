@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import OrdersList from '@/components/orders/OrdersList';
 
 export const metadata = {
@@ -10,7 +11,9 @@ export default function OrdersPage() {
     <div className="mx-auto max-w-3xl px-4 py-8">
       <h1 className="text-2xl font-semibold tracking-tight">My orders</h1>
       <div className="mt-6">
-        <OrdersList />
+        <Suspense fallback={null}>
+          <OrdersList />
+        </Suspense>
       </div>
     </div>
   );

@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
+import OrderPlaced from '@/components/orders/OrderPlaced';
 import Image from 'next/image';
 import { authedFetch } from '@/lib/client';
 import { useSession } from '@/lib/session';
@@ -33,7 +35,9 @@ const when = (iso) =>
   new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 
 export default function OrdersList() {
-  const { signedIn } = useSession();
+  const { signedIn, user } = useSession();
+  // Straight from checkout: the id of the order just placed, for the band.
+  const placedId = useSearchParams().get('placed');
   const [orders, setOrders] = useState([]);
   const [state, setState] = useState({ status: 'loading' });
 
@@ -90,8 +94,12 @@ export default function OrdersList() {
     );
   }
 
+  const placed = placedId ? orders.find((o) => String(o._id) === placedId) : null;
+
   return (
-    <ul className="space-y-4">
+    <>
+      {placed && <OrderPlaced order={placed} email={user?.email} />}
+      <ul className="space-y-4">
       {orders.map((order) => {
         const items = (order.items || []).filter((i) => i.productId);
 
@@ -155,6 +163,7 @@ export default function OrdersList() {
           </li>
         );
       })}
-    </ul>
+      </ul>
+    </>
   );
 }
