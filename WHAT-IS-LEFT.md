@@ -48,6 +48,7 @@ a page — the React app defined these in its services and no screen used them.
 |---|---|---|---|
 | 2.6 | **14 seeded products still share the old description** (was 35; 21 done 12 Sep). Next day with quota: `node draftProductDescriptions.js` then `--apply` (apply now reads the file, no second Gemini pass). None reach the feed | OPS backlog | Gemini daily quota |
 | 2.9 | **Sentry** — the one blind spot: a 500 at checkout is invisible | Plan §7b | Rajat's DSN |
+| 2.12 | **`seed.js --messy`** — adds (never deletes) the ugly cases to the dev DB so every state is seen by us before a customer: expired + live coupon, an NDR order, a dispute inside and outside 72h, a partial cancel with penalty, a return in transit, a suspended seller, a 0-stock product, a photo-less product, an address Borzo will not take, a payout with deductions. Rajat 12 Sep: realistic data is how edge cases surface | this list | after G4 |
 
 ## 2b. Google visibility — the full list, decided 12 Sep 2026
 
@@ -62,7 +63,7 @@ product word; 2 pages indexed, 8 not.
 | G1 | Search Console API — what people typed, per page, position | ✅ | done (service account is a user) | admin card ✅; seller: per-product queries in the listing panel | ✅ both |
 | G2 | URL Inspection API — is each product page indexed, last crawl | ✅ same account | — | "Google indexed: yes/no" per product ✅; admin list of not-indexed ☐ | seller ✅ |
 | G3 | Merchant Center API — per-product approved / disapproved + reason | ✅ verified (17 approved) | done | seller sees Google's verdict on the product ✅; admin sees all ☐ | seller ✅ |
-| G4 | Product structured data for merchant listings — `OfferShippingDetails`, `MerchantReturnPolicy` (7 days), `aggregateRating` where reviews exist | ✅ code | — | JSON-LD on the product page | ☐ |
+| G4 | Product structured data for merchant listings — `OfferShippingDetails` (₹100, 1–2 + 3–7 days, IN), `MerchantReturnPolicy` (7 days, customer pays courier), `aggregateRating` only where reviews exist, seller = the shop | ✅ code | — | `web/src/lib/productSchema.js`, verified on a local product page 12 Sep | ✅ |
 | G5 | Listing quality panel — score, checklist (title/photos/colour/size/description), AI keywords, Google preview, G1–G3 data inline | ✅ (Gemini/nano) | — | product form | ✅ 12 Sep (plan §4.30) |
 | G6 | GA4 property + Data API — traffic, product views, add-to-cart funnel | ✅ | **create GA4 property, send Measurement ID** | events on the storefront; admin panel card | ☐ |
 | G7 | PageSpeed Insights API — Core Web Vitals per page | ✅ | **Cloud → Credentials → Create API key → send** | admin card, per-page warnings | ☐ |

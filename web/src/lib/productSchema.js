@@ -48,7 +48,9 @@ export const productSchema = ({ product, url, price, was, inStock }) => {
         ? 'https://schema.org/InStock'
         : 'https://schema.org/OutOfStock',
       itemCondition: 'https://schema.org/NewCondition',
-      seller: { '@type': 'Organization', name: BUSINESS.tradeName },
+      // A marketplace listing names the shop that sells it, the way Amazon's
+      // does; the marketplace is the platform, not the seller.
+      seller: { '@type': 'Organization', name: product.shop?.name || BUSINESS.tradeName },
 
       shippingDetails: {
         '@type': 'OfferShippingDetails',
