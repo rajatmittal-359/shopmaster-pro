@@ -41,6 +41,7 @@ Liquidity · Trust · Seller recruitment · October 2026 cutover with nothing th
 - Error reply: `sendError(res, err)` from `utils/apiError.js` (`describeError` classifies validation / bad id / duplicate as 400). Never a raw 500 with `err.message`.
 - Auth: `middlewares/authMiddleware.js`, `roleMiddleware.js`, `checkSellerStatus.js` (`requireApprovedSeller`); capabilities in `utils/capabilities.js` (one account, roles as capabilities, `/auth/switch-context`).
 - Money: `sellerMoneyFor(order, sellerId)` in `sellerController` (subtotal / stamped commission / earning); refunds via `utils/refund`; payout state via `sellerPayoutStateFor`, `returnWindowFor` (`utils/payout.js`).
+- Rulebook: `config/sellerRules.js` (version, penalties, windows) — the agreement page, consent, payout and dashboard all read it; bump `version` when a rule changes. Charges ledger `models/SellerCharge.js`, `utils/sellerCharges.js` (`chargeForSellerCancel`, `applyChargesToPayout`).
 - Truth helpers: `utils/cancelOrder.js` (`CANCELLABLE`, `canCancelOrder`, `cancellableItemIds`, `cancelOrderFor`), `utils/deliveryTruth.js` (`sellerMayDeclareDelivered`, `customerMayDispute`, `payoutBlockedReason`), `applyCourierUpdate` (forward-only).
 - Input: `escapeRegex`, whitelisted `SORTS` map in `controllers/productController.js`, HTML allowlist validator on `Product.description`, `cloudinary.isOwnUrl`.
 - Cache: `middlewares/cacheControl.js` (`noStore` global, `publicCatalogue` on public routes). CORS from `FRONTEND_URL`.

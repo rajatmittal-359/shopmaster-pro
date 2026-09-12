@@ -335,11 +335,13 @@ const createPayoutForSeller = async (sellerId, adminId, session) => {
     return { ok: false, reason: 'Nothing is payable for this seller' };
   }
 
-  // 4. Record the money.
+  // 4. Record the money - less whatever the seller owes the platform
+  //    (cancellation charges, config/sellerRules.js), claimed exactly once.
   payout.itemCount = totals.itemCount;
   payout.grossSales = round2(totals.grossSales);
   payout.commission = round2(totals.commission);
   payout.netPayable = round2(totals.netPayable);
+  await require('./sellerCharges').applyChargesToPayout(payout);
   payout.periodFrom = periodFrom;
   payout.periodTo = periodTo;
   await payout.save(session ? { session } : {});

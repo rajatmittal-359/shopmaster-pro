@@ -14,3 +14,19 @@ process.env.CLOUDINARY_API_SECRET = 'test';
 // The shipping fallback charges a same-city delivery less, and works that out
 // from the pickup pincode. Fixed here so the zone split is deterministic.
 process.env.SHIPROCKET_PICKUP_PINCODE = '302019';
+
+/*
+ * The seller-charge ledger and the 30-day cancellation count sit on the cancel
+ * and payout paths. Tests written before they existed mock Order and Payout
+ * but not these, and an unmocked query to the never-connected database hangs
+ * until the test times out. Empty ledger, zero recent cancellations, unless a
+ * test says otherwise (sellerRules.test.mjs does).
+ */
+{
+  const SellerCharge = require('../models/SellerCharge');
+  const Order = require('../models/Order');
+  SellerCharge.find = () => ({ lean: async () => [] });
+  SellerCharge.updateMany = async () => ({ modifiedCount: 0 });
+  SellerCharge.create = async (doc) => doc;
+  Order.countDocuments = async () => 0;
+}

@@ -147,6 +147,15 @@ const cancelOrderFor = async (order, { by, actorId, reason, sellerId }) => {
   // through paymentStatus, not by erasing their financial history.
   await order.save();
 
+  // The rulebook's one charge: a seller cancelling an order they had accepted,
+  // beyond the monthly allowance. Customer- and platform-caused cancellations
+  // never reach it. After the save, so the count includes this one.
+  if (by === 'seller' && sellerId) {
+    const { chargeForSellerCancel } = require('./sellerCharges');
+    const { charged } = await chargeForSellerCancel(order, sellerId, { by });
+    if (charged) await order.save();
+  }
+
   return {
     ok: true,
     message: isPartial

@@ -1,4 +1,23 @@
 const User = require('../models/User');
+const sellerRules = require('../config/sellerRules');
+
+/**
+ * Nobody sells here without reading the rules first - Amazon, Flipkart and
+ * Meesho all put the agreement before the first listing, and so do we. The
+ * page sends `acceptedSellerAgreement: true` with the version it showed; the
+ * version has to be the current one, so a stale tab cannot accept last
+ * year's terms.
+ */
+const agreementRefusal = (body = {}) => {
+  const ok = body.acceptedSellerAgreement === true && String(body.agreementVersion || '') === sellerRules.version;
+  return ok
+    ? null
+    : {
+        message: 'Please read and agree to the Seller Agreement to sell on ShopMaster Pro.',
+        agreementVersion: sellerRules.version,
+      };
+};
+const acceptedNow = () => ({ version: sellerRules.version, acceptedAt: new Date() });
 const Seller = require('../models/Seller');
 const { generateToken } = require('../utils/tokenUtils');
 const sendEmail = require('../utils/sendEmail');
@@ -71,6 +90,10 @@ exports.register = async (req, res) => {
     // saved account with the seller role and no seller profile - unable to
     // sell, and unable to register again with that email.
     const isSeller = role === 'seller';
+    if (isSeller) {
+      const refused = agreementRefusal(req.body);
+      if (refused) return res.status(400).json(refused);
+    }
     if (isSeller && !businessName) {
       return res.status(400).json({ message: 'Business name required for seller' });
     }
@@ -86,7 +109,7 @@ exports.register = async (req, res) => {
     await user.save();
 
     if (isSeller) {
-      await Seller.create({ userId: user._id, businessName });
+      await Seller.create({ userId: user._id, businessName, agreement: acceptedNow() });
     }
 
     // The account already exists by this point, so a mail that will not send
@@ -136,6 +159,9 @@ exports.becomeSeller = async (req, res) => {
       return res.status(400).json({ message: 'What is the shop called?' });
     }
 
+    const refused = agreementRefusal(req.body);
+    if (refused) return res.status(400).json(refused);
+
     const existing = await Seller.findOne({ userId: req.user._id }).select('isApproved status');
 
     if (existing) {
@@ -150,7 +176,7 @@ exports.becomeSeller = async (req, res) => {
       });
     }
 
-    const seller = await Seller.create({ userId: req.user._id, businessName });
+    const seller = await Seller.create({ userId: req.user._id, businessName, agreement: acceptedNow() });
 
     return res.status(201).json({
       message: 'Thank you. An admin will review your shop before it goes live.',

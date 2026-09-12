@@ -104,9 +104,25 @@ export default function Sellers() {
                       {seller.kycStatus ? ` · KYC ${seller.kycStatus}` : ''}
                     </p>
                   </div>
-                  <p className="text-sm text-muted-foreground">
-                    Commission {seller.commissionRate ?? 0}%
-                  </p>
+                  <div className="text-right text-sm text-muted-foreground">
+                    <p>Commission {seller.commissionRate ?? 0}%</p>
+                    {/* The rulebook's two facts about a shop: did they accept it,
+                        and how often do they cancel what they accepted. */}
+                    <p>
+                      {seller.agreementUpToDate ? (
+                        <span>Agreement v{seller.agreement?.version} ✓</span>
+                      ) : (
+                        <span className="text-amber-700 dark:text-amber-300">Agreement not accepted</span>
+                      )}
+                    </p>
+                    {seller.cancellations && (
+                      <p className={seller.cancellations.ratePct > seller.cancellations.reviewAbovePct ? 'text-destructive' : ''}>
+                        Cancelled by seller: {seller.cancellations.cancelledBySeller} of {seller.cancellations.orders} in 30 days
+                        {seller.cancellations.orders ? ` (${seller.cancellations.ratePct}%)` : ''}
+                        {seller.cancellations.ratePct > seller.cancellations.reviewAbovePct ? ' · above the review line' : ''}
+                      </p>
+                    )}
+                  </div>
                 </div>
 
                 <div className="mt-3 flex flex-wrap items-center gap-2">

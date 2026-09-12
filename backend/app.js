@@ -104,6 +104,12 @@ app.use('/api/public/products', publicCatalogue, productRoutes);
  * same answer for everybody and it changes rarely.
  */
 app.use('/api/public/sellers', publicCatalogue, require('./routes/publicSellerRoutes'));
+// The seller rulebook, for the agreement page and the consent checkbox - the
+// same numbers the code enforces (config/sellerRules.js).
+app.get('/api/public/seller-rules', (req, res) => {
+  res.set('Cache-Control', 'public, max-age=300');
+  res.json(require('./config/sellerRules'));
+});
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/inventory', inventoryRoutes);
 app.use('/api/pincode', require('./routes/pincodeRoutes'));

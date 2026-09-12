@@ -7,6 +7,7 @@ import { authedFetch } from '@/lib/client';
 import { useSession, setCapabilities } from '@/lib/session';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import AgreementConsent from '@/components/seller/AgreementConsent';
 
 /**
  * Adding selling to the account somebody already has.
@@ -27,6 +28,8 @@ export default function ApplyToSell() {
   const router = useRouter();
   const { signedIn, canSell, capabilities } = useSession();
   const [businessName, setBusinessName] = useState('');
+  const [agreed, setAgreed] = useState(false);
+  const [agreementVersion, setAgreementVersion] = useState(null);
   const [state, setState] = useState({ status: 'idle' });
 
   useEffect(() => {
@@ -98,7 +101,10 @@ export default function ApplyToSell() {
         e.preventDefault();
         setState({ status: 'sending' });
         try {
-          await authedFetch('/auth/become-seller', { method: 'POST', body: { businessName } });
+          await authedFetch('/auth/become-seller', {
+            method: 'POST',
+            body: { businessName, acceptedSellerAgreement: agreed, agreementVersion },
+          });
           // Re-read rather than assume: the answer that matters is the one the
           // server will give every other page.
           const me = await authedFetch('/auth/me');
@@ -128,7 +134,9 @@ export default function ApplyToSell() {
         </p>
       </div>
 
-      <Button type="submit" size="lg" disabled={state.status === 'sending'}>
+      <AgreementConsent checked={agreed} onChange={setAgreed} onVersion={setAgreementVersion} />
+
+      <Button type="submit" size="lg" disabled={state.status === 'sending' || !agreed}>
         {state.status === 'sending' ? 'Sending…' : 'Apply to sell'}
       </Button>
 

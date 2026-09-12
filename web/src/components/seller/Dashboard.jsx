@@ -128,6 +128,20 @@ export default function SellerDashboard() {
         ))}
       </div>
 
+      {/* Account health, Amazon-style: the number the rulebook reviews on,
+          shown before it matters. Zero is the normal state and says so. */}
+      {analytics?.cancellations && (
+        <p className={`text-sm ${analytics.cancellations.ratePct > analytics.cancellations.reviewAbovePct ? 'text-destructive' : 'text-muted-foreground'}`}>
+          Cancelled by you in the last {analytics.cancellations.days} days:{' '}
+          <strong className="tabular-nums">{analytics.cancellations.cancelledBySeller}</strong> of{' '}
+          {analytics.cancellations.orders} orders
+          {analytics.cancellations.orders ? ` (${analytics.cancellations.ratePct}%)` : ''}.{' '}
+          {analytics.cancellations.ratePct > analytics.cancellations.reviewAbovePct
+            ? `Above ${analytics.cancellations.reviewAbovePct}% the account is reviewed.`
+            : `${analytics.cancellations.freePer30Days} are free a month; each one after costs ₹${analytics.cancellations.penalty}.`}
+        </p>
+      )}
+
       <div className="grid gap-6 lg:grid-cols-5">
         <PanelCard
           className="min-w-0 lg:col-span-3"

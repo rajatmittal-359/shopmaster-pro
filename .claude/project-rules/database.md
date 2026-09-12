@@ -17,7 +17,7 @@ Liquidity · Trust · Seller recruitment · October 2026 cutover. Stage: one Atl
   `populate('items.productId', 'name slug images')` is for display only; the
   snapshot decides money.
 - **Reference where it grows without bound**: `Inventory` (the stock audit
-  log), `Review`, `Payout`, `AiDraft`, `AiUsage` are their own collections.
+  log), `Review`, `Payout`, `SellerCharge`, `AiDraft`, `AiUsage` are their own collections.
   Never push into an array that a busy shop can make unbounded.
 - **Derived state is computed, not stored twice**: order status derives from
   fulfilments; `canCancel` / `canReturn` / `canDispute` are computed on read
@@ -29,7 +29,7 @@ Liquidity · Trust · Seller recruitment · October 2026 cutover. Stage: one Atl
   `Category`: `ancestors`, `parentCategory` · `Inventory`: `productId`,
   `orderId`, `createdAt` · `Review`: `{productId, userId}` unique ·
   `Payout`: `{sellerId, createdAt}` · `AiUsage`: `{scope, key, day}` unique ·
-  `AiProviderState`: `{provider, period}` unique.
+  `AiProviderState`: `{provider, period}` unique · `SellerCharge`: `{sellerId, payoutId}`.
 - **Category tree** uses the array-of-ancestors pattern (`ancestors`,
   `parentCategory`); products must sit on a leaf (`validateLeafCategory`).
 - **Reservation is a field, not a collection**: `reservationStatus` /

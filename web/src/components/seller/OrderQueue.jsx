@@ -284,6 +284,14 @@ export default function OrderQueue() {
                     {order.ndrAt ? ` · ${when(order.ndrAt)}` : ''}. The courier tries again; if it fails twice, call the customer.
                   </p>
                 )}
+                {/* The rulebook's one charge, said where it happened, with the
+                    reason - a deduction discovered in a payout is how trust ends. */}
+                {order.cancelPenalty > 0 && (
+                  <p className="mt-3 rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
+                    ₹{order.cancelPenalty} cancellation charge on this order - it was cancelled by you beyond the
+                    monthly free allowance, and comes off your next payout. See the Seller Agreement, section 4.
+                  </p>
+                )}
                 {order.nprReason && !shipped && (
                   <p className="mt-3 rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
                     The courier did not collect the parcel: {order.nprReason}. Book the pickup again.

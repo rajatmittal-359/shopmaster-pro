@@ -83,6 +83,7 @@ router.get('/ai/drafts', requireApprovedSeller, ai.listDrafts);
 // courier collects from.
 const sellerCtrl = require('../controllers/sellerController');
 router.get('/settings', sellerCtrl.getSettings);
+router.post('/agreement/accept', sellerCtrl.acceptAgreement);
 router.patch('/settings', sellerCtrl.updateSettings);
 
 // A seller's own earnings, settlement history and the account they are paid into.

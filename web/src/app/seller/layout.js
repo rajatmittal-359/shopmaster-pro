@@ -1,5 +1,6 @@
 import SellerGuard from '@/components/seller/SellerGuard';
 import PanelShell from '@/components/panel/PanelShell';
+import AgreementBanner from '@/components/seller/AgreementBanner';
 
 export const metadata = {
   title: { default: 'Seller', template: '%s · Seller · ShopMaster Pro' },
@@ -46,7 +47,10 @@ const GROUPS = [
 export default function SellerLayout({ children }) {
   return (
     <PanelShell title="Seller" groups={GROUPS}>
-      <SellerGuard>{children}</SellerGuard>
+      <SellerGuard>
+        <AgreementBanner />
+        {children}
+      </SellerGuard>
     </PanelShell>
   );
 }

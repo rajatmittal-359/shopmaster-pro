@@ -128,3 +128,12 @@ export const getSeller = async (userId) => {
 };
 
 export const apiBase = API;
+
+/** The seller rulebook - the numbers the backend enforces (config/sellerRules.js). */
+export const getSellerRules = async () => {
+  try {
+    return await get('/public/seller-rules', { revalidate: 300 });
+  } catch {
+    return null;
+  }
+};

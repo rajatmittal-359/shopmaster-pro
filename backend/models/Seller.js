@@ -11,6 +11,16 @@ const sellerSchema = new mongoose.Schema(
       required: true,
       unique: true // One seller profile per user
     },
+    /**
+     * Which version of the Seller Agreement this shop accepted, and when.
+     * Nobody becomes a seller without it; a version bump in
+     * config/sellerRules.js asks every existing seller to accept again.
+     */
+    agreement: {
+      version: { type: String, default: null },
+      acceptedAt: { type: Date, default: null },
+    },
+
     businessName: {
       type: String,
       required: [true, 'Business name is required'],

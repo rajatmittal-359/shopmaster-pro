@@ -1,5 +1,6 @@
 // backend/controllers/sellerController.js
 const { sendError } = require('../utils/apiError');
+const sellerRules = require('../config/sellerRules');
 const Product = require('../models/Product');
 const Order = require('../models/Order');
 const Seller = require('../models/Seller');
@@ -624,6 +625,8 @@ exports.getMyOrders = async (req, res) => {
         disputeStatus: fulfilment?.disputeStatus || null,
         bookingFailedReason: fulfilment?.bookingFailedReason || null,
         bookingFailedKind: fulfilment?.bookingFailedKind || null,
+        // What this cancellation cost them, if anything (config/sellerRules.js).
+        cancelPenalty: fulfilment?.cancelPenalty || 0,
         ndrReason: fulfilment?.ndrReason || null,
         ndrAt: fulfilment?.ndrAt || null,
         ndrAttempts: fulfilment?.ndrAttempts || 0,
@@ -965,6 +968,12 @@ exports.getSellerAnalytics = async (req, res) => {
         lowStock: lowStockCount,
       },
       revenue: revenue[0]?.total || 0,
+      /*
+       * The account-health number Amazon and Meesho act on: how often this
+       * shop cancels what it accepted. Shown from the first order, so a seller
+       * sees the line they must not cross before they cross it.
+       */
+      cancellations: await cancelStatsFor(req.user._id),
     });
   } catch (error) {
     sendError(res, error);
@@ -1566,6 +1575,51 @@ exports.settleReturn = async (req, res) => {
  *   the environment and used it for everybody, which for any seller but the
  *   platform's own shop means a courier sent to the wrong door.
  */
+/**
+ * Seller-caused cancellations in the last 30 days against orders received,
+ * and the review line from the rulebook. One helper, read by the seller's
+ * dashboard and the admin's seller list, so both quote the same number.
+ */
+const cancelStatsFor = async (sellerId) => {
+  const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  const [orders, cancelled] = await Promise.all([
+    Order.countDocuments({ 'items.sellerId': sellerId, createdAt: { $gte: since } }),
+    Order.countDocuments({ 'items.sellerId': sellerId, cancelledBy: 'seller', cancelledAt: { $gte: since } }),
+  ]);
+  const ratePct = orders ? Math.round((cancelled / orders) * 1000) / 10 : 0;
+  return {
+    days: 30,
+    orders,
+    cancelledBySeller: cancelled,
+    ratePct,
+    reviewAbovePct: sellerRules.cancelRateReviewPct,
+    freePer30Days: sellerRules.cancelFreePer30Days,
+    penalty: sellerRules.cancelPenalty,
+  };
+};
+exports.cancelStatsFor = cancelStatsFor;
+
+/** The seller reads the current agreement and accepts it from the panel. */
+exports.acceptAgreement = async (req, res) => {
+  try {
+    if (req.body?.agreementVersion !== sellerRules.version) {
+      return res.status(400).json({
+        message: 'That is not the current agreement. Reload the page and read the latest version.',
+        agreementVersion: sellerRules.version,
+      });
+    }
+    const seller = await Seller.findOneAndUpdate(
+      { userId: req.user._id },
+      { $set: { agreement: { version: sellerRules.version, acceptedAt: new Date() } } },
+      { new: true }
+    ).select('agreement');
+    if (!seller) return res.status(404).json({ message: 'Seller profile not found' });
+    res.json({ success: true, agreement: seller.agreement });
+  } catch (error) {
+    sendError(res, error);
+  }
+};
+
 exports.getSettings = async (req, res) => {
   try {
     const seller = await Seller.findOne({ userId: req.user._id });
@@ -1587,6 +1641,18 @@ exports.getSettings = async (req, res) => {
          */
         commissionRate: seller.commissionRate,
         isPlatformOwned: Boolean(seller.isPlatformOwned),
+
+        /*
+         * Which agreement this shop accepted, and whether it is the current
+         * one. The panel shows a banner until they match; a new seller cannot
+         * be created without it (authController).
+         */
+        agreement: {
+          version: seller.agreement?.version || null,
+          acceptedAt: seller.agreement?.acceptedAt || null,
+          currentVersion: sellerRules.version,
+          upToDate: seller.agreement?.version === sellerRules.version,
+        },
       },
     });
   } catch (error) {

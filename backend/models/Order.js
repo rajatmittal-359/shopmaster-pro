@@ -352,6 +352,13 @@ const fulfilmentSchema = new mongoose.Schema(
     nprReason: { type: String, default: null },
 
     /**
+     * What this seller was charged for cancelling this order themselves,
+     * beyond the monthly free allowance (config/sellerRules.js). Shown on
+     * their order card; the ledger row is in SellerCharge.
+     */
+    cancelPenalty: { type: Number, default: 0 },
+
+    /**
      * Proof of delivery - a signature or a photo, as the courier recorded it.
      *
      * This is the evidence an admin needs to settle "the tracking says

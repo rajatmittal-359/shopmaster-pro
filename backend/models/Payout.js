@@ -68,6 +68,8 @@ const payoutSchema = new mongoose.Schema(
     grossSales: { type: Number, required: true, min: 0 },
     commission: { type: Number, required: true, min: 0 },
     netPayable: { type: Number, required: true, min: 0 },
+    /** Charges netted off this payout (SellerCharge rows stamped with this id). */
+    deductions: { type: Number, default: 0, min: 0 },
 
     status: {
       type: String,

@@ -1152,6 +1152,50 @@ lives in every day.
   below; every page opens with a title and one line. The admin is one person,
   so nothing beyond what failed the checklist was touched.
 
+### 4.26 The Seller Agreement: rules first, consent first, enforced
+
+12 Sep 2026. Rajat: *"jaise Amazon/Flipkart/Myntra/Meesho sakht niyam se
+chalta hai waisa hi… seller banne se pehle hi rules padha dene chahiye,
+consent maang lena chahiye."* Gate: seller recruitment and trust — the plan's
+own §2a said "write the seller rules before the first outside seller"; this is
+that, with teeth.
+
+**References.** Amazon's Business Solutions Agreement (consent at signup;
+pre-fulfilment cancel rate reviewed above 2.5 %; since Aug 2026 a
+seller-caused cancellation costs 10 % + GST under ₹10,000), Flipkart's Seller
+Terms (Aug 2026: ₹30 late dispatch, ₹60 seller cancel, ₹90 both), Meesho's
+Supplier Agreement (₹25 cancel, ₹50 late dispatch), and their common shape:
+one document, numbered, the money as numbers.
+
+**One source of numbers.** `backend/config/sellerRules.js` (version 1.0,
+effective 12 Sep 2026): 2 free seller-caused cancellations per 30 days, ₹50
+each after; dispatch in 2 business days; 7-day returns; payout 7 days after
+delivery; 72 h to answer a dispute; 8 % default commission; account reviewed
+above 5 % cancel rate. Served at `GET /api/public/seller-rules`; the agreement
+page, the consent checkbox, the dashboard and the payout code all read it.
+**No GST anywhere** — neither the platform nor its shop is registered, and the
+page says so.
+
+**Consent.** `Seller.agreement { version, acceptedAt }`. Both roads to
+becoming a seller (register as one, apply from an existing account) send
+`acceptedSellerAgreement` + the version shown; the server refuses without it
+(`agreementRefusal`), and refuses a stale version. Existing sellers see a
+banner on every panel page until they accept the current version; the admin's
+seller list shows who has and who has not.
+
+**Enforcement.** `utils/sellerCharges.js`: on a seller-caused cancellation
+beyond the allowance a `SellerCharge` row is written (own collection — it
+grows for as long as the shop trades) and the parcel is stamped, so the order
+card says "₹50 cancellation charge… comes off your next payout" where it
+happened. `createPayoutForSeller` nets unclaimed charges off `netPayable`
+(`deductions` on the payout; never below zero — the remainder is written off,
+not chased) and claims them exactly once. Customer- and platform-caused
+cancellations never reach it.
+
+**The metric.** `cancelStatsFor(sellerId)` — one helper for the seller's
+dashboard line and the admin's list, so both quote the same figure against
+the same review line. 930 tests.
+
 ---
 
 ## 5. Structured data

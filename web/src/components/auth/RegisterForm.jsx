@@ -7,6 +7,7 @@ import { apiBase } from '@/lib/api';
 import { setSession } from '@/lib/session';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import AgreementConsent from '@/components/seller/AgreementConsent';
 
 /**
  * Creating an account, in two steps on one page.
@@ -198,16 +199,23 @@ export default function RegisterForm({ next = '/', verifyEmail = '' }) {
         </label>
 
         {form.role === 'seller' && (
-          <div className="mt-3">
-            <label htmlFor="businessName" className="text-sm font-medium">
-              Your shop&rsquo;s name
-            </label>
-            <Input
-              id="businessName"
-              required
-              value={form.businessName}
-              onChange={set('businessName')}
-              className="mt-1"
+          <div className="mt-3 space-y-3">
+            <div>
+              <label htmlFor="businessName" className="text-sm font-medium">
+                Your shop&rsquo;s name
+              </label>
+              <Input
+                id="businessName"
+                required
+                value={form.businessName}
+                onChange={set('businessName')}
+                className="mt-1"
+              />
+            </div>
+            <AgreementConsent
+              checked={form.acceptedSellerAgreement === true}
+              onChange={(v) => setForm((f) => ({ ...f, acceptedSellerAgreement: v }))}
+              onVersion={(v) => setForm((f) => (f.agreementVersion === v ? f : { ...f, agreementVersion: v }))}
             />
           </div>
         )}

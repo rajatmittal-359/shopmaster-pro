@@ -19,9 +19,23 @@ exports.getAllSellers = async (req, res) => {
   try {
     const allSellers = await Seller.find({})
       .populate("userId", "name email")
-      .sort({ createdAt: -1 });
-    
-    res.json({ count: allSellers.length, sellers: allSellers });
+      .sort({ createdAt: -1 })
+      .lean();
+
+    // Account health beside each shop - the number the rulebook reviews on -
+    // and which agreement they accepted. Same helper the seller's own
+    // dashboard uses, so admin and seller see one figure.
+    const { cancelStatsFor } = require('./sellerController');
+    const sellerRules = require('../config/sellerRules');
+    const sellers = await Promise.all(
+      allSellers.map(async (s) => ({
+        ...s,
+        cancellations: await cancelStatsFor(s.userId?._id || s.userId),
+        agreementUpToDate: s.agreement?.version === sellerRules.version,
+      }))
+    );
+
+    res.json({ count: sellers.length, sellers, agreementVersion: sellerRules.version });
   } catch (error) {
     sendError(res, error);
   }
