@@ -38,13 +38,23 @@ async function buildCatalogueFilter({ category, search, minPrice, maxPrice, colo
   }
 
   if (search) {
-    const searchRegex = { $regex: escapeRegex(search), $options: 'i' };
-    filter.$or = [
-      { name: searchRegex },
-      { description: searchRegex },
-      { brand: searchRegex },
-      { tags: searchRegex },
-    ];
+    // Atlas Search when it answers (typos, Hinglish, prefixes - utils/atlasSearch);
+    // the regex it always was when it does not. `searchIds` travels back so
+    // the list can keep relevance order.
+    const { searchProductIds } = require('./atlasSearch');
+    const ids = await searchProductIds(search, { limit: 200 });
+    if (ids) {
+      filter._id = { $in: ids };
+      filter.__searchIds = ids;
+    } else {
+      const searchRegex = { $regex: escapeRegex(search), $options: 'i' };
+      filter.$or = [
+        { name: searchRegex },
+        { description: searchRegex },
+        { brand: searchRegex },
+        { tags: searchRegex },
+      ];
+    }
   }
 
   if (minPrice || maxPrice) {

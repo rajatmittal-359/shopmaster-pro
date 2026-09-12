@@ -30,3 +30,16 @@ process.env.SHIPROCKET_PICKUP_PINCODE = '302019';
   SellerCharge.create = async (doc) => doc;
   Order.countDocuments = async () => 0;
 }
+
+/*
+ * Atlas Search runs as an aggregate on Product. There is no Atlas here, and
+ * an unmocked aggregate would buffer against the never-connected database
+ * until the test times out. Fail it fast instead: the code takes the regex
+ * road, which is exactly what the catalogue tests were written against.
+ */
+{
+  const Product = require('../models/Product');
+  Product.aggregate = async () => {
+    throw new Error('no Atlas Search under test');
+  };
+}

@@ -9,6 +9,7 @@
  * after it. Every handler's own WHY block travelled with it.
  */
 const { withShop } = require('../utils/shopNames');
+const { searchProductIds, inSearchOrder } = require('../utils/atlasSearch');
 const mongoose = require('mongoose');
 const { buildCatalogueFilter, escapeRegex } = require('../utils/catalogueFilter');
 const Product = require('../models/Product');
@@ -161,12 +162,25 @@ exports.listProducts = async (req, res) => {
     const numericLimit = Number(limit) || 20;
     const numericPage = Number(page) || 1;
 
-    const products = await Product.find(filter)
-      .populate('category', 'name')
-      .populate('sellerId', 'name')
-      .sort(SORTS[sort] || SORTS.newest)
-      .limit(numericLimit)
-      .skip((numericPage - 1) * numericLimit);
+    // Search results come back best-first from Atlas; unless the shopper
+    // chose a sort, that order is the one they expect. Pagination then happens
+    // on the ordered list rather than in Mongo.
+    const searchIds = filter.__searchIds;
+    delete filter.__searchIds;
+    const relevance = Boolean(searchIds) && !sort;
+
+    let products;
+    if (relevance) {
+      const all = await Product.find(filter).populate('category', 'name').populate('sellerId', 'name');
+      products = inSearchOrder(all, searchIds).slice((numericPage - 1) * numericLimit, numericPage * numericLimit);
+    } else {
+      products = await Product.find(filter)
+        .populate('category', 'name')
+        .populate('sellerId', 'name')
+        .sort(SORTS[sort] || SORTS.newest)
+        .limit(numericLimit)
+        .skip((numericPage - 1) * numericLimit);
+    }
 
     const total = await Product.countDocuments(filter);
 
@@ -232,28 +246,37 @@ exports.suggest = async (req, res) => {
     const rx = { $regex: '\\b' + escapeRegex(q), $options: 'i' };
     const browsable = await Category.getBrowsableIds();
 
-    const [products, categories] = await Promise.all([
-      Product.find({
-        isActive: true,
-        isDeleted: { $ne: true },
-        stock: { $gt: 0 },
-        category: { $in: browsable },
-        // Name, brand and tags only. NOT description: a product whose
-        // description happens to contain the word is a poor suggestion, and
-        // it is how "gift" returns everything in the shop.
-        $or: [{ name: rx }, { brand: rx }, { tags: rx }],
-      })
-        .select('name slug price salePrice saleStartsAt saleEndsAt mrp images category')
-        .populate('category', 'name')
-        .sort({ totalReviews: -1, createdAt: -1 })
-        .limit(6)
-        .lean(),
+    /*
+     * Atlas Search first (typos, Hinglish spellings, half-typed words - see
+     * utils/atlasSearch), the regex as the fallback it always was. `ids` is
+     * best-first; the find below is reordered to keep that.
+     */
+    const ids = await searchProductIds(q, { limit: 12, filterIds: browsable });
+    const base = { isActive: true, isDeleted: { $ne: true }, stock: { $gt: 0 }, category: { $in: browsable } };
+    let productQuery = Product.find(
+      ids
+        ? { ...base, _id: { $in: ids } }
+        : {
+            ...base,
+            // Name, brand and tags only. NOT description: a product whose
+            // description happens to contain the word is a poor suggestion, and
+            // it is how "gift" returns everything in the shop.
+            $or: [{ name: rx }, { brand: rx }, { tags: rx }],
+          }
+    )
+      .select('name slug price salePrice saleStartsAt saleEndsAt mrp images category')
+      .populate('category', 'name');
+    if (!ids) productQuery = productQuery.sort({ totalReviews: -1, createdAt: -1 });
+
+    const [found, categories] = await Promise.all([
+      productQuery.limit(ids ? 12 : 6).lean(),
 
       Category.find({ _id: { $in: browsable }, name: rx })
         .select('name slug')
         .limit(3)
         .lean(),
     ]);
+    const products = (ids ? inSearchOrder(found, ids) : found).slice(0, 6);
 
     return res.json({
       // Built field by field: this response is public and a `.lean()` document

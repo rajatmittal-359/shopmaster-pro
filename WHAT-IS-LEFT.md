@@ -73,11 +73,11 @@ product word; 2 pages indexed, 8 not.
 
 **First-run tour**: seller and admin ✅ (12 Sep). Customer storefront: none on purpose - Amazon and Flipkart show no tour to shoppers.
 
-**Our own site search** (customer side): MongoDB **Atlas Search** — free on
-the current cluster, no new account: typo tolerance (jhumki/jhumka/झुमका),
-synonyms, autocomplete, relevance. Replaces the regex suggest; Gemini as an
-optional layer on top ("laal jhumka 500 ke andar" → filters). Via `/database`.
-☐
+**Our own site search**: Atlas Search ✅ 12 Sep — index `products_search`
+(created from the app's connection), typo/prefix tolerant, name over tags over
+description, relevance order, regex fallback if Search is ever unavailable.
+Live: jhumki → Pearl Drop Jhumka, kundn choker → Kundan Choker Set. Later:
+synonyms collection (jhumka/jhumki/झुमका), Gemini query → filters.
 
 ## 3. Rajat's call — researched, waiting on a decision
 

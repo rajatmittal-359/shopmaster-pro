@@ -22,7 +22,6 @@ it sells anything, and nothing in the frame may name a category.
 | `web/DESIGN.md` | Tokens and rules of the visual system. Hand it to any tool or person before they touch a page | A token or rule changes |
 | `.claude/project-rules/{frontend,backend,database}.md` | **What the three skills read first**: goals for the gate, house rules, schema truths + live index list, conventions and file names. The skills themselves (`/frontend`, `/backend`, `/database`) are user-level in `~/.claude/skills/` so they work in every project; these files are what makes them *this* project's | A rule, index, helper or goal changes |
 | `README.md` | The front door for a stranger | Rarely |
-| `docs/archive/` (gitignored) | The 5 Sep gap analyses. Superseded by the plan; kept for the record | Never |
 | `private/` (gitignored) | Test credentials, Brevo domain notes, the Google client secret. Never commit, never print | — |
 
 ## Rules that came from Rajat, with the reason
@@ -50,8 +49,8 @@ it sells anything, and nothing in the frame may name a category.
 
 `superpowers` (TDD, systematic-debugging, verification), `security-guidance`
 (watches every edit and commit), `pr-review-toolkit` (`silent-failure-hunter`
-on money/error diffs), `mongodb-atlas` (schema/optimizer skills + read-only MCP
-once authorised via `/mcp`), `context7` (live Express 5 / Mongoose 9 docs),
+on money/error diffs), `mongodb-atlas` (schema/optimizer skills; its MCP is deliberately NOT
+authorised - the app's own `MONGO_URI` is enough and stays database-level), `context7` (live Express 5 / Mongoose 9 docs),
 `ui-ux-pro-max` (frontend; its search script is called by `/frontend`).
 The three project skills live in `~/.claude/skills/{frontend,backend,database}`
 — generic method + checklist; each reads `.claude/project-rules/<name>.md` here.
