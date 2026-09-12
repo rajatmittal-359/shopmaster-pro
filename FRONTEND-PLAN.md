@@ -1147,6 +1147,10 @@ lives in every day.
   Indian bank's beneficiary form does; Save disabled until they match.
 - **Order detail, Stock history**: layout-shaped skeletons instead of
   "Loading…". Nothing else there failed the checklist.
+- **Admin** (same day, same audit): skeletons on all six pages; the coupon
+  and category forms and the payout UTR field get labels above and hints
+  below; every page opens with a title and one line. The admin is one person,
+  so nothing beyond what failed the checklist was touched.
 
 ---
 

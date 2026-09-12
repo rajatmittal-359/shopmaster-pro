@@ -48,7 +48,6 @@ a page — the React app defined these in its services and no screen used them.
 |---|---|---|---|
 | 2.5 | **Seller cancellation carries no penalty** (Amazon 2–10 %, Flipkart ₹60) | OPS backlog | A policy number from Rajat |
 | 2.6 | **14 seeded products still share the old description** (was 35; 21 done 12 Sep). Next day with quota: `node draftProductDescriptions.js` then `--apply` (apply now reads the file, no second Gemini pass). None reach the feed | OPS backlog | Gemini daily quota |
-| 2.7 | **Admin pages to the product-form standard** — Overview, Orders, Sellers, Payouts, Categories, Coupons, Inventory. All work; first-pass style. Seller side is done (plan §4.19, §4.25) | Plan §4.19 | Time; admin is one person, so last |
 | 2.8 | **NVIDIA provider** — keep as a generate-only fallback, or remove. Text-to-image only (cannot take our photo), one-time credits | This session | Rajat's call |
 | 2.9 | **Sentry** — the one blind spot: a 500 at checkout is invisible | Plan §7b | Rajat's DSN |
 | 2.10 | **Backend hardening the copy-paste era never had:** no `helmet`, **no rate limiting** on login / forgot-password / checkout / AI routes, no request-validation layer (controllers validate by hand, unevenly). Found 12 Sep while measuring the backend | This session | Rajat runs the installs (`helmet`, `express-rate-limit`) — then I wire them with tests |
