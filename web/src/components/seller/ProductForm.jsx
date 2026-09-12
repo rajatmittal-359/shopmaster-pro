@@ -183,7 +183,7 @@ export default function ProductForm({ productId, copyFromId }) {
         ...(first?.kind === 'existing' ? { imageUrl: first.src } : {}),
         ...(first?.kind === 'new' ? { imageDataUrl: first.src } : {}),
       };
-      const { draft, warnings, usage: u } = await authedFetch('/seller/ai/listing', { method: 'POST', body });
+      const { draft, warnings, usage: u, writtenBy } = await authedFetch('/seller/ai/listing', { method: 'POST', body });
       setForm((f) => ({
         ...f,
         name: draft.name || f.name,
@@ -196,7 +196,7 @@ export default function ProductForm({ productId, copyFromId }) {
         tags: draft.tags?.length ? draft.tags : f.tags,
       }));
       if (u) setUsage(u);
-      setAi({ status: 'done', warnings: warnings || [] });
+      setAi({ status: 'done', warnings: warnings || [], writtenBy });
     } catch (err) {
       setAi({ status: 'error', message: err.message });
     }
@@ -311,6 +311,7 @@ export default function ProductForm({ productId, copyFromId }) {
           {ai.status === 'done' && (
             <p className="mt-2 text-sm text-brand-ink">
               Filled in below. Read it, change what is wrong, then save.
+              {ai.writtenBy && <span className="text-muted-foreground"> Written by {ai.writtenBy}.</span>}
               {ai.warnings?.length > 0 && (
                 <span className="block text-muted-foreground">{ai.warnings.join(' ')}</span>
               )}

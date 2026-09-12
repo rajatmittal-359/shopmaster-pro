@@ -53,6 +53,12 @@ const RESPONSE_SCHEMA = {
     size: { type: 'string', description: 'Labelled size ONLY if visible or stated ("M", "Free Size"), else empty' },
     categoryName: { type: 'string', description: 'The best match from the category list given, verbatim, or empty' },
     isJewellery: { type: 'boolean' },
+    photoIssues: {
+      type: 'array',
+      items: { type: 'string' },
+      description:
+        'Problems with the photo that would hurt sales or fail a marketplace image check: blurry, too dark, cluttered background, product cut off, watermark or text on the image, product too small in frame. Empty if none. Short phrases.',
+    },
   },
   required: ['name', 'description', 'bullets', 'tags', 'color', 'gender', 'ageGroup', 'categoryName', 'isJewellery'],
 };
@@ -180,7 +186,16 @@ const draftListing = async (input, deps = { generate }) => {
     warnings.push('The description named your shop; the shop is already shown on the page.');
   }
 
-  return { ok: true, draft, warnings };
+  // The photo, judged by the same eyes that wrote the copy. Amazon rejects a
+  // blurry or cluttered main image outright; we tell the seller before Google
+  // or a shopper does. Advice, not a block - the seller decides.
+  const photoIssues = (Array.isArray(draft.photoIssues) ? draft.photoIssues : []).map(clean).filter(Boolean).slice(0, 4);
+  if (hasImage && photoIssues.length) {
+    warnings.push(`About the photo: ${photoIssues.join('; ')}. A clean, bright, close photo sells better - the photo tools can help.`);
+  }
+  delete draft.photoIssues;
+
+  return { ok: true, draft, warnings, provider: answer.provider || 'gemini', model: answer.model || undefined };
 };
 
 module.exports = { draftListing, promptFor, RESPONSE_SCHEMA, looksLikeJewellery };

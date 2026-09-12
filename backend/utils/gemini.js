@@ -59,10 +59,35 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
  *                                      JSON somewhere inside it
  * @returns {Promise<{ok: true, text: string}|{ok: false, reason: string, status?: number}>}
  */
+/**
+ * When Gemini cannot answer today, Pollinations' nano model can - if a key is
+ * set. The schema Gemini would have enforced is written into the prompt
+ * instead; the caller validates the JSON either way.
+ */
+const fallbackOr = async (failure, prompt, opts) => {
+  if (!process.env.POLLINATIONS_API_KEY) return failure;
+  const { pollinationsText } = require('./ai/textFallback');
+  const schemaNote = opts.responseSchema
+    ? `
+
+Answer with ONE JSON object only, matching this JSON schema exactly (no prose, no markdown):
+${JSON.stringify(opts.responseSchema)}`
+    : '';
+  const second = await pollinationsText(prompt + schemaNote, {
+    imageUrl: opts.imageUrl,
+    imageDataUrl: opts.imageDataUrl,
+    json: Boolean(opts.responseSchema),
+    temperature: opts.temperature,
+  });
+  if (!second.ok) return { ...failure, reason: `${failure.reason}; fallback: ${second.reason}` };
+  console.warn(`Gemini unavailable (${failure.reason.slice(0, 60)}) - answered by Pollinations ${second.model}`);
+  return second;
+};
+
 const generate = async (prompt, opts = {}) => {
   const key = process.env.GEMINI_API_KEY;
   if (!key) {
-    return { ok: false, reason: 'GEMINI_API_KEY is not set' };
+    return fallbackOr({ ok: false, reason: 'GEMINI_API_KEY is not set' }, prompt, opts);
   }
 
   const model = opts.model || DEFAULT_MODEL;
@@ -148,11 +173,14 @@ const generate = async (prompt, opts = {}) => {
     const body = await response.text().catch(() => '');
 
     if (!RETRYABLE.has(response.status) || attempt === attempts) {
-      return {
+      const failure = {
         ok: false,
         status: response.status,
         reason: `Gemini said ${response.status}: ${body.slice(0, 200)}`,
       };
+      // Out of quota for the day is the one failure a second provider can
+      // answer; a 400 is our prompt's fault and would fail there too.
+      return response.status === 429 ? fallbackOr(failure, prompt, opts) : failure;
     }
 
     // 1.5s, 3s, 4.5s. Long enough for a load spike to pass, short enough that

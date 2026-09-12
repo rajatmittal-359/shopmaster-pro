@@ -199,6 +199,9 @@ const writeListing = async (req, res) => {
     res.json({
       draft: { ...result.draft, categoryId: match ? match._id : null },
       warnings: result.warnings,
+      // Which model wrote it - Gemini normally; Pollinations' nano when
+      // Gemini's quota is gone for the day. Provenance, as on every AI image.
+      writtenBy: result.provider === 'pollinations' ? `gpt-5.4-nano (Pollinations, Gemini's quota is used up today)` : 'Gemini',
       usage: await usageFor(req.user._id, exempt),
     });
   } catch (error) {
