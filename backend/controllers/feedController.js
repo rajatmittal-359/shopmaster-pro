@@ -224,3 +224,29 @@ ${items.join('\n')}
     return res.status(500).send('<?xml version="1.0"?><error>Feed unavailable</error>');
   }
 };
+
+/**
+ * /api/feed/promotions.txt - live coupons for Merchant Center's promotions
+ * add-on (utils/promotionsFeed). Same seller scope as the product feed: a
+ * seller-funded coupon is listed only if that seller's products are fed.
+ */
+exports.googlePromotionsFeed = async (req, res) => {
+  try {
+    const Coupon = require('../models/Coupon');
+    const Seller = require('../models/Seller');
+    const { eligible, tsv } = require('../utils/promotionsFeed');
+    let sellerIds = null;
+    if (process.env.FEED_ALL_SELLERS !== 'true') {
+      const own = await Seller.find({ isPlatformOwned: true }).select('userId').lean();
+      sellerIds = new Set(own.map((s) => String(s.userId)));
+    }
+    const coupons = await Coupon.find({ isActive: true }).lean();
+    const body = tsv(eligible(coupons, { sellerIds }));
+    res.set('Content-Type', 'text/tab-separated-values; charset=utf-8');
+    res.set('Cache-Control', 'public, max-age=3600');
+    return res.send(body);
+  } catch (error) {
+    console.error('PROMOTIONS FEED ERROR:', error.message);
+    return res.status(500).send('promotions feed unavailable');
+  }
+};

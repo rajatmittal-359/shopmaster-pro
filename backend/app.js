@@ -122,6 +122,7 @@ app.use('/api/pincode', require('./routes/pincodeRoutes'));
  * nothing about sellers, orders or margins goes near it.
  */
 app.get('/api/feed/google.xml', require('./controllers/feedController').googleProductFeed);
+app.get('/api/feed/promotions.txt', require('./controllers/feedController').googlePromotionsFeed);
 
 /*
  * The sitemap, live from the catalogue.
