@@ -92,6 +92,53 @@ synonyms collection (jhumka/jhumki/झुमका), Gemini query → filters.
 
 ## 3. Rajat's call — researched, waiting on a decision
 
+### 3a. The 13 Sep night list — sidebars and the next features (decide in the morning)
+
+Rajat, 13 Sep 04:00: *"sidebar wagerah improve… seller ka bilkul chhota ho gaya, admin badhiya, customer ki kuch cheezein sahi nahi… future scope dekho, research karo, free me jo mile, har role ko mazaa aaye."* Researched against Shopify admin (Home · Orders · Products · Customers · Marketing · Discounts · Content · Analytics · Settings), Amazon Seller Central (Catalog · Inventory · Orders · Advertising · Performance/Account Health · Reports) and Meesho's supplier panel (Catalog · Orders · Payments · Returns · Ads · Settings — [TrackEcom](https://trackecom.in/blog/meesho-supplier-panel-walkthrough), [WareIQ](https://wareiq.com/resources/blogs/meesho-seller/)). What is real today: seller nav has 5 items; there is **no seller coupon UI** (the model supports `fundedBy: 'seller'`, only admin creates); there is **no customer account page** (name/phone/password/delete); "Contact" sits in the customer's primary nav where no marketplace puts it.
+
+**Seller sidebar → 9 items (Meesho + Amazon shape, our words)**
+| # | Item | Why | New work |
+|---|---|---|---|
+| S1 | Home | as is | — |
+| S2 | Orders | as is | — |
+| S3 | **Returns & issues** | returns, disputes, NDR/NPR are the painful queue; Meesho and Amazon both separate them from orders | page: tabs Returns / Disputes / Delivery problems, from existing data |
+| S4 | Products (All · Photo studio · Stock) | as is | — |
+| S5 | **Promotions** | seller-funded coupons + a scheduled sale price; Shopify Discounts, Meesho Ads. Feeds G9 automatically | backend `/seller/coupons` (create/toggle, fundedBy seller, own products), page |
+| S6 | Payments | as is | — |
+| S7 | **Performance** | Amazon Account Health / Meesho Quality: cancel rate, dispatch time, NDR/RTO, rating, listing-quality average, against the rulebook thresholds; the seller sees trouble before the admin does | page from existing numbers + dispatch-time calc |
+| S8 | Settings | as is | — |
+| S9 | **Help & rules** | agreement, rulebook in plain words, "write to the platform" (mailto/WhatsApp) | page |
+
+**Customer**
+| # | Item | Why | New work |
+|---|---|---|---|
+| C1 | **Account page** (`/account`): name, phone, email, change password, sign-out everywhere, **delete my account** | every marketplace has it; India's DPDP Act needs deletion; today a customer cannot change their own phone | backend `PATCH /auth/me`, `POST /auth/change-password`, `DELETE /auth/me` (soft, anonymise) + page |
+| C2 | Header: drop "Contact" from primary nav → **Help** (returns, refunds, contact, track order) in the account menu and footer | Amazon/Flipkart pattern; Contact is a footer/help thing | small |
+| C3 | Account menu order: Orders · Saved · Addresses · Account · Help · (switch) · Sign out | Flipkart's order | small |
+| C4 | Mobile nav: categories first, then account, then policies — keep; add **Track order** shortcut | Meesho app | small |
+
+**Admin** — keep the sidebar (he likes it). One addition when it earns it: **Sellers → Performance** column (already partly there) and a **Catalogue quality** list (listing score < 60) once more sellers list.
+
+**Features worth building next (free, gate named)** — pick, do not take all
+| # | Feature | Role | Gate | Free how |
+|---|---|---|---|---|
+| F1 | **"Ask the shop" assistant** — "laal jhumka 500 ke andar", "gift for sister under 1000" → filters + picks, answers in Hindi/Hinglish | customer | liquidity: search is where buyers who know what they want are lost | Gemini + Atlas Search we have |
+| F2 | **Back in stock / price drop alerts** (email via Brevo) | customer | liquidity: a lost sale recovered | existing mailer |
+| F3 | **Reviews with photos** + AI "summary of reviews" | customer/trust | trust: photo reviews convert 2× (Baymard) | Cloudinary + Gemini |
+| F4 | **WhatsApp order updates** (placed / shipped / out for delivery) | customer | trust: India reads WhatsApp, not email | Meta Cloud API - utility messages ~₹0.12 each (not free; decide) or free deep-link "Share on WhatsApp" |
+| F5 | **Seller coupons + sale scheduling** (= S5) | seller | recruitment: sellers expect a discount tool | — |
+| F6 | **AI review reply** (seller answers a review in one tap, own tone) | seller | trust | Gemini |
+| F7 | **Bulk CSV/Excel import** with AI cleanup of columns | seller | recruitment: a shop with 200 SKUs will not type them | Gemini |
+| F8 | **Hindi UI** (storefront + seller panel) | all | recruitment in Jaipur: sellers who read Hindi first | next-intl + Gemini-drafted strings, human-checked |
+| F9 | **Photo search** ("is jaisa dikhao") | customer | liquidity, jewellery is visual | Gemini vision → search words → Atlas |
+| F10 | **Referral / first-order credit** | customer | liquidity: cheapest acquisition | coupon model |
+| F11 | **Admin: fraud signals** (COD refusals per phone/address, many cancels) | admin | trust/money | existing data |
+| F12 | Virtual try-on (earrings via camera) | customer | wow, but heavy and not free at quality - **not now** | — |
+
+**Who does what:** all of the above is code (Claude). Rajat: decisions, copy checks in Hindi, WhatsApp Business (F4) signup if chosen, DPDP one-line privacy text review (C1).
+
+**Also answered that night:** *Maps Embed API* enabled by Rajat - harmless, unused; the map uses Google's keyless embed. *"Did you read all 537 APIs?"* - names and jobs yes (catalog knowledge), exhaustive per-API pricing no; the Always-Free page and a category sweep were read live, and G19/G20 came out of the sweep.
+
 - **Seller performance / RTO rate page.** The first piece exists (cancel rate on the dashboard and the admin list, plan §4.26); late-dispatch and RTO counts would join it the same way. Now, or at thirty sellers? (Plan §14.2)
 - **Buyer-protection line on the product page.** Needs the copy — what we actually promise. (Plan §13)
 - **Buyer–seller messaging.** Large. Later. (Plan §13)
