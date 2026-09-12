@@ -1565,6 +1565,15 @@ The move is not cosmetic and it is not a component library for its own sake:
 
 ## 14. The three panels, and who each one is for
 
+> **Status, 12 Sep 2026.** Written 7 Sep as the research that decided the
+> panels. The ❌ and ⚠️ cells in the tables below are **what was true that day**:
+> every screen they list as missing has since been built (`/seller/products/new`,
+> `/seller/earnings`, `/admin/sellers`, `/admin/orders` with disputes,
+> `/admin/payouts`, `/admin/categories`, `/admin/coupons`). What is still open
+> from this section — the RTO/performance page, POD evidence on the dispute
+> screen — is in `WHAT-IS-LEFT.md`. The rules in 14.4 stand.
+
+
 Written 7 Sep 2026, after Rajat pointed out - correctly - that this was the one
 part of the plan with no research behind it. The customer research in section 4
 was done; the seller and admin research died on a session limit and was recorded

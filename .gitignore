@@ -72,3 +72,7 @@ backend/drafted-descriptions.json
 
 # Reference clone, read for its DESIGN.md format - not part of the project
 awesome-design-md/
+
+# Local-only folders (12 Sep 2026): credentials and superseded working documents
+private/
+docs/archive/
