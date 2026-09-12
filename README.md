@@ -17,8 +17,9 @@ and the working rules.
 | `frontend/` | The React (Vite) app that is **live today** |
 | `web/` | Its replacement: Next.js 16 App Router + shadcn. **Complete**, waiting for the October cutover. `FRONTEND-PLAN.md` has the why; `web/DESIGN.md` the visual system; `WHAT-IS-LEFT.md` the remaining code work |
 
-Two frontends is a migration, not a mistake. `frontend/` stays live until the
-domain moves to `web/`, then it is deleted.
+Two frontends is a migration, not a mistake. `frontend/` stays until every
+thing it could do exists in `web/` (`WHAT-IS-LEFT.md` §1) and the domain has
+moved; then it is deleted.
 
 ## Why the move to Next
 

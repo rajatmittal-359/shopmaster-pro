@@ -10,7 +10,7 @@ it sells anything, and nothing in the frame may name a category.
 |---|---|
 | `backend/` | Express 5 + Mongoose 9. **Live** on Render Singapore. 903 tests, `npm test`, no database needed |
 | `web/` | Next.js 16 + shadcn (Base UI). **Complete, localhost only.** Replaces `frontend/` at the October cutover |
-| `frontend/` | The old React app. **Still what the domain serves.** Do not build on it; delete it a week after cutover |
+| `frontend/` | The old React app. **Still what the domain serves**, and the record of what the shop can *do*. Do not build on it. **Not deleted until `WHAT-IS-LEFT.md` §1 is empty** and the cutover has run a week |
 
 ## The documents, and which one to open
 

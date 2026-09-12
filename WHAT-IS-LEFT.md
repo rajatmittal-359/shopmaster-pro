@@ -15,13 +15,33 @@ follows is what remains after that.
 
 ## 1. Dropped in the port — the React app had these, `web/` does not
 
-Found by diffing `frontend/` against `web/` on 12 Sep. These are regressions,
-so they come first.
+**`frontend/` is not deleted until this section is empty.** Rajat, 12 Sep: the
+Next app shows things *our* way and adds what React never had, but React is
+the record of what the shop could *do* — anything here still has to come
+across, in the new UI, not the old one.
 
-| # | What | Where it was | Size |
-|---|---|---|---|
-| 1.1 | **Product video.** The React seller form uploaded one clip per product (base64, 7 MB cap) and the product page played it. `Product.video` is still in the model; `web/` has no upload and no player | `frontend/src/pages/seller/MyProductsPage.jsx`, `ProductDetailsPage.jsx` | Medium — a slot in `MediaManager`, a player in the gallery |
-| 1.2 | **Why an order was cancelled.** `cancelledBy` and `cancellationReason` are stored and the React customer order page showed them; the Next one does not | `frontend/src/pages/customer/OrderDetailsPage.jsx:96` | Small |
+Found on 12 Sep by two diffs: every API path the React app calls against every
+path `web/` calls, then a feature-word pass over the customer pages. Route
+mapping alone had missed all of these.
+
+| # | What | Backend | React | Size |
+|---|---|---|---|---|
+| 1.1 | **A customer cannot write a review.** `web/` reads reviews on the product page; there is no form to add, edit or delete your own | `POST /reviews/:productId`, `DELETE /reviews/:id`, `GET /reviews/me` | `ProductDetailsPage.jsx` | Medium — and the verified-purchase flag (2.1) belongs in the same piece of work |
+| 1.2 | **A customer cannot raise a dispute.** After a refused return, or "tracking says delivered, nothing came", the React order page offered it; the admin can *decide* disputes in `web/` but nobody can *open* one | `POST /customer/orders/:id/dispute` | `OrderDetailsPage.jsx` (`canDispute`, `awaitingMyConfirmation`) | Small–medium; the server already sends `disputeStatus` |
+| 1.3 | **Cancel one item, not the whole order.** `web/` cancels the order only | `PATCH /customer/orders/:id/items/:itemId/cancel` | `OrderDetailsPage.jsx`, `MyOrdersPage.jsx` | Small |
+| 1.4 | **Product video.** One clip per product, uploaded from the seller form (base64, 7 MB cap), played in the product gallery. `Product.video` is still in the model | upload path in `sellerController` | `MyProductsPage.jsx`, `ProductDetailsPage.jsx` | Medium — a slot in `MediaManager`, a player in `Gallery` |
+| 1.5 | **Why an order was cancelled.** `cancelledBy` and `cancellationReason` are shown to the admin but not on the customer's order page | already in the order payload | `OrderDetailsPage.jsx:96` | Small |
+
+Checked and **present** in `web/` (no action): wishlist, addresses, coupons,
+COD and Razorpay, the address-specific delivery speeds (same-day when Borzo
+will take it), pincode check, the bill of supply, confirm-receipt, return and
+exchange requests, seller payout details, seller earnings, every admin action
+(approve / reject / suspend / activate / commission / disputes / payouts /
+categories / coupons).
+
+Not carried across on purpose: `GET /public/products/categories/all`,
+`PATCH /seller/orders/:id/tracking`, `GET /seller/profile`, `GET /reviews/me` as
+a page — the React app defined these in its services and no screen used them.
 
 ## 2. Decided, not finished
 
