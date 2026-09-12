@@ -179,7 +179,7 @@ export default function Studio({ base = '/seller' }) {
           >
             {source ? (
               <>
-                <Image src={source.src} alt="" fill unoptimized className="object-contain" sizes="50vw" />
+                <Image src={source.src} alt="" fill unoptimized priority className="object-contain" sizes="50vw" />
                 <button
                   type="button"
                   onClick={() => {
@@ -230,7 +230,7 @@ export default function Studio({ base = '/seller' }) {
               </div>
             ) : result ? (
               <>
-                <Image src={result.url} alt="" fill unoptimized className="object-contain" sizes="50vw" />
+                <Image src={result.url} alt="" fill unoptimized priority className="object-contain" sizes="50vw" />
                 <span className="absolute bottom-2 left-2 rounded bg-black/60 px-2 py-0.5 text-xs text-white">
                   {result.modelLabel} · {result.providerLabel} · {result.quality}
                 </span>
