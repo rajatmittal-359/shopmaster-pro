@@ -29,7 +29,9 @@ Liquidity · Trust · Seller recruitment · October 2026 cutover. Stage: one Atl
   `Category`: `ancestors`, `parentCategory` · `Inventory`: `productId`,
   `orderId`, `createdAt` · `Review`: `{productId, userId}` unique ·
   `Payout`: `{sellerId, createdAt}` · `AiUsage`: `{scope, key, day}` unique ·
-  `AiProviderState`: `{provider, period}` unique · `SellerCharge`: `{sellerId, payoutId}` · **Atlas Search** `products_search` on `products` (name autocomplete+text, description, tags, color, brand; filters isActive, category, sellerId; numbers price/avgRating/totalReviews) — `utils/atlasSearch.js`, created via `collection.createSearchIndex` from the app connection; free tier allows 3.
+  `AiProviderState`: `{provider, period}` unique · `SellerCharge`: `{sellerId, payoutId}` · **Atlas Search** `products_search` on `products` (name autocomplete+text, description, tags, color, brand; filters isActive, category, sellerId; numbers price/avgRating/totalReviews) — `utils/atlasSearch.js`; `npm run search-index` (`ensureSearchIndex.js`, idempotent) gives any fresh database the index; free tier allows 3.
+
+**Environments (decided 12 Sep 2026):** laptop → `shopmaster_dev` with its own Atlas user (readWrite on that DB only); live → `shopmaster_pro` via Render env only. `seed.js --reset` refuses the live name without `--i-mean-production`. M0 has no backups: `npm run backup` weekly until M10 at cutover.
 - **Category tree** uses the array-of-ancestors pattern (`ancestors`,
   `parentCategory`); products must sit on a leaf (`validateLeafCategory`).
 - **Reservation is a field, not a collection**: `reservationStatus` /

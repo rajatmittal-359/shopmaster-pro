@@ -13,7 +13,8 @@
     "seed:reset": "node seed.js --reset",
     "sitemap": "node generateSitemap.js",
     "images": "node addProductImages.js",
-    "backup": "node backupDb.js"
+    "backup": "node backupDb.js",
+    "search-index": "node ensureSearchIndex.js"
   },
   "keywords": [],
   "author": "",
