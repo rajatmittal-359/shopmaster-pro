@@ -77,8 +77,11 @@ const row = (c) => {
    */
   const from = c.validFrom || c.createdAt || new Date(0);
   const to = c.validUntil || new Date(new Date(from).getTime() + 183 * 86400000);
+  // The start date is part of the id: a coupon re-issued with new dates is a
+  // new promotion to Google, never an edit of one it already holds.
+  const stamp = istStamp(from).slice(0, 10).replace(/-/g, '');
   return [
-    `smp_${String(c.code).toLowerCase()}`.slice(0, 50),
+    `smp_${String(c.code).toLowerCase()}_${stamp}`.slice(0, 50),
     'all_products',
     'generic_code',
     c.code,

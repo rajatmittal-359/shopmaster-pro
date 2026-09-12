@@ -32,7 +32,7 @@ describe('row', () => {
   it('writes a percent coupon in Google’s columns, IST dates, title under 60 chars', () => {
     const r = row({ ...base, code: 'JAIPUR15', type: 'percent', value: 15, maxDiscount: 300, minOrderValue: 999, validUntil: new Date('2026-10-10T18:29:59Z') }, { now });
     const o = Object.fromEntries(COLUMNS.map((k, i) => [k, r[i]]));
-    expect(o.promotion_id).toBe('smp_jaipur15');
+    expect(o.promotion_id).toBe('smp_jaipur15_20260910');
     expect(o.offer_type).toBe('generic_code');
     expect(o.generic_redemption_code).toBe('JAIPUR15');
     expect(o.long_title.length).toBeLessThanOrEqual(60);
