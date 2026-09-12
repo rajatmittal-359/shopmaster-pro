@@ -69,3 +69,6 @@ backend/drafted-descriptions.json
 !web/public/**/*.png
 !web/src/app/icon.png
 !web/src/app/apple-icon.png
+
+# Reference clone, read for its DESIGN.md format - not part of the project
+awesome-design-md/
