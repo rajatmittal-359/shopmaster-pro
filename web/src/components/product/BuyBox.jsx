@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useSyncExternalStore } from 'react';
+import { addToCart } from '@/lib/analytics';
 import { apiBase } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 
@@ -83,6 +84,7 @@ export default function BuyBox({
       }
 
       setState({ status: 'added' });
+      addToCart({ _id: productId, name, price }, quantity, price);
     } catch (err) {
       setState({ status: 'error', message: err.message });
     }

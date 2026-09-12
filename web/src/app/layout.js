@@ -6,6 +6,8 @@ import { BUSINESS } from '@/config/policy';
 import ThemeProvider from '@/components/theme/ThemeProvider';
 import { Toaster } from '@/components/ui/sonner';
 import ShopChrome from '@/components/layout/ShopChrome';
+import { Suspense } from 'react';
+import GoogleAnalytics from '@/components/analytics/GoogleAnalytics';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -76,6 +78,10 @@ export default function RootLayout({ children }) {
               a save. Bottom-right, out of the way of the sticky buy bar. */}
           <Toaster position="bottom-right" richColors closeButton />
         </ThemeProvider>
+        {/* GA4 - loads nothing until NEXT_PUBLIC_GA_MEASUREMENT_ID is set. */}
+        <Suspense fallback={null}>
+          <GoogleAnalytics />
+        </Suspense>
       </body>
     </html>
   );

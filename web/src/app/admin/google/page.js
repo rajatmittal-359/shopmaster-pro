@@ -1,4 +1,6 @@
 import GoogleStatus from "@/components/admin/GoogleStatus";
+import Traffic from "@/components/admin/Traffic";
+import Speed from "@/components/admin/Speed";
 import PageHeader from "@/components/panel/PageHeader";
 
 export const metadata = { title: "Google" };
@@ -8,8 +10,12 @@ export default function AdminGooglePage() {
     <>
       <PageHeader
         title="Google"
-        lead="Is each product page in Google's index, and is each item approved for Shopping. Google's own answers, not ours."
+        lead="Visitors, page speed, the index and Shopping - Google's own answers about the shop, not ours."
       />
+      <div className="mb-6 space-y-6">
+        <Traffic days={28} />
+        <Speed />
+      </div>
       <GoogleStatus />
     </>
   );

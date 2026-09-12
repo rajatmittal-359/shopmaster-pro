@@ -7,6 +7,7 @@ import { productSchema, breadcrumbSchema } from '@/lib/productSchema';
 import { POLICY, BUSINESS } from '@/config/policy';
 import Gallery from '@/components/product/Gallery';
 import BuyBox from '@/components/product/BuyBox';
+import TrackView from '@/components/analytics/TrackView';
 import PincodeCheck from '@/components/product/PincodeCheck';
 import ProductCard from '@/components/product/ProductCard';
 import Stars from '@/components/product/Stars';
@@ -174,6 +175,7 @@ export default async function ProductPage({ params }) {
 
           <PincodeCheck />
 
+          <TrackView product={{ _id: product._id, name: product.name, price, brand: product.shop?.name, category: product.category }} />
           <BuyBox
             productId={product._id}
             name={product.name}

@@ -39,6 +39,13 @@ export const BUSINESS = {
   phoneHref: 'tel:+918769766908',
   email: 'rajatmittal359@gmail.com',
   hours: 'Monday to Saturday, 10am - 7pm IST',
+  /**
+   * The same business elsewhere on the web - Instagram, Justdial, the Google
+   * Business Profile. Google's Organization schema reads these as `sameAs`
+   * and uses them to join the site to the profiles it already trusts.
+   * Empty entries are dropped; fill in as Rajat sends the links.
+   */
+  sameAs: (process.env.NEXT_PUBLIC_SAME_AS || '').split(',').map((s) => s.trim()).filter(Boolean),
 };
 
 /**

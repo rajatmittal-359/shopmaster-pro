@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getProducts, getFilters, getCategories } from '@/lib/api';
+import TrackSearch from '@/components/analytics/TrackSearch';
 import { serialiseJsonLd } from '@/lib/jsonLd';
 import { shopHref } from '@/lib/shopUrl';
 import ProductCard from '@/components/product/ProductCard';
@@ -124,6 +125,7 @@ export default async function ShopPage({ searchParams }) {
         />
       )}
 
+      {params.search && <TrackSearch term={params.search} results={total} />}
       <header className="mb-6">
         <h1 className="text-2xl font-semibold tracking-tight">
           {params.search ? `Results for "${params.search}"` : category ? category.name : 'Shop'}

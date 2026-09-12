@@ -108,3 +108,65 @@ exports.adminGoogleProducts = async (req, res) => {
     sendError(res, error);
   }
 };
+
+/**
+ * Traffic and the funnel, from GA4 (utils/google/analytics). Six-hour memory;
+ * GA4 itself lags a day, so fresher calls buy nothing.
+ */
+let gaCache = { at: 0, days: 0, result: null };
+exports.adminTraffic = async (req, res) => {
+  try {
+    const days = daysFrom(req);
+    if (!(gaCache.result && gaCache.days === days && Date.now() - gaCache.at < SIX_HOURS)) {
+      const { overview } = require('../utils/google/analytics');
+      const result = await overview({ days });
+      if (result.ok) gaCache = { at: Date.now(), days, result };
+      else return res.json(result);
+    }
+    res.set('Cache-Control', 'private, max-age=600');
+    res.json({ ...gaCache.result, cached: true });
+  } catch (error) {
+    sendError(res, error);
+  }
+};
+
+/**
+ * Core Web Vitals for the pages that matter, from PageSpeed Insights, on
+ * mobile. One run a day per page - Google's scorer takes 10-30 s a page, so
+ * the first request answers `building` and the page asks again.
+ */
+const DAY = 24 * 60 * 60 * 1000;
+let speedCache = { at: 0, result: null, building: null };
+const speedPages = async () => {
+  const site = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.shopmasterpro.in';
+  const product = await Product.findOne({ isActive: true, isDeleted: { $ne: true }, stock: { $gt: 0 } }).sort({ totalReviews: -1 }).select('slug').lean();
+  const pages = [
+    { label: 'Home', url: `${site}/` },
+    { label: 'Shop', url: `${site}/shop` },
+  ];
+  if (product?.slug) pages.push({ label: 'A product page', url: `${site}/products/${product.slug}` });
+  return pages;
+};
+exports.adminSpeed = async (req, res) => {
+  try {
+    const fresh = speedCache.result && Date.now() - speedCache.at < DAY;
+    if (fresh && !req.query.refresh) return res.json({ ...speedCache.result, cached: true });
+    if (!process.env.PAGESPEED_API_KEY) return res.json({ ok: false, reason: 'PageSpeed is not connected', pages: [] });
+    if (!speedCache.building) {
+      speedCache.building = (async () => {
+        const { analyse } = require('../utils/google/pagespeed');
+        const pages = await speedPages();
+        const results = [];
+        for (const p of pages) results.push({ label: p.label, ...(await analyse(p.url).catch((e) => ({ ok: false, url: p.url, reason: e.message }))) });
+        speedCache = { at: Date.now(), result: { ok: true, pages: results, at: new Date().toISOString() }, building: null };
+      })().catch((err) => {
+        speedCache.building = null;
+        console.error('PageSpeed failed:', err.message);
+      });
+    }
+    if (speedCache.result) return res.json({ ...speedCache.result, cached: true, building: true });
+    res.status(202).json({ ok: true, building: true, pages: [] });
+  } catch (error) {
+    sendError(res, error);
+  }
+};

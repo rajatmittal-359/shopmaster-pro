@@ -29,6 +29,7 @@ const organisation = {
   url: SITE,
   email: BUSINESS.email,
   telephone: BUSINESS.phone,
+  ...(BUSINESS.sameAs.length ? { sameAs: BUSINESS.sameAs } : {}),
   address: {
     '@type': 'PostalAddress',
     streetAddress: BUSINESS.addressLines[0],

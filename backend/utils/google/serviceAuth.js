@@ -21,6 +21,7 @@ const path = require('path');
 const SCOPES = {
   searchConsole: 'https://www.googleapis.com/auth/webmasters.readonly',
   merchant: 'https://www.googleapis.com/auth/content',
+  analytics: 'https://www.googleapis.com/auth/analytics.readonly',
 };
 
 let credentials = null;

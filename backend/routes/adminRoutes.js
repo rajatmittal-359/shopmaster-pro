@@ -89,6 +89,8 @@ router.get('/ai/catalog', ai.getCatalog);
 router.patch('/ai/limits', ai.setLimits);
 router.get('/search/queries', require('../controllers/searchInsightsController').adminQueries);
 router.get('/google/products', require('../controllers/searchInsightsController').adminGoogleProducts);
+router.get('/google/traffic', require('../controllers/searchInsightsController').adminTraffic);
+router.get('/google/speed', require('../controllers/searchInsightsController').adminSpeed);
 router.post('/ai/listing', ai.writeListing);
 router.post('/ai/refine', ai.refineText);
 router.post('/ai/keywords', ai.suggestKeywords);

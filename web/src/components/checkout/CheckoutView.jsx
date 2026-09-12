@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { beginCheckout, purchase } from '@/lib/analytics';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { authedFetch } from '@/lib/client';
@@ -35,6 +36,7 @@ export default function CheckoutView() {
   const [deliveryOption, setDeliveryOption] = useState(undefined);
   const [totals, setTotals] = useState(null);
   const [coupon, setCoupon] = useState(null);
+  const begunRef = useRef(false);
   const [code, setCode] = useState('');
   const [state, setState] = useState({ status: 'loading' });
 
@@ -89,6 +91,10 @@ export default function CheckoutView() {
         });
         if (cancelled) return;
         setTotals(data);
+        if (!begunRef.current) {
+          begunRef.current = true;
+          beginCheckout(data.items || [], data.grandTotal);
+        }
         // The server decides which option is in force. Echoing it back keeps
         // the radio in step with what was actually priced.
         if (data.deliveryOption && data.deliveryOption !== deliveryOption) {
@@ -132,6 +138,7 @@ export default function CheckoutView() {
       if (payment === 'cod') {
         const data = await authedFetch('/customer/checkout-cod', { method: 'POST', body });
         if (!data.order?._id) throw new Error(data.message || 'Order could not be placed');
+        purchase({ orderId: data.order.orderNumber || data.order._id, value: payable, shipping: totals?.shippingCharges, coupon: coupon?.code, items: totals?.items });
         router.push('/orders');
         return;
       }
@@ -163,6 +170,7 @@ export default function CheckoutView() {
                 dbOrderId: started.dbOrderId,
               },
             });
+            purchase({ orderId: started.dbOrderId, value: payable, shipping: totals?.shippingCharges, coupon: coupon?.code, items: totals?.items });
             router.push('/orders');
           } catch (err) {
             setState({

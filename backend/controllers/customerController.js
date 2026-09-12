@@ -975,6 +975,13 @@ exports.previewTotals = async (req, res) => {
     return res.json({
       success: true,
       itemsTotal,
+      // The lines, for the storefront's analytics events (GA4 items[]).
+      items: cart.items.map((i) => ({
+        productId: i.productId?._id || i.productId,
+        name: i.productId?.name,
+        price: i.price,
+        quantity: i.quantity,
+      })),
       shippingCharges: priced.shippingCharges,
       grandTotal,
       shippingCourier: priced.shippingCourier,
