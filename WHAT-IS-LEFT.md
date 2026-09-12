@@ -99,7 +99,7 @@ synonyms collection (jhumka/jhumki/झुमका), Gemini query → filters.
 
 ## 4. Ideas raised, not decided — do not start without a yes
 
-- Google Cloud extras, each gated on a real need appearing: Vision SafeSearch to auto-moderate seller photos (1k/month free) when unknown sellers join · Speech-to-Text (60 min/month) or Groq Whisper for voice listing · Sheets API order export for the CA · Web push (FCM) for "shipped" · Google Wallet loyalty pass · photo-to-search via Gemini vision + Atlas Search.
+- Google Cloud extras (Always-Free page read 13 Sep: docs.cloud.google.com/free/docs/free-cloud-features), each gated on a real need appearing: **Web Risk** (100k URI checks/month) to screen links sellers paste (website, video) once unknown sellers join · **Cloud Run** (2M req/month) as the hosting fallback if Render's paid tier bites after cutover · Vision SafeSearch to auto-moderate seller photos (1k/month free) when unknown sellers join · Speech-to-Text (60 min/month) or Groq Whisper for voice listing · Sheets API order export for the CA · Web push (FCM) for "shipped" · Google Wallet loyalty pass · photo-to-search via Gemini vision + Atlas Search.
 - Search by embeddings (Atlas Search now covers typos/prefix; embeddings only if semantic misses show up).
 - Voice input for the AI listing (Groq or Cloudflare Whisper).
 - Text fallback when Gemini's quota is out — Pollinations serves free text models (`gpt-5.4-nano`, `deepseek-v4-flash-vision`, `glm-5.3-flash`).
