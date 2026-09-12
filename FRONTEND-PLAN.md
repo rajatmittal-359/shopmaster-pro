@@ -1130,6 +1130,24 @@ book again"; the customer's parcel says the courier tried and will try again.
 The seller payload now carries the four fields. No new endpoints, no new
 tests needed beyond the existing 919.
 
+### 4.25 The rest of the seller panel, to the same standard
+
+12 Sep 2026. Gate: seller recruitment - the panel is what the next Jaipur shop
+lives in every day.
+
+- **Products** (Shopify Products + Seller Central's inline quantity): tabs
+  All / Live / Out of stock / Hidden with counts, in the URL; search by name,
+  SKU or size; status badge that agrees with the numbers (Low shows what is
+  left); the row opens the editor, "View in shop" beside it; stock still
+  edited in the row, Enter saves, a toast says the new count went to the
+  stock history; empty state with the one CTA; skeleton; retry.
+- **Earnings**: the bank-account form had placeholder-only labels - on the
+  one form where a typo sends money to a stranger. Labels above, hints below,
+  IFSC/account cleaned as typed, and the account number typed twice as every
+  Indian bank's beneficiary form does; Save disabled until they match.
+- **Order detail, Stock history**: layout-shaped skeletons instead of
+  "Loading…". Nothing else there failed the checklist.
+
 ---
 
 ## 5. Structured data

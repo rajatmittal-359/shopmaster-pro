@@ -4,6 +4,9 @@ import { useEffect, useState } from 'react';
 import { authedFetch } from '@/lib/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Skeleton } from '@/components/ui/skeleton';
+import { toast } from 'sonner';
 
 /**
  * A seller's money, and where it has got to.
@@ -33,6 +36,7 @@ export default function Earnings() {
   const [bank, setBank] = useState(null);
   const [form, setForm] = useState({ accountHolderName: '', accountNumber: '', ifscCode: '', gstNumber: '' });
   const [editing, setEditing] = useState(false);
+  const [confirmAccount, setConfirmAccount] = useState('');
   const [state, setState] = useState({ status: 'loading' });
 
   const load = async () => {
@@ -72,13 +76,26 @@ export default function Earnings() {
     try {
       await authedFetch('/seller/payout-details', { method: 'PATCH', body: form });
       setEditing(false);
+      setConfirmAccount('');
       await load();
+      toast.success('Bank account saved', { description: 'Payouts go here from the next settlement.' });
     } catch (err) {
-      setState({ status: 'error', message: err.message });
+      setState({ status: 'idle' });
+      toast.error(err.message);
     }
   };
 
-  if (state.status === 'loading') return <p className="text-muted-foreground">Loading…</p>;
+  if (state.status === 'loading') {
+    return (
+      <div className="skeleton-in space-y-6" aria-busy="true" aria-label="Loading earnings">
+        <div className="grid gap-4 sm:grid-cols-3">
+          {[0, 1, 2].map((i) => <Skeleton key={i} className="h-24 rounded-xl" />)}
+        </div>
+        <Skeleton className="h-32 rounded-xl" />
+        <Skeleton className="h-40 rounded-xl" />
+      </div>
+    );
+  }
   if (!data) return <p className="text-destructive">{state.message}</p>;
 
   const e = data.earnings || {};
@@ -129,48 +146,81 @@ export default function Earnings() {
             </Button>
           </div>
         ) : (
-          <form onSubmit={save} className="mt-3 grid gap-3 sm:grid-cols-2">
-            <Input
-              required
-              value={form.accountHolderName}
-              onChange={(el) => setForm({ ...form, accountHolderName: el.target.value })}
-              placeholder="Name on the account"
-              aria-label="Account holder name"
-            />
-            <Input
-              required
-              value={form.accountNumber}
-              onChange={(el) => setForm({ ...form, accountNumber: el.target.value.replace(/\s/g, '') })}
-              placeholder="Account number"
-              aria-label="Account number"
-            />
-            <Input
-              required
-              value={form.ifscCode}
-              onChange={(el) => setForm({ ...form, ifscCode: el.target.value.toUpperCase() })}
-              placeholder="IFSC"
-              aria-label="IFSC code"
-            />
-            <Input
-              value={form.gstNumber}
-              onChange={(el) => setForm({ ...form, gstNumber: el.target.value.toUpperCase() })}
-              placeholder="GSTIN (if you have one)"
-              aria-label="GSTIN"
-            />
+          <form onSubmit={save} className="mt-3 grid gap-5 sm:grid-cols-2">
+            {/* Labels above, hints below (Baymard) - on the one form where a
+                typo sends money to a stranger. The account number is typed
+                twice, as every Indian bank's own beneficiary form asks. */}
+            <div>
+              <Label htmlFor="acct-name">Name on the account</Label>
+              <Input
+                id="acct-name"
+                className="mt-1.5"
+                required
+                autoComplete="name"
+                value={form.accountHolderName}
+                onChange={(el) => setForm({ ...form, accountHolderName: el.target.value })}
+              />
+              <p className="mt-1.5 text-xs text-muted-foreground">Exactly as the bank has it.</p>
+            </div>
+            <div>
+              <Label htmlFor="acct-ifsc">IFSC</Label>
+              <Input
+                id="acct-ifsc"
+                className="mt-1.5 uppercase"
+                required
+                maxLength={11}
+                value={form.ifscCode}
+                onChange={(el) => setForm({ ...form, ifscCode: el.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '') })}
+              />
+              <p className="mt-1.5 text-xs text-muted-foreground">11 characters, printed on the cheque book and in the banking app.</p>
+            </div>
+            <div>
+              <Label htmlFor="acct-no">Account number</Label>
+              <Input
+                id="acct-no"
+                className="mt-1.5 tabular-nums"
+                required
+                inputMode="numeric"
+                value={form.accountNumber}
+                onChange={(el) => setForm({ ...form, accountNumber: el.target.value.replace(/\D/g, '') })}
+              />
+            </div>
+            <div>
+              <Label htmlFor="acct-no-2">Account number, again</Label>
+              <Input
+                id="acct-no-2"
+                className="mt-1.5 tabular-nums"
+                required
+                inputMode="numeric"
+                value={confirmAccount}
+                onChange={(el) => setConfirmAccount(el.target.value.replace(/\D/g, ''))}
+                aria-invalid={confirmAccount.length > 0 && confirmAccount !== form.accountNumber}
+              />
+              <p className="mt-1.5 text-xs text-muted-foreground">
+                {confirmAccount && confirmAccount !== form.accountNumber
+                  ? 'The two numbers differ - check your passbook.'
+                  : 'A transfer to a wrong account cannot be pulled back.'}
+              </p>
+            </div>
+            <div className="sm:col-span-2">
+              <Label htmlFor="acct-gst">GSTIN <span className="font-normal text-muted-foreground">(optional)</span></Label>
+              <Input
+                id="acct-gst"
+                className="mt-1.5 uppercase sm:max-w-xs"
+                maxLength={15}
+                value={form.gstNumber}
+                onChange={(el) => setForm({ ...form, gstNumber: el.target.value.toUpperCase() })}
+              />
+            </div>
 
             <div className="flex items-center gap-3 sm:col-span-2">
-              <Button type="submit" disabled={state.status === 'working'}>
-                Save
+              <Button type="submit" disabled={state.status === 'working' || confirmAccount !== form.accountNumber}>
+                {state.status === 'working' ? 'Saving…' : 'Save the account'}
               </Button>
               <Button type="button" variant="ghost" size="sm" onClick={() => setEditing(false)}>
                 Cancel
               </Button>
             </div>
-
-            <p className="text-xs text-muted-foreground sm:col-span-2">
-              Check the account number against your passbook before saving. A
-              transfer to a wrong account cannot be pulled back.
-            </p>
           </form>
         )}
       </section>

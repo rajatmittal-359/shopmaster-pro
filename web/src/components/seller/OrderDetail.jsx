@@ -6,6 +6,7 @@ import { authedFetch } from '@/lib/client';
 import { money } from '@/lib/money';
 import { orderRef } from '@/lib/orderRef';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import ActionDialog from '@/components/common/ActionDialog';
 
 /**
@@ -69,7 +70,15 @@ export default function SellerOrderDetail({ orderId }) {
     }
   };
 
-  if (state.status === 'loading') return <p className="text-muted-foreground">Loading…</p>;
+  if (state.status === 'loading') {
+    return (
+      <div className="skeleton-in space-y-4" aria-busy="true" aria-label="Loading the order">
+        <Skeleton className="h-24 rounded-xl" />
+        <Skeleton className="h-40 rounded-xl" />
+        <Skeleton className="h-24 rounded-xl" />
+      </div>
+    );
+  }
   if (!order) return <p className="text-destructive">{state.message || 'Not found'}</p>;
 
   const address = order.shippingAddressId;

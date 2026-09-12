@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { authedFetch } from '@/lib/client';
+import { Skeleton } from '@/components/ui/skeleton';
 
 /**
  * Why the stock number changed.
@@ -53,7 +54,14 @@ export default function LogTable() {
     };
   }, []);
 
-  if (state.status === 'loading') return <p className="text-muted-foreground">Loading…</p>;
+  if (state.status === 'loading') {
+    return (
+      <div className="skeleton-in space-y-4" aria-busy="true" aria-label="Loading stock history">
+        <Skeleton className="h-24 rounded-xl" />
+        <Skeleton className="h-40 rounded-xl" />
+      </div>
+    );
+  }
   if (state.status === 'error') return <p className="text-destructive">{state.message}</p>;
 
   if (logs.length === 0) {
