@@ -90,6 +90,7 @@ router.patch('/ai/limits', ai.setLimits);
 router.get('/search/queries', require('../controllers/searchInsightsController').adminQueries);
 router.post('/ai/listing', ai.writeListing);
 router.post('/ai/refine', ai.refineText);
+router.post('/ai/keywords', ai.suggestKeywords);
 // Banners and category art from words - the one image mode sellers do not get.
 router.post('/ai/image', ai.makeImage);
 router.post('/ai/attach', ai.attachToProduct);

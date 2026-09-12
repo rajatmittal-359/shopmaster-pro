@@ -14,6 +14,7 @@ import VideoSlot from '@/components/seller/VideoSlot';
 import RichTextEditor from '@/components/seller/RichTextEditor';
 import CategoryPicker from '@/components/seller/CategoryPicker';
 import FieldAssist from '@/components/seller/FieldAssist';
+import ListingQuality from '@/components/seller/ListingQuality';
 
 /**
  * Listing something for sale.
@@ -88,9 +89,9 @@ function Field({ id, label, hint, aside, children, className = '' }) {
   );
 }
 
-function Card({ title, lead, aside, children }) {
+function Card({ id, title, lead, aside, children }) {
   return (
-    <section className="space-y-5 rounded-xl border bg-card p-5">
+    <section id={id} className="space-y-5 rounded-xl border bg-card p-5 scroll-mt-20">
       {(title || aside) && (
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -263,8 +264,22 @@ export default function ProductForm({ productId, copyFromId }) {
         </p>
       )}
 
+      {/* THE SCORE. Live, from the form; the three biggest fixes on top, each a
+          jump to its field; AI search words; a Google preview; and for a saved
+          product Google's own verdicts. Amazon's Listing Quality, at our size. */}
+      <ListingQuality
+        form={form}
+        photos={photos}
+        productId={productId}
+        categoryLabel={categories.find((c) => c._id === form.category)?.label}
+        needsSize={/cloth|fashion|footwear|shoe|kurt|saree|dress|apparel|wear|trouser|shirt|jeans/i.test(categories.find((c) => c._id === form.category)?.label || '')}
+        textModel={textModel}
+        onAddTags={(words) => setForm((f) => ({ ...f, tags: [...new Set([...(f.tags || []), ...words])] }))}
+      />
+
       {/* 1. MEDIA */}
       <Card
+        id="photos"
         title="1 · Photos"
         lead="Up to five. The first is the main one - white background sells best."
         aside={
@@ -500,6 +515,22 @@ export default function ProductForm({ productId, copyFromId }) {
           </Field>
           <Field id="sku" label="Your own item code" hint="Whatever you use in your own stock book.">
             <Input id="sku" value={form.sku ?? ''} onChange={set('sku')} className="h-10" />
+          </Field>
+          <Field
+            id="tags"
+            label="Search words"
+            hint="What people type to find this - the shop's own search and Google both read them. Commas between."
+            className="sm:col-span-2"
+          >
+            <Input
+              id="tags"
+              value={(form.tags || []).join(', ')}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, tags: e.target.value.split(',').map((t) => t.trim().toLowerCase()).filter(Boolean) }))
+              }
+              placeholder="kundan choker, bridal choker, green stone choker"
+              className="h-10"
+            />
           </Field>
         </div>
       </Card>

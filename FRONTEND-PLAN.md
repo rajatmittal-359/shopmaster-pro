@@ -1272,6 +1272,37 @@ The product form's cards are numbered **1 Photos · 2 Words · 3 Category
 · 4 Price and stock · 5 Details**, leads cut to one line, and the model
 selector folded under "More" - the people who change it know to look.
 
+### 4.30 Listing quality: the score, the fixes, the search words, and Google's own verdict
+
+12 Sep 2026. Rajat: *"lalach deke madad bhi karni padegi - keywords, SEO,
+Google pe upar aaye."* Gate: liquidity - Search Console said it plainly:
+90 days, seven queries, all the brand name, no product word, 8 of 10 pages
+not indexed.
+
+**References.** Amazon's Listing Quality dashboard (a score with the next fix
+on top), Etsy's listing score, Shopify's SEO preview; Search Console and
+Merchant Center as the only data that is about *our* pages.
+
+**Built.** One card at the top of the product form, `ListingQuality`:
+1. **Score /100**, live from the form (`lib/listingScore.js`, mirrored in
+   `backend/utils/listingScore.js` - fourteen checks, each a thing Google or a
+   shopper reads: title words/colour/length, 1 and 3 photos, 90-word
+   description with structure, category, colour, audience, size where the
+   category needs it, brand or code, weight, three search words). The three
+   biggest fixes on top, each a jump to its field, points shown.
+2. **What people type** - `POST /ai/keywords`: 8-12 phrases an Indian shopper
+   would type (type, colour, occasion, Hinglish spellings), green where the
+   listing already carries them, the rest one tap into the new **Search
+   words** field (tags), "Add all missing", and a title tip.
+3. **How it looks in Google** - a result preview from title, category, price
+   and the first line.
+4. **Google, right now** (saved products) - `GET /seller/products/:id/google`:
+   URL Inspection (indexed? state? last crawl), Merchant Center product
+   status with Google's own issue text and help link, and the queries that
+   showed this page. Own products only. Live for Pearl Maang Tikka: "not yet
+   · URL is unknown to Google", Shopping approved, no queries - the honest
+   starting line.
+
 ---
 
 ## 5. Structured data

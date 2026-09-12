@@ -33,6 +33,23 @@ exports.adminQueries = async (req, res) => {
   }
 };
 
+/**
+ * Google's verdicts on one of the seller's products: indexed?, approved in
+ * Merchant Center?, what was typed to find it. Own products only.
+ */
+exports.productGoogle = async (req, res) => {
+  try {
+    const product = await Product.findOne({ _id: req.params.productId, sellerId: req.user._id }).select('slug name').lean();
+    if (!product) return res.status(404).json({ message: 'Product not found' });
+    const { productGoogleStatus } = require('../utils/google/productStatus');
+    const status = await productGoogleStatus(product);
+    res.set('Cache-Control', 'private, max-age=900');
+    res.json(status);
+  } catch (error) {
+    sendError(res, error);
+  }
+};
+
 exports.sellerQueries = async (req, res) => {
   try {
     const result = await siteQueries(daysFrom(req));

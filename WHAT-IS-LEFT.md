@@ -59,11 +59,11 @@ product word; 2 pages indexed, 8 not.
 
 | # | What | Free? | Rajat does | Claude builds | State |
 |---|---|---|---|---|---|
-| G1 | Search Console API — what people typed, per page, position | ✅ | done (service account is a user) | admin card ✅; seller: per-product queries in the listing panel | admin ✅ · seller ☐ |
-| G2 | URL Inspection API — is each product page indexed, last crawl | ✅ same account | — | "Google indexed: yes/no" per product; admin list of not-indexed | ☐ |
-| G3 | Merchant Center API — per-product approved / disapproved + reason | ✅ verified (17 approved) | done | seller sees Google's verdict on the product; admin sees all | ☐ |
+| G1 | Search Console API — what people typed, per page, position | ✅ | done (service account is a user) | admin card ✅; seller: per-product queries in the listing panel | ✅ both |
+| G2 | URL Inspection API — is each product page indexed, last crawl | ✅ same account | — | "Google indexed: yes/no" per product ✅; admin list of not-indexed ☐ | seller ✅ |
+| G3 | Merchant Center API — per-product approved / disapproved + reason | ✅ verified (17 approved) | done | seller sees Google's verdict on the product ✅; admin sees all ☐ | seller ✅ |
 | G4 | Product structured data for merchant listings — `OfferShippingDetails`, `MerchantReturnPolicy` (7 days), `aggregateRating` where reviews exist | ✅ code | — | JSON-LD on the product page | ☐ |
-| G5 | Listing quality panel — score, checklist (title/photos/colour/size/description), AI keywords, Google preview, G1–G3 data inline | ✅ (Gemini/nano) | — | product form | ☐ **now** |
+| G5 | Listing quality panel — score, checklist (title/photos/colour/size/description), AI keywords, Google preview, G1–G3 data inline | ✅ (Gemini/nano) | — | product form | ✅ 12 Sep (plan §4.30) |
 | G6 | GA4 property + Data API — traffic, product views, add-to-cart funnel | ✅ | **create GA4 property, send Measurement ID** | events on the storefront; admin panel card | ☐ |
 | G7 | PageSpeed Insights API — Core Web Vitals per page | ✅ | **Cloud → Credentials → Create API key → send** | admin card, per-page warnings | ☐ |
 | G8 | Google Business Profile — reviews, products, posts (local pack, "near me") | ✅ | **reviews 2→30, add products, one post a week** (no API for small accounts) | `sameAs` (Instagram, Justdial, GBP) in Organization schema — send the URLs | ☐ |
