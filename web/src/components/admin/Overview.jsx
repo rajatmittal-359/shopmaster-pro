@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { authedFetch } from '@/lib/client';
+import { Skeleton } from '@/components/ui/skeleton';
 
 /**
  * The platform at a glance.
@@ -40,7 +41,15 @@ export default function Overview() {
     };
   }, []);
 
-  if (state.status === 'loading') return <p className="text-muted-foreground">Loading…</p>;
+  if (state.status === 'loading') {
+    return (
+      <div className="skeleton-in space-y-4" aria-busy="true" aria-label="Loading the overview">
+        <Skeleton className="h-24 rounded-xl" />
+        <Skeleton className="h-40 rounded-xl" />
+        <Skeleton className="h-24 rounded-xl" />
+      </div>
+    );
+  }
   if (state.status === 'error') return <p className="text-destructive">{state.message}</p>;
 
   const peak = Math.max(1, ...(data.revenueByDay || []).map((d) => d.total));

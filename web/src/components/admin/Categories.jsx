@@ -1,10 +1,12 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { authedFetch } from '@/lib/client';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
+import { useEffect, useState } from "react";
+import { authedFetch } from "@/lib/client";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 /**
  * The category tree.
@@ -22,36 +24,36 @@ import { Textarea } from '@/components/ui/textarea';
  */
 export default function Categories() {
   const [categories, setCategories] = useState([]);
-  const [state, setState] = useState({ status: 'loading' });
+  const [state, setState] = useState({ status: "loading" });
   const [form, setForm] = useState({
-    name: '',
-    description: '',
-    parentCategory: '',
+    name: "",
+    description: "",
+    parentCategory: "",
     /*
      * The API REFUSES a main category with no subcategories, and it is right
      * to: products are listed in subcategories, so a main category on its own
      * is a heading nothing can go under. This form did not send them at all,
      * which meant creating a main category always failed.
      */
-    subcategories: '',
+    subcategories: "",
   });
 
   const load = async () => {
-    const data = await authedFetch('/admin/categories');
+    const data = await authedFetch("/admin/categories");
     setCategories(data.categories || data || []);
-    setState({ status: 'idle' });
+    setState({ status: "idle" });
   };
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const data = await authedFetch('/admin/categories');
+        const data = await authedFetch("/admin/categories");
         if (cancelled) return;
         setCategories(data.categories || data || []);
-        setState({ status: 'idle' });
+        setState({ status: "idle" });
       } catch (err) {
-        if (!cancelled) setState({ status: 'error', message: err.message });
+        if (!cancelled) setState({ status: "error", message: err.message });
       }
     })();
     return () => {
@@ -60,20 +62,20 @@ export default function Categories() {
   }, []);
 
   const run = async (fn) => {
-    setState({ status: 'working' });
+    setState({ status: "working" });
     try {
       await fn();
       await load();
     } catch (err) {
-      setState({ status: 'error', message: err.message });
+      setState({ status: "error", message: err.message });
     }
   };
 
   const create = (e) => {
     e.preventDefault();
     run(async () => {
-      await authedFetch('/admin/categories', {
-        method: 'POST',
+      await authedFetch("/admin/categories", {
+        method: "POST",
         body: {
           name: form.name,
           description: form.description || undefined,
@@ -87,40 +89,79 @@ export default function Categories() {
                 .filter(Boolean),
         },
       });
-      setForm({ name: '', description: '', parentCategory: '', subcategories: '' });
+      setForm({
+        name: "",
+        description: "",
+        parentCategory: "",
+        subcategories: "",
+      });
     });
   };
 
-  if (state.status === 'loading') return <p className="text-muted-foreground">Loading…</p>;
+  if (state.status === "loading") {
+    return (
+      <div
+        className="skeleton-in space-y-4"
+        aria-busy="true"
+        aria-label="Loading categories"
+      >
+        <Skeleton className="h-24 rounded-xl" />
+        <Skeleton className="h-40 rounded-xl" />
+        <Skeleton className="h-24 rounded-xl" />
+      </div>
+    );
+  }
 
   const parents = categories.filter((c) => !c.parentCategory);
 
   return (
     <div className="space-y-8">
       <p aria-live="polite" className="min-h-5 text-sm">
-        {state.status === 'error' && <span className="text-destructive">{state.message}</span>}
+        {state.status === "error" && (
+          <span className="text-destructive">{state.message}</span>
+        )}
       </p>
 
-      <form onSubmit={create} className="space-y-3 rounded-xl border border-border p-4">
+      <form
+        onSubmit={create}
+        className="space-y-3 rounded-xl border border-border p-4"
+      >
         <h2 className="font-semibold">Add a category</h2>
 
         <div className="grid gap-3 sm:grid-cols-3">
-          <Input
-            required
-            value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
-            placeholder="Name"
-            aria-label="Category name"
-          />
-          <Input
-            value={form.description}
-            onChange={(e) => setForm({ ...form, description: e.target.value })}
-            placeholder="Description (optional)"
-            aria-label="Category description"
-          />
+          <div>
+            <Label htmlFor="cat-name">Name</Label>
+            <Input
+              id="cat-name"
+              className="mt-1.5"
+              required
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              aria-label="Category name"
+            />
+          </div>
+          <div>
+            <Label htmlFor="cat-desc">
+              Description{" "}
+              <span className="font-normal text-muted-foreground">
+                optional
+              </span>
+            </Label>
+            <Input
+              id="cat-desc"
+              className="mt-1.5"
+              value={form.description}
+              onChange={(e) =>
+                setForm({ ...form, description: e.target.value })
+              }
+              aria-label="Category description"
+            />
+          </div>
           <select
             value={form.parentCategory}
-            onChange={(e) => setForm({ ...form, parentCategory: e.target.value })}
+            onChange={(e) =>
+              setForm({ ...form, parentCategory: e.target.value })
+            }
             aria-label="Parent category"
             className="rounded-md border border-border bg-background px-3 py-2 text-sm"
           >
@@ -143,8 +184,10 @@ export default function Categories() {
               required
               rows={4}
               value={form.subcategories}
-              onChange={(e) => setForm({ ...form, subcategories: e.target.value })}
-              placeholder={'Rings\nEarrings\nNecklaces & Pendants'}
+              onChange={(e) =>
+                setForm({ ...form, subcategories: e.target.value })
+              }
+              placeholder={"Rings\nEarrings\nNecklaces & Pendants"}
               className="mt-1"
             />
             <p className="mt-1 text-xs text-muted-foreground">
@@ -155,7 +198,7 @@ export default function Categories() {
           </div>
         )}
 
-        <Button type="submit" disabled={state.status === 'working'}>
+        <Button type="submit" disabled={state.status === "working"}>
           Add it
         </Button>
         <p className="text-xs text-muted-foreground">
@@ -172,13 +215,20 @@ export default function Categories() {
       */}
       <ul className="divide-y divide-border rounded-xl border border-border">
         {categories.map((cat) => (
-          <li key={cat._id} className="flex flex-wrap items-center gap-3 p-3 text-sm">
+          <li
+            key={cat._id}
+            className="flex flex-wrap items-center gap-3 p-3 text-sm"
+          >
             <span className="min-w-0 flex-1">
-              {cat.parentCategory ? '— ' : ''}
+              {cat.parentCategory ? "— " : ""}
               {cat.name}
-              {!cat.isActive && <span className="text-muted-foreground"> · switched off</span>}
+              {!cat.isActive && (
+                <span className="text-muted-foreground"> · switched off</span>
+              )}
               {cat.description && (
-                <span className="block text-xs text-muted-foreground">{cat.description}</span>
+                <span className="block text-xs text-muted-foreground">
+                  {cat.description}
+                </span>
               )}
             </span>
 
@@ -188,13 +238,13 @@ export default function Categories() {
               onClick={() =>
                 run(() =>
                   authedFetch(`/admin/categories/${cat._id}`, {
-                    method: 'PATCH',
+                    method: "PATCH",
                     body: { isActive: !cat.isActive },
-                  })
+                  }),
                 )
               }
             >
-              {cat.isActive ? 'Switch off' : 'Switch on'}
+              {cat.isActive ? "Switch off" : "Switch on"}
             </Button>
           </li>
         ))}

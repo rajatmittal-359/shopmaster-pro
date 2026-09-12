@@ -1,8 +1,8 @@
-import AdminGuard from '@/components/admin/AdminGuard';
-import PanelShell from '@/components/panel/PanelShell';
+import AdminGuard from "@/components/admin/AdminGuard";
+import PanelShell from "@/components/panel/PanelShell";
 
 export const metadata = {
-  title: { default: 'Admin', template: '%s · Admin · ShopMaster Pro' },
+  title: { default: "Admin", template: "%s · Admin · ShopMaster Pro" },
   robots: { index: false, follow: false },
 };
 
@@ -19,33 +19,41 @@ export const metadata = {
  */
 const GROUPS = [
   {
-    items: [{ href: '/admin', label: 'Overview', icon: 'LayoutDashboard', end: true }],
-  },
-  {
-    label: 'Money',
-    items: [{ href: '/admin/payouts', label: 'Payouts', icon: 'IndianRupee' }],
-  },
-  {
-    label: 'Needs a person',
     items: [
-      { href: '/admin/orders', label: 'Orders & disputes', icon: 'MessageSquareWarning' },
-      { href: '/admin/sellers', label: 'Sellers', icon: 'Store' },
+      { href: "/admin", label: "Overview", icon: "LayoutDashboard", end: true },
     ],
   },
   {
-    label: 'Catalogue',
+    label: "Money",
+    items: [{ href: "/admin/payouts", label: "Payouts", icon: "IndianRupee" }],
+  },
+  {
+    label: "Needs a person",
     items: [
-      { href: '/admin/categories', label: 'Categories', icon: 'FolderTree' },
-      { href: '/admin/coupons', label: 'Coupons', icon: 'TicketPercent' },
+      {
+        href: "/admin/orders",
+        label: "Orders & disputes",
+        icon: "MessageSquareWarning",
+      },
+      { href: "/admin/sellers", label: "Sellers", icon: "Store" },
     ],
   },
   {
-    label: 'Records',
-    items: [{ href: '/admin/inventory', label: 'Stock history', icon: 'History' }],
+    label: "Catalogue",
+    items: [
+      { href: "/admin/categories", label: "Categories", icon: "FolderTree" },
+      { href: "/admin/coupons", label: "Coupons", icon: "TicketPercent" },
+    ],
   },
   {
-    label: 'AI',
-    items: [{ href: '/admin/ai', label: 'AI Studio', icon: 'Sparkles' }],
+    label: "Records",
+    items: [
+      { href: "/admin/inventory", label: "Stock history", icon: "History" },
+    ],
+  },
+  {
+    label: "AI",
+    items: [{ href: "/admin/ai", label: "AI Studio", icon: "Sparkles" }],
   },
 ];
 

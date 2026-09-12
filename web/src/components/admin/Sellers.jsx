@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { authedFetch } from '@/lib/client';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import ActionDialog from '@/components/common/ActionDialog';
@@ -70,7 +71,15 @@ export default function Sellers() {
   const patch = (id, path, body) =>
     run(() => authedFetch(`/admin/sellers/${id}${path}`, { method: 'PATCH', body }));
 
-  if (state.status === 'loading') return <p className="text-muted-foreground">Loading…</p>;
+  if (state.status === 'loading') {
+    return (
+      <div className="skeleton-in space-y-4" aria-busy="true" aria-label="Loading sellers">
+        <Skeleton className="h-24 rounded-xl" />
+        <Skeleton className="h-40 rounded-xl" />
+        <Skeleton className="h-24 rounded-xl" />
+      </div>
+    );
+  }
 
   return (
     <div>

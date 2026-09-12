@@ -1,10 +1,12 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { authedFetch } from '@/lib/client';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import ActionDialog from '@/components/common/ActionDialog';
+import { useEffect, useState } from "react";
+import { authedFetch } from "@/lib/client";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import ActionDialog from "@/components/common/ActionDialog";
 
 /**
  * Paying sellers what they are owed.
@@ -26,26 +28,31 @@ import ActionDialog from '@/components/common/ActionDialog';
  *   at once would mean the system says a seller was paid because somebody
  *   pressed a button - which is exactly the claim a seller will dispute.
  */
-const money = (n) => `₹${Number(n || 0).toLocaleString('en-IN')}`;
+const money = (n) => `₹${Number(n || 0).toLocaleString("en-IN")}`;
 
 const when = (iso) =>
-  iso ? new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : '';
+  iso
+    ? new Date(iso).toLocaleDateString("en-IN", {
+        day: "numeric",
+        month: "short",
+      })
+    : "";
 
 export default function Payouts() {
   const [payable, setPayable] = useState(null);
   const [history, setHistory] = useState([]);
-  const [state, setState] = useState({ status: 'loading' });
+  const [state, setState] = useState({ status: "loading" });
   const [reference, setReference] = useState({});
   const [failing, setFailing] = useState(null);
 
   const load = async () => {
     const [owed, past] = await Promise.all([
-      authedFetch('/admin/payouts/payable'),
-      authedFetch('/admin/payouts'),
+      authedFetch("/admin/payouts/payable"),
+      authedFetch("/admin/payouts"),
     ]);
     setPayable(owed);
     setHistory(past.payouts || []);
-    setState({ status: 'idle' });
+    setState({ status: "idle" });
   };
 
   useEffect(() => {
@@ -53,15 +60,15 @@ export default function Payouts() {
     (async () => {
       try {
         const [owed, past] = await Promise.all([
-          authedFetch('/admin/payouts/payable'),
-          authedFetch('/admin/payouts'),
+          authedFetch("/admin/payouts/payable"),
+          authedFetch("/admin/payouts"),
         ]);
         if (cancelled) return;
         setPayable(owed);
         setHistory(past.payouts || []);
-        setState({ status: 'idle' });
+        setState({ status: "idle" });
       } catch (err) {
-        if (!cancelled) setState({ status: 'error', message: err.message });
+        if (!cancelled) setState({ status: "error", message: err.message });
       }
     })();
     return () => {
@@ -70,58 +77,79 @@ export default function Payouts() {
   }, []);
 
   const run = async (fn) => {
-    setState({ status: 'working' });
+    setState({ status: "working" });
     try {
       await fn();
       await load();
     } catch (err) {
-      setState({ status: 'error', message: err.message });
+      setState({ status: "error", message: err.message });
     }
   };
 
-  if (state.status === 'loading') return <p className="text-muted-foreground">Loading…</p>;
+  if (state.status === "loading") {
+    return (
+      <div
+        className="skeleton-in space-y-4"
+        aria-busy="true"
+        aria-label="Loading payouts"
+      >
+        <Skeleton className="h-24 rounded-xl" />
+        <Skeleton className="h-40 rounded-xl" />
+        <Skeleton className="h-24 rounded-xl" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-10">
       <p aria-live="polite" className="min-h-5 text-sm">
-        {state.status === 'error' && <span className="text-destructive">{state.message}</span>}
+        {state.status === "error" && (
+          <span className="text-destructive">{state.message}</span>
+        )}
       </p>
 
       <section>
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h2 className="text-lg font-semibold">Owed right now</h2>
           <p className="text-sm text-muted-foreground">
-            {money(payable?.totalPayable)} across {payable?.sellers?.length || 0} seller(s) · a
-            line becomes payable {payable?.returnWindowDays} days after delivery
+            {money(payable?.totalPayable)} across{" "}
+            {payable?.sellers?.length || 0} seller(s) · a line becomes payable{" "}
+            {payable?.returnWindowDays} days after delivery
           </p>
         </div>
 
         {(payable?.sellers || []).length === 0 ? (
           <p className="mt-3 text-sm text-muted-foreground">
-            Nothing is due. Everything delivered recently is still inside its return window.
+            Nothing is due. Everything delivered recently is still inside its
+            return window.
           </p>
         ) : (
           <ul className="mt-4 divide-y divide-border rounded-xl border border-border">
             {payable.sellers.map((row) => (
-              <li key={row.sellerId} className="flex flex-wrap items-center gap-4 p-4">
+              <li
+                key={row.sellerId}
+                className="flex flex-wrap items-center gap-4 p-4"
+              >
                 <div className="min-w-0 flex-1">
-                  <p className="font-medium">{row.businessName || row.name || 'Seller'}</p>
+                  <p className="font-medium">
+                    {row.businessName || row.name || "Seller"}
+                  </p>
                   <p className="text-sm text-muted-foreground">
-                    {money(row.grossSales)} sold · {money(row.commission)} commission ·{' '}
-                    {row.itemCount || 0} item(s)
+                    {money(row.grossSales)} sold · {money(row.commission)}{" "}
+                    commission · {row.itemCount || 0} item(s)
                   </p>
                 </div>
 
                 <p className="text-lg font-semibold">{money(row.netPayable)}</p>
 
                 <Button
-                  disabled={state.status === 'working'}
+                  disabled={state.status === "working"}
                   onClick={() =>
                     run(() =>
-                      authedFetch('/admin/payouts', {
-                        method: 'POST',
+                      authedFetch("/admin/payouts", {
+                        method: "POST",
                         body: { sellerId: row.sellerId },
-                      })
+                      }),
                     )
                   }
                 >
@@ -148,31 +176,46 @@ export default function Payouts() {
                       {payout.payoutNumber} · {payout.businessName}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      {money(payout.netPayable)} · {payout.itemCount} item(s) ·{' '}
+                      {money(payout.netPayable)} · {payout.itemCount} item(s) ·{" "}
                       {when(payout.periodFrom)} to {when(payout.periodTo)}
                     </p>
                   </div>
-                  <p className="text-sm font-medium capitalize">{payout.status}</p>
+                  <p className="text-sm font-medium capitalize">
+                    {payout.status}
+                  </p>
                 </div>
 
-                {payout.status === 'pending' && (
+                {payout.status === "pending" && (
                   <div className="mt-3 flex flex-wrap items-center gap-2">
                     {/* The reference is the point. "Paid" without one is a
                         claim; with one it is a fact both sides can check. */}
+                    <Label
+                      htmlFor={`utr-${payout._id}`}
+                      className="text-xs text-muted-foreground"
+                    >
+                      Bank reference / UTR
+                    </Label>
                     <Input
-                      value={reference[payout._id] || ''}
-                      onChange={(e) => setReference({ ...reference, [payout._id]: e.target.value })}
-                      placeholder="Bank reference / UTR"
+                      id={`utr-${payout._id}`}
+                      value={reference[payout._id] || ""}
+                      onChange={(e) =>
+                        setReference({
+                          ...reference,
+                          [payout._id]: e.target.value,
+                        })
+                      }
                       className="w-56"
                     />
                     <Button
-                      disabled={!reference[payout._id] || state.status === 'working'}
+                      disabled={
+                        !reference[payout._id] || state.status === "working"
+                      }
                       onClick={() =>
                         run(() =>
                           authedFetch(`/admin/payouts/${payout._id}/paid`, {
-                            method: 'PATCH',
+                            method: "PATCH",
                             body: { reference: reference[payout._id] },
-                          })
+                          }),
                         )
                       }
                     >
@@ -191,11 +234,13 @@ export default function Payouts() {
                 {payout.reference && (
                   <p className="mt-2 text-sm text-muted-foreground">
                     Reference {payout.reference}
-                    {payout.paidAt ? ` · paid ${when(payout.paidAt)}` : ''}
+                    {payout.paidAt ? ` · paid ${when(payout.paidAt)}` : ""}
                   </p>
                 )}
                 {payout.failureReason && (
-                  <p className="mt-2 text-sm text-destructive">{payout.failureReason}</p>
+                  <p className="mt-2 text-sm text-destructive">
+                    {payout.failureReason}
+                  </p>
                 )}
               </li>
             ))}
@@ -214,19 +259,22 @@ export default function Payouts() {
         title="Record a failed transfer"
         description="The payout goes back to unpaid, and the seller is told why."
         reasons={[
-          'The account details are wrong',
-          'The bank rejected it',
-          'I have not made the transfer yet',
+          "The account details are wrong",
+          "The bank rejected it",
+          "I have not made the transfer yet",
         ]}
         requireReason
         confirmLabel="Record the failure"
-        busy={state.status === 'working'}
+        busy={state.status === "working"}
         note="The seller sees this on their earnings page."
         onConfirm={(reason) => {
           const id = failing;
           setFailing(null);
           run(() =>
-            authedFetch(`/admin/payouts/${id}/failed`, { method: 'PATCH', body: { reason } })
+            authedFetch(`/admin/payouts/${id}/failed`, {
+              method: "PATCH",
+              body: { reason },
+            }),
           );
         }}
       />

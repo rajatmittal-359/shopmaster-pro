@@ -1,11 +1,15 @@
-import Payouts from '@/components/admin/Payouts';
+import Payouts from "@/components/admin/Payouts";
+import PageHeader from "@/components/panel/PageHeader";
 
-export const metadata = { title: 'Payouts' };
+export const metadata = { title: "Payouts" };
 
 export default function AdminPayoutsPage() {
   return (
     <>
-      <h1 className="mb-6 text-2xl font-semibold tracking-tight">Payouts</h1>
+      <PageHeader
+        title="Payouts"
+        lead="Who is owed money, and marking it paid once the bank has it."
+      />
       <Payouts />
     </>
   );

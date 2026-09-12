@@ -1,11 +1,15 @@
-import Coupons from '@/components/admin/Coupons';
+import Coupons from "@/components/admin/Coupons";
+import PageHeader from "@/components/panel/PageHeader";
 
-export const metadata = { title: 'Coupons' };
+export const metadata = { title: "Coupons" };
 
 export default function AdminCouponsPage() {
   return (
     <>
-      <h1 className="mb-6 text-2xl font-semibold tracking-tight">Coupons</h1>
+      <PageHeader
+        title="Coupons"
+        lead="Codes, who funds them, and how often they were used."
+      />
       <Coupons />
     </>
   );

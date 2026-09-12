@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { authedFetch } from '@/lib/client';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import ActionDialog from '@/components/common/ActionDialog';
@@ -72,7 +73,15 @@ export default function AdminOrders() {
     }
   };
 
-  if (state.status === 'loading') return <p className="text-muted-foreground">Loading…</p>;
+  if (state.status === 'loading') {
+    return (
+      <div className="skeleton-in space-y-4" aria-busy="true" aria-label="Loading orders">
+        <Skeleton className="h-24 rounded-xl" />
+        <Skeleton className="h-40 rounded-xl" />
+        <Skeleton className="h-24 rounded-xl" />
+      </div>
+    );
+  }
 
   return (
     <div>

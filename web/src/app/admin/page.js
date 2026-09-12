@@ -1,11 +1,15 @@
-import Overview from '@/components/admin/Overview';
+import Overview from "@/components/admin/Overview";
+import PageHeader from "@/components/panel/PageHeader";
 
-export const metadata = { title: 'Overview' };
+export const metadata = { title: "Overview" };
 
 export default function AdminHome() {
   return (
     <>
-      <h1 className="mb-6 text-2xl font-semibold tracking-tight">Overview</h1>
+      <PageHeader
+        title="Overview"
+        lead="What is waiting on you, and how the marketplace is doing."
+      />
       <Overview />
     </>
   );

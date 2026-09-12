@@ -1,11 +1,15 @@
-import Sellers from '@/components/admin/Sellers';
+import Sellers from "@/components/admin/Sellers";
+import PageHeader from "@/components/panel/PageHeader";
 
-export const metadata = { title: 'Sellers' };
+export const metadata = { title: "Sellers" };
 
 export default function AdminSellersPage() {
   return (
     <>
-      <h1 className="mb-6 text-2xl font-semibold tracking-tight">Sellers</h1>
+      <PageHeader
+        title="Sellers"
+        lead="Who sells here, who is waiting to, and what each pays."
+      />
       <Sellers />
     </>
   );

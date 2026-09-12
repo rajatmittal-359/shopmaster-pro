@@ -1,11 +1,15 @@
-import Categories from '@/components/admin/Categories';
+import Categories from "@/components/admin/Categories";
+import PageHeader from "@/components/panel/PageHeader";
 
-export const metadata = { title: 'Categories' };
+export const metadata = { title: "Categories" };
 
 export default function AdminCategoriesPage() {
   return (
     <>
-      <h1 className="mb-6 text-2xl font-semibold tracking-tight">Categories</h1>
+      <PageHeader
+        title="Categories"
+        lead="The tree every product sits in. Products go on leaves only."
+      />
       <Categories />
     </>
   );
