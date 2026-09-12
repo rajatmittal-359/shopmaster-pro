@@ -25,7 +25,11 @@ path `web/` calls, then a feature-word pass over the customer pages. Route
 mapping alone had missed all of these. **1.2 dispute, 1.3 item cancel and 1.5
 cancellation reason were built on 12 Sep (plan §4.20); 1.1 review writing on
 12 Sep (plan §4.21) — which also closed 2.1: every review is verified by
-construction, the label was already honest.**
+construction, the label was already honest; 1.4 video on 12 Sep (plan §4.22).**
+
+**Empty as of 12 Sep 2026.** Two things still want Rajat's own eyes on
+localhost before this section is called closed: the review form as a customer
+with a delivered order, and one video upload from the product form.
 
 Checked and **present** in `web/` (no action): wishlist, addresses, coupons,
 COD and Razorpay, the address-specific delivery speeds (same-day when Borzo
