@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import Logo from '@/components/brand/Logo';
 import HeaderAccount from '@/components/layout/HeaderAccount';
+import RoleSwitch from '@/components/layout/RoleSwitch';
 import CategoryBar from '@/components/layout/CategoryBar';
 import MobileNav from '@/components/layout/MobileNav';
 import HideOnAuthPages from '@/components/layout/HideOnAuthPages';
@@ -60,6 +61,7 @@ export default async function Header() {
           <Link href="/contact" className="hidden text-muted-foreground hover:text-brand-ink sm:inline">
             Contact
           </Link>
+          <RoleSwitch className="hidden sm:flex" />
           <HeaderAccount />
           <ThemeToggle />
         </nav>

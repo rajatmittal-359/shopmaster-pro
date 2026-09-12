@@ -2,11 +2,12 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { ExternalLink, PanelLeft } from 'lucide-react';
+import { PanelLeft } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import PanelNav from '@/components/panel/PanelNav';
 import Logo from '@/components/brand/Logo';
 import HeaderAccount from '@/components/layout/HeaderAccount';
+import RoleSwitch from '@/components/layout/RoleSwitch';
 import ThemeToggle from '@/components/layout/ThemeToggle';
 
 /**
@@ -68,13 +69,9 @@ export default function PanelShell({ title, groups, children }) {
           </span>
 
           <div className="ml-auto flex items-center gap-1 text-sm">
-            <Link
-              href="/"
-              className="hidden items-center gap-1.5 rounded-md px-2.5 py-1.5 text-muted-foreground hover:bg-accent hover:text-foreground sm:flex"
-            >
-              <ExternalLink className="size-4" />
-              View shop
-            </Link>
+            {/* The same switch the storefront header carries: Shopping |
+                Selling | Admin, the current one lit. Replaces "View shop". */}
+            <RoleSwitch />
             <HeaderAccount showCart={false} />
             <ThemeToggle />
           </div>

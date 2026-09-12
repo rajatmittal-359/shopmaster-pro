@@ -100,10 +100,10 @@ export default function HeaderAccount({ showCart = true }) {
                 cart and its orders while it is in the seller area. */}
             {(canSell || isAdmin) && <DropdownMenuSeparator />}
             {canSell && (
-              <DropdownMenuItem render={<Link href="/seller" />}>Seller dashboard</DropdownMenuItem>
+              <DropdownMenuItem render={<Link href="/seller" />}>Switch to selling</DropdownMenuItem>
             )}
             {isAdmin && (
-              <DropdownMenuItem render={<Link href="/admin" />}>Admin</DropdownMenuItem>
+              <DropdownMenuItem render={<Link href="/admin" />}>Switch to admin</DropdownMenuItem>
             )}
             {!canSell && !isAdmin && (
               <DropdownMenuItem render={<Link href="/sell" />}>
