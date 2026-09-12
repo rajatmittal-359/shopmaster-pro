@@ -3,6 +3,20 @@ const cors = require('cors');
 
 const app = express();
 
+/*
+ * Render terminates TLS and forwards the request; without this every visitor
+ * looks like the load balancer, so a rate limit would punish everyone for one
+ * script. `1` trusts exactly one hop.
+ */
+app.set('trust proxy', 1);
+
+/*
+ * The security headers every framework ships by default and this one never
+ * had: no sniffing, no framing, no X-Powered-By, strict transport. A JSON API
+ * needs no content-security policy of its own, so helmet's defaults stand.
+ */
+app.use(require('helmet')());
+
 /**
  * Who may call this API from a browser.
  *
@@ -76,9 +90,12 @@ app.get('/', (req, res) => {
 });
 
 // Mount routes
-app.use('/api/auth', authRoutes);
+const { authLimiter, checkoutLimiter, aiLimiter } = require('./middlewares/rateLimits');
+app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/seller', sellerRoutes);
+app.use(['/api/customer/checkout-cod', '/api/customer/checkout-online'], checkoutLimiter);
+app.use(['/api/seller/ai', '/api/admin/ai'], aiLimiter);
 app.use('/api/customer', customerRoutes);
 app.use('/api/public/products', publicCatalogue, productRoutes);
 

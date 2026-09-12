@@ -48,9 +48,7 @@ a page — the React app defined these in its services and no screen used them.
 |---|---|---|---|
 | 2.5 | **Seller cancellation carries no penalty** (Amazon 2–10 %, Flipkart ₹60) | OPS backlog | A policy number from Rajat |
 | 2.6 | **14 seeded products still share the old description** (was 35; 21 done 12 Sep). Next day with quota: `node draftProductDescriptions.js` then `--apply` (apply now reads the file, no second Gemini pass). None reach the feed | OPS backlog | Gemini daily quota |
-| 2.8 | **NVIDIA provider** — keep as a generate-only fallback, or remove. Text-to-image only (cannot take our photo), one-time credits | This session | Rajat's call |
 | 2.9 | **Sentry** — the one blind spot: a 500 at checkout is invisible | Plan §7b | Rajat's DSN |
-| 2.10 | **Backend hardening the copy-paste era never had:** no `helmet`, **no rate limiting** on login / forgot-password / checkout / AI routes, no request-validation layer (controllers validate by hand, unevenly). Found 12 Sep while measuring the backend | This session | Rajat runs the installs (`helmet`, `express-rate-limit`) — then I wire them with tests |
 | 2.11 | **`productRoutes.js` carries 403 lines of business logic** — the one structural leftover from the 5 Sep review. Move to a `productController`; behaviour unchanged, tests already cover it | `docs/archive/CODE-STRUCTURE-REVIEW.md` item 1 | Time |
 
 ## 3. Rajat's call — researched, waiting on a decision
@@ -59,6 +57,7 @@ a page — the React app defined these in its services and no screen used them.
 - **Buyer-protection line on the product page.** Needs the copy — what we actually promise. (Plan §13)
 - **Buyer–seller messaging.** Large. Later. (Plan §13)
 - **Return label generation** — dropped as a need: in India the reverse-pickup rider brings the label (Amazon, Flipkart, Delhivery); the customer's page now says so. Revisit only if a courier asks the customer to print.
+- **Request-validation layer** (Zod/Joi) — controllers validate by hand today; add when a second pair of hands starts writing endpoints.
 - **Direct-to-Cloudinary uploads** once 7 MB video clips stop being enough — needs an unsigned upload preset in the Cloudinary console. (OPS backlog)
 
 ## 4. Ideas raised, not decided — do not start without a yes
