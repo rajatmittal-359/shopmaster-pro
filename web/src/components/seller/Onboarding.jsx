@@ -60,6 +60,21 @@ export default function Onboarding({ children }) {
   const pathname = usePathname();
   const router = useRouter();
   const [state, setState] = useState(null); // { agreed, pickupSet, bankSet, productsTotal, rules }
+  // Steps a seller chose to do later - the strip on Home keeps asking.
+  const [skipped, setSkipped] = useState(() => {
+    try {
+      return JSON.parse((typeof window !== 'undefined' && localStorage.getItem('smp_onboarding_skipped')) || '[]');
+    } catch {
+      return [];
+    }
+  });
+  const skip = (id) => {
+    const next = [...new Set([...skipped, id])];
+    setSkipped(next);
+    try {
+      localStorage.setItem('smp_onboarding_skipped', JSON.stringify(next));
+    } catch {}
+  };
   const [celebrated, setCelebrated] = useState(() => {
     try {
       return typeof window !== 'undefined' && localStorage.getItem('smp_onboarded') === '1';
@@ -96,12 +111,13 @@ export default function Onboarding({ children }) {
     bank: state.bankSet,
     product: state.productsTotal > 0,
   };
-  const pending = STEPS.filter((s) => !done[s.id]);
+  const pending = STEPS.filter((s) => !done[s.id] && !skipped.includes(s.id));
 
   // A shop that has already listed something is not new: it gets the panel,
   // and Home's setup guide nags about what is still missing. The wizard is
   // for the first day only. The product form is the one page step 4 needs.
-  if (pending.length === 0 && celebrated) return children;
+  const allDone = STEPS.every((s) => done[s.id]);
+  if ((pending.length === 0 && !allDone) || (pending.length === 0 && celebrated)) return children;
   if (state.productsTotal > 0 && (pending.length > 0 || celebrated)) return children;
   if (pathname.startsWith('/seller/products/new')) return children;
 
@@ -159,8 +175,13 @@ export default function Onboarding({ children }) {
         {current.id === 'product' && <ProductStep />}
       </div>
 
-      <p className="mt-4 text-xs text-muted-foreground">
-        Everything here can be changed later in Settings and Payments.
+      <p className="mt-4 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+        <span>Everything here can be changed later in Settings and Payments.</span>
+        {current.id !== 'rules' && (
+          <button type="button" onClick={() => skip(current.id)} className="text-brand-ink hover:underline">
+            Do this later
+          </button>
+        )}
       </p>
     </div>
   );

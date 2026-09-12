@@ -122,9 +122,13 @@ export default function SellerDashboard() {
 
   return (
     <div className="space-y-6">
-      {!setupDone && (
+      {!setupDone && productsTotal === 0 && (
         <SetupGuide agreed={agreed} pickupSet={pickupSet} bankSet={bankSet} productsTotal={productsTotal} shared={shared} onShared={markShared} />
       )}
+
+      {/* ONE next thing. A panel that lists everything says nothing; Shopify's
+          Home and Seller Central both lead with the single most urgent action. */}
+      <NextUp waiting={waiting} pickupSet={pickupSet} bankSet={bankSet} lowStock={lowStock} productsTotal={productsTotal} />
 
       <div className="grid grid-cols-3 gap-3 sm:gap-4">
         {cards.map(({ icon: Icon, label, value, href, note }) => (
@@ -146,9 +150,9 @@ export default function SellerDashboard() {
         ))}
       </div>
 
-      {/* ONE next thing. A panel that lists everything says nothing; Shopify's
-          Home and Seller Central both lead with the single most urgent action. */}
-      <NextUp waiting={waiting} pickupSet={pickupSet} bankSet={bankSet} lowStock={lowStock} productsTotal={productsTotal} />
+      {!setupDone && productsTotal > 0 && (
+        <SetupGuide agreed={agreed} pickupSet={pickupSet} bankSet={bankSet} productsTotal={productsTotal} shared={shared} onShared={markShared} />
+      )}
 
       {/* Account health, Amazon-style: the number the rulebook reviews on,
           shown before it matters. Zero is the normal state and says so. */}
@@ -244,96 +248,78 @@ export default function SellerDashboard() {
  * Shopify's setup guide, at our size: the two things a shop cannot sell
  * without. It goes away on its own once both are done.
  */
+/**
+ * Setup, as Shopify shows it to a store that is already trading: a strip
+ * with a count and a bar, the steps left as buttons, details on demand.
+ * The dashboard is the page; this is a reminder on it, not a wall in front
+ * of it. (A brand-new shop meets the wizard instead - Onboarding.jsx.)
+ */
 function SetupGuide({ agreed, pickupSet, bankSet, productsTotal, shared, onShared }) {
+  const [open, setOpen] = useState(false);
   const steps = [
-    {
-      done: agreed,
-      title: 'Read and accept the Seller Agreement',
-      body: 'The rules every shop here sells by - dispatch, cancellations, returns, payouts. Two minutes.',
-      href: '/seller/settings',
-      cta: 'Open settings',
-    },
-    {
-      done: pickupSet,
-      title: 'Tell the courier where to collect',
-      body: 'A pickup address is where the rider is sent. Without one, nothing can be shipped.',
-      href: '/seller/settings',
-      cta: 'Set the address',
-    },
-    {
-      done: bankSet,
-      title: 'Add the bank account payouts go to',
-      body: 'Released 7 days after each delivery, once the return window has closed.',
-      href: '/seller/payments',
-      cta: 'Add the account',
-    },
-    {
-      done: productsTotal > 0,
-      title: 'List your first product',
-      body: 'One photo is enough to start - the AI can write the listing and clean the picture.',
-      href: '/seller/products/new',
-      cta: 'Add a product',
-    },
-    {
-      done: shared,
-      title: 'Share your shop',
-      body: 'Your first customers are people who already know you. Send them the link.',
-      action: 'share',
-      cta: 'Copy the shop link',
-    },
+    { done: agreed, short: 'Agreement', title: 'Accept the Seller Agreement', href: '/seller/settings' },
+    { done: pickupSet, short: 'Pickup address', title: 'Tell the courier where to collect', href: '/seller/settings' },
+    { done: bankSet, short: 'Bank account', title: 'Add the account payouts go to', href: '/seller/payments' },
+    { done: productsTotal > 0, short: 'First product', title: 'List your first product', href: '/seller/products/new' },
+    { done: shared, short: 'Share the link', title: 'Send your shop link to people who know you', action: 'share' },
   ];
-  const left = steps.filter((s) => !s.done).length;
+  const left = steps.filter((s) => !s.done);
+  const pct = Math.round(((steps.length - left.length) / steps.length) * 100);
 
   const copyLink = async () => {
-    const url = `${window.location.origin}/shop`;
     try {
-      await navigator.clipboard.writeText(url);
+      await navigator.clipboard.writeText(`${window.location.origin}/shop`);
     } catch {}
     onShared();
   };
 
   return (
-    <PanelCard title="Set up your shop" lead={`${left} of ${steps.length} left. In this order, and you are selling.`}>
-      <ol className="divide-y">
-        {steps.map((step, i) => (
-          <li key={step.title} className="flex items-start gap-3 py-3">
-            <span
-              className={`mt-0.5 grid size-5 shrink-0 place-items-center rounded-full border text-[11px] tabular-nums ${
-                step.done ? 'border-primary bg-primary text-primary-foreground' : 'border-border text-muted-foreground'
-              }`}
-              aria-hidden
-            >
-              {step.done ? <Check className="size-3" /> : i + 1}
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className={`text-sm font-medium ${step.done ? 'text-muted-foreground line-through' : ''}`}>{step.title}</p>
-              {!step.done && (
-                <>
-                  <p className="mt-0.5 text-sm text-muted-foreground">{step.body}</p>
-                  {step.action === 'share' ? (
-                    <Button size="sm" className="mt-3" variant="outline" onClick={copyLink}>
-                      {step.cta}
-                    </Button>
-                  ) : (
-                    <Button size="sm" className="mt-3" nativeButton={false} render={<Link href={step.href} />}>
-                      {step.cta}
-                    </Button>
-                  )}
-                </>
-              )}
-            </div>
+    <div className="rounded-xl border bg-card px-4 py-3">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+        <button type="button" onClick={() => setOpen((o) => !o)} className="flex items-center gap-2 text-sm font-medium" aria-expanded={open}>
+          <span>Set up your shop</span>
+          <span className="text-muted-foreground">· {left.length} of {steps.length} left</span>
+          <span className={`text-xs text-muted-foreground transition ${open ? 'rotate-90' : ''}`} aria-hidden>▸</span>
+        </button>
+        <div className="h-1.5 w-28 overflow-hidden rounded bg-muted" aria-hidden>
+          <div className="h-full bg-primary" style={{ width: `${pct}%` }} />
+        </div>
+        <div className="flex flex-wrap gap-1.5 sm:ml-auto">
+          {left.map((step) =>
+            step.action === 'share' ? (
+              <Button key={step.short} size="sm" variant="outline" className="h-7 text-xs" onClick={copyLink}>
+                {step.short}
+              </Button>
+            ) : (
+              <Button key={step.short} size="sm" variant="outline" className="h-7 text-xs" nativeButton={false} render={<Link href={step.href} />}>
+                {step.short}
+              </Button>
+            )
+          )}
+        </div>
+      </div>
+      {open && (
+        <ol className="mt-3 divide-y border-t text-sm">
+          {steps.map((step, i) => (
+            <li key={step.short} className="flex items-center gap-3 py-2">
+              <span
+                className={`grid size-5 shrink-0 place-items-center rounded-full border text-[11px] tabular-nums ${
+                  step.done ? 'border-primary bg-primary text-primary-foreground' : 'border-border text-muted-foreground'
+                }`}
+                aria-hidden
+              >
+                {step.done ? <Check className="size-3" /> : i + 1}
+              </span>
+              <span className={step.done ? 'text-muted-foreground line-through' : ''}>{step.title}</span>
+            </li>
+          ))}
+          <li className="pt-2 text-xs text-muted-foreground">
+            How it works: list → a customer pays → pack and book the courier from Orders → delivered → paid 7 days later.{' '}
+            <Link href="/selling-policy" target="_blank" rel="noopener" className="text-brand-ink hover:underline">The rules</Link>.
           </li>
-        ))}
-      </ol>
-      <p className="mt-4 text-xs text-muted-foreground">
-        How selling works here: list → a customer pays → you pack and book the courier from Orders → delivered →
-        paid to your bank 7 days later.{' '}
-        <Link href="/selling-policy" target="_blank" rel="noopener" className="text-brand-ink hover:underline">
-          The full rules
-        </Link>
-        .
-      </p>
-    </PanelCard>
+        </ol>
+      )}
+    </div>
   );
 }
 

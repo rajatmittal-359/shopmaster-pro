@@ -1262,10 +1262,13 @@ sees a 4-step wizard and nothing else - **1 The rules** (five lines + accept)
 money goes** (bank form, number typed twice) → **4 Your first product** (three
 lines, one button) → *"Your shop is live"* with Copy-the-link. No skip; the
 product form is the one page allowed through. A shop that has already listed
-is never gated - Home's guide nags instead. Home now opens with **Next:** one
-line, one button, chosen in this order: an order to pack → pickup address →
+is never gated - Home's guide nags instead. Home is the dashboard first - **Next:** one line, one button, chosen in this order: an order to pack → pickup address →
 bank account → an out-of-stock product → fewer than five products → share the
-link. The product form's cards are numbered **1 Photos · 2 Words · 3 Category
+link; then the tiles; then, for a trading shop, setup as a **strip** - "3 of 5
+left", a progress bar, the remaining steps as buttons - not a wall (Rajat,
+later the same evening: "bidte hi setup form dikhana ajeeb hai"). The wizard's
+steps other than the agreement carry "Do this later"; the strip keeps asking.
+The product form's cards are numbered **1 Photos · 2 Words · 3 Category
 · 4 Price and stock · 5 Details**, leads cut to one line, and the model
 selector folded under "More" - the people who change it know to look.
 
