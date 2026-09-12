@@ -75,13 +75,15 @@ const buildSitemap = async () => {
       lastmod: c.updatedAt,
     }));
 
-  const products = await Product.find({
-    isActive: true,
-    isDeleted: { $ne: true },
-    stock: { $gt: 0 },
-    slug: { $exists: true, $ne: null },
-    category: { $in: browsableIds },
-  })
+  const products = await Product.find(
+    await require('./hiddenSellers').withoutHiddenSellers({
+      isActive: true,
+      isDeleted: { $ne: true },
+      stock: { $gt: 0 },
+      slug: { $exists: true, $ne: null },
+      category: { $in: browsableIds },
+    })
+  )
     .select('slug updatedAt')
     .lean();
 

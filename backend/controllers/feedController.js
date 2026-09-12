@@ -73,7 +73,7 @@ exports.googleProductFeed = async (req, res) => {
      *   third-party sellers join, set FEED_ALL_SELLERS=true and rename the
      *   Merchant Center account to the marketplace rather than the shop.
      */
-    const filter = { isActive: true, isDeleted: { $ne: true } };
+    const filter = await require('../utils/hiddenSellers').withoutHiddenSellers({ isActive: true, isDeleted: { $ne: true } });
 
     if (process.env.FEED_ALL_SELLERS !== 'true') {
       const Seller = require('../models/Seller');

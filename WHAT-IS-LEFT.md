@@ -48,7 +48,7 @@ a page — the React app defined these in its services and no screen used them.
 |---|---|---|---|
 | 2.6 | **14 seeded products still share the old description** (was 35; 21 done 12 Sep). Next day with quota: `node draftProductDescriptions.js` then `--apply` (apply now reads the file, no second Gemini pass). None reach the feed | OPS backlog | Gemini daily quota |
 | 2.9 | **Sentry** — the one blind spot: a 500 at checkout is invisible | Plan §7b | Rajat's DSN |
-| 2.12 | **`seed.js --messy`** — adds (never deletes) the ugly cases to the dev DB so every state is seen by us before a customer: expired + live coupon, an NDR order, a dispute inside and outside 72h, a partial cancel with penalty, a return in transit, a suspended seller, a 0-stock product, a photo-less product, an address Borzo will not take, a payout with deductions. Rajat 12 Sep: realistic data is how edge cases surface | this list | after G4 |
+| 2.12 | ~~`seedMessy.js`~~ ✅ 13 Sep — 12 ugly cases added to the dev DB (NDR ×2 attempts, NPR, open dispute with POD, resolved dispute + refund, seller cancel with ₹50 penalty, return in transit, replacement due, 3 coupons incl. expired, payout with deduction, suspended partner seller, 0-stock + photo-less product, Leh address). **First catch: a suspended seller's products stayed on the storefront** → `utils/hiddenSellers.js`, applied to list/suggest/product page/feed/sitemap. Next: walk every page with these states (customer, seller, admin) and fix what draws wrong | this list | — |
 
 ## 2b. Google visibility — the full list, decided 12 Sep 2026
 

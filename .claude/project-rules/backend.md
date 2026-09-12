@@ -52,3 +52,6 @@ Liquidity · Trust · Seller recruitment · October 2026 cutover with nothing th
 
 ## Record after building
 WHY block above the behaviour; `FRONTEND-PLAN.md` §4 if the interface changed, `OPS-AND-MANUAL-ACTIONS.md` changelog if operations did; `WHAT-IS-LEFT.md` row.
+
+- **Suspended sellers vanish from the storefront** — every public product read goes through `utils/hiddenSellers.withoutHiddenSellers(filter)` (list, suggest, single page, feed, sitemap); suspend/activate call `forget()`. Add it to any new public product query.
+- **Dev data**: `seed.js` (happy history), `seedMessy.js` (the ugly cases, add-only, re-runnable), `backupDb.js`, `ensureSearchIndex.js`.

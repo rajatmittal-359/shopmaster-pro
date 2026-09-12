@@ -103,6 +103,7 @@ exports.suspendSeller = async (req, res) => {
     seller.status = 'suspended';
     seller.suspensionReason = reason || '';
     await seller.save();
+    require('../utils/hiddenSellers').forget();
 
     return res.json({ message: 'Seller suspended successfully', seller });
   } catch (error) {
@@ -123,6 +124,7 @@ exports.activateSeller = async (req, res) => {
     seller.status = 'active';
     seller.suspensionReason = '';
     await seller.save();
+    require('../utils/hiddenSellers').forget();
 
     return res.json({ message: 'Seller activated successfully', seller });
   } catch (error) {

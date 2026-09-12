@@ -10,6 +10,7 @@
  */
 const { withShop } = require('../utils/shopNames');
 const { searchProductIds, inSearchOrder } = require('../utils/atlasSearch');
+const { withoutHiddenSellers, hiddenSellerIds } = require('../utils/hiddenSellers');
 const mongoose = require('mongoose');
 const { buildCatalogueFilter, escapeRegex } = require('../utils/catalogueFilter');
 const Product = require('../models/Product');
@@ -47,7 +48,7 @@ exports.categoryTree = async (req, res) => {
     // Live product count per leaf category, rolled up to every ancestor so a
     // parent reports everything beneath it.
     const counts = await Product.aggregate([
-      { $match: { isActive: true, stock: { $gt: 0 }, category: { $in: browsableIds } } },
+      { $match: await withoutHiddenSellers({ isActive: true, stock: { $gt: 0 }, category: { $in: browsableIds } }) },
       { $group: { _id: '$category', n: { $sum: 1 } } },
     ]);
     const directCount = new Map(counts.map((c) => [String(c._id), c.n]));
@@ -252,7 +253,7 @@ exports.suggest = async (req, res) => {
      * best-first; the find below is reordered to keep that.
      */
     const ids = await searchProductIds(q, { limit: 12, filterIds: browsable });
-    const base = { isActive: true, isDeleted: { $ne: true }, stock: { $gt: 0 }, category: { $in: browsable } };
+    const base = await withoutHiddenSellers({ isActive: true, isDeleted: { $ne: true }, stock: { $gt: 0 }, category: { $in: browsable } });
     let productQuery = Product.find(
       ids
         ? { ...base, _id: { $in: ids } }
@@ -397,7 +398,10 @@ exports.getProduct = async (req, res) => {
       .populate('category', 'name slug description ancestors')
       .populate('sellerId', 'name');
 
-    if (!product) {
+    // A suspended seller's page is gone the same minute as their listings.
+    const hidden = await hiddenSellerIds();
+    const sellerUserId = product && (product.sellerId?._id || product.sellerId);
+    if (!product || hidden.some((id) => String(id) === String(sellerUserId))) {
       return res.status(404).json({ message: 'Product not found' });
     }
 

@@ -43,3 +43,8 @@ process.env.SHIPROCKET_PICKUP_PINCODE = '302019';
     throw new Error('no Atlas Search under test');
   };
 }
+
+// Nobody is suspended under test unless a test says so; the lookup must not
+// wait on a database that never connects.
+const hidden = require('../utils/hiddenSellers');
+hidden.defaults.find = async () => [];

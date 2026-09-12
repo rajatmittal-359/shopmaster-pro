@@ -12,6 +12,8 @@ const mongoose = require('mongoose');
 const Category = require('../models/Category');
 
 /** A user's text becomes part of a regex. Escape it or they own the query. */
+const { withoutHiddenSellers } = require('./hiddenSellers');
+
 const escapeRegex = (text) => String(text).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 /**
@@ -22,6 +24,7 @@ const escapeRegex = (text) => String(text).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'
  */
 async function buildCatalogueFilter({ category, search, minPrice, maxPrice, color, size, minRating }) {
   const filter = { isActive: true, stock: { $gt: 0 } };
+  await withoutHiddenSellers(filter);
 
   if (category) {
     let categoryId = category;

@@ -11,6 +11,7 @@
     "seed": "node seed.js",
     "seed:dry": "node seed.js --dry",
     "seed:reset": "node seed.js --reset",
+    "seed:messy": "node seedMessy.js",
     "sitemap": "node generateSitemap.js",
     "images": "node addProductImages.js",
     "backup": "node backupDb.js",
