@@ -207,4 +207,22 @@ const releaseCouponUse = async (order) => {
   }
 };
 
-module.exports = { cancelOrderFor, CANCELLABLE, canCancelOrder, releaseCouponUse };
+
+/**
+ * Which lines the customer may still cancel one at a time.
+ *
+ * Same rule as the whole order - pending or processing, nothing shipped - and
+ * a line already cancelled cannot be cancelled again. Sent with the order so
+ * the page draws a Cancel on exactly the lines the endpoint will accept; the
+ * page used to decide for itself and offered it on shipped parcels.
+ *
+ * @returns {string[]} item ids
+ */
+const cancellableItemIds = (order) =>
+  CANCELLABLE.includes(order.status)
+    ? (order.items || [])
+        .filter((item) => item.status !== 'cancelled')
+        .map((item) => String(item._id))
+    : [];
+
+module.exports = { cancellableItemIds, cancelOrderFor, CANCELLABLE, canCancelOrder, releaseCouponUse };

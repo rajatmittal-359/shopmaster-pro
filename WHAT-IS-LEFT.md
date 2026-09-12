@@ -22,15 +22,13 @@ across, in the new UI, not the old one.
 
 Found on 12 Sep by two diffs: every API path the React app calls against every
 path `web/` calls, then a feature-word pass over the customer pages. Route
-mapping alone had missed all of these.
+mapping alone had missed all of these. **1.2 dispute, 1.3 item cancel and 1.5
+cancellation reason were built on 12 Sep (plan §4.20).**
 
 | # | What | Backend | React | Size |
 |---|---|---|---|---|
 | 1.1 | **A customer cannot write a review.** `web/` reads reviews on the product page; there is no form to add, edit or delete your own | `POST /reviews/:productId`, `DELETE /reviews/:id`, `GET /reviews/me` | `ProductDetailsPage.jsx` | Medium — and the verified-purchase flag (2.1) belongs in the same piece of work |
-| 1.2 | **A customer cannot raise a dispute.** After a refused return, or "tracking says delivered, nothing came", the React order page offered it; the admin can *decide* disputes in `web/` but nobody can *open* one | `POST /customer/orders/:id/dispute` | `OrderDetailsPage.jsx` (`canDispute`, `awaitingMyConfirmation`) | Small–medium; the server already sends `disputeStatus` |
-| 1.3 | **Cancel one item, not the whole order.** `web/` cancels the order only | `PATCH /customer/orders/:id/items/:itemId/cancel` | `OrderDetailsPage.jsx`, `MyOrdersPage.jsx` | Small |
 | 1.4 | **Product video.** One clip per product, uploaded from the seller form (base64, 7 MB cap), played in the product gallery. `Product.video` is still in the model | upload path in `sellerController` | `MyProductsPage.jsx`, `ProductDetailsPage.jsx` | Medium — a slot in `MediaManager`, a player in `Gallery` |
-| 1.5 | **Why an order was cancelled.** `cancelledBy` and `cancellationReason` are shown to the admin but not on the customer's order page | already in the order payload | `OrderDetailsPage.jsx:96` | Small |
 
 Checked and **present** in `web/` (no action): wishlist, addresses, coupons,
 COD and Razorpay, the address-specific delivery speeds (same-day when Borzo
@@ -56,6 +54,8 @@ a page — the React app defined these in its services and no screen used them.
 | 2.7 | **The remaining panel pages to the product-form standard** — seller Earnings, Stock history, Products list, Order detail; admin Overview, Orders, Sellers, Payouts, Categories, Coupons, Inventory. All work; all still the first-pass style. Dashboard/Orders/Settings were done 12 Sep (plan §4.19) | Plan §4.19 | Time |
 | 2.8 | **NVIDIA provider** — keep as a generate-only fallback, or remove. Text-to-image only (cannot take our photo), one-time credits | This session | Rajat's call |
 | 2.9 | **Sentry** — the one blind spot: a 500 at checkout is invisible | Plan §7b | Rajat's DSN |
+| 2.10 | **Backend hardening the copy-paste era never had:** no `helmet`, **no rate limiting** on login / forgot-password / checkout / AI routes, no request-validation layer (controllers validate by hand, unevenly). Found 12 Sep while measuring the backend | This session | Rajat runs the installs (`helmet`, `express-rate-limit`) — then I wire them with tests |
+| 2.11 | **`productRoutes.js` carries 403 lines of business logic** — the one structural leftover from the 5 Sep review. Move to a `productController`; behaviour unchanged, tests already cover it | `docs/archive/CODE-STRUCTURE-REVIEW.md` item 1 | Time |
 
 ## 3. Rajat's call — researched, waiting on a decision
 

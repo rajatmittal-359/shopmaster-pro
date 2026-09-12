@@ -15,7 +15,8 @@ const Product = require("../models/Product");
 const mongoose = require('mongoose'); 
 const Address = require('../models/Address'); 
 const { applyInventoryChange } = require("./inventoryController");
-const { cancelOrderFor, canCancelOrder } = require('../utils/cancelOrder');
+const { cancelOrderFor, canCancelOrder, cancellableItemIds } = require('../utils/cancelOrder');
+const { customerMayDispute } = require('../utils/deliveryTruth');
 const refunds = require('../utils/refund');
 const InventoryLog = require("../models/Inventory");
 
@@ -480,6 +481,11 @@ exports.getOrderDetails = async (req, res) => {
       returnWindowClosesAt,
       returnWindowDays,
       canCancel,
+      // The same discipline, one level down and one path sideways: which
+      // single lines can still be cancelled, and whether "something's wrong"
+      // can be raised at all. Both are drawn by the page only where true.
+      cancellableItemIds: cancellableItemIds(order),
+      canDispute: customerMayDispute(order).allowed,
     });
   } catch (err) {
     console.error("GET ORDER DETAILS ERROR", err.message);
@@ -1067,20 +1073,23 @@ exports.raiseDispute = async (req, res) => {
       return res.status(404).json({ message: 'Order not found' });
     }
 
-    // Nothing to argue about before a parcel has moved.
-    const arguable = order.fulfilments.filter((f) =>
-      ['shipped', 'delivered'].includes(f.status)
-    );
-    if (!arguable.length) {
+    // Nothing to argue about before a parcel has moved, and one argument at a
+    // time. The rule lives in customerMayDispute so the page's button and this
+    // refusal cannot disagree.
+    const may = customerMayDispute(order);
+    if (may.reason === 'not_sent') {
       return res.status(400).json({
         message: 'This order has not been sent yet, so there is nothing to dispute. Cancel it instead.',
       });
     }
-    if (arguable.some((f) => f.disputeStatus === 'open')) {
+    if (may.reason === 'already_open') {
       return res.status(409).json({
         message: 'A dispute on this order is already open. We will come back to you on it.',
       });
     }
+    const arguable = order.fulfilments.filter((f) =>
+      ['shipped', 'delivered'].includes(f.status)
+    );
 
     const now = new Date();
     arguable.forEach((f) => {

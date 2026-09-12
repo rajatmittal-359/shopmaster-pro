@@ -1003,6 +1003,35 @@ Shared: `PageHeader` (title, one line, optional action) and `PanelCard` (the
 product form's card) so every panel page is one material; `ui/switch.jsx` on
 Base UI.
 
+### 4.20 The customer's order page: actions next to the thing they act on
+
+12 Sep 2026, the first page done through `/redesign`. Rajat's decision:
+*"A karlo agar docs + research se yahi pata laga hai."*
+
+The feature diff (WHAT-IS-LEFT §1) had shown three things the Next port
+dropped from this page: a customer could not cancel one item, could not raise
+a dispute at all, and was never told why an order had been cancelled. The
+references then decided the shape rather than just the gap:
+
+- **Amazon.in** cancels per item, offers "Problem with order" on the shipment
+  that has the problem, and its A-to-z claim has two gates — something must
+  have shipped, one claim at a time — and a short list of categories.
+- **Flipkart** gives every item its own row with its own Cancel, and a
+  cancelled line carries "Cancelled — reason" in a grey band.
+- **Baymard** (order status): problem-actions belong next to the status they
+  concern, not in a box at the bottom.
+
+So the single "What you can do" box is gone. Cancel sits on the item row (only
+where `cancellableItemIds` says so), **Something's wrong** sits on a shipped or
+delivered parcel (only where `canDispute` says so; categories are Amazon's,
+with optional detail for the admin), a cancelled order says who and why with
+the refund promise read from `config/policy.js`, and the return — which the
+API applies to the whole order once every parcel has arrived — is the one
+action still below on its own. The two new flags are decided on the server
+(`cancellableItemIds`, `customerMayDispute`) and the dispute endpoint uses the
+same helper as the page, so the button and the refusal cannot disagree. 910
+tests.
+
 ---
 
 ## 5. Structured data

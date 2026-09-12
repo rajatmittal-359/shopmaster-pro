@@ -55,6 +55,13 @@ export default function ActionDialog({
   destructive = false,
   busy = false,
   note,
+  /**
+   * When set, the text box is always shown under the named reasons, with this
+   * label, and whatever is typed is appended to the chosen reason. For the
+   * cases where a category is not enough - a dispute an admin has to settle
+   * needs the story, not only "wrong item".
+   */
+  detailsLabel,
   onConfirm,
 }) {
   const [chosen, setChosen] = useState('');
@@ -62,7 +69,11 @@ export default function ActionDialog({
 
   const OTHER = 'Something else';
   const needsText = chosen === OTHER || reasons.length === 0;
-  const reason = needsText ? text.trim() : chosen;
+  const reason = needsText
+    ? text.trim()
+    : text.trim() && detailsLabel
+      ? `${chosen} - ${text.trim()}`
+      : chosen;
   const blocked = requireReason && reason.length < 3;
 
   const close = () => {
@@ -99,10 +110,10 @@ export default function ActionDialog({
           </fieldset>
         )}
 
-        {needsText && (
+        {(needsText || detailsLabel) && (
           <div>
             <label htmlFor="reason-text" className="text-sm font-medium">
-              {reasons.length > 0 ? 'Tell them what happened' : 'Reason'}
+              {needsText ? (reasons.length > 0 ? 'Tell them what happened' : 'Reason') : detailsLabel}
             </label>
             <Textarea
               id="reason-text"

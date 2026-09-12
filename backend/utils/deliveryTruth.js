@@ -179,7 +179,31 @@ const pickupAddressFor = (seller) => {
   return { ok: true, address: p };
 };
 
+
+/**
+ * Whether the customer may open a dispute on this order right now.
+ *
+ * Amazon's A-to-z has the same two gates: something must have been sent (a
+ * parcel that never moved is a cancellation, not an argument), and one
+ * argument at a time. Decided here so the order page and `raiseDispute` give
+ * one answer - the page draws "Something's wrong" only where the endpoint
+ * would accept it.
+ *
+ * @returns {{allowed: boolean, reason: 'not_sent'|'already_open'|null}}
+ */
+const customerMayDispute = (order) => {
+  const arguable = (order.fulfilments || []).filter((f) =>
+    ['shipped', 'delivered'].includes(f.status)
+  );
+  if (!arguable.length) return { allowed: false, reason: 'not_sent' };
+  if (arguable.some((f) => f.disputeStatus === 'open')) {
+    return { allowed: false, reason: 'already_open' };
+  }
+  return { allowed: true, reason: null };
+};
+
 module.exports = {
+  customerMayDispute,
   SELF_DELIVERY_CONFIRM_DAYS,
   hasCourier,
   sellerMayDeclareDelivered,
