@@ -906,10 +906,18 @@ reserve. So the only daily free editing path is Cloudflare klein-4b (~80/day),
 and the plan says so plainly instead of the "~7 premium a day" that was never
 verified across two days.
 
-**AI Studio** (`/seller/ai`, `/admin/ai`): the account's allowance (∞ when
-exempt), every model as a card - available or disabled with the reason and
-the return time - and a provider table with allowance, used, left, reset and
-status. The photo Edit menu gained a model picker: Automatic, or any editing
+**AI Studio** (`/seller/ai`, `/admin/ai`) is a WORKSPACE, not a report -
+Rajat's correction after the first version was a table: "Gemini jaisa cool
+interface jahan model select ho aur wahin limits likhe hon." So it follows
+Gemini's image mode and Shopify Magic's media editor: the photo on the left
+(dropped, or picked from your own products), the result on the right
+captioned with the model and provider that made it, and ONE bar underneath -
+action (white background / in use / describe), Shopify's style chips
+(Minimal, Vibrant, Natural, Urban, Refined, plus Festive for this market),
+the words, and the model as a chip inside the bar. The chip lists every
+editing model with what is left today; a spent one is shown disabled with the
+reason and the return time. A "Today" panel carries the allowance (∞ when
+exempt) and the toggle. The provider table lives at `/ai/limits`. The photo Edit menu gained a model picker: Automatic, or any editing
 model by name with what is left; spent ones shown disabled with why. The
 result caption names the model and provider that made it.
 
