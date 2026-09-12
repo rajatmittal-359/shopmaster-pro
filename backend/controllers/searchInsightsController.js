@@ -76,12 +76,11 @@ exports.sellerQueries = async (req, res) => {
  */
 let catalogueCache = { at: 0, result: null, building: null };
 const buildCatalogue = async () => {
-  const products = await Product.find({ isActive: true, isDeleted: { $ne: true } })
-    .select('name slug sellerId')
-    .populate('sellerId', 'name')
-    .lean();
+  // The shop's name, never the owner's - the same rule as "Sold by".
+  const { withShop } = require('../utils/shopNames');
+  const products = await withShop(await Product.find({ isActive: true, isDeleted: { $ne: true } }).select('name slug sellerId').lean());
   const { catalogueGoogleStatus } = require('../utils/google/productStatus');
-  const result = await catalogueGoogleStatus(products);
+  const result = await catalogueGoogleStatus(products.map((p) => ({ ...p, sellerName: p.shop?.name || null })));
   const weight = (r) => (r.merchant.status === 'disapproved' ? 0 : r.index.indexed === false ? 1 : r.merchant.status === 'not in feed' ? 2 : r.index.indexed === null ? 3 : 4);
   result.rows.sort((a, b) => weight(a) - weight(b) || a.name.localeCompare(b.name));
   result.at = new Date().toISOString();

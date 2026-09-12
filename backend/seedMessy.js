@@ -17,6 +17,9 @@
  *   are the seeded ones; if the catalogue was changed, it says which name it
  *   could not find and stops before writing.
  *
+ *   Most parcels are Charming Jewels' so the seller test account sees them;
+ *   the partner sellers get the suspension and one line of the split order.
+ *
  *   node seedMessy.js          add the cases
  *   node seedMessy.js --dry    list what it would add
  */
@@ -67,11 +70,11 @@ const run = async () => {
 
   const jhumka = await need('Pearl Drop Jhumka');
   const kada = await need('Oxidised Silver Kada');
-  const earbuds = await need('True Wireless Earbuds Pro');
+  const bangles = await need('Meenakari Bangle Set of 4');
   const serum = await need('Vitamin C Face Serum 30ml');
   const saree = await need('Kanjivaram Bridal Saree');
-  const derby = await need('Leather Formal Derby');
-  const diya = await need('Brass Diya Set of 6');
+  const bracelet = await need('Rose Gold Chain Bracelet');
+  const payal = await need('Silver Ghungroo Payal Pair');
   const lipstick = await need('Matte Liquid Lipstick');
 
   // A partner with products on the storefront, so the suspension is visible.
@@ -82,9 +85,24 @@ const run = async () => {
 
   /** An order shaped exactly as checkout leaves it, then bent into the case. */
   const order = async (label, { customer, lines, daysBack, fulfil, ...rest }) => {
-    if (await Order.exists({ razorpayOrderId: rest.razorpayOrderId })) {
-      skipped.push(label);
-      return null;
+    // One fulfilment per seller, shaped for the case, built before the model
+    // gets to add its default 'pending' ones (the pre-validate hook leaves an
+    // existing fulfilment alone).
+    const sellerIds = [...new Set(lines.map((l) => String(l.sellerId)))];
+    const fulfilments = sellerIds.map((sellerId) => ({ sellerId, ...(typeof fulfil === 'function' ? fulfil({ sellerId }) : fulfil) }));
+
+    const existing = await Order.findOne({ razorpayOrderId: rest.razorpayOrderId });
+    if (existing) {
+      // Already there: make sure its shape is the one described (an earlier
+      // version of this script lost the fulfilment fields).
+      const stale = existing.fulfilments.some((f) => f.status === 'pending');
+      if (stale && !DRY) {
+        existing.fulfilments = fulfilments;
+        if (rest.deliveredAt) existing.deliveredAt = rest.deliveredAt;
+        await existing.save();
+        say(`${label} (repaired)`);
+      } else skipped.push(label);
+      return existing;
     }
     say(label);
     if (DRY) return null;
@@ -95,6 +113,7 @@ const run = async () => {
       customerId: customer._id,
       shippingAddressId: (await addressOf(customer))._id,
       items,
+      fulfilments,
       totalAmount: goods + shippingCharges - (rest.discountAmount || 0),
       shippingCharges,
       shippingProvider: 'shiprocket',
@@ -102,9 +121,6 @@ const run = async () => {
       createdAt: daysAgo(daysBack),
       ...rest,
     });
-    // One fulfilment per seller is added by the model; shape each one here.
-    doc.validateSync();
-    for (const f of doc.fulfilments) Object.assign(f, typeof fulfil === 'function' ? fulfil(f) : fulfil);
     await doc.save();
     for (const it of doc.items) {
       if (it.status === 'cancelled') continue;
@@ -136,7 +152,7 @@ const run = async () => {
   // 1. NDR - the courier tried twice, nobody home. Seller and customer both need to act.
   await order('NDR order: two failed attempts, parcel still with the courier', {
     customer: c1,
-    lines: [line(earbuds)],
+    lines: [line(bangles)],
     daysBack: 7,
     paymentMethod: 'razorpay',
     paymentStatus: 'paid',
@@ -159,7 +175,7 @@ const run = async () => {
   // 2. NPR - marked shipped ten days ago, the courier never collected it.
   await order('NPR order: "shipped" for ten days, courier never picked it up', {
     customer: c2,
-    lines: [line(diya, 2)],
+    lines: [line(payal, 2)],
     daysBack: 11,
     paymentMethod: 'cod',
     paymentStatus: 'pending',
@@ -234,12 +250,15 @@ const run = async () => {
     paymentStatus: 'paid',
     razorpayOrderId: `order_${MESSY}PEN001`,
     razorpayPaymentId: `pay_${MESSY}PEN001`,
+    cancelledBy: 'seller',
+    cancelledAt: daysAgo(3),
+    cancellationReason: 'Item damaged in storage, cannot ship',
     fulfil: (f) =>
       String(f.sellerId) === String(jhumka.sellerId)
         ? { status: 'cancelled', cancelPenalty: RULES.cancelPenalty }
         : { status: 'processing' },
   });
-  if (partial) {
+  if (partial && !(await SellerCharge.exists({ orderId: partial._id }))) {
     const cancelled = partial.items.find((it) => String(it.productId) === String(jhumka._id));
     cancelled.status = 'cancelled';
     await partial.save();
@@ -256,7 +275,7 @@ const run = async () => {
   // 6. Return in transit - customer changed their mind, reverse pickup done, parcel on its way back.
   await order('Return picked up, on its way back to the seller (refund not yet due)', {
     customer: c3,
-    lines: [line(derby)],
+    lines: [line(bracelet)],
     daysBack: 14,
     paymentMethod: 'razorpay',
     paymentStatus: 'paid',
@@ -269,8 +288,8 @@ const run = async () => {
       courierStatus: 'Delivered',
       returnStage: 'picked',
       returnRequestedAt: daysAgo(5),
-      returnReason: 'Size too small',
-      returnNote: 'Ordered 9, fits like an 8.',
+      returnReason: 'Too small',
+      returnNote: 'Does not close around the wrist.',
       returnResolution: 'refund',
       returnAwb: 'RVP' + MESSY + '0006',
       returnBookedAt: daysAgo(4),
