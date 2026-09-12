@@ -2,6 +2,7 @@ import SellerGuard from '@/components/seller/SellerGuard';
 import PanelShell from '@/components/panel/PanelShell';
 import AgreementBanner from '@/components/seller/AgreementBanner';
 import Onboarding from '@/components/seller/Onboarding';
+import Tour from '@/components/panel/Tour';
 
 export const metadata = {
   title: { default: 'Seller', template: '%s · Seller · ShopMaster Pro' },
@@ -42,6 +43,15 @@ export default function SellerLayout({ children }) {
         <Onboarding>
           <AgreementBanner />
           {children}
+          {/* Three coach marks the first time, then never again (Tour.jsx). */}
+          <Tour
+            id="seller"
+            steps={[
+              { target: '/seller/orders', title: 'Orders land here', body: 'When a customer pays, the order appears in "To pack". One button books the courier.' },
+              { target: '/seller/products', title: 'Your products', body: 'Add one with a photo - the AI writes the words. The photo studio and stock history are tabs here.' },
+              { target: '/seller/payments', title: 'Your money', body: 'Paid to your bank 7 days after each delivery. Every rupee, and why, is listed here.' },
+            ]}
+          />
         </Onboarding>
       </SellerGuard>
     </PanelShell>

@@ -1,4 +1,5 @@
 import AdminGuard from "@/components/admin/AdminGuard";
+import Tour from "@/components/panel/Tour";
 import PanelShell from "@/components/panel/PanelShell";
 
 export const metadata = {
@@ -60,7 +61,17 @@ const GROUPS = [
 export default function AdminLayout({ children }) {
   return (
     <PanelShell title="Admin" groups={GROUPS}>
-      <AdminGuard>{children}</AdminGuard>
+      <AdminGuard>
+        {children}
+        <Tour
+          id="admin"
+          steps={[
+            { target: '/admin/orders', title: 'Where decisions wait', body: 'Open disputes, failed courier bookings and returns needing a ruling - with the evidence beside each.' },
+            { target: '/admin/sellers', title: 'Who sells here', body: 'Approve, suspend, set a commission. Their agreement version and cancel rate are on the row.' },
+            { target: '/admin/payouts', title: 'Who is owed money', body: 'Create a payout once the return window has closed; mark it paid with the bank reference.' },
+          ]}
+        />
+      </AdminGuard>
     </PanelShell>
   );
 }

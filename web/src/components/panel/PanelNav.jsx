@@ -45,6 +45,7 @@ export default function PanelNav({ groups, onNavigate = null }) {
                 <li key={href}>
                   <Link
                     href={href}
+                    data-tour={href}
                     onClick={onNavigate || undefined}
                     aria-current={active ? 'page' : undefined}
                     className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition ${
