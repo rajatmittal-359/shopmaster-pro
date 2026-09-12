@@ -5,6 +5,7 @@ import Footer from '@/components/layout/Footer';
 import { BUSINESS } from '@/config/policy';
 import ThemeProvider from '@/components/theme/ThemeProvider';
 import { Toaster } from '@/components/ui/sonner';
+import ShopChrome from '@/components/layout/ShopChrome';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -60,10 +61,17 @@ export default function RootLayout({ children }) {
     >
       <body className="flex min-h-full flex-col bg-background text-foreground">
         <ThemeProvider>
-          <Header />
+          {/* The storefront's chrome, on storefront routes only. The seller and
+              admin panels are their own application and bring their own bar -
+              a shop's header on top of a dashboard is neither. */}
+          <ShopChrome>
+            <Header />
+          </ShopChrome>
           {/* flex-1 so a short page still pushes the footer to the bottom. */}
           <main className="flex-1">{children}</main>
-          <Footer />
+          <ShopChrome>
+            <Footer />
+          </ShopChrome>
           {/* One toaster for the whole site: undo after a removal, a word after
               a save. Bottom-right, out of the way of the sticky buy bar. */}
           <Toaster position="bottom-right" richColors closeButton />

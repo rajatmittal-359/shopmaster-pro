@@ -114,12 +114,17 @@ const prepareImage = (file) =>
 export default function MediaManager({ photos, onChange, productName, onUsage, onError, base = '/seller' }) {
   const inputRef = useRef(null);
   const [catalog, setCatalog] = useState(null); // { models } from /ai/catalog
+  const [drafts, setDrafts] = useState([]);
+  const [draftsOpen, setDraftsOpen] = useState(false);
   const [modelId, setModelId] = useState('auto');
 
   useEffect(() => {
     let cancelled = false;
     authedFetch(`${base}/ai/catalog`)
       .then((d) => !cancelled && setCatalog(d))
+      .catch(() => {});
+    authedFetch(`${base}/ai/drafts`)
+      .then((d) => !cancelled && setDrafts(d.drafts || []))
       .catch(() => {});
     return () => {
       cancelled = true;
@@ -262,6 +267,44 @@ export default function MediaManager({ photos, onChange, productName, onUsage, o
             JPEG, PNG or WebP · any size, large ones are shrunk here · {room} more
           </span>
         </button>
+      )}
+
+      {/* Pictures the AI already made for this account - the Studio's output,
+          one click from a slot. Without this, a seller who made something
+          in the Studio had no way to get it here. */}
+      {room > 0 && drafts.length > 0 && (
+        <div>
+          <button
+            type="button"
+            onClick={() => setDraftsOpen((o) => !o)}
+            className="inline-flex items-center gap-1.5 text-sm text-brand-ink hover:underline"
+          >
+            <Sparkles className="size-4" />
+            {draftsOpen ? 'Hide' : 'Add from your AI pictures'} ({drafts.length})
+          </button>
+          {draftsOpen && (
+            <ul className="mt-2 grid grid-cols-4 gap-2 sm:grid-cols-6 md:grid-cols-8">
+              {drafts
+                .filter((d) => !photos.some((p) => p.src === d.url))
+                .slice(0, 24)
+                .map((d) => (
+                  <li key={d._id}>
+                    <button
+                      type="button"
+                      title={`${d.model} · ${d.provider}`}
+                      onClick={() => {
+                        onChange([...photos, { src: d.url, kind: 'existing' }]);
+                        toast('AI picture added', { description: 'Nothing is saved until you press Save changes.' });
+                      }}
+                      className="relative block aspect-square w-full overflow-hidden rounded-lg border hover:ring-2 hover:ring-primary/40"
+                    >
+                      <Image src={d.url} alt="" fill unoptimized className="object-cover" sizes="80px" />
+                    </button>
+                  </li>
+                ))}
+            </ul>
+          )}
+        </div>
       )}
       <input
         ref={inputRef}

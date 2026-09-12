@@ -90,5 +90,7 @@ router.patch('/ai/limits', ai.setLimits);
 router.post('/ai/listing', ai.writeListing);
 // Banners and category art from words - the one image mode sellers do not get.
 router.post('/ai/image', ai.makeImage);
+router.post('/ai/attach', ai.attachToProduct);
+router.get('/ai/drafts', ai.listDrafts);
 
 module.exports = router;

@@ -76,6 +76,8 @@ router.get('/ai/catalog', requireApprovedSeller, ai.getCatalog);
 router.patch('/ai/limits', requireApprovedSeller, ai.setLimits);
 router.post('/ai/listing', requireApprovedSeller, ai.writeListing);
 router.post('/ai/image', requireApprovedSeller, ai.makeImage);
+router.post('/ai/attach', requireApprovedSeller, ai.attachToProduct);
+router.get('/ai/drafts', requireApprovedSeller, ai.listDrafts);
 
 // A seller's own shop settings: whether they absorb delivery, and the address a
 // courier collects from.

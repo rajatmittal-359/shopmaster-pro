@@ -3,10 +3,11 @@
 import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ImagePlus, Loader2, Sparkles, ArrowRight, Infinity as InfinityIcon, RefreshCw, ShieldCheck, Check, Download, X } from 'lucide-react';
+import { ImagePlus, Loader2, Sparkles, ArrowRight, Infinity as InfinityIcon, RefreshCw, ShieldCheck, Check, Download, X, PackagePlus } from 'lucide-react';
 import { authedFetch } from '@/lib/client';
 import { Button } from '@/components/ui/button';
 import ModelChip from '@/components/ai/ModelChip';
+import AttachToProduct from '@/components/ai/AttachToProduct';
 import { toast } from 'sonner';
 import {
   Dialog,
@@ -114,6 +115,7 @@ export default function Studio({ base = '/seller' }) {
   const [history, setHistory] = useState([]);
   const [error, setError] = useState('');
   const [pickOpen, setPickOpen] = useState(false);
+  const [attachOpen, setAttachOpen] = useState(false);
   const [confirm, setConfirm] = useState(null); // { model, remaining } while the ask is open
   const [skipConfirm, setSkipConfirm] = useState(false);
   const inputRef = useRef(null);
@@ -125,7 +127,24 @@ export default function Studio({ base = '/seller' }) {
     let cancelled = false;
     authedFetch(`${base}/ai/catalog`).then((d) => !cancelled && setCatalog(d)).catch((e) => !cancelled && setError(e.message));
     authedFetch(`${base === '/admin' ? '/seller' : base}/products`)
-      .then((d) => !cancelled && setProducts((d.products || d || []).filter((p) => p.images?.length)))
+      .then((d) => !cancelled && setProducts((d.products || d || [])))
+      .catch(() => {});
+    // Yesterday's and today's pictures come back after a reload - the strip
+    // is the index the server keeps, not just this tab's memory.
+    authedFetch(`${base}/ai/drafts`)
+      .then((d) => {
+        if (cancelled) return;
+        setHistory(
+          (d.drafts || []).map((x) => ({
+            url: x.url,
+            modelLabel: x.model,
+            providerLabel: x.provider,
+            quality: '',
+            at: new Date(x.createdAt).getTime(),
+            action: x.mode,
+          }))
+        );
+      })
       .catch(() => {});
     return () => {
       cancelled = true;
@@ -266,7 +285,7 @@ export default function Studio({ base = '/seller' }) {
                   <Button type="button" size="sm" variant="outline" onClick={() => inputRef.current?.click()}>
                     Choose a file
                   </Button>
-                  {products.length > 0 && (
+                  {products.some((p) => p.images?.length) && (
                     <Button type="button" size="sm" variant="outline" onClick={() => setPickOpen((o) => !o)}>
                       From my products
                     </Button>
@@ -315,7 +334,7 @@ export default function Studio({ base = '/seller' }) {
           <div className="rounded-xl border p-3">
             <p className="mb-2 text-sm font-medium">Pick one of your products</p>
             <ul className="grid grid-cols-4 gap-2 sm:grid-cols-6 md:grid-cols-8">
-              {products.slice(0, 32).map((p) => (
+              {products.filter((p) => p.images?.length).slice(0, 32).map((p) => (
                 <li key={p._id}>
                   <button
                     type="button"
@@ -406,6 +425,10 @@ export default function Studio({ base = '/seller' }) {
         {/* Result actions */}
         {result && !busy && (
           <div className="flex flex-wrap items-center gap-2 text-sm">
+            <Button type="button" size="sm" onClick={() => setAttachOpen(true)} className="rounded-full">
+              <PackagePlus className="size-4" />
+              Add to a product
+            </Button>
             <a href={result.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 hover:bg-accent">
               <Download className="size-4" /> Open full size
             </a>
@@ -416,16 +439,14 @@ export default function Studio({ base = '/seller' }) {
             >
               <RefreshCw className="size-4" /> Use as new source
             </button>
-            <span className="text-muted-foreground">
-              Add it to a product from the product&rsquo;s photos - it is saved in your drafts.
-            </span>
+            <span className="text-muted-foreground">Kept in your drafts either way.</span>
           </div>
         )}
 
         {/* Today's results */}
-        {history.length > 1 && (
+        {history.length > 0 && (
           <div>
-            <p className="mb-2 text-sm font-medium">Made today</p>
+            <p className="mb-2 text-sm font-medium">Your recent AI pictures</p>
             <ul className="grid grid-cols-4 gap-2 sm:grid-cols-6 md:grid-cols-8">
               {history.map((h) => (
                 <li key={h.at}>
@@ -510,6 +531,14 @@ export default function Studio({ base = '/seller' }) {
           </Link>
         </div>
       </aside>
+
+      <AttachToProduct
+        base={base}
+        url={result?.url}
+        products={products}
+        open={attachOpen && Boolean(result)}
+        onClose={() => setAttachOpen(false)}
+      />
 
       {/* THE ASK before spending. Names the model and what is left, so the
           click that follows is an informed one. */}

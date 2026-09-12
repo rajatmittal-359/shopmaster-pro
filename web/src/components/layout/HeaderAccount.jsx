@@ -36,7 +36,13 @@ import {
  *   somebody to sign in before they can see what a cart IS is the behaviour
  *   this rebuild is removing.
  */
-export default function HeaderAccount() {
+/**
+ * @param {object} props
+ * @param {boolean} [props.showCart]  false inside the seller/admin panels - a
+ *   person running a shop is not shopping, and "Cart" in a dashboard's top bar
+ *   is the storefront leaking in.
+ */
+export default function HeaderAccount({ showCart = true }) {
   const router = useRouter();
   const { signedIn, user, canSell, isAdmin } = useSession();
 
@@ -67,9 +73,11 @@ export default function HeaderAccount() {
 
   return (
     <div className="flex items-center gap-4 text-sm">
-      <Link href="/cart" className="text-muted-foreground hover:text-brand-ink">
-        Cart
-      </Link>
+      {showCart && (
+        <Link href="/cart" className="text-muted-foreground hover:text-brand-ink">
+          Cart
+        </Link>
+      )}
 
       {signedIn ? (
         <DropdownMenu>

@@ -928,6 +928,35 @@ refuses honestly, never substitutes.
 
 ---
 
+### 4.18 The panels are their own application
+
+12 Sep 2026. Rajat: *"seller ka account bahut confusing hai - aadha customer
+jaisa, aadha seller. Seller ki tarah dekhna hai to seller wali cheezein hi
+dikhengi na."* He was right, and no reference does what we did: the seller
+and admin panels sat INSIDE the storefront - the shop's header, the category
+strip, the search box, "Sell on ShopMaster Pro", the footer of policies - and
+then a sidebar under all of it.
+
+Shopify's admin, Amazon Seller Central and Meesho's supplier panel are
+separate applications: a slim top bar with the mark, the panel's name, a way
+to the live shop, and the account; a sidebar; the work. Nothing that helps a
+shopper, because a person running a shop is not shopping.
+
+`ShopChrome` shows the storefront's header and footer only on storefront
+routes (a client gate on the path; the chrome stays server-rendered).
+`PanelShell` brings its own bar: logo, a "Seller"/"Admin" badge, **View shop**
+(a destination, not a return), the account without a cart link, the theme
+toggle. The sidebar is unchanged.
+
+**And the road from an AI picture to a product**, which did not exist:
+every image the Studio makes is recorded (`AiDraft`), the Studio's result has
+**Add to a product** (pick one of your own, main or gallery, saved at once by
+`POST /ai/attach` with the five-photo cap still enforced), the product form's
+photos section has **Add from your AI pictures**, and the Studio's strip shows
+recent pictures after a reload rather than only this tab's memory.
+
+---
+
 ## 5. Structured data
 
 GIVA's markup is the reference implementation for an Indian jewellery store and

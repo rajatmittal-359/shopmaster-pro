@@ -282,6 +282,24 @@ const makeImage = async (req, res) => {
     const dataUrl = `data:${made.mime};base64,${made.buffer.toString('base64')}`;
     const uploaded = await cloudinary.uploadImage(dataUrl, 'shopmaster-ai-drafts');
 
+    // Remembered, so the product form can offer "from your AI drafts" later.
+    // A failure here must not fail the image.
+    try {
+      const AiDraft = require('../models/AiDraft');
+      await AiDraft.create({
+        userId: req.user._id,
+        url: uploaded.url,
+        publicId: uploaded.publicId,
+        sourceUrl: imageUrl,
+        mode,
+        prompt: req.body?.prompt ? String(req.body.prompt).slice(0, 400) : '',
+        model: made.model,
+        provider: made.provider,
+      });
+    } catch (err) {
+      console.error('AI DRAFT RECORD:', err.message);
+    }
+
     // The premium quota is charged only when a 'best' MODEL answered - a
     // fallback to klein inside the premium chain is a standard image.
     const answered = byId[made.model];
@@ -320,6 +338,57 @@ const makeImage = async (req, res) => {
   }
 };
 
+/**
+ * POST /api/seller/ai/attach
+ * body: { productId, url, position: 'main' | 'gallery' }
+ *
+ * The missing step. A picture made in the Studio sat in the drafts folder
+ * with no road to a product; the seller had to remember it and paste
+ * nothing, because there was nothing to paste. This puts a draft onto one of
+ * the seller's OWN products - as the main photo or at the end of the gallery
+ * - and that is all it does. The ordinary product update does everything
+ * else, so the five-photo cap and every validator still apply.
+ */
+const attachToProduct = async (req, res) => {
+  try {
+    const { productId, url, position = 'gallery' } = req.body || {};
+    if (!ownImage(url)) return res.status(400).json({ message: 'That picture is not one of ours.' });
+    if (!['main', 'gallery'].includes(position)) return res.status(400).json({ message: 'position must be main or gallery' });
+
+    const Product = require('../models/Product');
+    const isAdmin = req.user?.role === 'admin' || req.capabilities?.admin;
+    const filter = { _id: productId, isDeleted: { $ne: true }, ...(isAdmin ? {} : { sellerId: req.user._id }) };
+    const product = await Product.findOne(filter);
+    if (!product) return res.status(404).json({ message: 'No such product of yours.' });
+
+    const rest = (product.images || []).filter((u) => u !== url);
+    const next = position === 'main' ? [url, ...rest] : [...rest, url];
+    if (next.length > 5) {
+      return res.status(400).json({ message: 'That product already has five photographs. Remove one first.' });
+    }
+    product.images = next;
+    await product.save();
+
+    res.json({ product: { _id: product._id, name: product.name, images: product.images } });
+  } catch (error) {
+    sendError(res, error);
+  }
+};
+
+/**
+ * GET /api/seller/ai/drafts - the pictures this account made recently, so the
+ * product form can offer them without the seller keeping a list.
+ */
+const listDrafts = async (req, res) => {
+  try {
+    const AiDraft = require('../models/AiDraft');
+    const drafts = await AiDraft.find({ userId: req.user._id }).sort({ createdAt: -1 }).limit(40).lean();
+    res.json({ drafts });
+  } catch (error) {
+    sendError(res, error);
+  }
+};
+
 /** GET /api/admin/ai/usage - today's platform picture, and who used what. */
 const adminUsage = async (req, res) => {
   try {
@@ -334,4 +403,4 @@ const adminUsage = async (req, res) => {
   }
 };
 
-module.exports = { getUsage, getCatalog, setLimits, writeListing, makeImage, adminUsage, CAPS, ownImage };
+module.exports = { getUsage, getCatalog, setLimits, writeListing, makeImage, attachToProduct, listDrafts, adminUsage, CAPS, ownImage };
