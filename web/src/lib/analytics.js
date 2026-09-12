@@ -17,6 +17,7 @@
 export const GA_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || '';
 
 const gtag = (...args) => {
+  // No gtag on localhost (GoogleAnalytics.jsx never loads it there), so this is a no-op in dev.
   if (!GA_ID || typeof window === 'undefined' || typeof window.gtag !== 'function') return;
   try {
     window.gtag(...args);

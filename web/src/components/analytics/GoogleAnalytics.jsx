@@ -14,14 +14,17 @@ import { GA_ID } from '@/lib/analytics';
  * pathname change, the way Next's own third-parties helper does (which is
  * not installed here - rule: no npm install on this machine).
  *
- * Renders nothing, loads nothing, when the measurement ID is empty.
+ * Renders nothing, loads nothing, when the measurement ID is empty - and on
+ * localhost, so a day of building pages never counts as forty visitors.
  */
+
+const isLocal = () => typeof window !== 'undefined' && /^(localhost|127\.0\.0\.1|\[::1\])$/.test(window.location.hostname);
 export default function GoogleAnalytics() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
   useEffect(() => {
-    if (!GA_ID || typeof window.gtag !== 'function') return;
+    if (!GA_ID || isLocal() || typeof window.gtag !== 'function') return;
     const query = searchParams?.toString();
     window.gtag('event', 'page_view', {
       page_path: query ? `${pathname}?${query}` : pathname,
@@ -30,7 +33,7 @@ export default function GoogleAnalytics() {
     });
   }, [pathname, searchParams]);
 
-  if (!GA_ID) return null;
+  if (!GA_ID || isLocal()) return null;
 
   return (
     <>

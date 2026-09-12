@@ -27,6 +27,16 @@
     <title>ShopMaster Pro</title>
     <meta name="description" content="ShopMaster Pro is a modern multi-category e-commerce platform where sellers can manage products and customers can shop easily online." />
     <meta name="robots" content="index, follow" />
+    <!-- GA4, 13 Sep 2026: the same property the Next app reports to, so the
+         numbers run through the cutover without a gap. Enhanced measurement
+         handles this SPA's route changes. -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-SK8WB9BKFG"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-SK8WB9BKFG', { anonymize_ip: true });
+    </script>
   </head>
 
     <body>
