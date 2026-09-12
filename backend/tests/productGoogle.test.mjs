@@ -38,6 +38,32 @@ describe('productGoogleStatus', () => {
   });
 });
 
+describe('Merchant API (products v1) parsing', () => {
+  const { parseMerchant, productName } = require('../utils/google/productStatus');
+
+  it('reads approved / pending / disapproved from the per-country lists, issues with their help link', () => {
+    expect(parseMerchant({ productStatus: { destinationStatuses: [{ reportingContext: 'SHOPPING_ADS', approvedCountries: ['IN'] }] } }).status).toBe('approved');
+    expect(parseMerchant({ productStatus: { destinationStatuses: [{ approvedCountries: ['IN'] }, { pendingCountries: ['IN'] }] } }).status).toBe('pending');
+    const bad = parseMerchant({
+      productStatus: {
+        destinationStatuses: [{ disapprovedCountries: ['IN'] }],
+        itemLevelIssues: [{ code: 'image_link_broken', severity: 'DISAPPROVED', description: 'Invalid image', detail: 'x', documentationUri: 'https://support.google.com/merchants/answer/6098289' }],
+      },
+    });
+    expect(bad.status).toBe('disapproved');
+    expect(bad.issues[0]).toMatchObject({ code: 'image_link_broken', text: 'Invalid image', help: expect.stringContaining('6098289') });
+    expect(parseMerchant({}).status).toBe('unknown');
+  });
+
+  it('names the product the way the feed wrote it, base64url so odd ids cannot break the path', () => {
+    const name = productName('5849184820', '6a93cf8bfbb4f39f4a6d5645');
+    expect(name.startsWith('accounts/5849184820/products/')).toBe(true);
+    const seg = name.split('/').pop();
+    expect(seg).not.toMatch(/[+/=]/);
+    expect(Buffer.from(seg.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString()).toBe('en~IN~6a93cf8bfbb4f39f4a6d5645');
+  });
+});
+
 describe('catalogueGoogleStatus', () => {
   const { catalogueGoogleStatus } = require('../utils/google/productStatus');
   const products = [

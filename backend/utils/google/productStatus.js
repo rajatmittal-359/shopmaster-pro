@@ -31,35 +31,57 @@ const inspect = async (url, deps = {}) => {
   return { ok: true, verdict: r.verdict, coverageState: r.coverageState, lastCrawl: r.lastCrawlTime || null, url };
 };
 
+/**
+ * Merchant Center, through the Merchant API (products v1).
+ *
+ * The Content API for Shopping this used to call was sunset on 18 Aug 2026
+ * and started failing progressively on 1 Sep; Rajat enabled the Merchant
+ * API on 13 Sep. The feed writes <g:id>{_id}</g:id>, and Merchant API names
+ * that product accounts/{mc}/products/{contentLanguage}~{feedLabel}~{offerId}
+ * - sent base64url-encoded, as Google recommends, so a tilde or slash in an
+ * id can never break the path.
+ */
+const MERCHANT_API = 'https://merchantapi.googleapis.com/products/v1';
+const FEED_LANGUAGE = process.env.MERCHANT_FEED_LANGUAGE || 'en';
+const FEED_LABEL = process.env.MERCHANT_FEED_LABEL || 'IN';
+
+const productName = (mc, offerId) => {
+  const plain = `${FEED_LANGUAGE}~${FEED_LABEL}~${offerId}`;
+  const encoded = Buffer.from(plain).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  return `accounts/${mc}/products/${encoded}`;
+};
+
+/** One product's verdict from a Merchant API Product resource. */
+const parseMerchant = (r) => {
+  const ds = r.productStatus?.destinationStatuses || [];
+  const status = ds.some((d) => (d.disapprovedCountries || []).length)
+    ? 'disapproved'
+    : ds.some((d) => (d.pendingCountries || []).length)
+      ? 'pending'
+      : ds.some((d) => (d.approvedCountries || []).length)
+        ? 'approved'
+        : 'unknown';
+  const issues = (r.productStatus?.itemLevelIssues || []).map((i) => ({
+    code: i.code,
+    severity: i.severity,
+    text: i.description,
+    detail: i.detail,
+    help: i.documentationUri,
+  }));
+  return { status, issues };
+};
+
 const merchantStatus = async (productId, deps = {}) => {
   const mc = process.env.MERCHANT_CENTER_ID;
   if (!mc || !configured()) return { ok: false, reason: 'not connected' };
   const token = await accessToken(SCOPES.merchant, deps);
-  // The feed writes <g:id>{_id}</g:id>; Merchant Center's REST id is online:{lang}:{country}:{offerId}.
-  const restId = `online:en:IN:${productId}`;
-  const res = await (deps.fetch || fetch)(
-    `https://shoppingcontent.googleapis.com/content/v2.1/${mc}/productstatuses/${encodeURIComponent(restId)}`,
-    { headers: { Authorization: `Bearer ${token}` } }
-  );
+  const res = await (deps.fetch || fetch)(`${MERCHANT_API}/${productName(mc, productId)}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
   const data = await res.json().catch(() => ({}));
   if (res.status === 404) return { ok: true, id: productId, status: 'not in feed', issues: [] };
   if (!res.ok) return { ok: false, status: res.status, reason: data?.error?.message || `merchant ${res.status}` };
-  const statuses = (data.destinationStatuses || []).map((d) => d.status);
-  const status = statuses.includes('disapproved')
-    ? 'disapproved'
-    : statuses.includes('pending')
-      ? 'pending'
-      : statuses.length
-        ? 'approved'
-        : 'unknown';
-  const issues = (data.itemLevelIssues || []).map((i) => ({
-    code: i.code,
-    severity: i.servability,
-    text: i.description,
-    detail: i.detail,
-    help: i.documentation,
-  }));
-  return { ok: true, id: productId, status, issues };
+  return { ok: true, id: productId, ...parseMerchant(data) };
 };
 
 const productGoogleStatus = async (product, deps = {}) => {
@@ -81,22 +103,9 @@ const productGoogleStatus = async (product, deps = {}) => {
 };
 
 /**
- * Every product's Merchant Center status in one listing call (pages of 250)
- * instead of one call per product - keyed by our product id.
+ * Every product's Merchant Center status in one listing (pages of 250)
+ * instead of one call per product - keyed by our product id (the offerId).
  */
-const parseMerchant = (r) => {
-  const statuses = (r.destinationStatuses || []).map((d) => d.status);
-  const status = statuses.includes('disapproved')
-    ? 'disapproved'
-    : statuses.includes('pending')
-      ? 'pending'
-      : statuses.length
-        ? 'approved'
-        : 'unknown';
-  const issues = (r.itemLevelIssues || []).map((i) => ({ code: i.code, severity: i.servability, text: i.description, detail: i.detail, help: i.documentation }));
-  return { status, issues };
-};
-
 const merchantStatuses = async (deps = {}) => {
   const mc = process.env.MERCHANT_CENTER_ID;
   if (!mc || !configured()) return { ok: false, reason: 'not connected', byId: new Map() };
@@ -104,11 +113,11 @@ const merchantStatuses = async (deps = {}) => {
   const byId = new Map();
   let pageToken = '';
   do {
-    const url = `https://shoppingcontent.googleapis.com/content/v2.1/${mc}/productstatuses?maxResults=250${pageToken ? `&pageToken=${pageToken}` : ''}`;
+    const url = `${MERCHANT_API}/accounts/${mc}/products?pageSize=250${pageToken ? `&pageToken=${encodeURIComponent(pageToken)}` : ''}`;
     const res = await (deps.fetch || fetch)(url, { headers: { Authorization: `Bearer ${token}` } });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) return { ok: false, status: res.status, reason: data?.error?.message || `merchant ${res.status}`, byId };
-    for (const r of data.resources || []) byId.set(String(r.productId).split(':').pop(), parseMerchant(r));
+    for (const r of data.products || []) if (r.offerId) byId.set(String(r.offerId), parseMerchant(r));
     pageToken = data.nextPageToken || '';
   } while (pageToken);
   return { ok: true, byId };
@@ -171,4 +180,4 @@ const catalogueGoogleStatus = async (products, deps = {}) => {
   return { ok: true, rows, summary, merchantReason: mer.ok ? null : mer.reason };
 };
 
-module.exports = { productGoogleStatus, catalogueGoogleStatus, merchantStatuses, inspect, merchantStatus, productUrl };
+module.exports = { productGoogleStatus, catalogueGoogleStatus, merchantStatuses, inspect, merchantStatus, parseMerchant, productName, productUrl };
