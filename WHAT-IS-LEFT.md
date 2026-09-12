@@ -49,6 +49,34 @@ a page — the React app defined these in its services and no screen used them.
 | 2.6 | **14 seeded products still share the old description** (was 35; 21 done 12 Sep). Next day with quota: `node draftProductDescriptions.js` then `--apply` (apply now reads the file, no second Gemini pass). None reach the feed | OPS backlog | Gemini daily quota |
 | 2.9 | **Sentry** — the one blind spot: a 500 at checkout is invisible | Plan §7b | Rajat's DSN |
 
+## 2b. Google visibility — the full list, decided 12 Sep 2026
+
+Rajat: *"Google pe product har factor me win kare… sab chahiye jo free me
+available ho; manual jo bologe kar lunga."* Goal: liquidity (product pages
+found and clicked) and trust (reviews, honest listing data). Today's truth
+from Search Console: 90 days, 7 queries, all the brand name misspelt, no
+product word; 2 pages indexed, 8 not.
+
+| # | What | Free? | Rajat does | Claude builds | State |
+|---|---|---|---|---|---|
+| G1 | Search Console API — what people typed, per page, position | ✅ | done (service account is a user) | admin card ✅; seller: per-product queries in the listing panel | admin ✅ · seller ☐ |
+| G2 | URL Inspection API — is each product page indexed, last crawl | ✅ same account | — | "Google indexed: yes/no" per product; admin list of not-indexed | ☐ |
+| G3 | Merchant Center API — per-product approved / disapproved + reason | ✅ verified (17 approved) | done | seller sees Google's verdict on the product; admin sees all | ☐ |
+| G4 | Product structured data for merchant listings — `OfferShippingDetails`, `MerchantReturnPolicy` (7 days), `aggregateRating` where reviews exist | ✅ code | — | JSON-LD on the product page | ☐ |
+| G5 | Listing quality panel — score, checklist (title/photos/colour/size/description), AI keywords, Google preview, G1–G3 data inline | ✅ (Gemini/nano) | — | product form | ☐ **now** |
+| G6 | GA4 property + Data API — traffic, product views, add-to-cart funnel | ✅ | **create GA4 property, send Measurement ID** | events on the storefront; admin panel card | ☐ |
+| G7 | PageSpeed Insights API — Core Web Vitals per page | ✅ | **Cloud → Credentials → Create API key → send** | admin card, per-page warnings | ☐ |
+| G8 | Google Business Profile — reviews, products, posts (local pack, "near me") | ✅ | **reviews 2→30, add products, one post a week** (no API for small accounts) | `sameAs` (Instagram, Justdial, GBP) in Organization schema — send the URLs | ☐ |
+| G9 | Merchant promotions feed — coupons shown in Shopping results | ✅ | — | coupons → promotions feed | ☐ later |
+| G10 | Cutover — the React app is why 8 pages are not indexed (client-rendered); Next renders them | — | October, Render card | already built | ☐ Oct |
+| — | Keyword Planner / Trends volume | needs Ads account + approval | not now | — | dropped |
+
+**Our own site search** (customer side): MongoDB **Atlas Search** — free on
+the current cluster, no new account: typo tolerance (jhumki/jhumka/झुमका),
+synonyms, autocomplete, relevance. Replaces the regex suggest; Gemini as an
+optional layer on top ("laal jhumka 500 ke andar" → filters). Via `/database`.
+☐
+
 ## 3. Rajat's call — researched, waiting on a decision
 
 - **Seller performance / RTO rate page.** The first piece exists (cancel rate on the dashboard and the admin list, plan §4.26); late-dispatch and RTO counts would join it the same way. Now, or at thirty sellers? (Plan §14.2)
