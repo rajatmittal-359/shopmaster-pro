@@ -197,6 +197,13 @@ export default function ListingQuality({ form, photos, productId, categoryLabel,
               {google.merchant.status === 'approved' && <span className="text-emerald-700 dark:text-emerald-300">approved</span>}
               {google.merchant.status === 'disapproved' && <span className="text-destructive">disapproved</span>}
               {!['approved', 'disapproved'].includes(google.merchant.status) && <span className="text-muted-foreground">{google.merchant.status}</span>}
+              {/* The lalach line: what Google actually did with the listing. */}
+              {google.shopping && (
+                <span className="text-muted-foreground">
+                  · shown <strong className="font-medium text-foreground">{google.shopping.impressions.toLocaleString('en-IN')}×</strong> in Shopping, {google.shopping.clicks} click{google.shopping.clicks === 1 ? '' : 's'} (28 days)
+                </span>
+              )}
+              {!google.shopping && google.merchant.status === 'approved' && <span className="text-xs text-muted-foreground">· no Shopping impressions yet</span>}
             </li>
             {google.merchant.issues?.map((i) => (
               <li key={i.code} className="rounded-lg bg-destructive/10 p-2 text-xs text-destructive">

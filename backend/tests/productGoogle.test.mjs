@@ -64,6 +64,21 @@ describe('Merchant API (products v1) parsing', () => {
   });
 });
 
+describe('productPerformance', () => {
+  const { productPerformance } = require('../utils/google/productStatus');
+  it('sums Shopping impressions and clicks per offer id across pages', async () => {
+    process.env.MERCHANT_CENTER_ID = '1';
+    const pages = [
+      { results: [{ productPerformanceView: { offerId: 'p1', impressions: '340', clicks: '4' } }, { productPerformanceView: { offerId: 'p2', impressions: '10', clicks: '0' } }], nextPageToken: 'n' },
+      { results: [{ productPerformanceView: { offerId: 'p1', impressions: '60', clicks: '1' } }] },
+    ];
+    let i = 0;
+    const out = await productPerformance({ days: 28 }, { fetch: async () => ({ ok: true, json: async () => pages[i++] }), token: 't' });
+    expect(out.byId.get('p1')).toEqual({ impressions: 400, clicks: 5 });
+    expect(out.byId.get('p2')).toEqual({ impressions: 10, clicks: 0 });
+  });
+});
+
 describe('catalogueGoogleStatus', () => {
   const { catalogueGoogleStatus } = require('../utils/google/productStatus');
   const products = [
@@ -74,6 +89,7 @@ describe('catalogueGoogleStatus', () => {
 
   it('lists every product with its index verdict and merchant status, and counts them', async () => {
     const out = await catalogueGoogleStatus(products, {
+      productPerformance: async () => ({ ok: true, byId: new Map([['p1', { impressions: 340, clicks: 4 }]]) }),
       inspect: async (url) => (url.endsWith('/a') ? { ok: true, verdict: 'PASS', coverageState: 'Submitted and indexed' } : { ok: true, verdict: 'NEUTRAL', coverageState: 'Crawled - currently not indexed' }),
       merchantStatuses: async () => ({
         ok: true,
@@ -87,11 +103,14 @@ describe('catalogueGoogleStatus', () => {
     expect(out.rows[0].sellerName).toBe('Charming Jewels');
     expect(out.rows[1].merchant.issues[0].code).toBe('image_link_broken');
     expect(out.rows[2].merchant.status).toBe('not in feed');
+    expect(out.rows[0].shopping).toEqual({ impressions: 340, clicks: 4 });
+    expect(out.rows[1].shopping).toBe(null);
     expect(out.summary).toEqual({ total: 3, indexed: 1, notIndexed: 2, indexUnknown: 0, approved: 1, disapproved: 1, pending: 0, notInFeed: 1 });
   });
 
   it('says unknown for every row when Google does not answer, never fine', async () => {
     const out = await catalogueGoogleStatus(products.map((p) => ({ ...p, _id: p._id + 'x', slug: p.slug + 'x' })), {
+      productPerformance: async () => ({ ok: false, byId: new Map() }),
       inspect: async () => { throw new Error('quota'); },
       merchantStatuses: async () => ({ ok: false, reason: 'not connected', byId: new Map() }),
     });

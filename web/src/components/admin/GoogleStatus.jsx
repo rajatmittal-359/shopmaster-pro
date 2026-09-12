@@ -133,7 +133,7 @@ export default function GoogleStatus() {
 
       <PanelCard
         title="Product by product"
-        lead="Sorted the way Google sorts: disapproved first, then not indexed, then missing from the feed."
+        lead="Sorted the way Google sorts: disapproved first, then not indexed, then missing from the feed. Shown · clicks = Google Shopping, last 28 days."
         aside={
           <div role="tablist" className="flex gap-1 overflow-x-auto rounded-lg bg-muted p-1">
             {FILTERS.map((f) => (
@@ -162,6 +162,7 @@ export default function GoogleStatus() {
                   <th className="py-1 pr-3 font-medium">Product</th>
                   <th className="py-1 pr-3 font-medium">Google index</th>
                   <th className="py-1 pr-3 font-medium">Shopping</th>
+                  <th className="py-1 pr-3 text-right font-medium">Shown · clicks</th>
                   <th className="py-1 text-right font-medium">Last crawl</th>
                 </tr>
               </thead>
@@ -197,6 +198,9 @@ export default function GoogleStatus() {
                             ))}
                           </ul>
                         )}
+                      </td>
+                      <td className="py-2 pr-3 text-right tabular-nums text-muted-foreground">
+                        {r.shopping ? `${r.shopping.impressions.toLocaleString('en-IN')} · ${r.shopping.clicks}` : '—'}
                       </td>
                       <td className="py-2 text-right tabular-nums text-muted-foreground">{when(r.index.lastCrawl)}</td>
                     </tr>

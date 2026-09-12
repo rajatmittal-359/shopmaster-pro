@@ -87,10 +87,11 @@ const merchantStatus = async (productId, deps = {}) => {
 const productGoogleStatus = async (product, deps = {}) => {
   const url = productUrl(product);
   const slugPath = `/products/${product.slug || product._id}`;
-  const [idx, mer, q] = await Promise.all([
+  const [idx, mer, q, perf] = await Promise.all([
     (deps.inspect || inspect)(url).catch((e) => ({ ok: false, reason: e.message })),
     (deps.merchantStatus || merchantStatus)(String(product._id)).catch((e) => ({ ok: false, reason: e.message })),
     (deps.queries || queries)({ days: 28, pageContains: slugPath }).catch(() => ({ ok: false, rows: [] })),
+    (deps.productPerformance || productPerformance)({ days: 28 }).catch(() => ({ ok: false, byId: new Map() })),
   ]);
   return {
     url,
@@ -99,6 +100,7 @@ const productGoogleStatus = async (product, deps = {}) => {
       : { indexed: null, state: null, lastCrawl: null, reason: idx.reason },
     merchant: mer.ok ? { status: mer.status, issues: mer.issues } : { status: 'unknown', issues: [], reason: mer.reason },
     queries: q.ok ? [...q.rows].sort((a, b) => b.impressions - a.impressions).slice(0, 10) : [],
+    shopping: perf.ok ? perf.byId.get(String(product._id)) || null : null,
   };
 };
 
@@ -124,6 +126,43 @@ const merchantStatuses = async (deps = {}) => {
 };
 
 /**
+ * How often Google actually showed each product in Shopping, and how often
+ * somebody clicked - the Merchant API's product performance report, keyed
+ * by our product id (the offer id). Empty until Google has impressions to
+ * report; the callers say "no data yet", never zero.
+ */
+const isoDay = (d) => d.toISOString().slice(0, 10);
+const productPerformance = async ({ days = 28 } = {}, deps = {}) => {
+  const mc = process.env.MERCHANT_CENTER_ID;
+  if (!mc || (!deps.token && !configured())) return { ok: false, reason: 'not connected', byId: new Map() };
+  const token = deps.token || (await accessToken(SCOPES.merchant, deps));
+  const to = new Date(Date.now() - 86400000);
+  const from = new Date(to.getTime() - days * 86400000);
+  const query = `SELECT offer_id, clicks, impressions, click_through_rate FROM product_performance_view WHERE date BETWEEN '${isoDay(from)}' AND '${isoDay(to)}'`;
+  const byId = new Map();
+  let pageToken = '';
+  do {
+    const res = await (deps.fetch || fetch)(`https://merchantapi.googleapis.com/reports/v1/accounts/${mc}/reports:search`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query, pageSize: 1000, ...(pageToken ? { pageToken } : {}) }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) return { ok: false, status: res.status, reason: data?.error?.message || `reports ${res.status}`, byId };
+    for (const r of data.results || []) {
+      const v = r.productPerformanceView || {};
+      if (!v.offerId) continue;
+      const cur = byId.get(String(v.offerId)) || { impressions: 0, clicks: 0 };
+      cur.impressions += Number(v.impressions) || 0;
+      cur.clicks += Number(v.clicks) || 0;
+      byId.set(String(v.offerId), cur);
+    }
+    pageToken = data.nextPageToken || '';
+  } while (pageToken);
+  return { ok: true, days, byId };
+};
+
+/**
  * The whole catalogue against Google: for the admin's "which pages are not
  * indexed, which items are disapproved" list. Inspections run six at a time
  * (quota is 600/min, 2000/day per property) and are remembered per URL for
@@ -140,7 +179,10 @@ const inspectCached = async (url, deps) => {
 };
 
 const catalogueGoogleStatus = async (products, deps = {}) => {
-  const mer = await (deps.merchantStatuses || merchantStatuses)(deps).catch((e) => ({ ok: false, reason: e.message, byId: new Map() }));
+  const [mer, perf] = await Promise.all([
+    (deps.merchantStatuses || merchantStatuses)(deps).catch((e) => ({ ok: false, reason: e.message, byId: new Map() })),
+    (deps.productPerformance || productPerformance)({ days: 28 }, deps).catch((e) => ({ ok: false, reason: e.message, byId: new Map() })),
+  ]);
   const rows = new Array(products.length);
   let next = 0;
   const worker = async () => {
@@ -162,6 +204,8 @@ const catalogueGoogleStatus = async (products, deps = {}) => {
         merchant: !mer.ok
           ? { status: 'unknown', issues: [], reason: mer.reason }
           : m || { status: 'not in feed', issues: [] },
+        // Shopping impressions/clicks, last 28 days; null = Google has no row yet.
+        shopping: perf.ok ? perf.byId.get(String(p._id)) || null : null,
       };
     }
   };
@@ -180,4 +224,4 @@ const catalogueGoogleStatus = async (products, deps = {}) => {
   return { ok: true, rows, summary, merchantReason: mer.ok ? null : mer.reason };
 };
 
-module.exports = { productGoogleStatus, catalogueGoogleStatus, merchantStatuses, inspect, merchantStatus, parseMerchant, productName, productUrl };
+module.exports = { productGoogleStatus, catalogueGoogleStatus, merchantStatuses, productPerformance, inspect, merchantStatus, parseMerchant, productName, productUrl };
