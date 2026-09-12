@@ -120,16 +120,16 @@ export default async function ProductPage({ params }) {
                 shopper is actually buying from, and until this page existed
                 they had nowhere to go to find out who that is. */}
             <p className="mt-1 text-sm text-muted-foreground">
+              {/* The SHOP's name, never the owner's - Etsy and Amazon both;
+                  and the owner's name on every product would say which shop
+                  the platform runs. `shop` comes from the API (utils/shopNames). */}
               Sold by{' '}
-              {product.sellerId?._id ? (
-                <Link
-                  href={`/sellers/${product.sellerId._id}`}
-                  className="text-brand-ink hover:underline"
-                >
-                  {product.sellerId.name}
+              {product.shop?.id ? (
+                <Link href={`/sellers/${product.shop.id}`} className="text-brand-ink hover:underline">
+                  {product.shop.name || 'this seller'}
                 </Link>
               ) : (
-                product.sellerId?.name || BUSINESS.legalName
+                product.shop?.name || BUSINESS.legalName
               )}
             </p>
           </div>

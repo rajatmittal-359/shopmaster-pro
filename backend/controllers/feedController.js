@@ -1,4 +1,5 @@
 const Product = require('../models/Product');
+const { withShop } = require('../utils/shopNames');
 const { effectivePrice } = require('../utils/discount');
 
 /**
@@ -80,12 +81,14 @@ exports.googleProductFeed = async (req, res) => {
       filter.sellerId = { $in: own.map((s) => s.userId) };
     }
 
-    const products = await Product.find(filter)
-      .populate('category', 'name')
-      .populate('sellerId', 'name')
-      .sort({ updatedAt: -1 })
-      .limit(5000)
-      .lean();
+    const products = await withShop(
+      await Product.find(filter)
+        .populate('category', 'name')
+        .populate('sellerId', 'name')
+        .sort({ updatedAt: -1 })
+        .limit(5000)
+        .lean()
+    );
 
     const items = products
       /*
@@ -171,7 +174,8 @@ exports.googleProductFeed = async (req, res) => {
           parts.push(`<g:item_group_id>${esc(p.variantGroupId)}</g:item_group_id>`);
         }
 
-        const brand = p.brand || p.sellerId?.name;
+        // The brand Google shows is the SHOP, never the owner's name (utils/shopNames).
+        const brand = p.brand || p.shop?.name;
         if (brand) parts.push(`<g:brand>${esc(brand)}</g:brand>`);
         if (p.sku) parts.push(`<g:mpn>${esc(p.sku)}</g:mpn>`);
 

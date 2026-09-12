@@ -17,7 +17,8 @@ import { POLICY, BUSINESS } from '@/config/policy';
  *   between them is the kind a payment aggregator calls misrepresentation.
  */
 export const productSchema = ({ product, url, price, was, inStock }) => {
-  const brand = product.brand || product.sellerId?.name || BUSINESS.tradeName;
+  // The brand Google sees is the seller's shop, not the person who owns it.
+  const brand = product.brand || product.shop?.name || BUSINESS.tradeName;
   const [handleMin, handleMax] = POLICY.handlingDays;
   const [transitMin, transitMax] = POLICY.transitDays;
 

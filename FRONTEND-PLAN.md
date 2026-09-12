@@ -1088,6 +1088,30 @@ With this, `WHAT-IS-LEFT.md` §1 — what the React app could do that `web/`
 could not — is **empty**, pending Rajat's own browser check of the review form
 (as a customer with a delivered order) and one video upload.
 
+### 4.23 "Sold by Charming Jewels", not "Sold by Rajat Mittal"
+
+12 Sep 2026, found while verifying the video with the test accounts. The
+public product routes populated `sellerId` with the **User's** name, so every
+product page said *Sold by Rajat Mittal*, the seller's own page said
+*Charming Jewels*, and the Google feed sent `<g:brand>Rajat Mittal</g:brand>`
+on all 17 items. Etsy and Amazon name the shop, never the owner — and naming
+the owner on every product tells the world which shop the platform's
+operator runs, which §7c says never to reveal.
+
+`utils/shopNames.js`: one query per page resolves seller user ids to
+business names; `withShop()` stamps `shop: { id, name }` on each product
+without touching the document the old app still reads. Used by the product
+list, the single product and the feed; the page and the JSON-LD brand read
+`product.shop`. Feed now: 17 × `Charming Jewels`. 919 tests.
+
+Verified in the local browser with the test accounts (12 Sep): customer
+Abha — review form shows her existing review, Edit → 4 stars → Save updates
+the list and the bars at once (restored to 5); seller Charming Jewels — a
+3-second generated clip uploaded through the new slot, Cloudinary returned
+URL + poster + duration, the gallery showed the play tile second and played
+it with the poster; the clip was then removed through the same contract
+(`video: null`) so the public test product carries nothing silly.
+
 ---
 
 ## 5. Structured data

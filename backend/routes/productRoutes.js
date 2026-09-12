@@ -1,5 +1,6 @@
 // backend/routes/productRoutes.js
 const express = require('express');
+const { withShop } = require('../utils/shopNames');
 const mongoose = require('mongoose');
 const router = express.Router();
 const { buildCatalogueFilter, escapeRegex } = require('../utils/catalogueFilter');
@@ -163,7 +164,9 @@ router.get('/', async (req, res) => {
     const total = await Product.countDocuments(filter);
 
     res.json({
-      products,
+      // Each with its shop's name - the page says "Sold by Charming Jewels",
+      // never the owner's name. One extra query for the whole page.
+      products: await withShop(products),
       totalPages: Math.ceil(total / numericLimit),
       currentPage: numericPage,
       total,
@@ -394,7 +397,8 @@ router.get('/:productId', async (req, res) => {
         .lean();
     }
 
-    res.json({ product, variants });
+    const [withShopName] = await withShop([product]);
+    res.json({ product: withShopName, variants });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
