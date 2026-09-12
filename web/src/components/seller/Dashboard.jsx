@@ -67,6 +67,7 @@ export default function SellerDashboard() {
       lowStock: low.products || low || [],
       waiting: all.filter((o) => WAITING.includes(o.status) && !o.shippingAwb),
       settings: settings.settings || {},
+      bankSet: Boolean(settings.settings?.bankSet),
     };
   }, []);
 

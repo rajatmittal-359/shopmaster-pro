@@ -1633,6 +1633,10 @@ exports.getSettings = async (req, res) => {
         businessName: seller.businessName,
         offersFreeShipping: Boolean(seller.offersFreeShipping),
         pickupAddress: seller.pickupAddress || {},
+        // The setup strip's two yes/no facts. The numbers themselves stay on
+        // /payout-details; the dashboard only needs to know they exist.
+        pickupSet: Boolean(seller.pickupAddress && seller.pickupAddress.pincode),
+        bankSet: Boolean(seller.bankDetails && seller.bankDetails.accountNumber && seller.bankDetails.ifscCode),
 
         /*
          * Shown, not editable. A seller seeing what the platform charges them

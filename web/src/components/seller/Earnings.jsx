@@ -239,12 +239,19 @@ export default function Earnings() {
                 <span>
                   {payout.payoutNumber}
                   <span className="block text-xs text-muted-foreground">
-                    {payout.itemCount} item(s) · {when(payout.createdAt)}
+                    {payout.itemCount} item(s) · {payout.status === 'paid' ? `paid ${when(payout.paidAt || payout.createdAt)}` : when(payout.createdAt)}
                     {payout.reference ? ` · ref ${payout.reference}` : ''}
                   </span>
                 </span>
                 <span className="text-right">
                   {money(payout.netPayable)}
+                  {/* A deduction the seller cannot see is a payout they will
+                      dispute. Amazon's statement shows the minus on the line. */}
+                  {payout.deductions > 0 && (
+                    <span className="block text-xs text-muted-foreground">
+                      {money(payout.netPayable + payout.deductions)} − {money(payout.deductions)} cancellation charge
+                    </span>
+                  )}
                   <span className="block text-xs capitalize text-muted-foreground">
                     {payout.status}
                   </span>
