@@ -13,6 +13,7 @@ import MediaManager from '@/components/seller/MediaManager';
 import VideoSlot from '@/components/seller/VideoSlot';
 import RichTextEditor from '@/components/seller/RichTextEditor';
 import CategoryPicker from '@/components/seller/CategoryPicker';
+import FieldAssist from '@/components/seller/FieldAssist';
 
 /**
  * Listing something for sale.
@@ -74,10 +75,13 @@ const leavesOf = (categories, trail = []) =>
   });
 
 /** A small, consistent field: label above, hint below. */
-function Field({ id, label, hint, children, className = '' }) {
+function Field({ id, label, hint, aside, children, className = '' }) {
   return (
     <div className={className}>
-      <Label htmlFor={id}>{label}</Label>
+      <div className="flex items-center justify-between gap-2">
+        <Label htmlFor={id}>{label}</Label>
+        {aside}
+      </div>
       <div className="mt-1.5">{children}</div>
       {hint && <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">{hint}</p>}
     </div>
@@ -293,17 +297,17 @@ export default function ProductForm({ productId, copyFromId }) {
             type="button"
             variant="outline"
             onClick={writeForMe}
-            disabled={ai.status === 'writing' || (photos.length === 0 && !form.name)}
+            disabled={ai.status === 'writing' || (photos.length === 0 && !form.name && !keywords.trim())}
             className="shrink-0 border-primary/40 text-brand-ink hover:bg-primary/5"
           >
             {ai.status === 'writing' ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
-            {ai.status === 'writing' ? 'Writing…' : 'Write it for me'}
+            {ai.status === 'writing' ? 'Writing…' : ai.status === 'done' ? 'Write it again' : 'Write it for me'}
           </Button>
         }
       >
         <div className="rounded-lg border border-primary/20 bg-primary/5 p-3">
           <Label htmlFor="keywords" className="text-xs text-muted-foreground">
-            A few words for the AI (optional) - it reads the first photo too
+            A few words for the AI - any language, Hindi or Hinglish is fine - it reads the first photo too
           </Label>
           <Input
             id="keywords"
@@ -357,6 +361,15 @@ export default function ProductForm({ productId, copyFromId }) {
           id="name"
           label="Title"
           hint="Put the colour in it if there is one - “Rose Gold Pearl Ring”. It is the first thing a shopper reads and the first thing Google matches."
+          aside={
+            <FieldAssist
+              field="name"
+              value={form.name}
+              onChange={(v) => setForm((f) => ({ ...f, name: v }))}
+              context={{ name: form.name, categoryName: categories.find((c) => c._id === form.category)?.label }}
+              textModel={textModel}
+            />
+          }
         >
           <Input id="name" required value={form.name} onChange={set('name')} className="h-10" />
         </Field>
@@ -364,7 +377,16 @@ export default function ProductForm({ productId, copyFromId }) {
         <Field
           id="description"
           label="Description"
-          hint="Two or three short paragraphs. What it is, what it goes with, when to wear or use it. Bullets for the details."
+          hint="Two or three short paragraphs. What it is, what it goes with, when to wear or use it. Bullets for the details. Write in any language - Improve can turn it into English."
+          aside={
+            <FieldAssist
+              field="description"
+              value={form.description}
+              onChange={(v) => setForm((f) => ({ ...f, description: v }))}
+              context={{ name: form.name, categoryName: categories.find((c) => c._id === form.category)?.label }}
+              textModel={textModel}
+            />
+          }
         >
           <RichTextEditor
             id="description"

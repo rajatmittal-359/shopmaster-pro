@@ -32,6 +32,7 @@ const cloudinary = require('../utils/cloudinary');
 const { sendError } = require('../utils/apiError');
 const { runImage, MODES } = require('../utils/ai/imageGen');
 const { draftListing } = require('../utils/ai/listing');
+const { refineField } = require('../utils/ai/refine');
 const { snapshot } = require('../utils/ai/status');
 const { byId } = require('../utils/ai/catalog');
 const User = require('../models/User');
@@ -409,4 +410,39 @@ const adminUsage = async (req, res) => {
   }
 };
 
-module.exports = { getUsage, getCatalog, setLimits, writeListing, makeImage, attachToProduct, listDrafts, adminUsage, CAPS, ownImage };
+/**
+ * One field, made better - polish, translate, shorten, add detail. Counts as
+ * a text draft against the same daily allowance; the seller sees the model.
+ */
+const refineText = async (req, res) => {
+  try {
+    const exempt = await isExempt(req);
+    const usage = await usageFor(req.user._id, exempt);
+    if (!exempt && usage.remaining.texts === 0) {
+      return res.status(429).json({
+        message: `You have used today's ${CAPS.textsPerSellerPerDay} AI drafts. It resets at midnight.`,
+        usage,
+      });
+    }
+    const { field, action, text, name, categoryName } = req.body || {};
+    const textModel = ['gemini', 'nano'].includes(req.body?.textModel) ? req.body.textModel : 'auto';
+    const result = await refineField({
+      field,
+      action,
+      text: String(text || '').slice(0, 4000),
+      context: { name: String(name || '').slice(0, 200), categoryName: String(categoryName || '').slice(0, 100), textModel },
+    });
+    if (!result.ok) return res.status(result.status === 429 ? 429 : 400).json({ message: result.reason });
+    await AiUsage.record(req.user._id, { kind: 'text', provider: result.provider || 'gemini' });
+    res.json({
+      text: result.text,
+      warnings: result.warnings,
+      writtenBy: result.provider === 'pollinations' ? 'gpt-5.4-nano (Pollinations)' : 'Gemini',
+      usage: await usageFor(req.user._id, exempt),
+    });
+  } catch (error) {
+    sendError(res, error);
+  }
+};
+
+module.exports = { getUsage, getCatalog, setLimits, writeListing, refineText, makeImage, attachToProduct, listDrafts, adminUsage, CAPS, ownImage };

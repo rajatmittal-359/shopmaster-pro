@@ -1222,6 +1222,29 @@ pickup address → bank account → first product → share the shop link, each
 step opening its page and ticking itself; under it one line, "how selling
 works here", linked to the agreement.
 
+### 4.28 AI beside every field, in any language
+
+12 Sep 2026. Rajat: a seller who wrote the title in Hindi, or wrote English
+badly, must be able to fix one field without regenerating the whole listing;
+and whatever little they give - a photo, a name, a line in Hinglish - the
+whole form should fill from it. Gate: seller recruitment (Meesho's sellers
+write Hinglish; a form that only speaks English loses them at the first box).
+
+**References.** Shopify Magic: a sparkle beside the title and beside the
+description - improve, tone, translate - separate from "generate". Amazon's
+listing assistant: per-attribute generate. Both keep the previous text
+reachable.
+
+**Built.** `POST /ai/refine { field, action, text }` → `utils/ai/refine.js`
+(polish · translate · shorten · detail), same honesty checks as the draft
+(no invented facts, purity claims flagged, only the allowed HTML), same daily
+allowance, same Gemini→nano road and the writer chip's choice. `FieldAssist`
+- the sparkle - sits beside Title and Description; every rewrite lands with
+an Undo toast. "Write it for me" becomes **Write it again** after a draft,
+works from keywords alone, and the prompt now reads the seller's words in
+any language and always writes English. Live: a Hinglish description came
+back as two clean English paragraphs. 940 tests.
+
 ---
 
 ## 5. Structured data

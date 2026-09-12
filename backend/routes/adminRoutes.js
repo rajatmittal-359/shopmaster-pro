@@ -88,6 +88,7 @@ router.get('/ai/usage', ai.adminUsage);
 router.get('/ai/catalog', ai.getCatalog);
 router.patch('/ai/limits', ai.setLimits);
 router.post('/ai/listing', ai.writeListing);
+router.post('/ai/refine', ai.refineText);
 // Banners and category art from words - the one image mode sellers do not get.
 router.post('/ai/image', ai.makeImage);
 router.post('/ai/attach', ai.attachToProduct);

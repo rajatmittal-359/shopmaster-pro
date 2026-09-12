@@ -75,6 +75,7 @@ router.get('/ai/usage', requireApprovedSeller, ai.getUsage);
 router.get('/ai/catalog', requireApprovedSeller, ai.getCatalog);
 router.patch('/ai/limits', requireApprovedSeller, ai.setLimits);
 router.post('/ai/listing', requireApprovedSeller, ai.writeListing);
+router.post('/ai/refine', requireApprovedSeller, ai.refineText);
 router.post('/ai/image', requireApprovedSeller, ai.makeImage);
 router.post('/ai/attach', requireApprovedSeller, ai.attachToProduct);
 router.get('/ai/drafts', requireApprovedSeller, ai.listDrafts);

@@ -100,7 +100,8 @@ Fill in the listing. RULES, in order of importance:
 
 3. Do not mention any shop name, brand name, price, delivery, or weight in the description.
 
-4. Write in simple English an Indian shopper would search for. Say WHEN and with what it would be used
+4. The seller's words may be in English, Hindi, Hinglish or any language - read them as facts. Write the
+   listing in simple English an Indian shopper would search for. Say WHEN and with what it would be used
    or worn - occasion, pairing, season. This is the part people search for.
 
 5. "color" is ONE primary colour in plain English. "gender" is who it is for; use "unisex" when it
@@ -123,8 +124,8 @@ Fill in the listing. RULES, in order of importance:
  * @returns {Promise<{ok: true, draft: object, warnings: string[]}|{ok: false, reason: string}>}
  */
 const draftListing = async (input, deps = { generate }) => {
-  if (!input.name && !input.imageUrl && !input.imageDataUrl) {
-    return { ok: false, reason: 'Give a product name or a photo to start from.' };
+  if (!input.name && !input.keywords && !input.imageUrl && !input.imageDataUrl) {
+    return { ok: false, reason: 'Give a photo, a name, or a few words about the product - in any language.' };
   }
 
   const hasImage = Boolean(input.imageUrl || input.imageDataUrl);

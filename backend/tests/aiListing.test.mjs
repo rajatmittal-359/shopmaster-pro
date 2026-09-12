@@ -69,10 +69,13 @@ describe('a good draft', () => {
     expect(r.warnings).toEqual([]);
   });
 
-  it('needs at least a name or a photo', async () => {
+  it('needs at least a photo, a name, or a few words - in any language', async () => {
     const r = await draftListing({}, answering(good));
     expect(r.ok).toBe(false);
-    expect(r.reason).toMatch(/name or a photo/);
+    expect(r.reason).toMatch(/photo, a name, or a few words/);
+    // Keywords alone are enough: a seller who types "laal kundan jhumka" has told us the product.
+    const k = await draftListing({ keywords: 'laal kundan jhumka' }, answering(good));
+    expect(k.ok).toBe(true);
   });
 });
 
