@@ -360,7 +360,7 @@ export default function MediaManager({ photos, onChange, productName, onUsage, o
               ))}
             </SelectContent>
           </Select>
-          <Link href={`${base}/ai`} className="text-xs text-brand-ink hover:underline">
+          <Link href={`${base}/products/studio`} className="text-xs text-brand-ink hover:underline">
             All models &amp; limits
           </Link>
         </div>

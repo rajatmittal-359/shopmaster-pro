@@ -166,6 +166,8 @@ const writeListing = async (req, res) => {
     }
 
     const { name, keywords, price, categoryId, imageUrl, imageDataUrl } = req.body || {};
+    // 'auto' (Gemini, nano when Gemini is out) | 'gemini' | 'nano' - the chip on the form.
+    const textModel = ['gemini', 'nano'].includes(req.body?.textModel) ? req.body.textModel : 'auto';
     if (imageUrl && !ownImage(imageUrl)) {
       return res.status(400).json({ message: 'That photo is not one of yours.' });
     }
@@ -189,12 +191,13 @@ const writeListing = async (req, res) => {
       imageUrl,
       imageDataUrl,
       brand: req.seller?.businessName,
+      textModel,
     });
 
     if (!result.ok) return res.status(502).json({ message: result.reason });
 
     const match = leaves.find((c) => c.name === result.draft.categoryName);
-    await AiUsage.record(req.user._id, { kind: 'text', provider: 'gemini' });
+    await AiUsage.record(req.user._id, { kind: 'text', provider: result.provider || 'gemini' });
 
     res.json({
       draft: { ...result.draft, categoryId: match ? match._id : null },

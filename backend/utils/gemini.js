@@ -65,7 +65,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
  * instead; the caller validates the JSON either way.
  */
 const fallbackOr = async (failure, prompt, opts) => {
-  if (!process.env.POLLINATIONS_API_KEY) return failure;
+  if (!process.env.POLLINATIONS_API_KEY || opts.textModel === 'gemini') return failure;
   const { pollinationsText } = require('./ai/textFallback');
   const schemaNote = opts.responseSchema
     ? `
@@ -85,6 +85,11 @@ ${JSON.stringify(opts.responseSchema)}`
 };
 
 const generate = async (prompt, opts = {}) => {
+  // The caller may name the road. 'nano' goes straight to Pollinations;
+  // 'gemini' never falls back; 'auto' (default) is Gemini with nano behind it.
+  if (opts.textModel === 'nano') {
+    return fallbackOr({ ok: false, reason: 'Pollinations nano was asked for and is not configured' }, prompt, opts);
+  }
   const key = process.env.GEMINI_API_KEY;
   if (!key) {
     return fallbackOr({ ok: false, reason: 'GEMINI_API_KEY is not set' }, prompt, opts);

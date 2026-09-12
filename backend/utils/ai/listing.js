@@ -133,6 +133,8 @@ const draftListing = async (input, deps = { generate }) => {
     imageDataUrl: input.imageDataUrl,
     responseSchema: RESPONSE_SCHEMA,
     temperature: 0.6,
+    // Which road: Gemini first with nano behind it, or one of them by name.
+    textModel: input.textModel || 'auto',
   });
   if (!answer.ok) return answer;
 

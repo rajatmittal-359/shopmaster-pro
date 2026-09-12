@@ -16,7 +16,7 @@ Stage: three sellers, ~50 products, single-digit orders a day. Not Amazon.
 
 ## Where things are
 - Storefront: `web/src/app/*`, components under `web/src/components/{home,shop,product,cart,checkout,orders,account}`.
-- Seller panel: `/seller/*`, `components/seller/*`; admin: `/admin/*`, `components/admin/*`; shared panel chrome `components/panel/*` (`PanelShell`, `PageHeader`, `PanelCard`).
+- Seller panel: `/seller/*` — Home · Orders · Products (tabs: all / studio / stock) · Payments · Settings; `components/seller/*`, `ProductsNav`; admin: `/admin/*`, `components/admin/*`; shared panel chrome `components/panel/*` (`PanelShell`, `PageHeader`, `PanelCard`).
 - AI tools: `components/ai/*` (Studio, ModelChip, AttachToProduct), `components/seller/MediaManager`.
 - Confirmations: `components/common/ActionDialog` (named reasons + optional details); toasts via sonner for undo.
 

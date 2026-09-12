@@ -1,12 +1,6 @@
-import Earnings from '@/components/seller/Earnings';
+import { redirect } from 'next/navigation';
 
-export const metadata = { title: 'Earnings' };
-
-export default function SellerEarningsPage() {
-  return (
-    <>
-      <h1 className="mb-6 text-2xl font-semibold tracking-tight">Earnings</h1>
-      <Earnings />
-    </>
-  );
+// Moved on 12 Sep 2026 (plan §4.27). Old bookmarks and links land in the right place.
+export default function Moved() {
+  redirect('/seller/payments');
 }

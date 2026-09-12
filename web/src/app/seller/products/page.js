@@ -1,6 +1,7 @@
 import { Suspense } from 'react';
 import Link from 'next/link';
 import ProductTable from '@/components/seller/ProductTable';
+import ProductsNav from '@/components/seller/ProductsNav';
 import PageHeader from '@/components/panel/PageHeader';
 import { Button } from '@/components/ui/button';
 
@@ -18,6 +19,7 @@ export default function SellerProductsPage() {
           </Button>
         }
       />
+      <ProductsNav />
       <Suspense fallback={null}>
         <ProductTable />
       </Suspense>

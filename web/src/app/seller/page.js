@@ -6,7 +6,7 @@ export const metadata = { title: 'Dashboard' };
 export default function SellerHome() {
   return (
     <>
-      <PageHeader title="Your shop" lead="Today, at a glance." />
+      <PageHeader title="Home" lead="Today, at a glance." />
       <SellerDashboard />
     </>
   );

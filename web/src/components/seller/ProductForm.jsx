@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Sparkles, Loader2 } from 'lucide-react';
+import { Sparkles, Loader2, Cpu } from 'lucide-react';
 import { authedFetch } from '@/lib/client';
 import { getCategories } from '@/lib/api';
 import { Button } from '@/components/ui/button';
@@ -110,6 +110,9 @@ export default function ProductForm({ productId, copyFromId }) {
   const [categories, setCategories] = useState([]);
   const [state, setState] = useState({ status: 'loading' });
   const [keywords, setKeywords] = useState('');
+  // Which model writes: 'auto' (Gemini, nano behind it), 'gemini', 'nano'. The
+  // same rule as the photo tools - the seller always sees who is doing the work.
+  const [textModel, setTextModel] = useState('auto');
   const [ai, setAi] = useState({ status: 'idle' });
   const [usage, setUsage] = useState(null);
 
@@ -182,6 +185,7 @@ export default function ProductForm({ productId, copyFromId }) {
         categoryId: form.category || undefined,
         ...(first?.kind === 'existing' ? { imageUrl: first.src } : {}),
         ...(first?.kind === 'new' ? { imageDataUrl: first.src } : {}),
+        textModel,
       };
       const { draft, warnings, usage: u, writtenBy } = await authedFetch('/seller/ai/listing', { method: 'POST', body });
       setForm((f) => ({
@@ -308,6 +312,35 @@ export default function ProductForm({ productId, copyFromId }) {
             placeholder="kundan, bridal, green stone · or: cotton kurti, block print, summer"
             className="mt-1.5 bg-background"
           />
+          {/* WHICH MODEL WRITES - the same chip idea as the photo tools: the
+              choice, and what is left today, in the same place as the action. */}
+          <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+            <Cpu className="size-3.5 text-muted-foreground" />
+            <span className="text-muted-foreground">Writer:</span>
+            <Select
+              items={{
+                auto: 'Automatic - Gemini, nano as backup',
+                gemini: 'Gemini 3.5 Flash',
+                nano: 'gpt-5.4-nano (Pollinations)',
+              }}
+              value={textModel}
+              onValueChange={setTextModel}
+            >
+              <SelectTrigger className="h-7 min-w-52 text-xs" aria-label="Which model writes the listing">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="auto">Automatic - Gemini, nano as backup</SelectItem>
+                <SelectItem value="gemini">Gemini 3.5 Flash - best copy, daily quota</SelectItem>
+                <SelectItem value="nano">gpt-5.4-nano (Pollinations) - always on, plainer</SelectItem>
+              </SelectContent>
+            </Select>
+            {usage && (
+              <span className="text-muted-foreground">
+                {usage.remaining.texts === null || usage.remaining.texts === undefined ? '∞' : usage.remaining.texts} drafts left today
+              </span>
+            )}
+          </div>
           {ai.status === 'done' && (
             <p className="mt-2 text-sm text-brand-ink">
               Filled in below. Read it, change what is wrong, then save.

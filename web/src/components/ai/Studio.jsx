@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { ImagePlus, Loader2, Sparkles, ArrowRight, Infinity as InfinityIcon, RefreshCw, ShieldCheck, Check, Download, X, PackagePlus } from 'lucide-react';
 import { authedFetch } from '@/lib/client';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import ModelChip from '@/components/ai/ModelChip';
 import AttachToProduct from '@/components/ai/AttachToProduct';
 import { toast } from 'sonner';
@@ -488,7 +489,7 @@ export default function Studio({ base = '/seller' }) {
               ))}
             </dl>
           ) : (
-            <p className="mt-2 text-sm text-muted-foreground">Loading…</p>
+            <div className="skeleton-in mt-2 space-y-2" aria-busy="true"><Skeleton className="h-4 w-32" /><Skeleton className="h-4 w-24" /></div>
           )}
           {catalog?.canToggleLimits && (
             <Button

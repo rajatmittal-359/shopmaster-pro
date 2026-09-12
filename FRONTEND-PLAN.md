@@ -1196,6 +1196,32 @@ cancellations never reach it.
 dashboard line and the admin's list, so both quote the same figure against
 the same review line. 930 tests.
 
+### 4.27 The seller panel, Shopify-shaped: five names, AI inside the work
+
+12 Sep 2026. Rajat, looking at his own panel: *"bahut confusing UI hai seller
+ke liye… AI Studio koi alag cheez lagta hai, idhar product management laga
+hai… bade log aise nahi karte honge."* He was right. Gate: seller recruitment.
+
+**References.** Shopify admin: Home · Orders · Products · Customers ·
+Finances · Settings, and Shopify Magic is a button inside the product editor,
+never a page. Seller Central: Catalog · Inventory · Orders · Payments ·
+Performance; "Generate listing content" lives inside Add a Product. Meesho:
+Orders · Catalog · Payments · Returns. All three call the money page
+**Payments**; none has an "AI" item or a "Records" group.
+
+**Built (Option A, his pick).** Sidebar is five nouns, no group labels:
+**Home · Orders · Products · Payments · Settings**. *Products* has its own
+tabs — **All products · Photo studio · Stock history** — so the AI studio is
+where products are, not a place to go. Old addresses (`/seller/ai`,
+`/seller/inventory`, `/seller/earnings`) redirect. **The model is visible
+wherever AI works**: the Studio bar, the photo edits in the form, and now
+**Write it for me** has a writer chip (Automatic → Gemini with nano behind it
+· Gemini · gpt-5.4-nano) with the day's remaining drafts, and the result says
+who wrote it. Home's **setup guide is the whole road**, numbered: Agreement →
+pickup address → bank account → first product → share the shop link, each
+step opening its page and ticking itself; under it one line, "how selling
+works here", linked to the agreement.
+
 ---
 
 ## 5. Structured data

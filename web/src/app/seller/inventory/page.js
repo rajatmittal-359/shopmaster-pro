@@ -1,12 +1,6 @@
-import LogTable from '@/components/inventory/LogTable';
+import { redirect } from 'next/navigation';
 
-export const metadata = { title: 'Stock history' };
-
-export default function SellerInventoryPage() {
-  return (
-    <>
-      <h1 className="mb-6 text-2xl font-semibold tracking-tight">Stock history</h1>
-      <LogTable />
-    </>
-  );
+// Moved on 12 Sep 2026 (plan §4.27). Old bookmarks and links land in the right place.
+export default function Moved() {
+  redirect('/seller/products/stock');
 }

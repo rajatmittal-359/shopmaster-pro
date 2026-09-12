@@ -35,6 +35,21 @@ const WAITING = ['pending', 'processing'];
 export default function SellerDashboard() {
   const [data, setData] = useState(null);
   const [state, setState] = useState({ status: 'loading' });
+  // "Share your shop" is done when they copied the link once. Local, per
+  // browser - it is a nudge, not a record.
+  const [shared, setShared] = useState(() => {
+    try {
+      return typeof window !== 'undefined' && localStorage.getItem('smp_shop_shared') === '1';
+    } catch {
+      return false;
+    }
+  });
+  const markShared = () => {
+    setShared(true);
+    try {
+      localStorage.setItem('smp_shop_shared', '1');
+    } catch {}
+  };
 
   // Fetching and showing are kept apart so the effect only subscribes to a
   // promise - the lint rule (and React) object to setState called straight
@@ -93,20 +108,23 @@ export default function SellerDashboard() {
     );
   }
 
-  const { analytics, lowStock, waiting, settings } = data;
+  const { analytics, lowStock, waiting, settings, bankSet } = data;
   const productsTotal = analytics?.products?.total || 0;
   const pickupSet = Boolean(settings.pickupAddress?.pincode);
-  const setupDone = productsTotal > 0 && pickupSet;
+  const agreed = Boolean(settings.agreement?.upToDate);
+  const setupDone = agreed && pickupSet && bankSet && productsTotal > 0 && shared;
 
   const cards = [
     { icon: Package, label: 'To pack', value: waiting.length, href: '/seller/orders?tab=pack', note: 'Orders waiting on you' },
     { icon: Tag, label: 'Products live', value: analytics?.products?.active ?? 0, href: '/seller/products', note: `${productsTotal} in total` },
-    { icon: IndianRupee, label: 'Earned so far', value: money(analytics?.revenue), href: '/seller/earnings', note: 'Paid orders, your lines only' },
+    { icon: IndianRupee, label: 'Earned so far', value: money(analytics?.revenue), href: '/seller/payments', note: 'Paid orders, your lines only' },
   ];
 
   return (
     <div className="space-y-6">
-      {!setupDone && <SetupGuide productsTotal={productsTotal} pickupSet={pickupSet} />}
+      {!setupDone && (
+        <SetupGuide agreed={agreed} pickupSet={pickupSet} bankSet={bankSet} productsTotal={productsTotal} shared={shared} onShared={markShared} />
+      )}
 
       <div className="grid grid-cols-3 gap-3 sm:gap-4">
         {cards.map(({ icon: Icon, label, value, href, note }) => (
@@ -222,8 +240,15 @@ export default function SellerDashboard() {
  * Shopify's setup guide, at our size: the two things a shop cannot sell
  * without. It goes away on its own once both are done.
  */
-function SetupGuide({ productsTotal, pickupSet }) {
+function SetupGuide({ agreed, pickupSet, bankSet, productsTotal, shared, onShared }) {
   const steps = [
+    {
+      done: agreed,
+      title: 'Read and accept the Seller Agreement',
+      body: 'The rules every shop here sells by - dispatch, cancellations, returns, payouts. Two minutes.',
+      href: '/seller/settings',
+      cta: 'Open settings',
+    },
     {
       done: pickupSet,
       title: 'Tell the courier where to collect',
@@ -232,42 +257,78 @@ function SetupGuide({ productsTotal, pickupSet }) {
       cta: 'Set the address',
     },
     {
+      done: bankSet,
+      title: 'Add the bank account payouts go to',
+      body: 'Released 7 days after each delivery, once the return window has closed.',
+      href: '/seller/payments',
+      cta: 'Add the account',
+    },
+    {
       done: productsTotal > 0,
       title: 'List your first product',
       body: 'One photo is enough to start - the AI can write the listing and clean the picture.',
       href: '/seller/products/new',
       cta: 'Add a product',
     },
+    {
+      done: shared,
+      title: 'Share your shop',
+      body: 'Your first customers are people who already know you. Send them the link.',
+      action: 'share',
+      cta: 'Copy the shop link',
+    },
   ];
   const left = steps.filter((s) => !s.done).length;
 
+  const copyLink = async () => {
+    const url = `${window.location.origin}/shop`;
+    try {
+      await navigator.clipboard.writeText(url);
+    } catch {}
+    onShared();
+  };
+
   return (
-    <PanelCard title="Set up your shop" lead={`${left} of ${steps.length} left to do.`}>
+    <PanelCard title="Set up your shop" lead={`${left} of ${steps.length} left. In this order, and you are selling.`}>
       <ol className="divide-y">
-        {steps.map((step) => (
+        {steps.map((step, i) => (
           <li key={step.title} className="flex items-start gap-3 py-3">
             <span
-              className={`mt-0.5 grid size-5 shrink-0 place-items-center rounded-full border ${
-                step.done ? 'border-primary bg-primary text-primary-foreground' : 'border-border'
+              className={`mt-0.5 grid size-5 shrink-0 place-items-center rounded-full border text-[11px] tabular-nums ${
+                step.done ? 'border-primary bg-primary text-primary-foreground' : 'border-border text-muted-foreground'
               }`}
               aria-hidden
             >
-              {step.done && <Check className="size-3" />}
+              {step.done ? <Check className="size-3" /> : i + 1}
             </span>
             <div className="min-w-0 flex-1">
               <p className={`text-sm font-medium ${step.done ? 'text-muted-foreground line-through' : ''}`}>{step.title}</p>
               {!step.done && (
                 <>
                   <p className="mt-0.5 text-sm text-muted-foreground">{step.body}</p>
-                  <Button size="sm" className="mt-3" nativeButton={false} render={<Link href={step.href} />}>
-                    {step.cta}
-                  </Button>
+                  {step.action === 'share' ? (
+                    <Button size="sm" className="mt-3" variant="outline" onClick={copyLink}>
+                      {step.cta}
+                    </Button>
+                  ) : (
+                    <Button size="sm" className="mt-3" nativeButton={false} render={<Link href={step.href} />}>
+                      {step.cta}
+                    </Button>
+                  )}
                 </>
               )}
             </div>
           </li>
         ))}
       </ol>
+      <p className="mt-4 text-xs text-muted-foreground">
+        How selling works here: list → a customer pays → you pack and book the courier from Orders → delivered →
+        paid to your bank 7 days later.{' '}
+        <Link href="/selling-policy" target="_blank" rel="noopener" className="text-brand-ink hover:underline">
+          The full rules
+        </Link>
+        .
+      </p>
     </PanelCard>
   );
 }

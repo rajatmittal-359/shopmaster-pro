@@ -1,15 +1,6 @@
-import Studio from '@/components/ai/Studio';
+import { redirect } from 'next/navigation';
 
-export const metadata = { title: 'AI Studio' };
-
-export default function SellerAiStudioPage() {
-  return (
-    <>
-      <h1 className="text-2xl font-semibold tracking-tight">AI Studio</h1>
-      <p className="mt-1 mb-6 text-sm text-muted-foreground">
-        Drop a product photo, say what you want, pick a model - the limits are written on the chip.
-      </p>
-      <Studio base="/seller" />
-    </>
-  );
+// Moved on 12 Sep 2026 (plan §4.27). Old bookmarks and links land in the right place.
+export default function Moved() {
+  redirect('/seller/products/studio');
 }

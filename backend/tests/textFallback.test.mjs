@@ -74,3 +74,25 @@ describe('generate falls back', () => {
     expect(globalThis.fetch).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('the chip names the road', () => {
+  it("'nano' goes straight to Pollinations without asking Gemini", async () => {
+    const { generate } = require('../utils/gemini');
+    const calls = [];
+    globalThis.fetch = vi.fn(async (url) => {
+      calls.push(String(url));
+      return jsonResponse(200, { choices: [{ message: { content: 'hi' } }] });
+    });
+    const out = await generate('Write it', { textModel: 'nano' });
+    expect(out.provider).toBe('pollinations');
+    expect(calls.every((u) => u.includes('pollinations'))).toBe(true);
+  });
+
+  it("'gemini' never falls back, even on quota", async () => {
+    const { generate } = require('../utils/gemini');
+    globalThis.fetch = vi.fn(async () => jsonResponse(429, { error: { message: 'quota' } }));
+    const out = await generate('Write it', { textModel: 'gemini', attempts: 1 });
+    expect(out.ok).toBe(false);
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+  });
+});
