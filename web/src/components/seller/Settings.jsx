@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { toast } from 'sonner';
 import { authedFetch } from '@/lib/client';
 import { Button } from '@/components/ui/button';
@@ -131,6 +132,27 @@ export default function SellerSettings() {
           <div>
             <dt className="text-muted-foreground">Who can change it</dt>
             <dd className="mt-0.5 font-medium">Only an admin</dd>
+          </div>
+          {/* The rules this shop agreed to, and when - findable from inside the
+              panel, as Shopify keeps policies under Settings. */}
+          <div className="sm:col-span-2">
+            <dt className="text-muted-foreground">Seller Agreement</dt>
+            <dd className="mt-0.5 font-medium">
+              {settings.agreement?.version ? (
+                <>
+                  Version {settings.agreement.version}
+                  {settings.agreement.acceptedAt
+                    ? `, accepted on ${new Date(settings.agreement.acceptedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}`
+                    : ''}
+                </>
+              ) : (
+                'Not accepted yet'
+              )}
+              {' · '}
+              <Link href="/selling-policy" target="_blank" rel="noopener" className="font-normal text-brand-ink hover:underline">
+                Read it
+              </Link>
+            </dd>
           </div>
         </dl>
       </PanelCard>
