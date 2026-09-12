@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import PhotoCropper from '@/components/seller/PhotoCropper';
+import { toast } from 'sonner';
 
 /**
  * The photographs on a product: adding, ordering, cropping, improving.
@@ -172,7 +173,21 @@ export default function MediaManager({ photos, onChange, productName, onUsage, o
     onChange(next);
   };
 
-  const remove = (index) => onChange(photos.filter((_, i) => i !== index));
+  /*
+   * Removing a photo is UNDOABLE rather than confirmed. A confirm on every
+   * removal is the kind people click through; an Undo that sits there for
+   * eight seconds catches the slip without slowing the deliberate one. The
+   * form itself is not saved until "Save changes", so this is one layer of
+   * safety on top of another.
+   */
+  const remove = (index) => {
+    const before = photos;
+    onChange(photos.filter((_, i) => i !== index));
+    toast(`Photo ${index + 1} removed`, {
+      duration: 8000,
+      action: { label: 'Undo', onClick: () => onChange(before) },
+    });
+  };
 
   const improve = async (index, mode, wish) => {
     const photo = photos[index];
@@ -209,9 +224,15 @@ export default function MediaManager({ photos, onChange, productName, onUsage, o
   };
 
   const accept = (asFirst) => {
+    const before = photos;
     const item = { src: preview.url, kind: 'existing' };
     onChange(asFirst ? [item, ...photos] : [...photos, item]);
     setPreview(null);
+    toast(asFirst ? 'AI photo is now the main photo' : 'AI photo added to the gallery', {
+      description: 'Nothing is saved until you press Save changes.',
+      duration: 8000,
+      action: { label: 'Undo', onClick: () => onChange(before) },
+    });
   };
 
   return (
@@ -512,10 +533,13 @@ export default function MediaManager({ photos, onChange, productName, onUsage, o
           if (err) onError(err.message);
         }}
         onDone={(dataUrl) => {
+          const before = photos;
           const next = [...photos];
           next[cropping] = { src: dataUrl, kind: 'new' };
           onChange(next);
           setCropping(null);
+          // A crop replaces the photo in the slot. The original is one Undo away.
+          toast('Cropped', { duration: 8000, action: { label: 'Undo', onClick: () => onChange(before) } });
         }}
       />
     </div>

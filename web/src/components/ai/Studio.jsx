@@ -7,6 +7,15 @@ import { ImagePlus, Loader2, Sparkles, ArrowRight, Infinity as InfinityIcon, Ref
 import { authedFetch } from '@/lib/client';
 import { Button } from '@/components/ui/button';
 import ModelChip from '@/components/ai/ModelChip';
+import { toast } from 'sonner';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 /**
  * AI Studio - the workspace.
@@ -34,6 +43,21 @@ import ModelChip from '@/components/ai/ModelChip';
  *     and the exempt account's toggle to live under seller limits.
  *   - A strip of today's results underneath. Any of them can be sent to a
  *     product or downloaded.
+ *
+ * WHERE IT ASKS, AND WHERE IT UNDOES
+ *   Rajat's rule: nothing here should be lost to a slipped click. The
+ *   research (NN/g on confirmations) says ask ONLY for the actions that cost
+ *   something or cannot be reversed - ask everywhere and people stop reading.
+ *   So:
+ *     Make            asks, and says what it will spend: "Kontext pro - 1 of
+ *                     15 left today". A confirm that names the cost is one
+ *                     people actually read.
+ *     Remove photo    does not ask. It undoes: the photo is gone from the
+ *     Replace source  canvas, a toast offers Undo for eight seconds, and the
+ *                     result is kept until the undo window closes.
+ *     Download, open  neither - they change nothing.
+ *   The confirm can be silenced for the session ("don't ask again today"),
+ *   because the admin doing forty in a row should not click eighty times.
  */
 const ACTIONS = [
   { key: 'clean', label: 'White background', hint: 'Listing-ready. Amazon wants this for the main photo.' },
@@ -90,7 +114,10 @@ export default function Studio({ base = '/seller' }) {
   const [history, setHistory] = useState([]);
   const [error, setError] = useState('');
   const [pickOpen, setPickOpen] = useState(false);
+  const [confirm, setConfirm] = useState(null); // { model, remaining } while the ask is open
+  const [skipConfirm, setSkipConfirm] = useState(false);
   const inputRef = useRef(null);
+  const undoRef = useRef(null); // the last removed { source, result }
 
   const loadCatalog = () => authedFetch(`${base}/ai/catalog`).then(setCatalog).catch((e) => setError(e.message));
 
@@ -119,11 +146,29 @@ export default function Studio({ base = '/seller' }) {
     }
   };
 
-  const make = async () => {
+  /** What the next Make will spend, in words - shown in the confirm. */
+  const costLine = () => {
+    if (modelId === 'auto') {
+      const first = editModels.find((m) => m.available);
+      return first
+        ? `Automatic - most likely ${first.label} (${first.unlimited ? 'unlimited' : `${first.remaining} left today`})`
+        : 'Automatic';
+    }
+    const m = editModels.find((x) => x.id === modelId);
+    return m ? `${m.label} - ${m.unlimited ? 'unlimited' : `1 of ${m.remaining} left today`}` : modelId;
+  };
+
+  const make = () => {
     if (!source) return setError('Add a photo first.');
     if (action === 'custom' && !wish.trim()) return setError('Describe the picture you want.');
-    setBusy(true);
     setError('');
+    if (skipConfirm) return run();
+    setConfirm({ line: costLine() });
+  };
+
+  const run = async () => {
+    setConfirm(null);
+    setBusy(true);
     try {
       /*
        * How action + style + words become one request:
@@ -154,11 +199,34 @@ export default function Studio({ base = '/seller' }) {
       setResult(item);
       setHistory((h) => [item, ...h].slice(0, 12));
       loadCatalog();
+      toast.success(`Made with ${r.modelLabel}`, { description: `${r.providerLabel} · ${r.quality} quality` });
     } catch (e) {
       setError(e.message);
     } finally {
       setBusy(false);
     }
+  };
+
+  /**
+   * Removing or replacing the source is undoable, not confirmed. The canvas
+   * clears at once; a toast holds the way back for eight seconds.
+   */
+  const removeSource = (replacement = null) => {
+    undoRef.current = { source, result };
+    setSource(replacement);
+    setResult(null);
+    toast(replacement ? 'Result is now the source' : 'Photo removed', {
+      duration: 8000,
+      action: {
+        label: 'Undo',
+        onClick: () => {
+          if (!undoRef.current) return;
+          setSource(undoRef.current.source);
+          setResult(undoRef.current.result);
+          undoRef.current = null;
+        },
+      },
+    });
   };
 
   return (
@@ -182,10 +250,7 @@ export default function Studio({ base = '/seller' }) {
                 <Image src={source.src} alt="" fill unoptimized priority className="object-contain" sizes="50vw" />
                 <button
                   type="button"
-                  onClick={() => {
-                    setSource(null);
-                    setResult(null);
-                  }}
+                  onClick={() => removeSource(null)}
                   aria-label="Remove photo"
                   className="absolute top-2 right-2 rounded-full bg-black/60 p-1.5 text-white hover:bg-black/80"
                 >
@@ -346,7 +411,7 @@ export default function Studio({ base = '/seller' }) {
             </a>
             <button
               type="button"
-              onClick={() => setSource({ src: result.url, kind: 'existing', name: source?.name || 'product' })}
+              onClick={() => removeSource({ src: result.url, kind: 'existing', name: source?.name || 'product' })}
               className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 hover:bg-accent"
             >
               <RefreshCw className="size-4" /> Use as new source
@@ -414,6 +479,9 @@ export default function Studio({ base = '/seller' }) {
                 try {
                   const r = await authedFetch(`${base}/ai/limits`, { method: 'PATCH', body: { likeSeller: !catalog.limitsLikeSeller } });
                   setCatalog((c) => ({ ...c, limitsLikeSeller: r.limitsLikeSeller, usage: r.usage }));
+                  toast(r.limitsLikeSeller ? 'Seller limits are on for you' : 'Seller limits are off - you are uncapped', {
+                    description: r.limitsLikeSeller ? '20 photos, 2 premium, 60 drafts a day.' : 'Use as much as the providers allow.',
+                  });
                 } catch (e) {
                   setError(e.message);
                 }
@@ -442,6 +510,38 @@ export default function Studio({ base = '/seller' }) {
           </Link>
         </div>
       </aside>
+
+      {/* THE ASK before spending. Names the model and what is left, so the
+          click that follows is an informed one. */}
+      <Dialog open={Boolean(confirm)} onOpenChange={(o) => !o && setConfirm(null)}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Make this picture?</DialogTitle>
+            <DialogDescription>
+              {ACTIONS.find((a) => a.key === action)?.label}
+              {style !== 'none' ? ` · ${STYLES.find((s) => s.key === style)?.label}` : ''}
+              {action === 'custom' && wish.trim() ? ` · “${wish.trim().slice(0, 80)}${wish.trim().length > 80 ? '…' : ''}”` : ''}
+            </DialogDescription>
+          </DialogHeader>
+          <p className="rounded-lg bg-muted/60 px-3 py-2 text-sm">
+            <Sparkles className="mr-1.5 inline size-4 text-brand-ink" />
+            {confirm?.line}
+          </p>
+          <label className="flex items-center gap-2 text-xs text-muted-foreground">
+            <input type="checkbox" className="size-3.5 accent-primary" onChange={(e) => setSkipConfirm(e.target.checked)} />
+            Don&rsquo;t ask again while I&rsquo;m on this page
+          </label>
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={() => setConfirm(null)}>
+              Cancel
+            </Button>
+            <Button type="button" onClick={run}>
+              <Sparkles className="size-4" />
+              Make it
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

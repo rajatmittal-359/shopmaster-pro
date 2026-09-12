@@ -4,6 +4,7 @@ import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import { BUSINESS } from '@/config/policy';
 import ThemeProvider from '@/components/theme/ThemeProvider';
+import { Toaster } from '@/components/ui/sonner';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -63,6 +64,9 @@ export default function RootLayout({ children }) {
           {/* flex-1 so a short page still pushes the footer to the bottom. */}
           <main className="flex-1">{children}</main>
           <Footer />
+          {/* One toaster for the whole site: undo after a removal, a word after
+              a save. Bottom-right, out of the way of the sticky buy bar. */}
+          <Toaster position="bottom-right" richColors closeButton />
         </ThemeProvider>
       </body>
     </html>
