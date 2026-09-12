@@ -87,6 +87,7 @@ const ai = require('../controllers/aiController');
 router.get('/ai/usage', ai.adminUsage);
 router.get('/ai/catalog', ai.getCatalog);
 router.patch('/ai/limits', ai.setLimits);
+router.get('/search/queries', require('../controllers/searchInsightsController').adminQueries);
 router.post('/ai/listing', ai.writeListing);
 router.post('/ai/refine', ai.refineText);
 // Banners and category art from words - the one image mode sellers do not get.

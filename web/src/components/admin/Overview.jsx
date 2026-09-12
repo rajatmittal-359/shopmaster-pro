@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { authedFetch } from '@/lib/client';
 import { Skeleton } from '@/components/ui/skeleton';
+import SearchQueries from '@/components/admin/SearchQueries';
 
 /**
  * The platform at a glance.
@@ -130,6 +131,8 @@ export default function Overview() {
           </ul>
         </section>
       )}
+
+      <SearchQueries base="/admin" days={90} />
 
       <p className="text-sm text-muted-foreground">
         Anything waiting on you is in{' '}
