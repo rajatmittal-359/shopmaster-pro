@@ -309,7 +309,13 @@ export default function OrderDetail({ orderId }) {
                 {parcel.returnStage === 'received' && (
                   <p className="mt-1 text-muted-foreground">
                     {parcel.returnResolution === 'replacement'
-                      ? 'The replacement is on its way, delivered free.'
+                      ? {
+                          // Say where the replacement actually is - "on its way"
+                          // before it has shipped was the seed data's first catch.
+                          due: 'We have your item back. The seller is packing the replacement - it ships within 2 working days, delivered free.',
+                          shipped: 'The replacement is on its way, delivered free. Its tracking appears below once the courier scans it.',
+                          delivered: 'The replacement was delivered.',
+                        }[parcel.replacementStage] || 'We have your item back; the replacement follows, delivered free.'
                       : `Your refund goes back the way you paid, within ${REFUND_DAYS}.`}
                   </p>
                 )}

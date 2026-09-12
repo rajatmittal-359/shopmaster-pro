@@ -102,12 +102,24 @@ export default function ShipmentTimeline({ order, fulfilment }) {
           we do not compute one here, because a date we invented is a promise
           nobody made. */}
       {parcel.expectedDeliveryAt && parcel.status !== 'delivered' && !stopped && (
-        <p className="text-sm">
-          Arriving by <strong>{onDay(parcel.expectedDeliveryAt)}</strong>
-          <span className="block text-xs text-muted-foreground">
-            The courier&rsquo;s own estimate, updated with every scan.
-          </span>
-        </p>
+        new Date(parcel.expectedDeliveryAt) < new Date() ? (
+          /* A date that has passed is not "arriving by" - it is late, and
+             saying so is the difference between a customer who waits and one
+             who thinks nobody noticed. Amazon's wording. */
+          <p className="text-sm">
+            <strong className="text-amber-700 dark:text-amber-300">Running late</strong> - was due {onDay(parcel.expectedDeliveryAt)}.
+            <span className="block text-xs text-muted-foreground">
+              The courier is still moving it; the newest scan below is the truth. If nothing changes for two days, use <em>Something&rsquo;s wrong</em>.
+            </span>
+          </p>
+        ) : (
+          <p className="text-sm">
+            Arriving by <strong>{onDay(parcel.expectedDeliveryAt)}</strong>
+            <span className="block text-xs text-muted-foreground">
+              The courier&rsquo;s own estimate, updated with every scan.
+            </span>
+          </p>
+        )
       )}
 
       {/* How far along. Hidden once an order is cancelled or returned, where a
