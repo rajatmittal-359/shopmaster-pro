@@ -78,3 +78,5 @@ awesome-design-md/
 # Local-only folders (12 Sep 2026): credentials and superseded working documents
 private/
 docs/archive/
+claude-code-owasp/
+mongodb-expert-skill/

@@ -21,6 +21,8 @@ it sells anything, and nothing in the frame may name a category.
 | `FRONTEND-PLAN.md` | Why every page looks the way it does — the references, the decisions, the reasons. §13 is the progress table | A page is built or a decision is made |
 | `web/DESIGN.md` | Tokens and rules of the visual system. Hand it to any tool or person before they touch a page | A token or rule changes |
 | `.claude/skills/redesign/` | **`/redesign`** — the project's own skill: a page's screenshot → checklist + live references + judgment + Rajat's note → options → his pick → build. Its `checklist.md` is the distilled audit | A rule proves itself or fails in practice |
+| `.claude/skills/backend/` | **`/backend`** — same shape for the API: house rules (server decides, money per seller, nothing refunds immediately) + OWASP/TDD/silent-failure checklist + how Stripe/Shopify/Razorpay state the rule → options → his pick → failing test first | Same |
+| `.claude/skills/database/` | **`/database`** — access pattern → embed/reference → ESR index → `explain()` before/after → reversible script. §0 holds this schema's truths and the live index list — keep it true | An index or collection is added |
 | `README.md` | The front door for a stranger | Rarely |
 | `docs/archive/` (gitignored) | The 5 Sep gap analyses. Superseded by the plan; kept for the record | Never |
 | `private/` (gitignored) | Test credentials, Brevo domain notes, the Google client secret. Never commit, never print | — |
@@ -45,6 +47,15 @@ it sells anything, and nothing in the frame may name a category.
    polish. Raise once, then drop it.
 8. **Answers go in the chat**, not into new `.md` files, unless a document is
    the deliverable.
+
+## Installed help (Rajat installs; Claude uses)
+
+`superpowers` (TDD, systematic-debugging, verification), `security-guidance`
+(watches every edit and commit), `pr-review-toolkit` (`silent-failure-hunter`
+on money/error diffs), `mongodb-atlas` (schema/optimizer skills + read-only MCP
+once authorised via `/mcp`), `context7` (live Express 5 / Mongoose 9 docs),
+`ui-ux-pro-max` and `taste-skill` (frontend). Local clones, gitignored:
+`awesome-design-md/`, `claude-code-owasp/`, `mongodb-expert-skill/`.
 
 ## Things that bite
 
