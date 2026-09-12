@@ -16,9 +16,9 @@ bearertoken.txt
 *.tok
 
 # Local tooling
-# Local Claude settings stay out; the project's own skills are part of the repo
+# Local Claude settings stay out; the project's rules for the user-level skills are part of the repo
 .claude/*
-!.claude/skills/
+!.claude/project-rules/
 
 # Build outputs
 dist/
@@ -73,10 +73,7 @@ backend/drafted-descriptions.json
 !web/src/app/apple-icon.png
 
 # Reference clone, read for its DESIGN.md format - not part of the project
-awesome-design-md/
 
 # Local-only folders (12 Sep 2026): credentials and superseded working documents
 private/
 docs/archive/
-claude-code-owasp/
-mongodb-expert-skill/

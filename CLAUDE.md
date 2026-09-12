@@ -20,9 +20,7 @@ it sells anything, and nothing in the frame may name a category.
 | `OPS-AND-MANUAL-ACTIONS.md` (gitignored) | Everything outside the code: accounts, DNS, courier, payments, and **Rajat's own checklist** — the list at the top is the current one | A dashboard fact changes or Rajat ticks a box |
 | `FRONTEND-PLAN.md` | Why every page looks the way it does — the references, the decisions, the reasons. §13 is the progress table | A page is built or a decision is made |
 | `web/DESIGN.md` | Tokens and rules of the visual system. Hand it to any tool or person before they touch a page | A token or rule changes |
-| `.claude/skills/redesign/` | **`/redesign`** — the project's own skill: a page's screenshot → checklist + live references + judgment + Rajat's note → options → his pick → build. Its `checklist.md` is the distilled audit | A rule proves itself or fails in practice |
-| `.claude/skills/backend/` | **`/backend`** — same shape for the API: house rules (server decides, money per seller, nothing refunds immediately) + OWASP/TDD/silent-failure checklist + how Stripe/Shopify/Razorpay state the rule → options → his pick → failing test first | Same |
-| `.claude/skills/database/` | **`/database`** — access pattern → embed/reference → ESR index → `explain()` before/after → reversible script. §0 holds this schema's truths and the live index list — keep it true | An index or collection is added |
+| `.claude/project-rules/{frontend,backend,database}.md` | **What the three skills read first**: goals for the gate, house rules, schema truths + live index list, conventions and file names. The skills themselves (`/frontend`, `/backend`, `/database`) are user-level in `~/.claude/skills/` so they work in every project; these files are what makes them *this* project's | A rule, index, helper or goal changes |
 | `README.md` | The front door for a stranger | Rarely |
 | `docs/archive/` (gitignored) | The 5 Sep gap analyses. Superseded by the plan; kept for the record | Never |
 | `private/` (gitignored) | Test credentials, Brevo domain notes, the Google client secret. Never commit, never print | — |
@@ -54,8 +52,9 @@ it sells anything, and nothing in the frame may name a category.
 (watches every edit and commit), `pr-review-toolkit` (`silent-failure-hunter`
 on money/error diffs), `mongodb-atlas` (schema/optimizer skills + read-only MCP
 once authorised via `/mcp`), `context7` (live Express 5 / Mongoose 9 docs),
-`ui-ux-pro-max` and `taste-skill` (frontend). Local clones, gitignored:
-`awesome-design-md/`, `claude-code-owasp/`, `mongodb-expert-skill/`.
+`ui-ux-pro-max` (frontend; its search script is called by `/frontend`).
+The three project skills live in `~/.claude/skills/{frontend,backend,database}`
+— generic method + checklist; each reads `.claude/project-rules/<name>.md` here.
 
 ## Things that bite
 
