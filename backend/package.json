@@ -12,7 +12,8 @@
     "seed:dry": "node seed.js --dry",
     "seed:reset": "node seed.js --reset",
     "sitemap": "node generateSitemap.js",
-    "images": "node addProductImages.js"
+    "images": "node addProductImages.js",
+    "backup": "node backupDb.js"
   },
   "keywords": [],
   "author": "",
