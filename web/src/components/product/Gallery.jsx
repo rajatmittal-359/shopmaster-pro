@@ -46,7 +46,17 @@ export default function Gallery({ images = [], video = null, name }) {
   return (
     <div>
       <div className="relative aspect-square w-full overflow-hidden rounded-xl bg-muted">
-        {current.kind === 'video' ? (
+        {current.kind === 'video' && current.youtubeId ? (
+          <iframe
+            key={current.youtubeId}
+            src={`https://www.youtube-nocookie.com/embed/${current.youtubeId}?rel=0&modestbranding=1&playsinline=1`}
+            title={`${name} - video`}
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+            loading="lazy"
+            className="h-full w-full bg-black"
+          />
+        ) : current.kind === 'video' ? (
           <video
             key={current.url}
             src={current.url}

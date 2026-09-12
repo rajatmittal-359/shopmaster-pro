@@ -37,6 +37,29 @@ export default function ContactPage() {
           ))}
           <span>({BUSINESS.landmark})</span>
         </address>
+        {/* The map, Google's keyless embed: no API key, no billing account,
+            no quota - the same iframe Google's own "Share → Embed a map"
+            hands out. A shop people can find on a map is one people trust. */}
+        <div className="mt-4 overflow-hidden rounded-xl border">
+          <iframe
+            title={`${BUSINESS.legalName} on the map`}
+            src={`https://maps.google.com/maps?q=${encodeURIComponent(`${BUSINESS.legalName}, ${BUSINESS.addressLines.join(', ')}`)}&z=16&output=embed`}
+            width="100%"
+            height="260"
+            loading="lazy"
+            referrerPolicy="no-referrer-when-downgrade"
+            allowFullScreen
+            className="block w-full"
+          />
+        </div>
+        <a
+          href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${BUSINESS.legalName}, ${BUSINESS.addressLines.join(', ')}`)}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-2 inline-block text-sm font-medium text-brand-ink hover:underline"
+        >
+          Get directions
+        </a>
       </Section>
 
       <Section title="Phone">

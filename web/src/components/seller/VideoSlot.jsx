@@ -1,10 +1,12 @@
 'use client';
 
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
 import { Film, Trash2, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { youtubeId } from '@/lib/youtube';
 
 /**
  * One short product video, optional.
@@ -59,7 +61,20 @@ export default function VideoSlot({ value, onChange }) {
     });
   };
 
+  const [link, setLink] = useState('');
+  const applyLink = () => {
+    const id = youtubeId(link);
+    if (!id) {
+      toast.error('That is not a YouTube video link. It should look like youtube.com/watch?v=… or youtu.be/…');
+      return;
+    }
+    onChange({ ...value, next: link.trim(), nextFile: null, youtubeId: id, removed: false });
+    setLink('');
+  };
+
   const showing = value.next ? 'new' : value.existing && !value.removed ? 'existing' : 'none';
+  const isLink = showing === 'new' ? Boolean(value.youtubeId) : Boolean(value.existing?.youtubeId);
+  const linkPoster = showing === 'new' && value.youtubeId ? `https://i.ytimg.com/vi/${value.youtubeId}/hqdefault.jpg` : null;
 
   return (
     <div className="mt-4 rounded-lg border border-dashed p-3">
@@ -75,6 +90,7 @@ export default function VideoSlot({ value, onChange }) {
       />
 
       {showing === 'none' && (
+        <>
         <button
           type="button"
           onClick={() => inputRef.current?.click()}
@@ -89,14 +105,36 @@ export default function VideoSlot({ value, onChange }) {
           </span>
           <Upload className="size-4 text-muted-foreground" />
         </button>
+        {/* Or a link: nothing to upload, no size limit, and a demo that already
+            lives on the seller's YouTube stays there. */}
+        <div className="mt-2 flex items-center gap-2 px-1">
+          <Input
+            value={link}
+            onChange={(e) => setLink(e.target.value)}
+            placeholder="or paste a YouTube link (youtube.com / youtu.be / Shorts)"
+            className="h-9 text-sm"
+            aria-label="YouTube link"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                applyLink();
+              }
+            }}
+          />
+          <Button type="button" size="sm" variant="outline" onClick={applyLink} disabled={!link.trim()}>
+            Use link
+          </Button>
+        </div>
+        </>
       )}
 
       {showing !== 'none' && (
         <div className="flex items-center gap-3">
           <span className="relative h-16 w-16 shrink-0 overflow-hidden rounded-md border bg-black">
-            {showing === 'new' && preview && (
+            {showing === 'new' && preview && !isLink && (
               <video src={preview} muted playsInline preload="metadata" className="h-full w-full object-cover" />
             )}
+            {linkPoster && <Image src={linkPoster} alt="" fill unoptimized className="object-cover" sizes="64px" />}
             {showing === 'existing' && value.existing.poster && (
               <Image src={value.existing.poster} alt="" fill unoptimized className="object-cover" sizes="64px" />
             )}
@@ -107,9 +145,9 @@ export default function VideoSlot({ value, onChange }) {
             </span>
           </span>
           <span className="min-w-0 flex-1 text-sm">
-            <span className="block font-medium">{showing === 'new' ? 'New video - uploads when you save' : 'Product video'}</span>
+            <span className="block font-medium">{showing === 'new' ? (isLink ? 'YouTube video - saved when you save' : 'New video - uploads when you save') : isLink ? 'YouTube video' : 'Product video'}</span>
             <span className="block text-xs text-muted-foreground">
-              {showing === 'new' ? value.nextFile?.name : 'Plays from the gallery with a tap.'}
+              {showing === 'new' ? (isLink ? value.next : value.nextFile?.name) : 'Plays from the gallery with a tap.'}
             </span>
           </span>
           <div className="flex shrink-0 gap-1">

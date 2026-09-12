@@ -294,6 +294,12 @@ exports.addProduct = async (req, res) => {
     if (typeof req.body.video === 'string' && req.body.video.startsWith('data:video/')) {
       const clip = await cloudinary.uploadVideo(req.body.video);
       product.video = clip;
+    } else if (typeof req.body.video === 'string' && req.body.video.trim()) {
+      // A YouTube link: nothing to store, nothing to pay for.
+      const { youtubeId, youtubeVideo } = require('../utils/youtube');
+      const id = youtubeId(req.body.video);
+      if (!id) return res.status(400).json({ message: 'That link is not a YouTube video. Paste a youtube.com or youtu.be link, or upload a clip.' });
+      product.video = youtubeVideo(id);
     }
 
     await product.save();
@@ -429,6 +435,12 @@ exports.updateProduct = async (req, res) => {
 
       if (typeof incoming === 'string' && incoming.startsWith('data:video/')) {
         product.video = await cloudinary.uploadVideo(incoming);
+        if (previousId) await cloudinary.deleteVideo(previousId);
+      } else if (typeof incoming === 'string' && incoming.trim()) {
+        const { youtubeId, youtubeVideo } = require('../utils/youtube');
+        const id = youtubeId(incoming);
+        if (!id) return res.status(400).json({ message: 'That link is not a YouTube video. Paste a youtube.com or youtu.be link, or upload a clip.' });
+        product.video = youtubeVideo(id);
         if (previousId) await cloudinary.deleteVideo(previousId);
       } else if (!incoming) {
         product.video = { url: null, publicId: null, poster: null, duration: null };

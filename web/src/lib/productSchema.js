@@ -93,6 +93,21 @@ export const productSchema = ({ product, url, price, was, inStock }) => {
     },
   };
 
+  // A product video is worth a VideoObject: it is what earns the video
+  // thumbnail in results, and Google reads the YouTube id straight from it.
+  if (product.video?.url) {
+    schema.video = {
+      '@type': 'VideoObject',
+      name: `${product.name} - video`,
+      description: schema.description || product.name,
+      thumbnailUrl: product.video.poster || undefined,
+      uploadDate: product.updatedAt || product.createdAt || undefined,
+      ...(product.video.youtubeId
+        ? { embedUrl: `https://www.youtube-nocookie.com/embed/${product.video.youtubeId}`, contentUrl: product.video.url }
+        : { contentUrl: product.video.url }),
+    };
+  }
+
   // Only when reviews genuinely exist. An aggregateRating with a count of zero
   // is a structured-data error, and an invented one is worse than an error.
   if (product.totalReviews > 0 && product.avgRating > 0) {

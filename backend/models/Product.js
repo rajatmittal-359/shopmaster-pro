@@ -175,6 +175,8 @@ const productSchema = new mongoose.Schema(
       publicId: { type: String, default: null },
       poster: { type: String, default: null },
       duration: { type: Number, default: null },
+      /** Set when the video is a YouTube link rather than an upload (utils/youtube). */
+      youtubeId: { type: String, default: null },
     },
 
     images: {
