@@ -14,6 +14,13 @@ Stage: three sellers, ~50 products, single-digit orders a day. Not Amazon.
 - Browser verification **only on Rajat's laptop, locally** (Playwright MCP against localhost). The Chrome extension is banned. Never log in for him.
 - No `npm install` from Claude; commit at milestones.
 
+## The feel Rajat wants (12 Sep 2026) - check every page against this
+- **Clean, clear, "sexy"**: one primary action per view, one-line leads, nothing the role does not need. If a page needs a paragraph to explain itself, the page is wrong.
+- **Per role**: customer (phone, wants the product and the price), seller (wants today's work and their money), admin (wants what needs a decision). Never show one role the other's chrome.
+- **Reassurance**: every risky moment says what happens next in one sentence (refund timing, what the rider brings, when payout lands). Numbers over adjectives.
+- **First-run guidance, every role**: the first visit gets a short coach-mark tour - 3 tooltips max, "Next / Got it", dismissible, remembered per role in localStorage (`smp_tour_<role>`), never shown twice. Shopify's first-visit tooltips are the reference. Sellers additionally get the wizard (`Onboarding.jsx`) and the setup strip with a percentage; nothing is rigid - "Do this later" everywhere except consent.
+- **Progress, not walls**: setup shows as a strip with a percentage on the dashboard, never as a page that replaces the dashboard for a trading shop.
+
 ## Where things are
 - Storefront: `web/src/app/*`, components under `web/src/components/{home,shop,product,cart,checkout,orders,account}`.
 - Seller panel: `/seller/*` — Home · Orders · Products (tabs: all / studio / stock) · Payments · Settings; `components/seller/*`, `ProductsNav`; admin: `/admin/*`, `components/admin/*`; shared panel chrome `components/panel/*` (`PanelShell`, `PageHeader`, `PanelCard`).

@@ -71,6 +71,10 @@ product word; 2 pages indexed, 8 not.
 | G10 | Cutover — the React app is why 8 pages are not indexed (client-rendered); Next renders them | — | October, Render card | already built | ☐ Oct |
 | — | Keyword Planner / Trends volume | needs Ads account + approval | not now | — | dropped |
 
+**First-run tour, per role** (customer · seller · admin): 3 coach marks on the
+first visit, dismissible, remembered per role. Shopify's first-visit tooltips.
+Small, after G5. ☐
+
 **Our own site search** (customer side): MongoDB **Atlas Search** — free on
 the current cluster, no new account: typo tolerance (jhumki/jhumka/झुमका),
 synonyms, autocomplete, relevance. Replaces the regex suggest; Gemini as an
