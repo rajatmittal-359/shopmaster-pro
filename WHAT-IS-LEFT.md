@@ -73,6 +73,10 @@ product word; 2 pages indexed, 8 not.
 | G12 | **Postmaster Tools** — Google's own view of whether our order emails (Brevo, shopmasterpro.in) land in Gmail inboxes or spam | ✅ | https://postmaster.google.com → add `shopmasterpro.in` → DNS TXT (Hostinger) | — (a dashboard fact for OPS) | ☐ |
 | G13 | **Google Alerts** — "ShopMaster Pro", "shopmasterpro.in", "Charming Jewels" Jaipur, daily to rajatmittal359 | ✅ | done 13 Sep | — | ✅ |
 | G14 | **Google for every seller, not just Charming Jewels.** On a marketplace the seller does NOT set Google up - the platform does it once (Amazon/Flipkart/Meesho: the seller only writes the listing). Google's structure for this (support.google.com/merchants/answer/14228975): a **Marketplace multi-client account** with a *marketplace-owned* sub-account (Charming Jewels, today's) and a *multi-seller* sub-account carrying every other seller's products with `external_seller_id` (answer/11537846). Apply when the first real third-party seller joins; until then `FEED_ALL_SELLERS=false` is right | ✅ | Merchant Center → apply for marketplace account (Google reviews it); rename to ShopMaster Pro | feed: `external_seller_id` + seller name per item; a seller-panel page "How your products reach Google" (what we do for them, the 5 things only they can do: GBP for their shop, reviews, photos, honest titles, stock) | ☐ at first third-party seller |
+| G15 | **Merchant API Reports** — per-product Shopping impressions/clicks (`reports.search`, productPerformanceView) | ✅ | — | seller Listing panel "Google showed this N times, M clicks"; admin Google page column | ☐ |
+| G16 | **Places Autocomplete (New)** on the checkout address — wrong addresses are the NDR/RTO the rulebook charges for; Amazon/Flipkart both autocomplete | 10k req/month | enable Places API (New) + website-restricted key; **needs a Cloud billing account even for the free tier - his card was refused before; if refused again, fall back to India Post pincode lookup + a better form** | suggestions + pincode/city/state fill | ☐ |
+| G17 | **Google One Tap** sign-in — one tap at the login wall, same OAuth client | ✅ | — | One Tap prompt on storefront for signed-out visitors | ☐ |
+| G18 | **reCAPTCHA v3** on register / login / coupon apply — bots arrive with real coupons | 10k/month | enable + site key, at launch | middleware + score threshold | ☐ launch |
 | G10 | Cutover — the React app is why 8 pages are not indexed (client-rendered); Next renders them | — | October, Render card | already built | ☐ Oct |
 | — | Keyword Planner / Trends volume | needs Ads account + approval | not now | — | dropped |
 
@@ -95,7 +99,8 @@ synonyms collection (jhumka/jhumki/झुमका), Gemini query → filters.
 
 ## 4. Ideas raised, not decided — do not start without a yes
 
-- Search by embeddings (the current suggest is word-boundary regex).
+- Google Cloud extras, each gated on a real need appearing: Vision SafeSearch to auto-moderate seller photos (1k/month free) when unknown sellers join · Speech-to-Text (60 min/month) or Groq Whisper for voice listing · Sheets API order export for the CA · Web push (FCM) for "shipped" · Google Wallet loyalty pass · photo-to-search via Gemini vision + Atlas Search.
+- Search by embeddings (Atlas Search now covers typos/prefix; embeddings only if semantic misses show up).
 - Voice input for the AI listing (Groq or Cloudflare Whisper).
 - Text fallback when Gemini's quota is out — Pollinations serves free text models (`gpt-5.4-nano`, `deepseek-v4-flash-vision`, `glm-5.3-flash`).
 - Real 3D product views (Tripo3D) — "3D later" was Rajat's phrase.
