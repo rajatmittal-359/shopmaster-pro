@@ -48,6 +48,30 @@ in section 0 below and outranks all of it.
 10. **Every behaviour has a WHY block** above it — what it replaced and why.
     Match that voice.
 
+## Gate — the business goal, before any option
+
+Rajat, 12 Sep 2026: *"business goal samjhe bina aur research kare bina approve
+nahi karna faltu cheezon ko."* So before voices A–D, answer in one line each:
+
+1. **Which goal does this serve?** The marketplace has three (plan §2a):
+   **liquidity** — more buyers finding more of what the sellers we have
+   actually stock; **trust** — a stranger in Jaipur or Jhansi believing the
+   shop and the seller (reviews, verified purchase, honest status, honest
+   money); **seller recruitment** — the next shop in Jaipur choosing to list
+   here and being able to run its business from the panel. Plus the one
+   deadline: the **October cutover** with nothing the React app could do
+   missing.
+2. **What does the research say people at our stage do?** Not what Amazon
+   does at scale — what the references do that a three-seller,
+   single-digit-orders-a-day shop needs *now*. If no reference does it, say so.
+3. **What breaks or costs if we do not build it?** A named consequence
+   (a lost order, a wrong payout, a disapproved feed item), or "nothing yet".
+
+If 1 has no answer, or 3 is "nothing yet", it is **not an option** — it goes
+to `WHAT-IS-LEFT.md` §4 with the reason, and the reply says so in one line.
+Rajat asking for something does not skip the gate; the gate is how he is
+protected from his own "kar do" at midnight, and from mine.
+
 ## 1. Name the change
 
 One line each: the endpoint or rule · who calls it (customer / seller /
