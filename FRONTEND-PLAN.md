@@ -1032,6 +1032,36 @@ action still below on its own. The two new flags are decided on the server
 same helper as the page, so the button and the refusal cannot disagree. 910
 tests.
 
+### 4.21 Writing a review, and the badge that needed no flag
+
+12 Sep 2026, through `/frontend` + `/backend`. Gate: trust (every marketplace
+guide names reviews with verified-purchase flags as how a new marketplace buys
+trust) and the cutover (the React app could write reviews; `web/` only read
+them).
+
+**References.** Flipkart: "Rate this product" — five stars each carrying a
+word (Very bad … Excellent), then title and description, shown to verified
+buyers only. Amazon: the same order, rating first, the rating alone enough to
+submit. Baymard on reviews: show the spread, label verification, let people
+edit what they wrote.
+
+**What was found.** The badge Rajat was asked to decide on (OPS Q3) never
+needed a flag: the API already refuses a review from anyone without a
+delivered order containing the product, and stores the `orderId`. Every review
+*is* a verified purchase by construction, so the page says it once above the
+list and labels each one — honest on all of them, invented on none.
+
+**Built.** `GET /reviews/product/:id/mine` → `{ canReview, reason, review }`,
+using `deliveredOrderWith()` — the **same** lookup the POST refuses with
+(`utils/reviewEligibility.js`), so the form is drawn only where the endpoint
+would accept it. `ReviewForm` is a client island on the server-rendered
+product page: signed out → one line with a sign-in link; signed in and not
+eligible → nothing (the sentence above already explains); eligible → stars
+with words, optional title and body, "Post review"; already written → their
+review with Edit and Remove (confirmed). `router.refresh()` after a save, and
+the reviews fetch is uncached so the list and the rating bars update at once.
+915 tests.
+
 ---
 
 ## 5. Structured data

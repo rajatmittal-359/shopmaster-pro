@@ -10,6 +10,7 @@ const {
   createOrUpdateReview,
   deleteReview,
   getMyReviews,
+  myReviewStatus,
 } = require('../controllers/reviewController');
 
 // ✅ PUBLIC: list reviews of a product
@@ -18,6 +19,9 @@ router.get('/product/:productId', getProductReviews);
 
 // ✅ PROTECTED: customer-only routes
 router.use(authMiddleware, roleMiddleware('customer'));
+
+// GET /api/reviews/product/:productId/mine - may I review it, and what did I write
+router.get('/product/:productId/mine', myReviewStatus);
 
 // POST /api/reviews/product/:productId
 router.post('/product/:productId', createOrUpdateReview);

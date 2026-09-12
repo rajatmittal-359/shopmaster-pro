@@ -2,7 +2,6 @@
 const mongoose = require('mongoose');
 const { sendError } = require('../utils/apiError');
 const Review = require('../models/Review');
-const Order = require('../models/Order');
 const Product = require('../models/Product');
 
 /**
@@ -21,6 +20,8 @@ const Product = require('../models/Product');
  *
  * Returns the product document, or null.
  */
+const { deliveredOrderWith } = require('../utils/reviewEligibility');
+
 const findProduct = (productId, extra = {}) => {
   const identity = mongoose.isValidObjectId(productId)
     ? { $or: [{ slug: productId }, { _id: productId }] }
@@ -95,16 +96,7 @@ exports.createOrUpdateReview = async (req, res) => {
      * makes both conditions apply to the SAME item - without it an order
      * containing this product AND some other active item would pass.
      */
-    const order = await Order.findOne({
-      customerId: req.user._id,
-      status: { $in: ['delivered', 'returned'] },
-      items: {
-        $elemMatch: {
-          productId: product._id,
-          status: 'active',
-        },
-      },
-    });
+    const order = await deliveredOrderWith(req.user._id, product._id);
 
     if (!order) {
       return res.status(400).json({
@@ -151,6 +143,36 @@ exports.createOrUpdateReview = async (req, res) => {
         .status(400)
         .json({ message: 'You have already reviewed this product' });
     }
+    sendError(res, error);
+  }
+};
+
+/**
+ * Whether the product page may offer THIS customer the review form, and the
+ * review they already wrote if any.
+ *
+ * The server decides, the page draws: without this, the page would either
+ * show a form to everybody (and refuse most of them at the last step) or
+ * guess from the orders list. Same lookup as creating a review, on purpose.
+ */
+exports.myReviewStatus = async (req, res) => {
+  try {
+    const product = await findProduct(req.params.productId).select('_id').lean();
+    if (!product) {
+      return res.status(404).json({ message: 'Product not found' });
+    }
+
+    const [order, review] = await Promise.all([
+      deliveredOrderWith(req.user._id, product._id),
+      Review.findOne({ productId: product._id, userId: req.user._id }).lean(),
+    ]);
+
+    res.json({
+      canReview: Boolean(order),
+      reason: order ? null : 'not_received',
+      review: review || null,
+    });
+  } catch (error) {
     sendError(res, error);
   }
 };

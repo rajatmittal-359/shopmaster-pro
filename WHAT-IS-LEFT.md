@@ -23,11 +23,12 @@ across, in the new UI, not the old one.
 Found on 12 Sep by two diffs: every API path the React app calls against every
 path `web/` calls, then a feature-word pass over the customer pages. Route
 mapping alone had missed all of these. **1.2 dispute, 1.3 item cancel and 1.5
-cancellation reason were built on 12 Sep (plan §4.20).**
+cancellation reason were built on 12 Sep (plan §4.20); 1.1 review writing on
+12 Sep (plan §4.21) — which also closed 2.1: every review is verified by
+construction, the label was already honest.**
 
 | # | What | Backend | React | Size |
 |---|---|---|---|---|
-| 1.1 | **A customer cannot write a review.** `web/` reads reviews on the product page; there is no form to add, edit or delete your own | `POST /reviews/:productId`, `DELETE /reviews/:id`, `GET /reviews/me` | `ProductDetailsPage.jsx` | Medium — and the verified-purchase flag (2.1) belongs in the same piece of work |
 | 1.4 | **Product video.** One clip per product, uploaded from the seller form (base64, 7 MB cap), played in the product gallery. `Product.video` is still in the model | upload path in `sellerController` | `MyProductsPage.jsx`, `ProductDetailsPage.jsx` | Medium — a slot in `MediaManager`, a player in `Gallery` |
 
 Checked and **present** in `web/` (no action): wishlist, addresses, coupons,
@@ -45,7 +46,6 @@ a page — the React app defined these in its services and no screen used them.
 
 | # | What | Decided where | Blocked on |
 |---|---|---|---|
-| 2.1 | **Verified-purchase badge** on reviews — set when the reviewer has a delivered order with that product; show it | Plan §13 "Owed on the product page" | Rajat's yes (OPS "Questions" Q3 was never answered) |
 | 2.2 | **NDR / failed delivery has no screen.** `ndrReason` is recorded by the webhook; nothing shows it to the seller or admin | OPS backlog | — |
 | 2.3 | **POD and NPR evidence on the admin dispute screen.** `podUrl` and `nprReason` are stored; the referee cannot see them | OPS backlog | — |
 | 2.4 | **No return label is ever produced.** Nothing calls Shiprocket's label endpoint; the customer is told nothing about what to attach. Also why Merchant Center's "return label" field is unanswered | OPS backlog | — |

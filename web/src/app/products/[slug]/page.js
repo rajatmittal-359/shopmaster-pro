@@ -10,6 +10,7 @@ import BuyBox from '@/components/product/BuyBox';
 import PincodeCheck from '@/components/product/PincodeCheck';
 import ProductCard from '@/components/product/ProductCard';
 import Stars from '@/components/product/Stars';
+import ReviewForm from '@/components/product/ReviewForm';
 import SizePicker from '@/components/product/SizePicker';
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.shopmasterpro.in';
@@ -264,6 +265,10 @@ export default async function ProductPage({ params }) {
         <p className="mt-2 text-sm text-muted-foreground">
           Only people who bought this and received it can review it.
         </p>
+
+        {/* Who is looking decides whether a form appears; the server cannot
+            know, so this island asks. Everything else here stays server-drawn. */}
+        <ReviewForm productId={product.slug || String(product._id)} />
 
         {reviews.length === 0 ? (
           <p className="mt-3 text-sm text-muted-foreground">

@@ -60,7 +60,10 @@ export const getProduct = async (slug) => {
 
 /** The reviews shown on a product page. */
 export const getReviews = async (productId) => {
-  const data = await get(`/reviews/product/${productId}`);
+  // Not cached: the person who just posted a review is the next person to
+  // load this page, and a list that shows their review a minute later reads
+  // as lost. Reviews are cheap to fetch and rare to change.
+  const data = await get(`/reviews/product/${productId}`, { revalidate: 0 });
   // The endpoint has been through two shapes; accept both rather than break.
   return data?.reviews || (Array.isArray(data) ? data : []);
 };
