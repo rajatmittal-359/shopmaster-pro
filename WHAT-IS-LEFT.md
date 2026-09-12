@@ -46,9 +46,8 @@ a page — the React app defined these in its services and no screen used them.
 
 | # | What | Decided where | Blocked on |
 |---|---|---|---|
-| 2.4 | **No return label is ever produced.** Nothing calls Shiprocket's label endpoint; the customer is told nothing about what to attach. Also why Merchant Center's "return label" field is unanswered | OPS backlog | — |
 | 2.5 | **Seller cancellation carries no penalty** (Amazon 2–10 %, Flipkart ₹60) | OPS backlog | A policy number from Rajat |
-| 2.6 | **35 seeded products still share the old description.** `node draftProductDescriptions.js --apply` on a day with Gemini quota. None reach the feed, so nothing customer-facing waits on it | OPS backlog | Quota |
+| 2.6 | **14 seeded products still share the old description** (was 35; 21 done 12 Sep). Next day with quota: `node draftProductDescriptions.js` then `--apply` (apply now reads the file, no second Gemini pass). None reach the feed | OPS backlog | Gemini daily quota |
 | 2.7 | **The remaining panel pages to the product-form standard** — seller Earnings, Stock history, Products list, Order detail; admin Overview, Orders, Sellers, Payouts, Categories, Coupons, Inventory. All work; all still the first-pass style. Dashboard/Orders/Settings were done 12 Sep (plan §4.19) | Plan §4.19 | Time |
 | 2.8 | **NVIDIA provider** — keep as a generate-only fallback, or remove. Text-to-image only (cannot take our photo), one-time credits | This session | Rajat's call |
 | 2.9 | **Sentry** — the one blind spot: a 500 at checkout is invisible | Plan §7b | Rajat's DSN |
@@ -60,6 +59,7 @@ a page — the React app defined these in its services and no screen used them.
 - **Seller performance / RTO rate page.** Meesho demotes on RTO; Amazon has Account Health. We have the data. Now, with three sellers, or at thirty? (Plan §14.2)
 - **Buyer-protection line on the product page.** Needs the copy — what we actually promise. (Plan §13)
 - **Buyer–seller messaging.** Large. Later. (Plan §13)
+- **Return label generation** — dropped as a need: in India the reverse-pickup rider brings the label (Amazon, Flipkart, Delhivery); the customer's page now says so. Revisit only if a courier asks the customer to print.
 - **Direct-to-Cloudinary uploads** once 7 MB video clips stop being enough — needs an unsigned upload preset in the Cloudinary console. (OPS backlog)
 
 ## 4. Ideas raised, not decided — do not start without a yes
