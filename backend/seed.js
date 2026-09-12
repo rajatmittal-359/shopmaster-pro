@@ -367,9 +367,13 @@ const run = async () => {
     );
   }
   if (has('--reset')) {
-    // The one line between a dev reset and an emptied shop. The live database
+    // The one line between a dev reset and an emptied shop. A live database
     // is never dropped from a laptop by a flag that is easy to type.
-    if (dbName === 'shopmaster_pro' && !has('--i-mean-production')) {
+    // `shopmaster_pro` is what the domain serves until cutover, then it becomes
+    // the dev database (decided 12 Sep) and leaves this list; `shopmaster_prod`
+    // is the clean production database from cutover on.
+    const LIVE = ['shopmaster_pro', 'shopmaster_prod'];
+    if (LIVE.includes(dbName) && !has('--i-mean-production')) {
       throw new Error(`"${dbName}" is the live database. --reset needs --i-mean-production here, and a backup first (npm run backup).`);
     }
     await mongoose.connection.dropDatabase();
