@@ -265,8 +265,8 @@ export default function ProductForm({ productId, copyFromId }) {
 
       {/* 1. MEDIA */}
       <Card
-        title="Photographs"
-        lead="Up to five. The first is the main photo - it shows on the card and in search, and a white background works best there."
+        title="1 · Photos"
+        lead="Up to five. The first is the main one - white background sells best."
         aside={
           usage && (
             <p className="shrink-0 rounded-lg bg-muted px-2.5 py-1.5 text-right text-xs leading-tight text-muted-foreground">
@@ -291,7 +291,7 @@ export default function ProductForm({ productId, copyFromId }) {
 
       {/* 2. WORDS */}
       <Card
-        title="Title and description"
+        title="2 · Words"
         aside={
           <Button
             type="button"
@@ -307,7 +307,7 @@ export default function ProductForm({ productId, copyFromId }) {
       >
         <div className="rounded-lg border border-primary/20 bg-primary/5 p-3">
           <Label htmlFor="keywords" className="text-xs text-muted-foreground">
-            A few words for the AI - any language, Hindi or Hinglish is fine - it reads the first photo too
+            ✦ A photo or a few words - any language - and the AI fills 2 to 5
           </Label>
           <Input
             id="keywords"
@@ -398,14 +398,14 @@ export default function ProductForm({ productId, copyFromId }) {
       </Card>
 
       {/* 3. ORGANISATION */}
-      <Card title="Category">
+      <Card title="3 · Category">
         <Field id="category" label="Where it sits in the shop" hint="Type to search. Shoppers browse by these, and Google reads them.">
           <CategoryPicker id="category" options={categories} value={form.category} onChange={setValue('category')} />
         </Field>
       </Card>
 
       {/* 4. PRICING & INVENTORY */}
-      <Card title="Price and stock">
+      <Card title="4 · Price and stock">
         <div className="grid gap-5 sm:grid-cols-3">
           <Field id="price" label="Selling price (₹)">
             <Input id="price" required inputMode="numeric" value={form.price} onChange={set('price')} className="h-10" />
@@ -451,8 +451,8 @@ export default function ProductForm({ productId, copyFromId }) {
 
       {/* 5. DETAILS THE CHANNELS NEED */}
       <Card
-        title="Details"
-        lead="Colour, who it is for and the age group decide whether it appears in Google Shopping for free. Leave colour empty and it sits in “Under review” instead."
+        title="5 · Details"
+        lead="Colour, who it is for and age group put it on Google Shopping for free."
       >
         <div className="grid gap-5 sm:grid-cols-2">
           <Field id="color" label="Colour">

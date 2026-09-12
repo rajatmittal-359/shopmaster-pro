@@ -1245,6 +1245,30 @@ works from keywords alone, and the prompt now reads the seller's words in
 any language and always writes English. Live: a Hinglish description came
 back as two clean English paragraphs. 940 tests.
 
+### 4.29 The first day: a wizard, then one next thing
+
+12 Sep 2026. Rajat: *"jaise hi ghuse sab samajh aa jaaye - kahan jaana hai,
+kya karna hai, next kya hai. Main workflow taiyaar ho."* Gate: seller
+recruitment - the first ten minutes decide whether the next Jaipur shop stays.
+
+**References.** Meesho's supplier onboarding: a wizard - one screen, one job,
+a step counter, no panel until done. Shopify's first-run Home: setup guide,
+one step open at a time, progress bar; afterwards a Home that leads with the
+single most urgent action. Seller Central's "Your seller journey" likewise.
+
+**Built.** `Onboarding` wraps the seller panel: a shop with nothing listed
+sees a 4-step wizard and nothing else - **1 The rules** (five lines + accept)
+→ **2 Where the courier collects** (form on the same screen) → **3 Where the
+money goes** (bank form, number typed twice) → **4 Your first product** (three
+lines, one button) → *"Your shop is live"* with Copy-the-link. No skip; the
+product form is the one page allowed through. A shop that has already listed
+is never gated - Home's guide nags instead. Home now opens with **Next:** one
+line, one button, chosen in this order: an order to pack → pickup address →
+bank account → an out-of-stock product → fewer than five products → share the
+link. The product form's cards are numbered **1 Photos · 2 Words · 3 Category
+· 4 Price and stock · 5 Details**, leads cut to one line, and the model
+selector folded under "More" - the people who change it know to look.
+
 ---
 
 ## 5. Structured data

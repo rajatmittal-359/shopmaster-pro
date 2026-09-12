@@ -146,6 +146,10 @@ export default function SellerDashboard() {
         ))}
       </div>
 
+      {/* ONE next thing. A panel that lists everything says nothing; Shopify's
+          Home and Seller Central both lead with the single most urgent action. */}
+      <NextUp waiting={waiting} pickupSet={pickupSet} bankSet={bankSet} lowStock={lowStock} productsTotal={productsTotal} />
+
       {/* Account health, Amazon-style: the number the rulebook reviews on,
           shown before it matters. Zero is the normal state and says so. */}
       {analytics?.cancellations && (
@@ -330,6 +334,28 @@ function SetupGuide({ agreed, pickupSet, bankSet, productsTotal, shared, onShare
         .
       </p>
     </PanelCard>
+  );
+}
+
+function NextUp({ waiting, pickupSet, bankSet, lowStock, productsTotal }) {
+  let next;
+  if (waiting.length) {
+    const o = waiting[0];
+    next = { text: `Pack and book ${o.orderNumber || 'the order'} for ${o.customerId?.name || 'a customer'}`, href: `/seller/orders/${o._id}`, cta: 'Open the order' };
+  } else if (!pickupSet) next = { text: 'Set where the courier collects - nothing ships without it', href: '/seller/settings', cta: 'Set the address' };
+  else if (!bankSet) next = { text: 'Add the bank account your payouts go to', href: '/seller/payments', cta: 'Add the account' };
+  else if (lowStock.some((p) => p.stock === 0)) next = { text: `Restock ${lowStock.find((p) => p.stock === 0).name} - it is out`, href: '/seller/products?tab=out', cta: 'Open products' };
+  else if (productsTotal < 5) next = { text: 'Add another product - five or more is when a shop starts to look like one', href: '/seller/products/new', cta: 'Add a product' };
+  else next = { text: 'Nothing waiting. Share your shop link - your first customers already know you', href: '/shop', cta: 'Open the shop' };
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/30 bg-primary/5 px-4 py-3 text-sm">
+      <p>
+        <span className="font-medium text-brand-ink">Next:</span> {next.text}
+      </p>
+      <Button size="sm" nativeButton={false} render={<Link href={next.href} />}>
+        {next.cta}
+      </Button>
+    </div>
   );
 }
 

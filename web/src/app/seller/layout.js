@@ -1,6 +1,7 @@
 import SellerGuard from '@/components/seller/SellerGuard';
 import PanelShell from '@/components/panel/PanelShell';
 import AgreementBanner from '@/components/seller/AgreementBanner';
+import Onboarding from '@/components/seller/Onboarding';
 
 export const metadata = {
   title: { default: 'Seller', template: '%s · Seller · ShopMaster Pro' },
@@ -38,8 +39,10 @@ export default function SellerLayout({ children }) {
   return (
     <PanelShell title="Seller" groups={GROUPS}>
       <SellerGuard>
-        <AgreementBanner />
-        {children}
+        <Onboarding>
+          <AgreementBanner />
+          {children}
+        </Onboarding>
       </SellerGuard>
     </PanelShell>
   );
