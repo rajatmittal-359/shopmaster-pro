@@ -153,6 +153,10 @@ exports.register = async (req, res) => {
  */
 exports.becomeSeller = async (req, res) => {
   try {
+    const live = await require('../utils/liveSettings').liveSettings();
+    if (live && live.shop && live.shop.sellerSignupOpen === false) {
+      return res.status(403).json({ message: 'New seller applications are paused for now. Write to us and we will tell you when they reopen.' });
+    }
     const businessName = String(req.body?.businessName || '').trim();
 
     if (businessName.length < 2) {

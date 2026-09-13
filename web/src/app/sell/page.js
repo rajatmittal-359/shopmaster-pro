@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import ApplyToSell from '@/components/seller/ApplyToSell';
+import { getSettings } from '@/lib/api';
 import { POLICY, BUSINESS, COMMISSION_RATE } from '@/config/policy';
 
 export const metadata = {
@@ -30,7 +31,9 @@ export const metadata = {
  *   stays between us and them. Publishing exceptions only teaches every other
  *   seller to ask for one.
  */
-export default function SellPage() {
+export default async function SellPage() {
+  const settings = await getSettings();
+  const signupOpen = settings?.shop?.sellerSignupOpen !== false;
   const steps = [
     ['You apply', 'Create an account and tick the selling box. It takes a minute.'],
     ['We approve you', 'A person checks the shop. Nothing of yours is public until then.'],
@@ -51,7 +54,11 @@ export default function SellPage() {
       </p>
 
       <div className="mt-8">
-        <ApplyToSell />
+        {signupOpen ? (
+          <ApplyToSell />
+        ) : (
+          <p className="rounded-xl border bg-muted/40 p-4 text-sm">New seller applications are paused for a short while. Write to us and we will tell you the day they reopen.</p>
+        )}
         <p className="mt-3 text-sm text-muted-foreground">
           The full terms are in the{' '}
           <Link href="/selling-policy" className="text-brand-ink hover:underline">

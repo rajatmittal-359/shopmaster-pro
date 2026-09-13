@@ -1,5 +1,6 @@
 import Link from 'next/link';
-import { BUSINESS, POLICY_PAGES } from '@/config/policy';
+import { POLICY_PAGES, businessFrom } from '@/config/policy';
+import { getSettings } from '@/lib/api';
 import { TileMark } from '@/components/brand/Logo';
 
 /**
@@ -12,7 +13,9 @@ import { TileMark } from '@/components/brand/Logo';
  *   It is also what a stranger looks for before paying a shop they have never
  *   heard of: who is this, and where are they if it goes wrong.
  */
-export default function Footer() {
+export default async function Footer() {
+  // Who we are, as the admin last saved it (Settings → Who we are).
+  const BUSINESS = businessFrom(await getSettings());
   return (
     <footer className="mt-16 border-t border-border bg-muted/40">
       <div className="mx-auto grid max-w-5xl gap-8 px-4 py-10 text-sm sm:grid-cols-2">

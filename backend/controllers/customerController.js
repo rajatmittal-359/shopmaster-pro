@@ -182,6 +182,13 @@ const parseQuantity = (raw) => {
   };
 
 exports.checkout = async (req, res) => {
+  // The admin's switch (Settings → Shop). Checked here, not only drawn on
+  // the page: a switch the API does not enforce is a suggestion.
+  const live = await require('../utils/liveSettings').liveSettings();
+  if (live && live.shop && live.shop.codEnabled === false) {
+    return res.status(400).json({ success: false, message: 'Cash on delivery is paused right now - please pay online.' });
+  }
+
   const session = await mongoose.startSession();
   session.startTransaction();
 

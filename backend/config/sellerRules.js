@@ -22,7 +22,15 @@
  *   before they can act in the panel. Change the number when a rule changes,
  *   not when the wording is tidied.
  */
-module.exports = Object.freeze({
+/*
+ * LIVE FROM 13 Sep 2026
+ *   The numbers below are the DEFAULTS. The admin edits them on the Settings
+ *   page (models/PlatformSettings); `loadRules()` copies the saved values
+ *   onto this same object at startup and after every save, so every caller
+ *   that holds a reference keeps reading the current rulebook. Not frozen any
+ *   more for that reason - and nothing but loadRules() may write to it.
+ */
+const RULES = {
   version: '1.0',
   effectiveFrom: '2026-09-12',
 
@@ -43,4 +51,25 @@ module.exports = Object.freeze({
   disputeResponseHours: 72,
   /** The platform's share of each sale, unless an admin set a different rate for the shop. */
   defaultCommissionPct: 8,
-});
+};
+
+const DEFAULTS = Object.freeze({ ...RULES });
+
+/** Copy the admin's saved rulebook onto the live object. Safe to call often. */
+RULES.loadRules = async () => {
+  try {
+    const PlatformSettings = require('../models/PlatformSettings');
+    if (PlatformSettings.db.readyState !== 1) return RULES;
+    const doc = await PlatformSettings.findById('platform').lean();
+    if (!doc?.rules) return RULES;
+    for (const key of Object.keys(DEFAULTS)) {
+      if (doc.rules[key] !== undefined && doc.rules[key] !== null) RULES[key] = doc.rules[key];
+    }
+  } catch {
+    // No database yet (tests, first boot): the defaults stand.
+  }
+  return RULES;
+};
+RULES.defaults = DEFAULTS;
+
+module.exports = RULES;

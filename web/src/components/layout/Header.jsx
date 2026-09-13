@@ -9,6 +9,7 @@ import HideOnAuthPages from '@/components/layout/HideOnAuthPages';
 import ThemeToggle from '@/components/layout/ThemeToggle';
 import SearchBox from '@/components/search/SearchBox';
 import { getCategories } from '@/lib/api';
+import AnnouncementBar from '@/components/layout/AnnouncementBar';
 
 /**
  * The bar every page carries.
@@ -34,6 +35,7 @@ export default async function Header() {
   const categories = (await getCategories()).filter((c) => c.productCount > 0);
   return (
     <header className="glass sticky top-0 z-40 border-b">
+      <AnnouncementBar />
       <div className="mx-auto flex h-14 max-w-5xl items-center justify-between gap-4 px-4">
         <div className="flex items-center gap-1">
           {/* Only on a phone. On a wide screen the category bar below is

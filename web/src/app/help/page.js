@@ -1,5 +1,6 @@
 import Link from 'next/link';
-import { BUSINESS, POLICY } from '@/config/policy';
+import { POLICY, businessFrom } from '@/config/policy';
+import { getSettings } from '@/lib/api';
 
 export const metadata = {
   title: 'Help',
@@ -23,7 +24,8 @@ const QA = [
   ['I want to sell here.', 'Apply from your existing account - no second login. The rules are on one page, in numbers, before you agree.', '/sell', 'Sell on ShopMaster Pro'],
 ];
 
-export default function HelpPage() {
+export default async function HelpPage() {
+  const BUSINESS = businessFrom(await getSettings());
   return (
     <div className="mx-auto max-w-3xl px-4 py-8">
       <h1 className="text-2xl font-semibold tracking-tight">Help</h1>

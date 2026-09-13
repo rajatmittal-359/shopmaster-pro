@@ -2,7 +2,8 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { getProducts, getCategories } from '@/lib/api';
 import { serialiseJsonLd } from '@/lib/jsonLd';
-import { POLICY, BUSINESS } from '@/config/policy';
+import { POLICY, businessFrom } from '@/config/policy';
+import { getSettings } from '@/lib/api';
 import Hero from '@/components/home/Hero';
 import ProductCard from '@/components/product/ProductCard';
 
@@ -21,7 +22,7 @@ export const metadata = {
  * from config/policy.js rather than written out: the same numbers the policy
  * pages and the product offers use.
  */
-const organisation = {
+const organisationFor = (BUSINESS) => ({
   '@context': 'https://schema.org',
   '@type': 'OnlineStore',
   name: BUSINESS.tradeName,
@@ -46,9 +47,12 @@ const organisation = {
     returnMethod: 'https://schema.org/ReturnByMail',
     returnFees: 'https://schema.org/ReturnShippingFees',
   },
-};
+});
 
 export default async function Home() {
+  // Who we are, as the admin last saved it - the schema and the trust block read the same object.
+  const business = businessFrom(await getSettings());
+  const organisation = organisationFor(business);
   const [newest, categories] = await Promise.all([
     getProducts({ limit: 8, sort: 'newest' }),
     getCategories(),
@@ -143,7 +147,7 @@ export default async function Home() {
             <h2 className="text-lg font-semibold">The shop behind it</h2>
             <p className="mt-3 text-[15px] leading-7 text-muted-foreground">
               ShopMaster Pro is run from Devi Nagar, Jaipur by{' '}
-              {BUSINESS.legalName}. Independent sellers list here across every
+              {business.legalName}. Independent sellers list here across every
               category, and every product page names the seller it comes from.
             </p>
             <p className="mt-3 text-[15px] leading-7 text-muted-foreground">
@@ -154,20 +158,20 @@ export default async function Home() {
 
           <div className="text-[15px] leading-7">
             <address className="not-italic text-muted-foreground">
-              <strong className="text-foreground">{BUSINESS.legalName}</strong>
+              <strong className="text-foreground">{business.legalName}</strong>
               <br />
-              {BUSINESS.addressLines.map((line) => (
+              {business.addressLines.map((line) => (
                 <span key={line} className="block">
                   {line}
                 </span>
               ))}
-              <span className="block">{BUSINESS.landmark}</span>
+              <span className="block">{business.landmark}</span>
             </address>
             <p className="mt-3">
-              <a href={BUSINESS.phoneHref} className="text-brand-ink hover:underline">
-                {BUSINESS.phone}
+              <a href={business.phoneHref} className="text-brand-ink hover:underline">
+                {business.phone}
               </a>
-              <span className="block text-muted-foreground">{BUSINESS.hours}</span>
+              <span className="block text-muted-foreground">{business.hours}</span>
             </p>
           </div>
         </div>

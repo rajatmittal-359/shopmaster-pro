@@ -147,3 +147,16 @@ export const getCoupons = async () => {
     return [];
   }
 };
+
+/**
+ * The platform's settings as the storefront reads them (public subset),
+ * five-minute cache. Null when the API is down - callers fall back to the
+ * code's defaults in config/policy.js.
+ */
+export const getSettings = async () => {
+  try {
+    return await get('/public/settings', { revalidate: 300 });
+  } catch {
+    return null;
+  }
+};

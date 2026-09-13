@@ -70,3 +70,31 @@ export const POLICY_PAGES = [
   ['Terms & conditions', '/terms'],
   ['Privacy policy', '/privacy'],
 ];
+
+/**
+ * BUSINESS as the admin last saved it (Settings → Who we are), merged over
+ * the defaults above. Server components await this; client components keep
+ * the defaults. A blank field in the settings never blanks the page - the
+ * default stands until a real value replaces it.
+ */
+export const businessFrom = (settings) => {
+  const b = settings?.business || {};
+  const pick = (v, d) => (v && String(v).trim() ? String(v).trim() : d);
+  const phone = pick(b.phone, BUSINESS.phone);
+  const line1 = pick(b.address1, BUSINESS.addressLines[0]);
+  const cityLine = b.city || b.state || b.pincode ? `${pick(b.city, 'Jaipur')}, ${pick(b.state, 'Rajasthan')} ${pick(b.pincode, '302019')}`.trim() : BUSINESS.addressLines[1];
+  const links = settings?.links || {};
+  return {
+    ...BUSINESS,
+    legalName: pick(b.legalName, BUSINESS.legalName),
+    tradeName: pick(b.tradeName, BUSINESS.tradeName),
+    email: pick(b.email, BUSINESS.email),
+    phone,
+    phoneHref: `tel:${phone.replace(/[^\d+]/g, '')}`,
+    whatsapp: pick(b.whatsapp, BUSINESS.phoneHref.replace(/\D/g, '')),
+    addressLines: [line1, cityLine, 'India'],
+    landmark: pick(b.address2, BUSINESS.landmark),
+    hours: pick(b.hours, BUSINESS.hours),
+    sameAs: Object.values(links).filter(Boolean).length ? Object.values(links).filter(Boolean) : BUSINESS.sameAs,
+  };
+};

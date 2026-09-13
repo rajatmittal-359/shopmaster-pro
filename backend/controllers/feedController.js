@@ -35,7 +35,12 @@ const SITE = process.env.FRONTEND_URL || 'https://www.shopmasterpro.in';
  * feed that advertises one delivery charge while the page promises another is
  * a discrepancy Google checks for.
  */
-const REPRESENTATIVE_SHIPPING = Number(process.env.FEED_SHIPPING_RATE) || 100;
+const REPRESENTATIVE_SHIPPING_DEFAULT = Number(process.env.FEED_SHIPPING_RATE) || 100;
+/** The admin's number (Settings → Shop) when set, else the env/default. */
+const representativeShipping = async () => {
+  const live = await require('../utils/liveSettings').liveSettings();
+  return live && live.shop && live.shop.shippingRate > 0 ? live.shop.shippingRate : REPRESENTATIVE_SHIPPING_DEFAULT;
+};
 
 /** XML has five characters that cannot appear raw, and product names contain them. */
 const esc = (value) =>
@@ -58,6 +63,7 @@ const rfc3339 = (d) => new Date(d).toISOString().replace(/\.\d{3}Z$/, 'Z');
 
 exports.googleProductFeed = async (req, res) => {
   try {
+    const SHIPPING = await representativeShipping();
     /*
      * WHOSE products go to Google.
      *
@@ -204,7 +210,7 @@ exports.googleProductFeed = async (req, res) => {
          */
         parts.push(
           `<g:shipping><g:country>IN</g:country><g:price>${
-            p.freeShipping ? '0.00' : REPRESENTATIVE_SHIPPING.toFixed(2)
+            p.freeShipping ? '0.00' : SHIPPING.toFixed(2)
           } INR</g:price></g:shipping>`
         );
 

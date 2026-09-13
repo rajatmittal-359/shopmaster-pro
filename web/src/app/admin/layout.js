@@ -59,6 +59,11 @@ const GROUPS = [
     label: "AI",
     items: [{ href: "/admin/ai", label: "AI Studio", icon: "Sparkles" }],
   },
+  {
+    label: "Platform",
+    pinned: true,
+    items: [{ href: "/admin/settings", label: "Settings", icon: "Settings" }],
+  },
 ];
 
 export default function AdminLayout({ children }) {

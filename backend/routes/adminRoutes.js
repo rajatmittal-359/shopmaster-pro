@@ -94,6 +94,9 @@ router.get('/products', panel.adminProducts);
 router.get('/customers', panel.adminCustomers);
 router.patch('/customers/:userId/block', panel.setCustomerBlocked);
 router.get('/nav-counts', panel.adminNavCounts);
+const settings = require('../controllers/settingsController');
+router.get('/settings', settings.getSettings);
+router.patch('/settings', settings.updateSettings);
 router.get('/category-requests', panel.adminCategoryRequests);
 // The Saturday mail, on demand: read it now, or send it now.
 router.get('/digest', async (req, res) => {

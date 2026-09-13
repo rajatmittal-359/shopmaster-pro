@@ -1,6 +1,7 @@
 import PolicyHeading from '@/components/policy/PolicyHeading';
 import Section from '@/components/policy/Section';
-import { BUSINESS } from '@/config/policy';
+import { businessFrom } from '@/config/policy';
+import { getSettings } from '@/lib/api';
 
 /**
  * A postal address, a working phone and a working email - not a form alone.
@@ -13,7 +14,8 @@ export const metadata = {
   alternates: { canonical: '/contact' },
 };
 
-export default function ContactPage() {
+export default async function ContactPage() {
+  const BUSINESS = businessFrom(await getSettings());
   return (
     <>
       <PolicyHeading title="Contact us" />

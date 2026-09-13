@@ -1,6 +1,7 @@
 'use client';
 
 import { useSyncExternalStore } from 'react';
+import { usePathname } from 'next/navigation';
 import HI from '@/lib/i18n.hi';
 
 /**
@@ -60,5 +61,9 @@ const fill = (s, vars) => (vars ? s.replace(/\{(\w+)\}/g, (_, k) => (vars[k] ===
 /** `t('Orders')` or `t('{n} of {total} left', { n, total })`. */
 export const useT = () => {
   const lang = useLang();
-  return (en, vars) => fill(lang === 'hi' && HI[en] ? HI[en] : en, vars);
+  // Hindi is the SELLER panel's. The admin panel and the storefront stay
+  // English whatever the toggle says - the choice is remembered, not spread.
+  const pathname = usePathname() || '';
+  const on = lang === 'hi' && (pathname === '/seller' || pathname.startsWith('/seller/'));
+  return (en, vars) => fill(on && HI[en] ? HI[en] : en, vars);
 };

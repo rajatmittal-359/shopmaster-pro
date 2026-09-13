@@ -138,8 +138,11 @@ app.get('/api/public/coupons', async (req, res) => {
 
 app.get('/api/public/seller-rules', (req, res) => {
   res.set('Cache-Control', 'public, max-age=300');
-  res.json(require('./config/sellerRules'));
+  const { loadRules, defaults, ...rules } = require('./config/sellerRules');
+  res.json(rules);
 });
+// What the storefront needs to draw itself: identity, links, switches, banner.
+app.get('/api/public/settings', require('./controllers/settingsController').publicSettings);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/inventory', inventoryRoutes);
 app.use('/api/pincode', require('./routes/pincodeRoutes'));

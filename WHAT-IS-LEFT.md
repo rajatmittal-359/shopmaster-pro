@@ -91,6 +91,8 @@ description, relevance order, regex fallback if Search is ever unavailable.
 Live: jhumki → Pearl Drop Jhumka, kundn choker → Kundan Choker Set. Later:
 synonyms collection (jhumka/jhumki/झुमका), Gemini query → filters.
 
+| 2.15 | **Cutover code**: `next.config` 301 map from the React app's indexed URLs to the Next ones; `migrateToProd.js` per the OPS "Production data" plan | OPS cutover plan | at cutover |
+| 2.16 | **Settings, the rest of the consumers**: policy pages, Bill, seller Help still read the code's BUSINESS defaults (server pages can take `businessFrom(await getSettings())` like Footer/Contact/Help/home do); `sameDayEnabled` and `freeShippingAbove` are stored but not yet enforced in `utils/shipping.js` | plan §4.37 | — |
 | 2.13 | **Hindi, the rest of the seller panel** — foundation and the daily loop done 13 Sep (plan §4.36); left: Orders page body text, Returns & issues, Products list, Settings, Payments, Help/Grow copy, toasts. Add lines to `lib/i18n.hi.js` page by page | plan §4.36 | — |
 | 2.14 | **One account, two hats in production** — in the dev seed the admin (`rajatmittal359`) and the Charming Jewels seller are two users. At the production seed the admin user must also own the Charming Jewels `Seller` doc (capabilities already grant `seller` to an admin with one) so 359 is admin + seller as Rajat intends | seed --minimal | cutover |
 

@@ -5,6 +5,7 @@ import { beginCheckout, purchase } from '@/lib/analytics';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { authedFetch } from '@/lib/client';
+import { apiBase } from '@/lib/api';
 import { useSession } from '@/lib/session';
 import AddressPicker from '@/components/checkout/AddressPicker';
 import { Button } from '@/components/ui/button';
@@ -33,6 +34,21 @@ export default function CheckoutView() {
   const [addresses, setAddresses] = useState([]);
   const [addressId, setAddressId] = useState(null);
   const [payment, setPayment] = useState('online');
+  // Admin switches (Settings → Switches). The API enforces them; this only hides the option.
+  const [switches, setSwitches] = useState({ codEnabled: true });
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`${apiBase}/public/settings`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (!cancelled && d?.shop) setSwitches({ codEnabled: d.shop.codEnabled !== false });
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   const [deliveryOption, setDeliveryOption] = useState(undefined);
   const [totals, setTotals] = useState(null);
   const [coupon, setCoupon] = useState(null);
@@ -281,7 +297,7 @@ export default function CheckoutView() {
           <div className="mt-3 space-y-2 text-sm">
             {[
               ['online', 'Pay now', 'Card, UPI, netbanking or wallet, through Razorpay'],
-              ['cod', 'Cash on delivery', 'Pay the delivery agent when it arrives'],
+              ...(switches.codEnabled ? [['cod', 'Cash on delivery', 'Pay the delivery agent when it arrives']] : []),
             ].map(([value, label, note]) => (
               <label
                 key={value}
