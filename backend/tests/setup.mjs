@@ -35,6 +35,16 @@ process.env.VAPID_PRIVATE_KEY = '';
 process.env.VAPID_SUBJECT = '';
 
 /*
+ * No test may reach a database. Without this, a model call nobody stubbed
+ * sits in Mongoose's buffer for 10 s and the test dies of a timeout with no
+ * clue why (14 Sep 2026: the notification dispatcher's first row did that
+ * to 12 checkout tests). With it, the call rejects at once, the code under
+ * test logs and carries on, and the missing stub is obvious.
+ */
+import mongoose from 'mongoose';
+mongoose.set('bufferCommands', false);
+
+/*
  * The seller-charge ledger and the 30-day cancellation count sit on the cancel
  * and payout paths. Tests written before they existed mock Order and Payout
  * but not these, and an unmocked query to the never-connected database hangs

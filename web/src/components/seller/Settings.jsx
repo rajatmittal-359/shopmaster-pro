@@ -12,6 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
 import PanelCard from '@/components/panel/PanelCard';
 import PushToggle from '@/components/seller/PushToggle';
+import NotificationPrefs from '@/components/common/NotificationPrefs';
 
 /**
  * A seller's own settings.
@@ -163,6 +164,7 @@ export default function SellerSettings() {
       </PanelCard>
 
       <PushToggle />
+      <NotificationPrefs />
 
       <PanelCard
         title="Where the courier collects"

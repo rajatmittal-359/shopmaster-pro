@@ -1125,7 +1125,7 @@ const sendEmail = require('../utils/sendEmail');
 try {
   const customer = await User.findById(order.customerId);
   const template = shippingNotificationEmail(order, customer, order.trackingInfo);
-  await sendEmail({ to: customer.email, ...template });
+  await require('../utils/notifyCustomer').shipped(order, { courierName: order.trackingInfo?.courierName, trackingNumber: order.trackingInfo?.trackingNumber }, template);
   console.log('📧 Shipping email sent to customer');
 } catch (emailErr) {
   console.log('Email error:', emailErr.message);
@@ -1313,7 +1313,7 @@ exports.shipOrder = async (req, res) => {
             shippedDate: new Date(),
           }
         );
-        await sendSafeEmail({ toUserId: customer._id, subject, html, text });
+        await require('../utils/notifyCustomer').shipped(order, { courierName: result.update.shippingCourierName, trackingNumber: result.update.shippingAwb }, { subject, html, text });
       } catch (err) {
         console.error('Shipping email failed for', order.orderNumber, '-', err.message);
       }
@@ -1745,6 +1745,7 @@ exports.updateSettings = async (req, res) => {
       const v = await moderateText(seller.about, { context: 'seller about' });
       seller.aboutModeration = v.flagged ? { status: 'held', categories: v.categories, reason: v.reason, at: new Date() } : { status: 'ok', categories: [], reason: null, at: new Date() };
       if (v.flagged) aboutHeld = v.reason;
+      if (v.flagged) setImmediate(() => require('../utils/notify').notifyAdmins({ category: 'trust', title: `Shop About held · ${seller.businessName}`, body: String(v.reason || '').slice(0, 140), url: '/admin/trust', tag: `about-held-${seller.userId}` }).catch(() => {}));
     }
     if (showLocation !== undefined) seller.showLocation = Boolean(showLocation);
     if (links && typeof links === 'object') {

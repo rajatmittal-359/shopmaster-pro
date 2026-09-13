@@ -100,6 +100,8 @@ app.use('/api/seller', sellerRoutes);
 app.use(['/api/customer/checkout-cod', '/api/customer/checkout-online'], checkoutLimiter);
 app.use(['/api/seller/ai', '/api/admin/ai', '/api/seller/assist', '/api/admin/assist', '/api/customer/assist', '/api/seller/voice', '/api/admin/voice', '/api/customer/voice', '/api/public/voice'], aiLimiter);
 app.use('/api/customer', customerRoutes);
+// The bell + push devices, any signed-in role (plan 2.30)
+app.use('/api/notifications', require('./routes/notificationRoutes'));
 app.use('/api/public/products', publicCatalogue, productRoutes);
 
 /*

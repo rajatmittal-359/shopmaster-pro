@@ -105,6 +105,10 @@ exports.settlePayout = async (req, res) => {
 
     if (!result.ok) return res.status(409).json({ success: false, message: result.reason });
 
+    // The seller's bell and phone: money reached the bank (plan 2.30).
+    const p = result.payout;
+    if (p?.sellerId) setImmediate(() => require('../utils/notify').notify({ userId: p.sellerId, role: 'seller', category: 'payouts', title: `₹${Math.round(Number(p.amount || 0)).toLocaleString('en-IN')} भेज दिया · Payout paid`, body: `${p.reference || ''}${p.bankReference ? ` · bank ref ${p.bankReference}` : ''}`.trim(), url: '/seller/payments', tag: `payout-${p._id}` }).catch(() => {}));
+
     res.json({ success: true, payout: result.payout });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

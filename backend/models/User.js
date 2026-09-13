@@ -102,6 +102,16 @@
         isBlocked: { type: Boolean, default: false },
         blockedReason: { type: String, default: null },
 
+        /**
+         * Where each notification category also goes (plan 2.30). The bell
+         * always gets it; these only ever switch a channel OFF. Missing = on,
+         * so a new category needs no migration. Keys: utils/notify CATEGORIES.
+         */
+        notificationPrefs: {
+          push: { type: Map, of: Boolean, default: undefined },
+          email: { type: Map, of: Boolean, default: undefined },
+        },
+
         aiLimitsLikeSeller: {
         type: Boolean,
         default: false

@@ -520,12 +520,9 @@ exports.verifyRazorpayPayment = async (req, res) => {
       const customer = (await User.findById(customerId)) || { name: 'there' };
       const { subject, html, text } = orderConfirmedEmail(order, customer);
 
-      await sendSafeEmail({
-        toUserId: customerId,
-        subject,
-        html,
-        text,
-      });
+      // Bell + push + mail, per the customer's preferences (plan 2.30) - after
+      // the response, as the comment above always promised.
+      setImmediate(() => require('../utils/notifyCustomer').orderConfirmed(order, { subject, html, text }));
     } catch (e) {
       console.error("Order confirmation email failed:", e.message);
     }
@@ -697,8 +694,7 @@ exports.handleRazorpayWebhook = async (req, res) => {
               fresh || order,
               customer
             );
-            const sendSafeEmail = require('../utils/sendSafeEmail');
-            await sendSafeEmail({ toUserId: customer._id, subject, html, text });
+            await require('../utils/notifyCustomer').orderConfirmed(fresh || order, { subject, html, text });
           } catch (e) {
             console.error('Webhook order email failed:', e.message);
           }
@@ -809,6 +805,8 @@ exports.handleRazorpayWebhook = async (req, res) => {
       }
 
       await order.save();
+      // The customer hears it from us, not from a bank SMS a week later (plan 2.30).
+      setImmediate(() => require('../utils/notifyCustomer').refund(order, (Number(refund.amount) || 0) / 100, done === 'completed'));
 
       /*
        * A failed refund is money the customer is owed and is not getting, and

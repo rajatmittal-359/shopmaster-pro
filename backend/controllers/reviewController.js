@@ -143,6 +143,7 @@ exports.createOrUpdateReview = async (req, res) => {
     // ✅ Recalculate product rating
     await Review.recalculateProductRating(product._id);
 
+    if (review.moderation?.status === 'held') setImmediate(() => require('../utils/notify').notifyAdmins({ category: 'trust', title: 'Review held for you', body: String(review.comment || review.title || '').slice(0, 140), url: '/admin/trust', tag: `review-held-${review._id}` }).catch(() => {}));
     res.status(201).json({
       message: review.moderation?.status === 'held'
         ? 'Thank you - your rating is saved. The written part is being checked because it looks like it has contact details or strong words; it appears once an admin has read it.'

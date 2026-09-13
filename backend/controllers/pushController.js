@@ -37,7 +37,7 @@ exports.subscribe = async (req, res) => {
     await PushSubscription.findOneAndUpdate(
       { endpoint: v.endpoint },
       { $set: { userId: req.user._id, keys: v.keys, label } },
-      { upsert: true, new: true, setDefaultsOnInsert: true }
+      { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true }
     );
     res.json({ ok: true });
   } catch (error) {

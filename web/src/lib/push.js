@@ -61,7 +61,7 @@ export function usePush() {
     setBusy(true);
     setError('');
     try {
-      const { publicKey } = await authedFetch('/seller/push/public-key');
+      const { publicKey } = await authedFetch('/notifications/push/public-key');
       const reg = await navigator.serviceWorker.register('/sw.js');
       await navigator.serviceWorker.ready;
       const permission = await Notification.requestPermission();
@@ -70,7 +70,7 @@ export function usePush() {
         return false;
       }
       const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlB64ToUint8(publicKey) });
-      await authedFetch('/seller/push/subscribe', { method: 'POST', body: { subscription: sub.toJSON(), label: deviceLabel() } });
+      await authedFetch('/notifications/push/subscribe', { method: 'POST', body: { subscription: sub.toJSON(), label: deviceLabel() } });
       setState('on');
       return true;
     } catch (e) {
@@ -88,7 +88,7 @@ export function usePush() {
       const reg = await navigator.serviceWorker.getRegistration('/sw.js');
       const sub = reg ? await reg.pushManager.getSubscription() : null;
       if (sub) {
-        await authedFetch('/seller/push/subscribe', { method: 'DELETE', body: { endpoint: sub.endpoint } }).catch(() => {});
+        await authedFetch('/notifications/push/subscribe', { method: 'DELETE', body: { endpoint: sub.endpoint } }).catch(() => {});
         await sub.unsubscribe();
       }
       setState('off');
@@ -103,7 +103,7 @@ export function usePush() {
     setBusy(true);
     setError('');
     try {
-      await authedFetch('/seller/push/test', { method: 'POST' });
+      await authedFetch('/notifications/push/test', { method: 'POST' });
       return true;
     } catch (e) {
       setError(e.message || 'Nothing arrived');

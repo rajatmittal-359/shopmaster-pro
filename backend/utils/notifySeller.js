@@ -1,8 +1,6 @@
-const User = require('../models/User');
 const Order = require('../models/Order');
-const sendSafeEmail = require('./sendSafeEmail');
 const { frontendUrl } = require('./appUrl');
-const push = require('./push');
+const { notify } = require('./notify');
 
 /**
  * The seller's phone buzzes when something needs them.
@@ -19,11 +17,11 @@ const push = require('./push');
  *   return requested   what is coming back and why
  *   dispute opened     the 72-hour clock has started
  *
- * SINCE 14 Sep 2026 (plan 2.26) each moment also pushes to the seller's
- * registered devices (utils/push) - the lock-screen version of the same
- * mail, Hindi first. Mail stays as the copy that survives a phone change.
+ * SINCE 14 Sep 2026 (plans 2.26, 2.30) every moment goes through
+ * utils/notify: the bell row always, the phone push and the mail as the
+ * seller's own preferences allow. Hindi first everywhere.
  *
- * Never throws - a mail or push failure must not fail the order.
+ * Never throws - a bell, push or mail failure must not fail the order.
  */
 // Customer-written text (names, reasons) is escaped before it enters HTML.
 const esc = (v) => String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
@@ -47,22 +45,12 @@ const itemsOf = (order, sellerId) =>
 
 const sellerIdsOf = (order) => [...new Set((order.items || []).map((i) => String(i.sellerId)))];
 
-/** The lock-screen line: title + one body line + where to go. Never throws. */
-const buzz = async (sellerId, note) => {
+/** One event → bell + push + mail, per the seller's preferences. Never throws. */
+const tell = async (sellerId, { category, title, body, url, tag, subject, html, text }) => {
   try {
-    await push.sendToUser(sellerId, note);
+    await notify({ userId: sellerId, role: 'seller', category, title, body, url, tag, mail: { subject, html, text } });
   } catch (err) {
-    console.error(`Seller push (${note.title}) failed:`, err.message);
-  }
-};
-
-const send = async (sellerId, subject, html, text) => {
-  try {
-    const seller = await User.findById(sellerId).select('email name').lean();
-    if (!seller?.email) return;
-    await sendSafeEmail({ toUserId: seller._id, toEmail: seller.email, subject, html, text });
-  } catch (err) {
-    console.error(`Seller mail (${subject}) failed:`, err.message);
+    console.error(`Seller notification (${subject}) failed:`, err.message);
   }
 };
 
@@ -86,8 +74,7 @@ const newOrder = async (orderId) => {
       href,
       'ऑर्डर खोलें · Open the order'
     );
-    await send(sellerId, subject, html, `New order ${order.orderNumber}: ${what}. Open: ${href}`);
-    await buzz(sellerId, { title: 'नया ऑर्डर आया है 🎉', body: `${plain(what)} · ${plain(order.customerId?.name || 'Customer')} · ${cod ? 'COD' : 'Paid'}`, url: `/seller/orders/${order._id}`, tag: `order-${order._id}` });
+    await tell(sellerId, { category: 'orders', title: 'नया ऑर्डर आया है 🎉', body: `${plain(what)} · ${plain(order.customerId?.name || 'Customer')} · ${cod ? 'COD' : 'Paid'}`, url: `/seller/orders/${order._id}`, tag: `order-${order._id}`, subject, html, text: `New order ${order.orderNumber}: ${what}. Open: ${href}` });
   }
 };
 
@@ -108,8 +95,7 @@ const returnRequested = async (orderId, sellerId) => {
     href,
     'ऑर्डर देखें · See the order'
   );
-  await send(sellerId, plain(`वापसी · Return requested ${order.orderNumber} - ${what}`), html, `Return requested on ${order.orderNumber}: ${what}. ${href}`);
-  await buzz(sellerId, { title: 'वापसी माँगी है · Return requested', body: `${plain(what)} · ${plain(f.returnReason || '')}`.slice(0, 200), url: `/seller/orders/${order._id}`, tag: `return-${order._id}` });
+  await tell(sellerId, { category: 'returns', title: 'वापसी माँगी है · Return requested', body: `${plain(what)} · ${plain(f.returnReason || '')}`.slice(0, 200), url: `/seller/orders/${order._id}`, tag: `return-${order._id}-${sellerId}`, subject: plain(`वापसी · Return requested ${order.orderNumber} - ${what}`), html, text: `Return requested on ${order.orderNumber}: ${what}. ${href}` });
 };
 
 const disputeOpened = async (orderId) => {
@@ -130,8 +116,7 @@ const disputeOpened = async (orderId) => {
       href,
       'जवाब दें · Reply now'
     );
-    await send(f.sellerId, plain(`शिकायत · Dispute on ${order.orderNumber} - ${what}`), html, `Dispute opened on ${order.orderNumber}: ${what}. Reply within 72h: ${href}`);
-    await buzz(f.sellerId, { title: 'शिकायत · Dispute - 72 घंटे', body: `${plain(what)} · “${plain(f.disputeReason || '')}”`.slice(0, 200), url: `/seller/orders/${order._id}`, tag: `dispute-${order._id}` });
+    await tell(f.sellerId, { category: 'disputes', title: 'शिकायत · Dispute - 72 घंटे', body: `${plain(what)} · “${plain(f.disputeReason || '')}”`.slice(0, 200), url: `/seller/orders/${order._id}`, tag: `dispute-${order._id}-${f.sellerId}`, subject: plain(`शिकायत · Dispute on ${order.orderNumber} - ${what}`), html, text: `Dispute opened on ${order.orderNumber}: ${what}. Reply within 72h: ${href}` });
   }
 };
 

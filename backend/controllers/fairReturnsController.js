@@ -163,10 +163,15 @@ exports.approveReturn = async (req, res) => {
       f.returnNeedsApproval = false;
       f.returnApprovedAt = new Date();
       await order.save();
+      setImmediate(() => {
+        require('../utils/notifyCustomer').returnDecided(order, true);
+        require('../utils/notify').notify({ userId: f.sellerId, role: 'seller', category: 'returns', title: `वापसी मंज़ूर · Return approved · ${order.orderNumber}`, body: 'अब पिकअप बुक करें। Book the pickup from the order page.', url: `/seller/orders/${order._id}`, tag: `return-approved-${order._id}-${f.sellerId}` }).catch(() => {});
+      });
       return res.json({ ok: true, message: 'Approved. The seller can book the pickup now.' });
     }
     const done = await returns.rejectReturn(order, { actorId: req.user._id, sellerId: f.sellerId, reason: `Admin: ${String(req.body?.note || 'return not approved').trim()}` });
     if (!done.ok) return res.status(done.status || 400).json({ message: done.message });
+    setImmediate(() => require('../utils/notifyCustomer').returnDecided(order, false, req.body?.note));
     res.json({ ok: true, message: 'Return refused; the customer sees the reason and can write to Help.' });
   } catch (error) {
     sendError(res, error);

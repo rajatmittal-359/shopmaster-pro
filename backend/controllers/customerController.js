@@ -395,13 +395,8 @@ exports.checkout = async (req, res) => {
         const customer = req.user;
         const { subject, html, text } = orderConfirmedEmail(order[0], customer);
 
-        await sendSafeEmail({
-          toUserId: customer._id,
-          toEmail: customer.email,
-          subject,
-          html,
-          text,
-        });
+        // Bell + push + mail, per the customer's preferences (plan 2.30).
+        await require('../utils/notifyCustomer').orderConfirmed(order[0], { subject, html, text });
       } catch (emailErr) {
         console.error('COD order email failed:', emailErr.message);
       }
@@ -880,6 +875,7 @@ exports.cancelOrderItem = async (req, res) => {
       });
 
       await order.save();
+    if (needsApproval) setImmediate(() => require('../utils/notify').notifyAdmins({ category: 'returns', title: `Return waiting for approval · ${order.orderNumber}`, body: String(reason || '').slice(0, 160), url: '/admin/trust', tag: `return-approval-${order._id}` }).catch(() => {}));
       // Every seller whose parcel is coming back hears it the same minute.
       for (const f of eligible) setImmediate(() => require('../utils/notifySeller').returnRequested(order._id, f.sellerId));
 
@@ -1174,6 +1170,8 @@ exports.raiseDispute = async (req, res) => {
       f.disputeRaisedAt = now;
       if (flags.length) f.textFlags = [...new Set([...(f.textFlags || []), ...flags])];
     });
+    // The platform must see it: every admin's bell, and their phone if they chose so (plan 2.30).
+    setImmediate(() => require('../utils/notify').notifyAdmins({ category: 'disputes', title: `Dispute opened · ${order.orderNumber}`, body: String(reason || '').slice(0, 160), url: '/admin/orders', tag: `dispute-open-${order._id}` }).catch(() => {}));
 
     await order.save();
     setImmediate(() => require('../utils/notifySeller').disputeOpened(order._id));

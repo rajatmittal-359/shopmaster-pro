@@ -6,6 +6,7 @@ import { ShoppingBag } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useSession, clearSession, setCapabilities } from '@/lib/session';
 import { authedFetch } from '@/lib/client';
+import NotificationBell from '@/components/common/NotificationBell';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -79,6 +80,9 @@ export default function HeaderAccount({ showCart = true }) {
           <ShoppingBag className="size-5" />
         </Link>
       )}
+
+      {/* The bell sits where every panel and the storefront already share a header (plan 2.30). */}
+      {signedIn && <NotificationBell />}
 
       {signedIn ? (
         <DropdownMenu>

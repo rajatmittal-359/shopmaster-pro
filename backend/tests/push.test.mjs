@@ -80,7 +80,8 @@ describe('notifySeller pushes beside the mail', () => {
   const Order = require('../models/Order');
   const User = require('../models/User');
   const notify = require('../utils/notifySeller');
-  const originals = { orderFindById: Order.findById, userFindById: User.findById, find: PushSubscription.find, updateOne: PushSubscription.updateOne };
+  const Notification = require('../models/Notification');
+  const originals = { orderFindById: Order.findById, userFindById: User.findById, find: PushSubscription.find, updateOne: PushSubscription.updateOne, nUpsert: Notification.findOneAndUpdate, nCreate: Notification.create };
   let sent;
   beforeEach(() => {
     sent = [];
@@ -92,6 +93,8 @@ describe('notifySeller pushes beside the mail', () => {
     PushSubscription.updateOne = vi.fn(async () => ({}));
     // no email on file → the mail is skipped, the push must still go
     User.findById = vi.fn(() => ({ select: () => ({ lean: async () => null }) }));
+    Notification.findOneAndUpdate = vi.fn(async () => ({ _id: 'n' }));
+    Notification.create = vi.fn(async (d) => d);
     const order = {
       _id: 'o1', orderNumber: 'SMP-1', paymentMethod: 'cod', customerId: { name: 'Priya' },
       items: [{ sellerId: 's1', name: 'Jhumka', quantity: 2 }, { sellerId: 's2', name: 'Kurta', quantity: 1 }],
@@ -107,6 +110,8 @@ describe('notifySeller pushes beside the mail', () => {
     User.findById = originals.userFindById;
     PushSubscription.find = originals.find;
     PushSubscription.updateOne = originals.updateOne;
+    Notification.findOneAndUpdate = originals.nUpsert;
+    Notification.create = originals.nCreate;
     delete process.env.VAPID_PUBLIC_KEY; delete process.env.VAPID_PRIVATE_KEY; delete process.env.VAPID_SUBJECT;
   });
 
@@ -125,7 +130,7 @@ describe('notifySeller pushes beside the mail', () => {
   it('dispute: pushes only the seller whose fulfilment is disputed, with the 72-hour title', async () => {
     await notify.disputeOpened('o1');
     expect(sent).toHaveLength(1);
-    expect(sent[0]).toMatchObject({ to: 's1', tag: 'dispute-o1' });
+    expect(sent[0]).toMatchObject({ to: 's1', tag: 'dispute-o1-s1' });
     expect(sent[0].title).toMatch(/72/);
     expect(sent[0].body).toContain('Broken');
   });

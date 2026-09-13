@@ -110,6 +110,7 @@ exports.register = async (req, res) => {
 
     if (isSeller) {
       await Seller.create({ userId: user._id, businessName, agreement: acceptedNow() });
+      setImmediate(() => require('../utils/notify').notifyAdmins({ category: 'account', title: `New seller application · ${businessName}`, body: 'Waiting for approval on Sellers.', url: '/admin/sellers', tag: `seller-apply-${user._id}` }).catch(() => {}));
     }
 
     // The account already exists by this point, so a mail that will not send
@@ -181,6 +182,7 @@ exports.becomeSeller = async (req, res) => {
     }
 
     const seller = await Seller.create({ userId: req.user._id, businessName, agreement: acceptedNow() });
+    setImmediate(() => require('../utils/notify').notifyAdmins({ category: 'account', title: `New seller application · ${businessName}`, body: 'Waiting for approval on Sellers.', url: '/admin/sellers', tag: `seller-apply-${req.user._id}` }).catch(() => {}));
 
     return res.status(201).json({
       message: 'Thank you. An admin will review your shop before it goes live.',

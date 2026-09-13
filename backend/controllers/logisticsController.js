@@ -195,7 +195,7 @@ exports.courierUpdate = async (req, res) => {
             customer,
             fulfilment.status
           );
-          await sendSafeEmail({ toUserId: customer._id, subject, html, text });
+          await require('../utils/notifyCustomer').courierStatus(order, fulfilment.status, { subject, html, text });
         } catch (err) {
           console.error('Delivery email failed for', order.orderNumber, '-', err.message);
         }

@@ -849,6 +849,14 @@ exports.resolveDispute = async (req, res) => {
     console.log(
       `Dispute on ${order.orderNumber} resolved for the ${inFavourOf} by admin ${req.user._id}`
     );
+    // Both sides hear the decision the same minute (plan 2.30).
+    setImmediate(() => {
+      require('../utils/notifyCustomer').disputeDecided(order, inFavourOf);
+      const { notify } = require('../utils/notify');
+      for (const f of open) {
+        notify({ userId: f.sellerId, role: 'seller', category: 'disputes', title: inFavourOf === 'seller' ? `शिकायत आपके पक्ष में · Dispute decided for you · ${order.orderNumber}` : `शिकायत ग्राहक के पक्ष में · Dispute decided for the customer · ${order.orderNumber}`, body: inFavourOf === 'seller' ? 'आपका पेमेंट अब आगे बढ़ेगा। Your payout proceeds.' : 'रिफ़ंड ग्राहक को जाएगा; वजह ऑर्डर पेज पर है। The refund goes to the customer; the reason is on the order.', url: `/seller/orders/${order._id}`, tag: `dispute-decided-${order._id}-${f.sellerId}` }).catch(() => {});
+      }
+    });
 
     return res.json({
       success: true,
