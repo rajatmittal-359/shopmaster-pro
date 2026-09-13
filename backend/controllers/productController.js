@@ -41,7 +41,7 @@ exports.categoryTree = async (req, res) => {
     const browsableIds = await Category.getBrowsableIds();
 
     const allCategories = await Category.find({ _id: { $in: browsableIds } })
-      .select('name slug description parentCategory ancestors')
+      .select('name slug description parentCategory ancestors returnMode returnModesAllowed')
       .sort({ name: 1 })
       .lean();
 
@@ -64,6 +64,9 @@ exports.categoryTree = async (req, res) => {
         description: cat.description,
         parentCategory: cat.parentCategory || null,
         productCount: directCount.get(String(cat._id)) || 0,
+        // Fair Returns: the category's default promise and what a seller may pick.
+        returnMode: cat.returnMode || 'R',
+        returnModesAllowed: cat.returnModesAllowed?.length ? cat.returnModesAllowed : ['R', 'X', 'N'],
         children: [],
       };
     });

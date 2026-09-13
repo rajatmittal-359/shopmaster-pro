@@ -192,11 +192,22 @@ export default async function ProductPage({ params }) {
               page, 15% abandon over an unsatisfactory one - and 44% of sites do
               not link it from the product content. Cheapest fix in the plan. */}
           <ul className="space-y-1.5 border-t border-border pt-4 text-sm text-muted-foreground">
+            {/* Fair Returns (plan §4.39): THIS item's promise - R, X or N - said
+                before anyone buys. A wrong or damaged item is covered whatever
+                the mode; the policy page has the matrix. */}
             <li>
               <Link href="/refund-policy" className="text-brand-ink hover:underline">
-                {POLICY.returnDays}-day returns
+                {product.returnMode === 'N'
+                  ? 'No change-of-mind returns on this item'
+                  : product.returnMode === 'X'
+                    ? `${POLICY.returnDays}-day exchange only`
+                    : `${POLICY.returnDays}-day returns`}
               </Link>{' '}
-              from delivery, or exchange for the same piece
+              {product.returnMode === 'N'
+                ? '(hygiene / custom) - wrong, damaged or faulty is always covered'
+                : product.returnMode === 'X'
+                  ? 'from delivery, for size or colour - wrong or damaged is refunded'
+                  : 'from delivery, or exchange for the same piece'}
             </li>
             <li>
               <Link href="/shipping-policy" className="text-brand-ink hover:underline">

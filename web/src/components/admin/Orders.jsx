@@ -6,6 +6,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import ActionDialog from '@/components/common/ActionDialog';
+import DisputeBrief from '@/components/admin/DisputeBrief';
 
 /**
  * Everything that has been ordered, and the one screen that can settle an
@@ -153,6 +154,48 @@ export default function AdminOrders() {
                           {parcel.deliveryConfirmedBy ? ` · confirmed by ${parcel.deliveryConfirmedBy}` : ''}
                           {parcel.courierName ? ` · ${parcel.courierName}${parcel.awb ? ` ${parcel.awb}` : ''}` : ''}
                         </dd>
+                        {parcel.disputeRaisedBy === 'seller' && (
+                          <>
+                            <dt className="text-muted-foreground">Raised by</dt>
+                            <dd>the seller - the return came back not as sent</dd>
+                          </>
+                        )}
+                        {parcel.returnKind && (
+                          <>
+                            <dt className="text-muted-foreground">Return</dt>
+                            <dd>
+                              {parcel.returnKind.replace(/_/g, ' ')}{parcel.returnTagIntact === true ? ' · tag confirmed' : ''}
+                              {parcel.returnEvidence?.length ? <> · {parcel.returnEvidence.map((u, k) => <a key={u} href={u} target="_blank" rel="noopener noreferrer" className="text-brand-ink hover:underline">photo {k + 1}</a>).reduce((acc, x) => (acc === null ? [x] : [...acc, ' ', x]), null)}</> : ' · no customer photos'}
+                              {parcel.returnNeedsApproval && !parcel.returnApprovedAt ? ' · WAITING FOR YOUR APPROVAL' : ''}
+                            </dd>
+                          </>
+                        )}
+                        <dt className="text-muted-foreground">Pack proof</dt>
+                        <dd>{parcel.packProof?.url ? <a href={parcel.packProof.url} target="_blank" rel="noopener noreferrer" className="text-brand-ink hover:underline">Seller&apos;s photo before dispatch ({when(parcel.packProof.at)})</a> : <span className="text-muted-foreground">none from the seller</span>}</dd>
+                        {parcel.receiptCheck?.at && (
+                          <>
+                            <dt className="text-muted-foreground">Came back</dt>
+                            <dd>
+                              {parcel.receiptCheck.ok ? 'OK' : 'NOT as sent'}{parcel.receiptCheck.note ? ` - ${parcel.receiptCheck.note}` : ''}
+                              {parcel.receiptCheck.photos?.length ? <> · {parcel.receiptCheck.photos.map((u, k) => <a key={u} href={u} target="_blank" rel="noopener noreferrer" className="text-brand-ink hover:underline">photo {k + 1}</a>).reduce((acc, x) => (acc === null ? [x] : [...acc, ' ', x]), null)}</> : ''}
+                            </dd>
+                          </>
+                        )}
+                        {parcel.disputeSellerRespondedAt && (
+                          <>
+                            <dt className="text-muted-foreground">Seller says</dt>
+                            <dd>
+                              {parcel.disputeSellerNote} ({when(parcel.disputeSellerRespondedAt)})
+                              {parcel.disputeSellerEvidence?.length ? <> · {parcel.disputeSellerEvidence.map((u, k) => <a key={u} href={u} target="_blank" rel="noopener noreferrer" className="text-brand-ink hover:underline">photo {k + 1}</a>).reduce((acc, x) => (acc === null ? [x] : [...acc, ' ', x]), null)}</> : ''}
+                            </dd>
+                          </>
+                        )}
+                        {parcel.disputeStatus === 'open' && parcel.disputeRaisedBy !== 'seller' && !parcel.disputeSellerRespondedAt && (
+                          <>
+                            <dt className="text-muted-foreground">Seller says</dt>
+                            <dd className="text-muted-foreground">nothing yet (72 h from {parcel.disputeRaisedAt ? when(parcel.disputeRaisedAt) : 'the claim'})</dd>
+                          </>
+                        )}
                         <dt className="text-muted-foreground">Proof of delivery</dt>
                         <dd>
                           {parcel.podUrl ? (
@@ -179,6 +222,24 @@ export default function AdminOrders() {
                     )}
                   </div>
                 ))}
+
+                {/* A return held for the admin (a customer under returns_approval, or a big amount). */}
+                {(order.fulfilments || []).filter((f) => f.returnNeedsApproval && !f.returnApprovedAt && f.returnStage === 'requested').map((f) => (
+                  <div key={`appr-${f._id}`} className="mt-3 flex flex-wrap items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm">
+                    <span className="font-medium text-amber-800">Return waiting for your approval</span>
+                    <Button size="sm" onClick={() => run(() => authedFetch(`/admin/orders/${order._id}/return/approve`, { method: 'POST', body: { sellerId: f.sellerId, approve: true } }))}>Approve - book the pickup</Button>
+                    <Button size="sm" variant="outline" onClick={() => { const note = window.prompt('Why is this return refused? The customer reads this.'); if (note && note.trim().length > 4) run(() => authedFetch(`/admin/orders/${order._id}/return/approve`, { method: 'POST', body: { sellerId: f.sellerId, approve: false, note } })); }}>Refuse</Button>
+                  </div>
+                ))}
+
+                {disputes.length > 0 && (
+                  <DisputeBrief
+                    orderId={order._id}
+                    sellerId={disputes[0]?.sellerId}
+                    onSuggest={(inFavourOf) => setDecision((d) => (deciding === order._id ? d : { ...d, inFavourOf }))}
+                    onUseNote={(note) => { setDeciding(order._id); setDecision((d) => ({ ...d, resolution: note })); }}
+                  />
+                )}
 
                 <div className="mt-3 flex flex-wrap gap-2">
                   {disputes.length > 0 && deciding !== order._id && (

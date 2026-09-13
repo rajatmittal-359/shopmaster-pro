@@ -805,6 +805,20 @@ exports.getOrderDetails = async (req, res) => {
       disputeReason: fulfilment?.disputeReason || null,
       disputeResolution: fulfilment?.disputeResolution || null,
 
+      // Fair Returns (plan §4.39): the evidence on this parcel, both sides.
+      disputeRaisedBy: fulfilment?.disputeRaisedBy || null,
+      disputeRaisedAt: fulfilment?.disputeRaisedAt || null,
+      disputeSellerNote: fulfilment?.disputeSellerNote || null,
+      disputeSellerEvidence: fulfilment?.disputeSellerEvidence || [],
+      disputeSellerRespondedAt: fulfilment?.disputeSellerRespondedAt || null,
+      packProof: fulfilment?.packProof?.url ? fulfilment.packProof : null,
+      returnKind: fulfilment?.returnKind || null,
+      returnEvidence: fulfilment?.returnEvidence || [],
+      returnTagIntact: fulfilment?.returnTagIntact ?? null,
+      returnNeedsApproval: Boolean(fulfilment?.returnNeedsApproval && !fulfilment?.returnApprovedAt),
+      receiptCheck: fulfilment?.receiptCheck?.at ? fulfilment.receiptCheck : null,
+      podUrl: fulfilment?.podUrl || null,
+
       /** Who said it arrived - the seller, or somebody with no stake in it. */
       deliveryConfirmedBy: fulfilment?.deliveryConfirmedBy || null,
 

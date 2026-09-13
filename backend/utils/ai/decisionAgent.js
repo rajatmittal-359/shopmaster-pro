@@ -155,6 +155,14 @@ const briefDispute = async (orderId, sellerId) => {
   } catch {
     return { ok: false, reason: 'The model did not return a usable brief', evidence };
   }
+  // Whatever shape the model chose, the page gets arrays of short lines.
+  const lines = (v) => (Array.isArray(v) ? v : String(v || '').split(/\n+|(?<=\.)\s+(?=[A-Z])|\s*[•·]\s*/)).map((x) => String(x).replace(/^[-*•\d.)\s]+/, '').trim()).filter(Boolean).slice(0, 6);
+  brief.forCustomer = lines(brief.forCustomer);
+  brief.forSeller = lines(brief.forSeller);
+  brief.missing = lines(brief.missing);
+  brief.summary = String(brief.summary || '').trim();
+  brief.reasoning = String(brief.reasoning || '').trim();
+  brief.resolutionNote = String(brief.resolutionNote || '').trim();
   brief.recommendation = ['customer', 'seller', 'partial', 'need_more'].includes(brief.recommendation) ? brief.recommendation : 'need_more';
   brief.confidence = Math.max(0, Math.min(1, Number(brief.confidence) || 0));
   return { ok: true, brief, evidence, model: r.model || (r.fellBack ? 'nano' : 'gemini') };

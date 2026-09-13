@@ -61,6 +61,7 @@ import { useT } from '@/lib/i18n';
 const left = (n) => (n === null || n === undefined ? '∞' : n);
 
 const EMPTY = {
+  returnMode: '',
   name: '',
   description: '',
   category: '',
@@ -88,8 +89,15 @@ const leavesOf = (categories, trail = []) =>
   categories.flatMap((cat) => {
     const path = [...trail, cat.name];
     const children = cat.children || [];
-    return children.length === 0 ? [{ _id: cat._id, label: path.join(' → ') }] : leavesOf(children, path);
+    return children.length === 0 ? [{ _id: cat._id, label: path.join(' → '), returnMode: cat.returnMode || 'R', returnModesAllowed: cat.returnModesAllowed || ['R', 'X', 'N'] }] : leavesOf(children, path);
   });
+
+/* Fair Returns (plan §4.39): what the item promises. Wrong / damaged / faulty is covered whatever is chosen - law. */
+const RETURN_MODES = {
+  R: ['Return or exchange', '7 days, tag on, unused. The default most shops use.'],
+  X: ['Exchange only', 'Size or colour swap; no refund for a change of mind.'],
+  N: ['No return', 'Hygiene, custom or made-to-order. Wrong, damaged or faulty is still covered.'],
+};
 
 /** A small, consistent field: label above, hint below. */
 function Field({ id, label, hint, aside, children, className = '' }) {
@@ -279,6 +287,7 @@ export default function ProductForm({ productId, copyFromId }) {
 
     const body = {
       ...form,
+      returnMode: form.returnMode || null,
       price: Number(form.price),
       mrp: form.mrp === '' ? undefined : Number(form.mrp),
       stock: Number(form.stock),
@@ -532,6 +541,34 @@ export default function ProductForm({ productId, copyFromId }) {
             </label>
           </div>
         </div>
+      
+        {/* The return promise, inside what the category allows. Shown on the product page before anyone buys. */}
+        {(() => {
+          const cat = categories.find((c) => c._id === form.category);
+          const allowed = cat?.returnModesAllowed || ['R', 'X', 'N'];
+          const def = cat?.returnMode || 'R';
+          return (
+            <fieldset className="mt-4">
+              <legend className="text-sm font-medium">{t('Returns on this item')}</legend>
+              <p className="mb-2 text-xs text-muted-foreground">{t('Wrong, damaged or faulty is always returnable - that is the law. This is about a change of mind.')}</p>
+              <div className="grid gap-2 sm:grid-cols-3">
+                {['R', 'X', 'N'].map((m) => {
+                  const ok = allowed.includes(m);
+                  const checked = (form.returnMode || def) === m;
+                  return (
+                    <label key={m} className={`flex cursor-pointer gap-2 rounded-lg border p-3 text-sm has-[:checked]:border-primary ${ok ? '' : 'opacity-50'}`}>
+                      <input type="radio" name="returnMode" disabled={!ok} checked={checked} onChange={() => setForm((f) => ({ ...f, returnMode: m === def ? '' : m }))} className="mt-1" />
+                      <span>
+                        <strong>{t(RETURN_MODES[m][0])}</strong>{m === def ? <span className="ml-1 text-xs text-muted-foreground">({t('category default')})</span> : null}
+                        <span className="block text-xs text-muted-foreground">{t(RETURN_MODES[m][1])}</span>
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+            </fieldset>
+          );
+        })()}
       </Card>
 
       {/* 5. DETAILS THE CHANNELS NEED */}

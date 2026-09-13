@@ -13,6 +13,27 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
 import { POLICY } from '@/config/policy';
+import PhotoPicker from '@/components/common/PhotoPicker';
+
+/*
+ * Fair Returns (plan §4.39). The customer says WHAT KIND of return it is -
+ * that decides the evidence asked for, the window and who pays the courier:
+ *   damaged / wrong / faulty      photos, within 48 h of delivery, courier on us
+ *   not as described              photos, inside the window, courier on us
+ *   change of mind / size         tag on, unused, courier on the customer;
+ *                                 refused on hygiene/custom items (mode N)
+ * The server enforces the same table (utils/returnPolicy); the form only
+ * makes the honest path the easy one.
+ */
+const RETURN_KINDS = [
+  ['damaged', 'Arrived damaged', 'Photos of the item and the box · within 48 hours of delivery · pickup is free'],
+  ['wrong', 'Wrong, missing or empty', 'Photos (a video of opening the box for costly items) · within 48 hours · pickup is free'],
+  ['defective', 'Faulty / does not work', 'Photos or a short video · within 48 hours · pickup is free'],
+  ['not_as_described', 'Not as described', 'A photo next to the listing · inside the return window · pickup is free'],
+  ['change_of_mind', 'Changed my mind', 'Tag/seal on, unused · you pay the return courier · not on hygiene or custom items'],
+  ['size', 'Size does not fit', 'Tag on, unused · exchange for another size · you pay the return courier'],
+];
+const FAULT = new Set(['damaged', 'wrong', 'defective', 'not_as_described']);
 
 /**
  * One order: where each parcel is, and what can still be done about it.
@@ -81,7 +102,7 @@ export default function OrderDetail({ orderId }) {
   const [data, setData] = useState(null);
   const [state, setState] = useState({ status: 'loading' });
   const [returning, setReturning] = useState(false);
-  const [returnForm, setReturnForm] = useState({ reason: '', resolution: 'refund' });
+  const [returnForm, setReturnForm] = useState({ reason: '', resolution: 'refund', kind: '', evidence: [], tagIntact: false });
   // { kind: 'cancelOrder' | 'cancelItem' | 'dispute', item? }
   const [asking, setAsking] = useState(null);
 
@@ -393,6 +414,39 @@ export default function OrderDetail({ orderId }) {
               }}
               className="mt-4 space-y-4"
             >
+              <fieldset className="space-y-2">
+                <legend className="text-sm font-medium">What happened?</legend>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {RETURN_KINDS.map(([value, label, note]) => (
+                    <label key={value} className="flex cursor-pointer gap-3 rounded-lg border p-3 text-sm has-[:checked]:border-primary">
+                      <input type="radio" name="kind" required checked={returnForm.kind === value} onChange={() => setReturnForm({ ...returnForm, kind: value })} className="mt-1" />
+                      <span>
+                        <strong>{label}</strong>
+                        <span className="block text-xs text-muted-foreground">{note}</span>
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+
+              {returnForm.kind && FAULT.has(returnForm.kind) && (
+                <div>
+                  <p className="text-sm font-medium">Photos of what arrived</p>
+                  <p className="mb-2 text-xs text-muted-foreground">Up to three - the item and the box. The seller and the admin see exactly what you saw.</p>
+                  <PhotoPicker value={returnForm.evidence} onChange={(evidence) => setReturnForm({ ...returnForm, evidence })} max={3} />
+                </div>
+              )}
+
+              {returnForm.kind && !FAULT.has(returnForm.kind) && (
+                <label className="flex cursor-pointer gap-3 rounded-lg border p-3 text-sm has-[:checked]:border-primary">
+                  <input type="checkbox" required checked={returnForm.tagIntact} onChange={(e) => setReturnForm({ ...returnForm, tagIntact: e.target.checked })} className="mt-1" />
+                  <span>
+                    <strong>The tag / seal is still on and it is unused</strong>
+                    <span className="block text-xs text-muted-foreground">The pickup rider checks this. Without the tag the return is refused at the door.</span>
+                  </span>
+                </label>
+              )}
+
               {/*
                 Money back, or the same item again. Asked here, once, because
                 the seller's payout and the courier booking both depend on it.
@@ -431,6 +485,9 @@ export default function OrderDetail({ orderId }) {
                   className="mt-1.5 w-full"
                 />
                 <p className="mt-1.5 text-xs text-muted-foreground">The seller reads this. A line is enough.</p>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Every decision is written on this order with its reason. If you disagree, <Link href="/help" className="text-brand-ink hover:underline">write to us</Link> within 7 days.
+                </p>
               </div>
 
               <div className="flex gap-3">

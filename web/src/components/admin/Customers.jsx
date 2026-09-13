@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, Fragment } from 'react';
+import CustomerRisk from '@/components/admin/CustomerRisk';
 import { toast } from 'sonner';
 import { authedFetch } from '@/lib/client';
 import { Input } from '@/components/ui/input';
@@ -36,6 +37,7 @@ export default function Customers() {
   const [filter, setFilter] = useState('all');
   const [q, setQ] = useState('');
   const [asking, setAsking] = useState(null);
+  const [open, setOpen] = useState(null); // the customer whose record is unfolded
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -124,7 +126,8 @@ export default function Customers() {
               </thead>
               <tbody className="divide-y">
                 {rows.map((c) => (
-                  <tr key={c._id} className={c.blocked ? 'opacity-60' : ''}>
+                  <Fragment key={c._id}>
+                  <tr className={c.blocked ? 'opacity-60' : ''}>
                     <td className="py-2 pr-3">
                       <span className="block font-medium">
                         {c.name}
@@ -141,7 +144,10 @@ export default function Customers() {
                     <td className={`py-2 pr-3 text-right tabular-nums ${c.cancelled >= 3 ? 'text-destructive' : ''}`}>{c.cancelled}</td>
                     <td className={`py-2 pr-3 text-right tabular-nums ${c.disputes >= 2 ? 'text-destructive' : ''}`}>{c.disputes}</td>
                     <td className="py-2 pr-3 text-muted-foreground">{when(c.lastOrderAt)}</td>
-                    <td className="py-2 text-right">
+                    <td className="py-2 text-right whitespace-nowrap">
+                      <Button size="sm" variant="ghost" onClick={() => setOpen(open === c._id ? null : c._id)}>
+                        {open === c._id ? 'Close' : 'Record'}
+                      </Button>
                       {c.blocked ? (
                         <Button size="sm" variant="ghost" onClick={() => setBlocked(c, false)} disabled={busy}>
                           Unblock
@@ -153,6 +159,15 @@ export default function Customers() {
                       )}
                     </td>
                   </tr>
+                  {open === c._id && (
+                    <tr>
+                      <td colSpan={7} className="bg-muted/30 px-3 py-3">
+                        {/* Fair Returns: the 180-day record and the step short of a block. */}
+                        <CustomerRisk customer={c} />
+                      </td>
+                    </tr>
+                  )}
+                  </Fragment>
                 ))}
               </tbody>
             </table>

@@ -195,6 +195,13 @@ export default function PlatformSettings() {
             ['cancelPenalty', 'Cancel charge after that (₹)'],
             ['cancelRateReviewPct', 'Review above cancel rate (%)'],
             ['defaultCommissionPct', 'Default commission (%)'],
+            // Fair Returns (plan §4.39)
+            ['damagedClaimHours', 'Damaged / wrong claim within (hours)'],
+            ['receiptCheckHours', 'Seller receipt check within (hours)'],
+            ['goodwillCapRupees', 'Goodwill refund cap (₹)'],
+            ['otpDeliveryAbove', 'OTP delivery at or above (₹)'],
+            ['unboxingVideoAbove', 'Unboxing video for wrong-item claims above (₹)'],
+            ['adminReviewAbove', 'Admin reviews every return above (₹)'],
           ].map(([k, label]) => (
             <Field key={k} id={`r-${k}`} label={label} hint={defaults?.rules?.[k] !== undefined && defaults.rules[k] !== r[k] ? `Default ${defaults.rules[k]}` : undefined}>
               <Input id={`r-${k}`} type="number" value={r[k]} onChange={setNum('rules', k)} min={0} />
