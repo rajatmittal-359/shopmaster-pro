@@ -1,82 +1,124 @@
+'use client';
+
+import { useState } from 'react';
 import Link from 'next/link';
+import { Check, ChevronDown, Star } from 'lucide-react';
 import { shopHref } from '@/lib/shopUrl';
 import PriceFilter from '@/components/shop/PriceFilter';
 
 /**
- * The filters, and only these.
+ * The filters - Myntra's left rail, at our size.
  *
- * Baymard's five essentials are Price, Rating, Colour, Size and Brand. Brand is
- * excluded by their own rule on a single-brand site. Size was excluded too
- * while this was a jewellery shop - and then clothing sellers arrived, so it is
- * here now, shown only where the current view actually has sizes.
- * 80% of shoppers apply a price filter whatever they are buying; only 47% of
- * sites offer a rating filter at all, which is the largest gap in the industry.
+ * WHAT CHANGED (13 Sep 2026; Rajat: "text ki list, mazaa nahi aa raha")
+ *   Sections that fold, a tick beside the one that is on, counts in quiet
+ *   grey, colours as swatches you can see before you read, sizes as chips,
+ *   price as a slider with the two boxes under it, ratings as stars. Options
+ *   with nothing behind them are not shown - Baymard's dead-end rule: a
+ *   filter that empties the page teaches people not to touch filters.
  *
- * A SERVER COMPONENT. Every option is a LINK, so each filtered view has a real
- * URL that can be shared, bookmarked and crawled - and the panel costs no
- * JavaScript. Only the price box needs a browser, and that is its own island.
+ * WHAT DID NOT CHANGE
+ *   Every option is still a LINK. Each filtered view keeps a real URL that
+ *   can be shared and crawled; the panel is a client component only for the
+ *   fold state and the slider.
  */
+const SWATCH = {
+  gold: '#d4af37',
+  'rose gold': '#b76e79',
+  'antique gold': '#a67c2e',
+  silver: '#c0c0c0',
+  'oxidised silver': '#6e6e6e',
+  copper: '#b87333',
+  bronze: '#cd7f32',
+  white: '#f5f5f5',
+  'off white': '#f2ede4',
+  cream: '#f3e9d2',
+  beige: '#e8d9c0',
+  black: '#1a1a1a',
+  grey: '#8a8a8a',
+  gray: '#8a8a8a',
+  red: '#c8102e',
+  maroon: '#7a1f2b',
+  pink: '#e58fb3',
+  peach: '#f2b8a0',
+  orange: '#f0812a',
+  yellow: '#f2c94c',
+  green: '#2e8b57',
+  teal: '#2a9d8f',
+  blue: '#2f5fbf',
+  navy: '#1f2a5a',
+  purple: '#7b4fbf',
+  brown: '#7b4a2d',
+  multicolour: 'conic-gradient(#e63946, #f4a261, #e9c46a, #2a9d8f, #457b9d, #e63946)',
+  multicolor: 'conic-gradient(#e63946, #f4a261, #e9c46a, #2a9d8f, #457b9d, #e63946)',
+};
+const swatchFor = (name) => SWATCH[String(name).toLowerCase()] || '#d9d9d9';
+
+function Section({ title, open: initial = true, count, children }) {
+  const [open, setOpen] = useState(initial);
+  return (
+    <section className="border-b pb-4">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className="flex w-full items-center justify-between py-1 text-left"
+      >
+        <span className="text-[0.8rem] font-semibold tracking-wide uppercase">
+          {title}
+          {count > 0 && <span className="ml-1.5 rounded-full bg-primary/10 px-1.5 text-[0.65rem] font-semibold text-brand-ink normal-case">{count}</span>}
+        </span>
+        <ChevronDown className={`size-4 text-muted-foreground transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && <div className="mt-2">{children}</div>}
+    </section>
+  );
+}
+
+/** A row that reads like a checkbox and behaves like a link. */
+function Option({ href, on, children, count }) {
+  return (
+    <li>
+      <Link href={href} aria-current={on ? 'true' : undefined} className="group flex items-center gap-2.5 rounded-md py-1.5 pr-1 hover:text-foreground">
+        <span
+          className={`grid size-4 shrink-0 place-items-center rounded-[4px] border transition ${on ? 'border-brand-ink bg-brand-ink text-white' : 'border-border bg-background group-hover:border-foreground/40'}`}
+          aria-hidden
+        >
+          {on && <Check className="size-3" strokeWidth={3} />}
+        </span>
+        <span className={`min-w-0 flex-1 truncate ${on ? 'font-medium text-foreground' : 'text-muted-foreground group-hover:text-foreground'}`}>{children}</span>
+        {count != null && <span className="text-xs tabular-nums text-muted-foreground/70">{count}</span>}
+      </Link>
+    </li>
+  );
+}
+
 export default function FilterPanel({ params, categories, colors, sizes = [], price }) {
   const active = (key, value) => String(params[key] || '') === String(value);
+  const live = categories.filter((c) => c.productCount > 0);
 
   return (
-    <aside className="space-y-6 text-sm">
-      <section>
-        <h2 className="font-semibold">Category</h2>
-        <ul className="mt-2 space-y-1">
-          <li>
-            <Link
-              href={shopHref(params, { category: '' })}
-              className={!params.category ? 'font-medium text-brand-ink' : 'text-muted-foreground hover:text-brand-ink'}
-            >
-              Everything
-            </Link>
-          </li>
-          {categories.map((cat) => {
+    <aside className="space-y-4 text-sm">
+      <Section title="Category">
+        <ul className="space-y-0.5">
+          <Option href={shopHref(params, { category: '' })} on={!params.category}>
+            Everything
+          </Option>
+          {live.map((cat) => {
             const children = (cat.children || []).filter((c) => c.productCount > 0);
-            /*
-             * A main category's children are shown when that branch is the one
-             * being looked at - either the parent is selected, or one of its
-             * children is. Showing every subcategory of every category at once
-             * turns a sidebar into a wall; hiding them entirely (which this
-             * panel did at first) means the only way into "Earrings" is the
-             * hover menu, which does not exist on a phone.
-             */
-            const inThisBranch =
-              active('category', cat.slug) || children.some((c) => active('category', c.slug));
-
+            const inThisBranch = active('category', cat.slug) || children.some((c) => active('category', c.slug));
             return (
               <li key={cat._id}>
-                <Link
-                  href={shopHref(params, { category: cat.slug })}
-                  className={
-                    active('category', cat.slug)
-                      ? 'font-medium text-brand-ink'
-                      : 'text-muted-foreground hover:text-brand-ink'
-                  }
-                >
-                  {cat.name}{' '}
-                  <span className="text-xs text-muted-foreground">({cat.productCount})</span>
-                </Link>
-
+                <ul>
+                  <Option href={shopHref(params, { category: cat.slug })} on={active('category', cat.slug)} count={cat.productCount}>
+                    {cat.name}
+                  </Option>
+                </ul>
                 {inThisBranch && children.length > 0 && (
-                  <ul className="mt-1 space-y-1 border-l border-border pl-3">
+                  <ul className="mt-0.5 mb-1 ml-2 space-y-0.5 border-l pl-3">
                     {children.map((child) => (
-                      <li key={child._id}>
-                        <Link
-                          href={shopHref(params, { category: child.slug })}
-                          className={
-                            active('category', child.slug)
-                              ? 'font-medium text-brand-ink'
-                              : 'text-muted-foreground hover:text-brand-ink'
-                          }
-                        >
-                          {child.name}{' '}
-                          <span className="text-xs text-muted-foreground">
-                            ({child.productCount})
-                          </span>
-                        </Link>
-                      </li>
+                      <Option key={child._id} href={shopHref(params, { category: child.slug })} on={active('category', child.slug)} count={child.productCount}>
+                        {child.name}
+                      </Option>
                     ))}
                   </ul>
                 )}
@@ -84,70 +126,78 @@ export default function FilterPanel({ params, categories, colors, sizes = [], pr
             );
           })}
         </ul>
-      </section>
+      </Section>
 
-      {colors.length > 0 && (
-        <section>
-          <h2 className="font-semibold">Colour</h2>
-          <ul className="mt-2 space-y-1">
-            {colors.map((c) => (
-              <li key={c.value}>
-                <Link
-                  href={shopHref(params, { color: active('color', c.value) ? '' : c.value })}
-                  className={active('color', c.value) ? 'font-medium text-brand-ink' : 'text-muted-foreground hover:text-brand-ink'}
-                >
-                  {c.value} <span className="text-xs">({c.count})</span>
-                </Link>
-              </li>
-            ))}
+      <PriceFilter key={`${price?.min}-${price?.max}-${params.minPrice || ''}-${params.maxPrice || ''}`} params={params} range={price} />
+
+      {colors.filter((c) => c.count > 0).length > 0 && (
+        <Section title="Colour" count={params.color ? 1 : 0}>
+          <ul className="space-y-0.5">
+            {colors
+              .filter((c) => c.count > 0)
+              .map((c) => {
+                const on = active('color', c.value);
+                return (
+                  <li key={c.value}>
+                    <Link
+                      href={shopHref(params, { color: on ? '' : c.value })}
+                      aria-current={on ? 'true' : undefined}
+                      className="group flex items-center gap-2.5 rounded-md py-1.5 pr-1"
+                    >
+                      <span
+                        aria-hidden
+                        className={`size-5 shrink-0 rounded-full border shadow-inner ${on ? 'ring-2 ring-brand-ink ring-offset-2 ring-offset-background' : 'border-black/10'}`}
+                        style={{ background: swatchFor(c.value) }}
+                      />
+                      <span className={`min-w-0 flex-1 truncate ${on ? 'font-medium text-foreground' : 'text-muted-foreground group-hover:text-foreground'}`}>{c.value}</span>
+                      <span className="text-xs tabular-nums text-muted-foreground/70">{c.count}</span>
+                    </Link>
+                  </li>
+                );
+              })}
           </ul>
-        </section>
+        </Section>
       )}
 
-      {/*
-        Size only appears where sizes exist - jewellery has none, and an empty
-        "Size" heading on a page of nose pins is a filter that teaches people
-        the panel is not to be trusted.
-      */}
       {sizes.length > 0 && (
-        <section>
-          <h2 className="font-semibold">Size</h2>
-          <ul className="mt-2 flex flex-wrap gap-2">
-            {sizes.map((s) => (
-              <li key={s.value}>
-                <Link
-                  href={shopHref(params, { size: active('size', s.value) ? '' : s.value })}
-                  className={`block min-w-10 rounded-md border px-2.5 py-1.5 text-center text-sm ${
-                    active('size', s.value)
-                      ? 'border-primary bg-primary/10 font-medium text-brand-ink'
-                      : 'border-border text-muted-foreground hover:border-primary hover:text-brand-ink'
-                  }`}
-                >
-                  {s.value}
-                </Link>
-              </li>
-            ))}
+        <Section title="Size" count={params.size ? 1 : 0}>
+          <ul className="flex flex-wrap gap-2">
+            {sizes.map((s) => {
+              const on = active('size', s.value);
+              return (
+                <li key={s.value}>
+                  <Link
+                    href={shopHref(params, { size: on ? '' : s.value })}
+                    aria-current={on ? 'true' : undefined}
+                    className={`block min-w-10 rounded-full border px-3 py-1.5 text-center text-sm transition ${
+                      on ? 'border-brand-ink bg-brand-ink font-medium text-white' : 'border-border text-muted-foreground hover:border-foreground/40 hover:text-foreground'
+                    }`}
+                  >
+                    {s.value}
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
-        </section>
+        </Section>
       )}
 
-      <PriceFilter params={params} range={price} />
-
-      <section>
-        <h2 className="font-semibold">Rating</h2>
-        <ul className="mt-2 space-y-1">
+      <Section title="Rating" count={params.minRating ? 1 : 0}>
+        <ul className="space-y-0.5">
           {[4, 3].map((r) => (
-            <li key={r}>
-              <Link
-                href={shopHref(params, { minRating: active('minRating', r) ? '' : r })}
-                className={active('minRating', r) ? 'font-medium text-brand-ink' : 'text-muted-foreground hover:text-brand-ink'}
-              >
-                {r} stars and up
-              </Link>
-            </li>
+            <Option key={r} href={shopHref(params, { minRating: active('minRating', r) ? '' : r })} on={active('minRating', r)}>
+              <span className="inline-flex items-center gap-1">
+                <span className="inline-flex text-amber-500" aria-hidden>
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <Star key={i} className="size-3.5" fill={i <= r ? 'currentColor' : 'none'} strokeWidth={i <= r ? 0 : 1.5} />
+                  ))}
+                </span>
+                <span>{r}★ &amp; up</span>
+              </span>
+            </Option>
           ))}
         </ul>
-      </section>
+      </Section>
     </aside>
   );
 }

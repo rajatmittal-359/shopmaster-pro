@@ -531,3 +531,48 @@ body::before {
     animation: smp-appear 1ms linear 300ms both;
   }
 }
+
+/*
+ * The price slider's two native range inputs share one track: the track is
+ * drawn by the component, the inputs only contribute their thumbs. The
+ * thumb needs pointer events; the (invisible) track must not swallow them,
+ * or the lower input hides the upper one.
+ */
+.range-thumb {
+  pointer-events: none;
+  height: 100%;
+}
+.range-thumb::-webkit-slider-runnable-track {
+  background: transparent;
+  height: 100%;
+}
+.range-thumb::-moz-range-track {
+  background: transparent;
+}
+.range-thumb::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  pointer-events: auto;
+  width: 18px;
+  height: 18px;
+  margin-top: 1px;
+  border-radius: 9999px;
+  background: var(--background);
+  border: 2px solid var(--brand-ink);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.2);
+  cursor: grab;
+}
+.range-thumb::-moz-range-thumb {
+  pointer-events: auto;
+  width: 18px;
+  height: 18px;
+  border-radius: 9999px;
+  background: var(--background);
+  border: 2px solid var(--brand-ink);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.2);
+  cursor: grab;
+}
+.range-thumb:focus-visible::-webkit-slider-thumb {
+  outline: 2px solid var(--brand-ink);
+  outline-offset: 2px;
+}

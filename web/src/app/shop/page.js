@@ -6,6 +6,7 @@ import { serialiseJsonLd } from '@/lib/jsonLd';
 import { shopHref } from '@/lib/shopUrl';
 import ProductCard from '@/components/product/ProductCard';
 import FilterPanel from '@/components/shop/FilterPanel';
+import FilterDrawer from '@/components/shop/FilterDrawer';
 import SortSelect from '@/components/shop/SortSelect';
 import AppliedFilters from '@/components/shop/AppliedFilters';
 import Pagination from '@/components/shop/Pagination';
@@ -136,17 +137,15 @@ export default async function ShopPage({ searchParams }) {
         </p>
       </header>
 
-      <div className="grid gap-8 md:grid-cols-[13rem_1fr]">
-        <FilterPanel
-          params={params}
-          categories={categories}
-          colors={filters.colors || []}
-          sizes={filters.sizes || []}
-          price={filters.price}
-        />
+      <div className="grid gap-8 md:grid-cols-[15rem_1fr]">
+        {/* The rail on a wide screen; behind a "Filters" button on a phone. */}
+        <div className="hidden md:block">
+          <FilterPanel params={params} categories={categories} colors={filters.colors || []} sizes={filters.sizes || []} price={filters.price} />
+        </div>
 
         <div>
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <FilterDrawer params={params} categories={categories} colors={filters.colors || []} sizes={filters.sizes || []} price={filters.price} />
             <AppliedFilters params={params} categoryName={category?.name} />
             <div className="ml-auto">
               <SortSelect params={params} />

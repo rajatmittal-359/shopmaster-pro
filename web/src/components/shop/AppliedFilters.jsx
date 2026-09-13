@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { X } from 'lucide-react';
 import { shopHref, FILTER_LABELS } from '@/lib/shopUrl';
 
 /**
@@ -27,10 +28,10 @@ export default function AppliedFilters({ params, categoryName }) {
         <Link
           key={chip.key}
           href={shopHref(params, { [chip.key]: '' })}
-          className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1 text-xs hover:bg-accent"
+          className="inline-flex items-center gap-1.5 rounded-full border border-brand-ink/30 bg-primary/10 px-3 py-1 text-xs font-medium text-brand-ink hover:bg-primary/20"
         >
           {chip.text}
-          <span aria-hidden="true" className="text-muted-foreground">x</span>
+          <X aria-hidden="true" className="size-3" />
           <span className="sr-only">Remove this filter</span>
         </Link>
       ))}
