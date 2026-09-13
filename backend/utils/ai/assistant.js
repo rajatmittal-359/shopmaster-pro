@@ -126,15 +126,22 @@ Answer now, as Ask ShopMaster.`;
   const meta = { retrieved: found.chunks.map((c) => c.source), via: found.via };
 
   if (textModel !== 'nano') {
-    const declarations = declarationsFor(role);
-    const r = await generateWithTools([...past, { role: 'user', parts: [{ text: prompt }] }], {
-      system: SYSTEM(role, true),
-      declarations,
-      run: (name, args) => runTool(name, args, { role, user }),
-    });
-    if (r.ok) return { ok: true, answer: r.text.trim(), model: r.model, searchedWeb: r.calls.includes('webSearch'), calls: r.calls, ...meta, ms: Date.now() - started };
+    const contents = [...past, { role: 'user', parts: [{ text: prompt }] }];
+    const withTools = { system: SYSTEM(role, true), declarations: declarationsFor(role), run: (name, args) => runTool(name, args, { role, user }) };
+    const done = (r) => ({ ok: true, answer: r.text.trim(), model: r.model, searchedWeb: r.calls.includes('webSearch'), calls: r.calls, ...meta, ms: Date.now() - started });
+
+    const r = await generateWithTools(contents, withTools);
+    if (r.ok) return done(r);
     if (textModel === 'gemini' || !/429|quota|reach|503|502|nothing/i.test(r.reason)) return { ok: false, reason: r.reason };
-    console.warn(`assistant: Gemini with tools failed (${r.reason.slice(0, 80)}) - answering without tools`);
+
+    // Second road, tools intact: Groq's free Llama 70B, when a key is set.
+    const { groqWithTools } = require('./groq');
+    const g = await groqWithTools(contents, withTools);
+    if (g.ok) {
+      console.warn(`assistant: Gemini unavailable (${r.reason.slice(0, 60)}) - answered by Groq ${g.model}`);
+      return done(g);
+    }
+    console.warn(`assistant: Gemini (${r.reason.slice(0, 60)}) and Groq (${g.reason.slice(0, 60)}) unavailable - answering without tools`);
   }
 
   // No tools on this road: the prefetch and the retrieved passages are all it has.

@@ -196,3 +196,44 @@ describe('generateWithTools', () => {
     expect(global.fetch).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('groqWithTools - the second road keeps the tools', () => {
+  const realFetch = global.fetch;
+  afterEach(() => {
+    global.fetch = realFetch;
+    delete process.env.GROQ_API_KEY;
+  });
+
+  it('is off without a key', async () => {
+    const { groqWithTools } = require('../utils/ai/groq');
+    const r = await groqWithTools([{ role: 'user', parts: [{ text: 'q' }] }], { run: async () => ({}) });
+    expect(r.ok).toBe(false);
+    expect(r.reason).toMatch(/GROQ_API_KEY/);
+  });
+
+  it('translates Gemini declarations to OpenAI tools and feeds tool results back', async () => {
+    process.env.GROQ_API_KEY = 'test';
+    const { groqWithTools } = require('../utils/ai/groq');
+    const bodies = [];
+    global.fetch = vi.fn(async (url, init) => {
+      bodies.push(JSON.parse(init.body));
+      const json = bodies.length === 1
+        ? { choices: [{ message: { role: 'assistant', content: null, tool_calls: [{ id: 'c1', type: 'function', function: { name: 'getOrder', arguments: '{"orderNumber":"SMP-260912-AB12CD"}' } }] } }] }
+        : { choices: [{ message: { role: 'assistant', content: 'Shipped, arriving Monday.' } }] };
+      return { ok: true, json: async () => json };
+    });
+    const run = vi.fn(async () => ({ order: 'shipped' }));
+    const r = await groqWithTools([{ role: 'user', parts: [{ text: 'where is SMP-260912-AB12CD' }] }], {
+      system: 'sys',
+      declarations: [{ name: 'getOrder', description: 'x', parameters: { type: 'OBJECT', properties: { orderNumber: { type: 'STRING', description: 'n' } }, required: ['orderNumber'] } }],
+      run,
+    });
+    expect(r.ok).toBe(true);
+    expect(r.calls).toEqual(['getOrder']);
+    expect(run).toHaveBeenCalledWith('getOrder', { orderNumber: 'SMP-260912-AB12CD' });
+    expect(bodies[0].tools[0].function.parameters.type).toBe('object');
+    expect(bodies[0].tools[0].function.parameters.properties.orderNumber.type).toBe('string');
+    expect(bodies[0].messages[0]).toEqual({ role: 'system', content: 'sys' });
+    expect(bodies[1].messages.at(-1)).toEqual({ role: 'tool', tool_call_id: 'c1', content: '{"order":"shipped"}' });
+  });
+});
