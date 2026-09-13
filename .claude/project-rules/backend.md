@@ -48,6 +48,7 @@ Liquidity · Trust · Seller recruitment · October 2026 cutover with nothing th
 - Cache: `middlewares/cacheControl.js` (`noStore` global, `publicCatalogue` on public routes). CORS from `FRONTEND_URL`.
 - Tests: vitest, `tests/setup.mjs` sets dummy keys and a never-connected `MONGO_URI`; 910 tests, no database, under a minute. Paid APIs (Gemini, Cloudflare, Pollinations, HF, Razorpay, Shiprocket, Brevo) always mocked.
 - AI: `utils/ai/{providers,catalog,imageGen,status,listing}.js`; quotas are real — test with mocks, 2–3 real heavy calls a day at most.
+- Seller notifications: `utils/notifySeller.js` (mail + push for new order / return / dispute); push via `utils/push.js` (`sendToUser`, VAPID keys in env, `transport.send` is the test seam), devices in `models/PushSubscription.js`.
 - Rate limits: `middlewares/rateLimits.js` (`authLimiter`, `checkoutLimiter`, `aiLimiter`; off under test unless `RATE_LIMIT_TEST=1`); `helmet` and `trust proxy` in `app.js`. Public catalogue handlers live in `controllers/productController.js`; `routes/productRoutes.js` is 15 lines. No request-validation layer yet (by hand, per controller).
 
 ## Record after building

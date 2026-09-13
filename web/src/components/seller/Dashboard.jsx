@@ -8,6 +8,7 @@ import { useT } from '@/lib/i18n';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import PanelCard from '@/components/panel/PanelCard';
+import PushToggle from '@/components/seller/PushToggle';
 
 /**
  * What a seller needs to know before they do anything else.
@@ -132,6 +133,9 @@ export default function SellerDashboard() {
       {/* ONE next thing. A panel that lists everything says nothing; Shopify's
           Home and Seller Central both lead with the single most urgent action. */}
       <NextUp waiting={waiting} pickupSet={pickupSet} bankSet={bankSet} lowStock={lowStock} productsTotal={productsTotal} />
+
+      {/* Once, in one line: the phone buzzes on a new order (plan 2.26). Gone when on. */}
+      <PushToggle compact />
 
       <div className="grid grid-cols-3 gap-3 sm:gap-4">
         {cards.map(({ icon: Icon, label, value, href, note }) => (

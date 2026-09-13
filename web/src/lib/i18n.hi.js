@@ -181,6 +181,24 @@ const HI = {
   'Your side is on the order': 'आपका पक्ष ऑर्डर पर है',
   'Courier’s delivery proof': 'कूरियर का डिलीवरी सबूत',
   'e.g. Packed on the 6th with the tag on, courier collected the same day; delivery photo shows the parcel at the door.': 'जैसे: 6 तारीख को टैग सहित पैक किया, उसी दिन कूरियर ले गया; डिलीवरी फोटो में पार्सल दरवाज़े पर दिख रहा है।',
+  // Phone notifications (plan 2.26)
+  'Get a buzz when an order comes in': 'ऑर्डर आते ही फ़ोन पर सूचना पाएँ',
+  'New order, return, dispute - on this phone the same second, like WhatsApp. No app to install.': 'नया ऑर्डर, वापसी, शिकायत - उसी पल इस फ़ोन पर, WhatsApp की तरह। कोई ऐप नहीं लगाना।',
+  'Notifications are on for this device': 'इस फ़ोन पर सूचनाएँ चालू हैं',
+  'New orders, returns and disputes reach this phone. Email still comes as the copy.': 'नए ऑर्डर, वापसी और शिकायत इस फ़ोन पर आएँगे। ईमेल भी साथ में आता रहेगा।',
+  'Notifications are blocked in this browser': 'इस ब्राउज़र में सूचनाएँ बंद हैं',
+  'Tap the lock icon next to the address, open Site settings → Notifications → Allow, then reload.': 'पते के पास ताले के निशान पर दबाएँ → Site settings → Notifications → Allow, फिर पेज दोबारा खोलें।',
+  'On iPhone, first add ShopMaster to the Home Screen': 'iPhone पर पहले ShopMaster को Home Screen पर जोड़ें',
+  'Safari → Share button → Add to Home Screen. Open it from there, then come back here and turn notifications on.': 'Safari → Share बटन → Add to Home Screen। वहाँ से खोलें, फिर यहाँ आकर सूचनाएँ चालू करें।',
+  'This browser cannot show notifications': 'यह ब्राउज़र सूचनाएँ नहीं दिखा सकता',
+  'Open the panel in Chrome on your phone to get them.': 'अपने फ़ोन के Chrome में पैनल खोलें, वहाँ मिलेंगी।',
+  'Turn on notifications': 'सूचनाएँ चालू करें',
+  'Send a test': 'टेस्ट भेजें',
+  'Turn off on this device': 'इस फ़ोन पर बंद करें',
+  'Not now': 'अभी नहीं',
+  'Phone notifications': 'फ़ोन सूचनाएँ',
+  'Notifications are on. A test is on its way.': 'सूचनाएँ चालू हो गईं। एक टेस्ट आ रहा है।',
+  'Sent. Look at your notification bar.': 'भेज दिया। ऊपर नोटिफ़िकेशन बार देखें।',
 };
 
 export default HI;

@@ -30,6 +30,9 @@ process.env.CLOUDFLARE_AI_GATEWAY = ''; // tests mock the direct provider URLs
 process.env.HF_TOKEN = '';
 process.env.NVIDIA_API_KEY = '';
 process.env.SENTRY_DSN = '';
+process.env.VAPID_PUBLIC_KEY = '';
+process.env.VAPID_PRIVATE_KEY = '';
+process.env.VAPID_SUBJECT = '';
 
 /*
  * The seller-charge ledger and the 30-day cancellation count sit on the cancel

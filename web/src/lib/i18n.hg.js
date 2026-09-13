@@ -134,6 +134,24 @@ const HG = {
   'Your side is on the order': 'Aapka paksh order pe hai',
   'Courier’s delivery proof': 'Courier ka delivery proof',
   'e.g. Packed on the 6th with the tag on, courier collected the same day; delivery photo shows the parcel at the door.': 'Jaise: 6 taareekh ko tag ke saath pack kiya, usi din courier le gaya; delivery photo me parcel darwaze pe dikh raha hai.',
+  // Phone notifications (plan 2.26)
+  'Get a buzz when an order comes in': 'Order aate hi phone pe notification pao',
+  'New order, return, dispute - on this phone the same second, like WhatsApp. No app to install.': 'Naya order, return, dispute - usi second is phone pe, WhatsApp jaisa. Koi app install nahi.',
+  'Notifications are on for this device': 'Is phone pe notifications on hain',
+  'New orders, returns and disputes reach this phone. Email still comes as the copy.': 'Naye orders, returns aur disputes is phone pe aayenge. Email bhi saath me aata rahega.',
+  'Notifications are blocked in this browser': 'Is browser me notifications block hain',
+  'Tap the lock icon next to the address, open Site settings → Notifications → Allow, then reload.': 'Address ke paas lock icon dabao → Site settings → Notifications → Allow, phir page reload karo.',
+  'On iPhone, first add ShopMaster to the Home Screen': 'iPhone pe pehle ShopMaster ko Home Screen pe add karo',
+  'Safari → Share button → Add to Home Screen. Open it from there, then come back here and turn notifications on.': 'Safari → Share button → Add to Home Screen. Wahan se kholo, phir yahan aake notifications on karo.',
+  'This browser cannot show notifications': 'Ye browser notifications nahi dikha sakta',
+  'Open the panel in Chrome on your phone to get them.': 'Phone ke Chrome me panel kholo, wahan milengi.',
+  'Turn on notifications': 'Notifications on karo',
+  'Send a test': 'Test bhejo',
+  'Turn off on this device': 'Is phone pe band karo',
+  'Not now': 'Abhi nahi',
+  'Phone notifications': 'Phone notifications',
+  'Notifications are on. A test is on its way.': 'Notifications on ho gayi. Ek test aa raha hai.',
+  'Sent. Look at your notification bar.': 'Bhej diya. Upar notification bar dekho.',
 };
 
 export default HG;

@@ -11,6 +11,7 @@ import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
 import PanelCard from '@/components/panel/PanelCard';
+import PushToggle from '@/components/seller/PushToggle';
 
 /**
  * A seller's own settings.
@@ -160,6 +161,8 @@ export default function SellerSettings() {
           </div>
         </dl>
       </PanelCard>
+
+      <PushToggle />
 
       <PanelCard
         title="Where the courier collects"

@@ -95,6 +95,13 @@ const assist = require('../controllers/assistController');
 router.post('/assist', requireApprovedSeller, assist.seller);
 router.patch('/assist/:id', assist.rate);
 router.post('/voice/transcribe', require('../controllers/voiceController').transcribe);
+// Push notifications to the seller's phone (plan 2.26) - any signed-in seller may register a device.
+const pushCtl = require('../controllers/pushController');
+router.get('/push/public-key', pushCtl.publicKey);
+router.get('/push', pushCtl.list);
+router.post('/push/subscribe', pushCtl.subscribe);
+router.delete('/push/subscribe', pushCtl.unsubscribe);
+router.post('/push/test', pushCtl.test);
 router.get('/category-requests', requireApprovedSeller, panel.myCategoryRequests);
 router.post('/category-requests', requireApprovedSeller, panel.requestCategory);
 router.post('/ai/listing', requireApprovedSeller, ai.writeListing);
