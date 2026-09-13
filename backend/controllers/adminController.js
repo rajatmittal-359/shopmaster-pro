@@ -156,7 +156,7 @@ exports.activateSeller = async (req, res) => {
  */
 exports.createCategory = async (req, res) => {
   try {
-    const { name, description, parentCategory } = req.body;
+    const { name, description, parentCategory, googleProductCategory } = req.body;
 
     // Names of the subcategories to create alongside a new main category.
     const subcategories = Array.isArray(req.body.subcategories)
@@ -205,6 +205,7 @@ exports.createCategory = async (req, res) => {
       name,
       description,
       parentCategory: parentCategory || null,
+      googleProductCategory: googleProductCategory || null,
       createdBy: req.user._id,
     });
 
@@ -288,7 +289,7 @@ exports.getCategories = async (req, res) => {
 exports.updateCategory = async (req, res) => {
   try {
     const { categoryId } = req.params;
-    const { name, description, isActive, parentCategory } = req.body;
+    const { name, description, isActive, parentCategory, googleProductCategory } = req.body;
 
     // ✅ Validate parent if changing
     if (parentCategory) {
@@ -320,6 +321,7 @@ exports.updateCategory = async (req, res) => {
     // findByIdAndUpdate bypasses the pre('save') hook, so the materialized
     // path and slug are computed explicitly here to stay consistent.
     const update = { name, description, isActive };
+    if (googleProductCategory !== undefined) update.googleProductCategory = googleProductCategory || null;
     if (parentCategory !== undefined) {
       update.parentCategory = parentCategory || null;
       update.ancestors = await Category.buildAncestors(parentCategory || null);

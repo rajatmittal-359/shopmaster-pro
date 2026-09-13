@@ -94,6 +94,8 @@ router.get('/products', panel.adminProducts);
 router.get('/customers', panel.adminCustomers);
 router.patch('/customers/:userId/block', panel.setCustomerBlocked);
 router.get('/nav-counts', panel.adminNavCounts);
+router.get('/category-requests', panel.adminCategoryRequests);
+router.patch('/category-requests/:requestId', panel.decideCategoryRequest);
 router.get('/google/traffic', require('../controllers/searchInsightsController').adminTraffic);
 router.get('/google/speed', require('../controllers/searchInsightsController').adminSpeed);
 router.post('/ai/listing', ai.writeListing);

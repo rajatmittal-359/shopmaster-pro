@@ -83,7 +83,7 @@ exports.googleProductFeed = async (req, res) => {
 
     const products = await withShop(
       await Product.find(filter)
-        .populate('category', 'name')
+        .populate({ path: 'category', select: 'name googleProductCategory parentCategory', populate: { path: 'parentCategory', select: 'name googleProductCategory' } })
         .populate('sellerId', 'name')
         .sort({ updatedAt: -1 })
         .limit(5000)
@@ -187,7 +187,14 @@ exports.googleProductFeed = async (req, res) => {
         if (!p.sku) parts.push(`<g:identifier_exists>no</g:identifier_exists>`);
 
         if (p.category?.name) {
-          parts.push(`<g:product_type>${esc(p.category.name)}</g:product_type>`);
+          // Our own path (parent > leaf) as product_type, and Google's name
+          // for the branch as google_product_category - the leaf's, else the
+          // parent's. Google classifies and approves by the second.
+          const parent = p.category.parentCategory;
+          const path = parent?.name ? `${parent.name} > ${p.category.name}` : p.category.name;
+          parts.push(`<g:product_type>${esc(path)}</g:product_type>`);
+          const gpc = p.category.googleProductCategory || parent?.googleProductCategory;
+          if (gpc) parts.push(`<g:google_product_category>${esc(gpc)}</g:google_product_category>`);
         }
 
         /*

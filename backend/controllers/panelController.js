@@ -315,3 +315,92 @@ exports.adminNavCounts = async (req, res) => {
     sendError(res, error);
   }
 };
+
+// ------------------------------------------------- category requests
+const CategoryRequest = require('../models/CategoryRequest');
+const Category = require('../models/Category');
+const { escapeRegex } = require('../utils/catalogueFilter');
+const exactName = (name) => new RegExp(`^${escapeRegex(name)}$`, 'i');
+
+/** Seller: ask for a category. One open request per name per seller. */
+exports.requestCategory = async (req, res) => {
+  try {
+    const name = String(req.body?.name || '').trim();
+    if (name.length < 2) return res.status(400).json({ message: 'Give the category a name' });
+    if (await Category.exists({ name: exactName(name) })) {
+      return res.status(409).json({ message: `"${name}" already exists - type it in the category box` });
+    }
+    const dup = await CategoryRequest.findOne({ sellerId: req.user._id, name: exactName(name), status: 'open' });
+    if (dup) return res.status(409).json({ message: 'You have already asked for this one - it is with the admin' });
+    const parent = req.body?.parentCategory ? await Category.findOne({ _id: req.body.parentCategory, parentCategory: null }).lean() : null;
+    const request = await CategoryRequest.create({
+      sellerId: req.user._id,
+      name,
+      parentCategory: parent?._id || null,
+      note: req.body?.note ? String(req.body.note).slice(0, 300) : null,
+    });
+    res.status(201).json({ request });
+  } catch (error) {
+    sendError(res, error);
+  }
+};
+
+/** Seller: my requests and their answers. */
+exports.myCategoryRequests = async (req, res) => {
+  try {
+    const requests = await CategoryRequest.find({ sellerId: req.user._id }).populate('parentCategory', 'name').populate('createdCategory', 'name').sort({ createdAt: -1 }).limit(20).lean();
+    res.json({ requests });
+  } catch (error) {
+    sendError(res, error);
+  }
+};
+
+/** Admin: the open requests, with who asked. */
+exports.adminCategoryRequests = async (req, res) => {
+  try {
+    const requests = await CategoryRequest.find({}).populate('sellerId', 'name').populate('parentCategory', 'name').populate('createdCategory', 'name').sort({ status: 1, createdAt: -1 }).limit(100).lean();
+    const named = await withShop(requests.map((r) => ({ ...r, sellerId: r.sellerId?._id || r.sellerId, sellerName: r.sellerId?.name })));
+    res.json({ requests: named.map((r) => ({ ...r, shop: r.shop?.name || r.sellerName || null })) });
+  } catch (error) {
+    sendError(res, error);
+  }
+};
+
+/**
+ * Admin decides: `create` makes the category under the (possibly changed)
+ * parent and tells the seller; `decline` tells them why. Either way the
+ * request closes - a seller never waits on a silent queue.
+ */
+exports.decideCategoryRequest = async (req, res) => {
+  try {
+    const request = await CategoryRequest.findById(req.params.requestId);
+    if (!request || request.status !== 'open') return res.status(404).json({ message: 'No open request' });
+    const { action, parentCategory, reply, googleProductCategory } = req.body || {};
+    if (action === 'create') {
+      const parentId = parentCategory || request.parentCategory;
+      if (!parentId) return res.status(400).json({ message: 'Choose the main category it goes under' });
+      const parent = await Category.findOne({ _id: parentId, parentCategory: null });
+      if (!parent) return res.status(400).json({ message: 'That parent is not a main category' });
+      const category = await Category.create({
+        name: request.name,
+        parentCategory: parent._id,
+        googleProductCategory: googleProductCategory || parent.googleProductCategory || null,
+        createdBy: req.user._id,
+      });
+      request.status = 'created';
+      request.createdCategory = category._id;
+      request.reply = reply || `Added under ${parent.name}. You can list in it now.`;
+    } else if (action === 'decline') {
+      request.status = 'declined';
+      request.reply = reply || 'Not added - see the note.';
+    } else {
+      return res.status(400).json({ message: 'action must be create or decline' });
+    }
+    request.decidedAt = new Date();
+    await request.save();
+    res.json({ request });
+  } catch (error) {
+    if (error.code === 11000) return res.status(409).json({ message: 'A category with that name already exists' });
+    sendError(res, error);
+  }
+};

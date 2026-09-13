@@ -59,3 +59,5 @@ Liquidity · Trust · Seller recruitment · October 2026 cutover. Stage: one Atl
 | `Payout` | Money leaving. Amount from `sellerMoneyFor` at the time; state forward-only; who marked it paid. |
 | `AiUsage` / `AiProviderState` | Keyed per day / period; `$inc` not read-modify-save; unique index is the lock. |
 | `Category` | Ancestors array kept true on move; products only on leaves. |
+
+**Categories (13 Sep 2026):** two levels, names unique, `googleProductCategory` on each (Google Product Taxonomy path; the feed sends it, leaf falls back to parent). The tree lives in `config/taxonomy.js` (23 mains / 168 subs) and `seedCategories.js` grows a database to it add-only. Sellers never create categories - they file a `CategoryRequest`; the admin creates or declines from the Categories page.

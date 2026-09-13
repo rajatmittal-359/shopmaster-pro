@@ -84,6 +84,8 @@ router.post('/coupons', requireApprovedSeller, panel.createSellerCoupon);
 router.patch('/coupons/:couponId/toggle', requireApprovedSeller, panel.toggleSellerCoupon);
 router.get('/performance', requireApprovedSeller, panel.sellerPerformance);
 router.get('/nav-counts', panel.sellerNavCounts);
+router.get('/category-requests', requireApprovedSeller, panel.myCategoryRequests);
+router.post('/category-requests', requireApprovedSeller, panel.requestCategory);
 router.post('/ai/listing', requireApprovedSeller, ai.writeListing);
 router.post('/ai/refine', requireApprovedSeller, ai.refineText);
 router.post('/ai/keywords', requireApprovedSeller, ai.suggestKeywords);

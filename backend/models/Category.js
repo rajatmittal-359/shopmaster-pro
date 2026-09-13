@@ -41,6 +41,13 @@ const categorySchema = new mongoose.Schema(
       type: Boolean,
       default: true
     },
+    /**
+     * Google's own name for this branch (Google Product Taxonomy path, e.g.
+     * "Apparel & Accessories > Jewelry > Earrings"). The Merchant feed sends
+     * it as google_product_category; a leaf without one inherits its parent's.
+     * Set from config/taxonomy.js, editable by the admin.
+     */
+    googleProductCategory: { type: String, trim: true, default: null },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User'

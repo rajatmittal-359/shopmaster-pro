@@ -15,6 +15,7 @@ import RichTextEditor from '@/components/seller/RichTextEditor';
 import CategoryPicker from '@/components/seller/CategoryPicker';
 import FieldAssist from '@/components/seller/FieldAssist';
 import ListingQuality from '@/components/seller/ListingQuality';
+import SuggestCategory from '@/components/seller/SuggestCategory';
 
 /**
  * Listing something for sale.
@@ -113,6 +114,7 @@ export default function ProductForm({ productId, copyFromId }) {
   // One optional clip: keep / replace / remove, said exactly once on save (see VideoSlot).
   const [video, setVideo] = useState({ existing: null, next: null, nextFile: null, removed: false });
   const [categories, setCategories] = useState([]);
+  const [parents, setParents] = useState([]);
   const [state, setState] = useState({ status: 'loading' });
   const [keywords, setKeywords] = useState('');
   // Which model writes: 'auto' (Gemini, nano behind it), 'gemini', 'nano'. The
@@ -128,6 +130,7 @@ export default function ProductForm({ productId, copyFromId }) {
         const tree = await getCategories();
         if (cancelled) return;
         setCategories(leavesOf(tree));
+        setParents(tree.map((c) => ({ _id: c._id, name: c.name })));
 
         // Today's AI allowance. A failure here must not block the form.
         authedFetch('/seller/ai/usage')
@@ -416,6 +419,7 @@ export default function ProductForm({ productId, copyFromId }) {
       <Card title="3 · Category">
         <Field id="category" label="Where it sits in the shop" hint="Type to search. Shoppers browse by these, and Google reads them.">
           <CategoryPicker id="category" options={categories} value={form.category} onChange={setValue('category')} />
+          <SuggestCategory parents={parents} />
         </Field>
       </Card>
 

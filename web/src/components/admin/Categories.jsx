@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import CategoryRequests from "@/components/admin/CategoryRequests";
 
 /**
  * The category tree.
@@ -116,6 +117,7 @@ export default function Categories() {
 
   return (
     <div className="space-y-8">
+      <CategoryRequests parents={parents} onCreated={load} />
       <p aria-live="polite" className="min-h-5 text-sm">
         {state.status === "error" && (
           <span className="text-destructive">{state.message}</span>
