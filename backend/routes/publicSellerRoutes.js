@@ -35,7 +35,7 @@ router.get('/:userId', async (req, res) => {
     const { userId } = req.params;
 
     const seller = await Seller.findOne({ userId })
-      .select('businessName isApproved status createdAt about links showLocation pickupAddress')
+      .select('businessName isApproved status createdAt about links showLocation pickupAddress aboutModeration')
       .lean();
 
     /*
@@ -90,7 +90,7 @@ router.get('/:userId', async (req, res) => {
         id: userId,
         businessName: seller.businessName,
         sellingSince: seller.createdAt,
-        about: seller.about || '',
+        about: seller.aboutModeration?.status === 'held' || seller.aboutModeration?.status === 'removed' ? '' : seller.about || '',
         links: Object.fromEntries(Object.entries(seller.links || {}).filter(([, v]) => v)),
         city: seller.showLocation && seller.pickupAddress?.city ? { city: seller.pickupAddress.city, state: seller.pickupAddress.state || '' } : null,
         productCount: count,

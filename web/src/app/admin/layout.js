@@ -33,6 +33,7 @@ const GROUPS = [
     label: "Needs a person",
     items: [
       { href: "/admin/orders", label: "Orders & disputes", icon: "MessageSquareWarning", badge: "orders" },
+      { href: "/admin/trust", label: "Trust queue", icon: "ShieldCheck", badge: "trust" },
       { href: "/admin/sellers", label: "Sellers", icon: "Store", badge: "sellers" },
     ],
   },

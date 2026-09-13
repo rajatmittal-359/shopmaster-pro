@@ -111,6 +111,13 @@ const sellerSchema = new mongoose.Schema(
      *                need a place; off by default because a pickup address
      *                can be a home
      */
+    /** Trust queue (plan 2.22): a flagged About is saved but not shown until an admin approves. */
+    aboutModeration: {
+      status: { type: String, enum: ['ok', 'held', 'removed'], default: 'ok' },
+      categories: { type: [String], default: [] },
+      reason: { type: String, default: null },
+      at: { type: Date, default: null },
+    },
     about: { type: String, trim: true, maxlength: 600, default: '' },
     links: {
       instagram: { type: String, trim: true, default: '' },

@@ -36,6 +36,17 @@
         trim: true,
         maxlength: [1000, 'Comment cannot exceed 1000 characters'],
         },
+        /**
+         * Trust queue (plan 2.22). 'held' is not shown and not counted until
+         * an admin approves; 'removed' stays as a record of what was said.
+         */
+        moderation: {
+          status: { type: String, enum: ['ok', 'held', 'removed'], default: 'ok' },
+          categories: { type: [String], default: [] },
+          reason: { type: String, default: null },
+          at: { type: Date, default: null },
+          by: { type: String, enum: ['rules', 'rules+model', 'admin', null], default: null },
+        },
     },
     { timestamps: true }
     );
@@ -46,7 +57,7 @@
     // ✅ Helper to recalc product avg rating
     reviewSchema.statics.recalculateProductRating = async function (productId) {
     const stats = await this.aggregate([
-        { $match: { productId: new mongoose.Types.ObjectId(productId) } },
+        { $match: { productId: new mongoose.Types.ObjectId(productId), 'moderation.status': { $ne: 'held' }, $expr: { $ne: ['$moderation.status', 'removed'] } } },
         {
         $group: {
             _id: '$productId',

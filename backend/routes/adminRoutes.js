@@ -101,6 +101,11 @@ router.patch('/customers/:id/risk', fair.setCustomerRisk);
 router.get('/sellers/:userId/risk', fair.sellerRisk);
 router.post('/orders/:orderId/return/approve', fair.approveReturn);
 router.get('/orders/:orderId/dispute-brief', fair.disputeBrief);
+// The Trust queue (plan 2.22)
+const trust = require('../controllers/trustController');
+router.get('/trust', trust.queue);
+router.patch('/trust/reviews/:id', trust.reviewAction);
+router.patch('/trust/sellers/:userId/about', trust.aboutAction);
 
 const assist = require('../controllers/assistController');
 router.post('/assist', assist.admin);

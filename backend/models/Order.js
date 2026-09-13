@@ -337,6 +337,8 @@ const fulfilmentSchema = new mongoose.Schema(
     disputeRaisedAt: { type: Date, default: null },
     disputeResolvedAt: { type: Date, default: null },
     disputeResolution: { type: String, default: null },
+    /** Trust queue: what the moderator saw in the dispute / return text (abuse, contact details). Never blocks. */
+    textFlags: { type: [String], default: [] },
     /** Who opened it: the customer (nothing came / wrong item) or the seller (the return came back wrong). */
     disputeRaisedBy: { type: String, enum: ['customer', 'seller', null], default: null },
     /** The seller's side, inside disputeResponseHours: a note and photos / the courier's proof. */

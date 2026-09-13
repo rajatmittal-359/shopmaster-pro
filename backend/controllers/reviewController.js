@@ -42,7 +42,7 @@ exports.getProductReviews = async (req, res) => {
       return res.status(404).json({ message: 'Product not found' });
     }
 
-    const reviews = await Review.find({ productId: product._id })
+    const reviews = await Review.find({ productId: product._id, 'moderation.status': { $nin: ['held', 'removed'] } })
       .populate('userId', 'name')
       .sort({ createdAt: -1 });
 
@@ -110,11 +110,21 @@ exports.createOrUpdateReview = async (req, res) => {
       userId: req.user._id,
     });
 
+    // Trust queue (plan 2.22): the words are read before they are shown. A
+    // phone number, a link, abuse → held for the admin; the rating still
+    // saves, the text waits. The customer is told, plainly.
+    const { moderateText } = require('../utils/ai/moderate');
+    const verdict = await moderateText(`${title || ''} ${comment || ''}`, { context: 'review' });
+    const moderation = verdict.flagged
+      ? { status: 'held', categories: verdict.categories, reason: verdict.reason, at: new Date(), by: verdict.via }
+      : { status: 'ok', categories: [], reason: null, at: new Date(), by: verdict.via };
+
     if (review) {
       // Update
       review.rating = rating;
       if (title !== undefined) review.title = title;
       if (comment !== undefined) review.comment = comment;
+      review.moderation = moderation;
 
       await review.save();
     } else {
@@ -126,6 +136,7 @@ exports.createOrUpdateReview = async (req, res) => {
         rating,
         title,
         comment,
+        moderation,
       });
     }
 
@@ -133,7 +144,10 @@ exports.createOrUpdateReview = async (req, res) => {
     await Review.recalculateProductRating(product._id);
 
     res.status(201).json({
-      message: 'Review saved successfully',
+      message: review.moderation?.status === 'held'
+        ? 'Thank you - your rating is saved. The written part is being checked because it looks like it has contact details or strong words; it appears once an admin has read it.'
+        : 'Review saved successfully',
+      held: review.moderation?.status === 'held',
       review,
     });
   } catch (error) {

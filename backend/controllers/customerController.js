@@ -1167,10 +1167,12 @@ exports.raiseDispute = async (req, res) => {
     );
 
     const now = new Date();
+    const flags = (await require('../utils/ai/moderate').moderateText(reason, { context: 'dispute' })).categories;
     arguable.forEach((f) => {
       f.disputeStatus = 'open';
       f.disputeReason = reason;
       f.disputeRaisedAt = now;
+      if (flags.length) f.textFlags = [...new Set([...(f.textFlags || []), ...flags])];
     });
 
     await order.save();

@@ -122,6 +122,12 @@ exports.createSellerCoupon = async (req, res) => {
     if (!code || !type || value == null) return res.status(400).json({ message: 'Code, type and value are required' });
     if (type === 'percent' && (Number(value) < 1 || Number(value) > 90)) return res.status(400).json({ message: 'A percentage between 1 and 90' });
     if (type === 'flat' && Number(value) < 1) return res.status(400).json({ message: 'A rupee amount of at least 1' });
+    {
+      // Trust queue: a coupon code is public text on every product page.
+      const { byRules } = require('../utils/ai/moderate');
+      const bad = byRules(String(req.body?.code || ''));
+      if (bad.flagged) return res.status(400).json({ message: 'That code cannot be used - it looks like contact details or offensive words. Pick letters and numbers, e.g. DIWALI20.' });
+    }
     const coupon = await Coupon.create({
       code: String(code).toUpperCase().trim(),
       description: description || null,
@@ -304,13 +310,17 @@ exports.setCustomerBlocked = async (req, res) => {
 // -------------------------------------------------------- admin: counts
 exports.adminNavCounts = async (req, res) => {
   try {
-    const [pendingSellers, disputes, payable] = await Promise.all([
+    const Review = require('../models/Review');
+    const [pendingSellers, disputes, payable, heldReviews, heldAbouts, heldReturns] = await Promise.all([
       Seller.countDocuments({ isApproved: { $ne: true }, kycStatus: { $ne: 'rejected' } }),
       Order.countDocuments({ 'fulfilments.disputeStatus': 'open' }),
       Payout.countDocuments({ status: 'pending' }),
+      Review.countDocuments({ 'moderation.status': 'held' }),
+      Seller.countDocuments({ 'aboutModeration.status': 'held' }),
+      Order.countDocuments({ fulfilments: { $elemMatch: { returnNeedsApproval: true, returnApprovedAt: null, returnStage: 'requested' } } }),
     ]);
     res.set('Cache-Control', 'private, max-age=30');
-    res.json({ sellers: pendingSellers, orders: disputes, payouts: payable });
+    res.json({ sellers: pendingSellers, orders: disputes, payouts: payable, trust: heldReviews + heldAbouts + heldReturns });
   } catch (error) {
     sendError(res, error);
   }

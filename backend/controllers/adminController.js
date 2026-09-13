@@ -996,6 +996,12 @@ exports.createCoupon = async (req, res) => {
       perCustomerLimit,
     } = req.body || {};
 
+    {
+      // Trust queue: a coupon code is public text on every product page.
+      const { byRules } = require('../utils/ai/moderate');
+      const bad = byRules(String(req.body?.code || ''));
+      if (bad.flagged) return res.status(400).json({ message: 'That code cannot be used - it looks like contact details or offensive words. Pick letters and numbers, e.g. DIWALI20.' });
+    }
     const coupon = await Coupon.create({
       code,
       description,

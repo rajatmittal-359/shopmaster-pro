@@ -1725,6 +1725,7 @@ exports.getSettings = async (req, res) => {
 exports.updateSettings = async (req, res) => {
   try {
     const { offersFreeShipping, pickupAddress, about, links, showLocation } = req.body || {};
+    let aboutHeld = null;
 
     const seller = await Seller.findOne({ userId: req.user._id });
     if (!seller) {
@@ -1737,7 +1738,14 @@ exports.updateSettings = async (req, res) => {
 
     // Plain text only: no tags, no control characters - it is printed on the
     // shop page and inside its structured data.
-    if (about !== undefined) seller.about = String(about).replace(/<[^>]*>/g, '').replace(/[ -\u2028\u2029]/g, ' ').slice(0, 600).trim();
+    if (about !== undefined) {
+      seller.about = String(about).replace(/<[^>]*>/g, '').replace(/[ -\u2028\u2029]/g, ' ').slice(0, 600).trim();
+      // Trust queue: an About with a phone number or a link waits for the admin.
+      const { moderateText } = require('../utils/ai/moderate');
+      const v = await moderateText(seller.about, { context: 'seller about' });
+      seller.aboutModeration = v.flagged ? { status: 'held', categories: v.categories, reason: v.reason, at: new Date() } : { status: 'ok', categories: [], reason: null, at: new Date() };
+      if (v.flagged) aboutHeld = v.reason;
+    }
     if (showLocation !== undefined) seller.showLocation = Boolean(showLocation);
     if (links && typeof links === 'object') {
       // Only http(s) links, only to the hosts each field is for - a link that
@@ -1805,7 +1813,10 @@ exports.updateSettings = async (req, res) => {
 
     return res.json({
       success: true,
-      message: 'Saved',
+      message: aboutHeld
+        ? 'Saved. Your About is being checked before it goes on your page - it looks like it has contact details or a link. Shoppers reach you through ShopMaster; the admin will approve it or write to you.'
+        : 'Saved',
+      aboutHeld: Boolean(aboutHeld),
       settings: {
         offersFreeShipping: Boolean(seller.offersFreeShipping),
         pickupAddress: seller.pickupAddress || {},
