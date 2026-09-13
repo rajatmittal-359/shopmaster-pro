@@ -26,6 +26,11 @@ import { GOOGLE_CLIENT_ID, ensureGsi, exchangeGoogleCredential, gsiReady } from 
  */
 const QUIET_ON = ['/login', '/register', '/forgot-password', '/reset-password', '/checkout'];
 
+// Once per page load. Re-prompting on every client navigation - and
+// cancelling the previous prompt to do it - is what made Google log
+// "FedCM get() rejects with AbortError" on each route change.
+let prompted = false;
+
 export default function GoogleOneTap() {
   const { signedIn } = useSession();
   const pathname = usePathname() || '/';
@@ -33,7 +38,7 @@ export default function GoogleOneTap() {
   const quiet = !GOOGLE_CLIENT_ID || signedIn || QUIET_ON.some((p) => pathname.startsWith(p));
 
   useEffect(() => {
-    if (quiet) return undefined;
+    if (quiet || prompted) return undefined;
     let cancelled = false;
     let tries = 0;
     const timer = setInterval(() => {
@@ -41,6 +46,8 @@ export default function GoogleOneTap() {
       if (cancelled || tries > 40) return clearInterval(timer);
       if (!gsiReady()) return undefined;
       clearInterval(timer);
+      if (prompted) return undefined;
+      prompted = true;
       ensureGsi(async (response) => {
         try {
           const data = await exchangeGoogleCredential(response.credential);
@@ -56,8 +63,8 @@ export default function GoogleOneTap() {
     return () => {
       cancelled = true;
       clearInterval(timer);
-      // Leaving the storefront for the login page: let its button take over.
-      if (gsiReady()) window.google.accounts.id.cancel();
+      // No cancel() here: the prompt is Google's to close, and aborting it
+      // on every navigation is the noise this comment is about.
     };
   }, [quiet, router]);
 
