@@ -1,7 +1,10 @@
 # ShopMaster Pro — read this first
 
-Marketplace from Jaipur, run by Rajat Mittal. His own shop, **Charming Jewels**,
-is one seller on it and also the admin account. The site is **ShopMaster Pro**;
+Marketplace from Jaipur, run by Rajat Mittal. His family's shop, **Charming Jewels**,
+is one seller on it. Two accounts, kept apart: `rajatmittal6908@gmail.com` is the
+Charming Jewels **seller** (his mother's daily login, also the shop's Google Business
+Profile); `rajatmittal359@gmail.com` is the **admin** (and every Google/Atlas/Render
+console). The site is **ShopMaster Pro**;
 it sells anything, and nothing in the frame may name a category.
 
 ## Which app is which
