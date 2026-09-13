@@ -2047,3 +2047,28 @@ Rajat: not a dictionary of canned answers - it must learn the architecture and t
 - **Four roads, one budget (13 Sep evening)** - Gemini's free day ran out at 18:30 and Groq's chat models turned out to allow 8,000 tokens a *minute* (our full prompt is ~6,500). So: Gemini (tools, full prompt) → Groq gpt-oss-120b (tools, compact prompt ~3,500, 2 rounds) → Groq compound-mini (70k/min, no custom tools, its own search) → Pollinations nano (compact). Groq's rate-limit headers are remembered per model and a road that cannot fit is skipped without a call. Whatever the road, the answer's script is checked and rewritten when wrong.
 - **Language chip** - हिंदी · Hinglish · English on the panel bar and inside the chat; हिंदी and Hinglish pin the script, English answers as written ("kaise ho" → Hinglish). Same chip drives the mic (Hinglish = heard as Hindi, transliterated to roman) and the read-aloud voice.
 - **Answer shape** - Rajat: "pinpointed, no faltu baat, wholesome". First line is the answer, then only its specifics, one next step; no greetings, emoji, "happy selling", dashboard tours; small talk gets one line. `npm run eval:assistant` grades nine cases by code; 8/9 clean on the worst-case roads.
+
+### 4.39 Fair Returns - the policy matrix (13 Sep 2026, decided; built with 2.19 and 2.29)
+
+Rajat: "saman bahut tarah ka, nuksaan bahut tarah se; seller bhi jhooth bol sakta hai; no-return, exchange-only, return-refund sab chahiye; tight karo." References: Myntra/Flipkart tamper tags ("no tag, no return"), Amazon/Flipkart non-returnable hygiene categories with the legal exception, Shiprocket QC-returns and OTP delivery, Consumer Protection (E-Commerce) Rules 2020.
+
+**A. Return mode per product** (seller picks inside the admin's per-category allowance; shown on the product page, at checkout, on the order and in the email): **R** return/refund or exchange (7 days, tag/seal intact, unused) · **X** exchange only · **N** no return (hygiene: earrings, nose pins, innerwear, cosmetics; custom/engraved; made-to-order; perishable). **Always, whatever the mode**: wrong / damaged / defective / not-as-described → replacement or refund - the law, not a seller choice. Category defaults: non-pierced jewellery R, pierced N, clothing R/X, footwear R (box), electronics R (seal), cosmetics N, custom N.
+
+**B. Claim type → evidence → who pays**
+| Claim | Customer evidence | Seller / platform evidence | Cost falls on |
+|---|---|---|---|
+| Not received though "delivered" | raise within 48 h | courier POD; **OTP delivery above ₹2,000** | courier/platform if POD weak; customer if OTP-delivered |
+| Damaged in transit | box + item photos within 48 h | **Pack proof** photo, courier weight | courier/platform (not the seller, when pack proof is clean) |
+| Wrong / missing item, empty box | **unboxing video** (required above ₹2,000, asked for below) | pack proof; courier manifest weight vs product weight | whoever's evidence loses |
+| Defective | photo/video | listing, pack proof | seller |
+| Not as described | listing vs item photo | listing | **seller** + listing flag; second time → suspension review |
+| Change of mind | tag-intact confirmation | - | customer (return courier); modes R/X only |
+| Size | - | - | exchange; courier on the customer (X) |
+
+**C. The item comes back wrong** (worn, broken, swapped): seller marks OK / not-OK **with photos within 48 h**; compared with pickup-QC photos and pack proof. Abuse proven → no refund, item returned to the customer at their cost, risk +2. Seller claim without photos → not accepted (the seller-lies case). No evidence either side → **≤ ₹500: platform goodwill once per customer per 90 days**; above that the admin rules for the side with more evidence.
+
+**D. Both sides can lie - two scores.** Customer risk: return %, refused returns, lost disputes, RTO, empty-box claims → warn → prepaid-only → returns need approval → block (reason shown). Seller risk: lost-dispute %, not-as-described flags, refusals the admin overturned, pack-proof missing % → warning → longer payout hold → suspension review. Both live in the rulebook (numbers editable in /admin/settings) and in the Trust queue (2.22).
+
+**E. Amount tiers.** < ₹500 fast-track (goodwill once) · ₹500–5,000 evidence required · > ₹5,000 OTP delivery + unboxing video + admin review · ₹20,000+ (real gold) insured courier - after cutover.
+
+**F. Time and transparency.** Raise inside the window (damage 48 h) · seller replies in 72 h (rulebook) · admin rules in 5 days · refund 5–7 working days · every ruling written on the order for both · appeal within 7 days via /help · 48 h acknowledgement / 30 days resolution (law) · the assistant explains all of it in the person's language; the decision agent (2.19) drafts rulings from exactly this evidence.
