@@ -39,9 +39,12 @@ const isAllowedOrigin = (origin) => {
   if (!origin) return true;
   if (PRODUCTION_ORIGINS.includes(origin)) return true;
 
+  // Outside production: the laptop itself, and a phone on the same Wi-Fi
+  // hitting the laptop by its LAN address (192.168.x.x / 10.x / 172.16-31.x)
+  // - how the seller panel is tried on a real phone before a deploy.
   return (
     process.env.NODE_ENV !== 'production' &&
-    /^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin)
+    /^http:\/\/(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+):\d+$/.test(origin)
   );
 };
 

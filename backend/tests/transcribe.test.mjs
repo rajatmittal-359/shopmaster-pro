@@ -79,3 +79,66 @@ describe('transcribe', () => {
     expect(global.fetch).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('language misdetection', () => {
+  const realFetch = global.fetch;
+  afterEach(() => {
+    global.fetch = realFetch;
+    delete process.env.GROQ_API_KEY;
+  });
+
+  it('a clip heard as Icelandic is heard again as Hindi', async () => {
+    process.env.GROQ_API_KEY = 'g';
+    const langs = [];
+    global.fetch = vi.fn(async (url, init) => {
+      langs.push(init.body.get('language'));
+      const forced = init.body.get('language') === 'hi';
+      return { ok: true, json: async () => (forced ? { text: 'हाय हेलो', language: 'hi' } : { text: 'Hæ, halló', language: 'Icelandic' }) };
+    });
+    const r = await transcribe(clip(), { language: 'auto' });
+    expect(langs).toEqual([null, 'hi']);
+    expect(r.text).toBe('हाय हेलो');
+    expect(r.redetected).toBe('Icelandic');
+  });
+
+  it('English and Hindi detections are trusted first time', async () => {
+    process.env.GROQ_API_KEY = 'g';
+    global.fetch = vi.fn(async () => ({ ok: true, json: async () => ({ text: 'where is my order', language: 'English' }) }));
+    const r = await transcribe(clip(), { language: 'auto' });
+    expect(r.text).toBe('where is my order');
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('Hinglish mode', () => {
+  const realFetch = global.fetch;
+  afterEach(() => {
+    global.fetch = realFetch;
+    delete process.env.GROQ_API_KEY;
+  });
+
+  it('hears as Hindi, then writes in roman letters', async () => {
+    process.env.GROQ_API_KEY = 'g';
+    const calls = [];
+    global.fetch = vi.fn(async (url, init) => {
+      calls.push(url);
+      if (url.includes('/audio/')) {
+        expect(init.body.get('language')).toBe('hi');
+        return { ok: true, json: async () => ({ text: 'मेरा पेमेंट कब आएगा', language: 'hi' }) };
+      }
+      return { ok: true, json: async () => ({ choices: [{ message: { content: 'mera payment kab aayega' } }] }) };
+    });
+    const r = await transcribe(clip(), { language: 'hg' });
+    expect(r.text).toBe('mera payment kab aayega');
+    expect(r.script).toBe('roman');
+    expect(calls.some((u) => u.includes('chat/completions'))).toBe(true);
+  });
+
+  it('roman text is left alone; Devanagari stands when no model can help', async () => {
+    const { toHinglish } = require('../utils/ai/transcribe');
+    global.fetch = vi.fn();
+    expect(await toHinglish('where is my order')).toBe('where is my order');
+    expect(await toHinglish('मेरा ऑर्डर')).toBe('मेरा ऑर्डर');
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+});

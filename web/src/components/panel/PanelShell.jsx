@@ -74,7 +74,7 @@ export default function PanelShell({ title, groups, countsUrl = null, identity =
             {/* The same switch the storefront header carries: Shopping |
                 Selling | Admin, the current one lit. Replaces "View shop". */}
             <RoleSwitch />
-            {title === 'Seller' && <LangToggle />}
+            {title === 'Seller' && <LangToggle compact />}
             <HeaderAccount showCart={false} />
             <ThemeToggle />
           </div>

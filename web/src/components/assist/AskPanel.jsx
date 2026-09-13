@@ -7,6 +7,7 @@ import { authedFetch } from '@/lib/client';
 import { useT, useLang } from '@/lib/i18n';
 import { speak, stopSpeaking } from '@/lib/voice';
 import MicButton from '@/components/voice/MicButton';
+import LangToggle from '@/components/panel/LangToggle';
 import Answer from './Answer';
 
 /**
@@ -32,27 +33,23 @@ import Answer from './Answer';
  * The thread lives in this component only. Nothing is stored in the
  * browser; the server keeps a 90-day log for the admin.
  */
+/* Starter chips in the chosen language - the first thing a new person taps. */
 const STARTERS = {
-  seller: [
-    'मेरा पेमेंट कब आएगा और कितना?',
-    'Which of my listings need fixing first?',
-    'Ek customer bol raha hai parcel nahi mila - kya karu?',
-    'Cancel karne pe kya charge lagta hai, aur kyun?',
-    'How do I get my products on Google?',
-  ],
-  admin: [
-    'What needs my decision this weekend?',
-    'Charming Jewels ka performance kaisa chal raha hai?',
-    'Which sellers are close to the cancel-rate limit?',
-    'How does the payout hold work when a dispute is open?',
-    'Cutover plan me abhi kya bacha hai?',
-  ],
-  customer: [
-    'Where is my last order?',
-    'Mera refund kab tak aayega?',
-    'How do returns and exchanges work?',
-    'The courier says delivered but I have nothing.',
-  ],
+  seller: {
+    hi: ['मेरा पेमेंट कब आएगा और कितना?', 'कौन से प्रोडक्ट पहले ठीक करूँ?', 'ग्राहक कह रहा है पार्सल नहीं मिला - क्या करूँ?', 'ऑर्डर रद्द करने पर क्या चार्ज लगता है, और क्यों?', 'मेरे प्रोडक्ट Google पर कैसे दिखेंगे?'],
+    hg: ['Mera payment kab aayega aur kitna?', 'Kaunse products pehle theek karun?', 'Customer bol raha hai parcel nahi mila - kya karun?', 'Cancel karne pe kya charge lagta hai, aur kyun?', 'Mere products Google pe kaise dikhenge?'],
+    en: ['When is my next payout, and how much?', 'Which of my listings need fixing first?', 'A customer says the parcel never came - what do I do?', 'What does cancelling an order cost, and why?', 'How do I get my products on Google?'],
+  },
+  admin: {
+    hi: ['इस हफ्ते मुझे क्या तय करना है?', 'Charming Jewels का प्रदर्शन कैसा है?', 'कौन से विक्रेता cancel-rate की सीमा के पास हैं?', 'dispute खुला हो तो payout hold कैसे काम करता है?'],
+    hg: ['Is weekend mujhe kya decide karna hai?', 'Charming Jewels ka performance kaisa chal raha hai?', 'Kaunse sellers cancel-rate limit ke paas hain?', 'Dispute open ho to payout hold kaise kaam karta hai?', 'Cutover plan me abhi kya bacha hai?'],
+    en: ['What needs my decision this weekend?', 'How is Charming Jewels performing?', 'Which sellers are close to the cancel-rate limit?', 'How does the payout hold work when a dispute is open?', 'What is left in the cutover plan?'],
+  },
+  customer: {
+    hi: ['मेरा आखिरी ऑर्डर कहाँ है?', 'मेरा रिफ़ंड कब तक आएगा?', 'वापसी और बदली कैसे होती है?', 'कूरियर कहता है पहुँच गया, पर मुझे कुछ नहीं मिला।'],
+    hg: ['Mera last order kahan hai?', 'Mera refund kab tak aayega?', 'Return aur exchange kaise hota hai?', 'Courier bolta hai deliver ho gaya, par mujhe kuch nahi mila.'],
+    en: ['Where is my last order?', 'When will my refund arrive?', 'How do returns and exchanges work?', 'The courier says delivered but I have nothing.'],
+  },
 };
 
 const ROUTE = { seller: '/seller/assist', admin: '/admin/assist', customer: '/customer/assist' };
@@ -105,7 +102,7 @@ export default function AskPanel({ role = 'seller', compact = false }) {
     setThread((tq) => [...tq, { role: 'user', text: q }]);
     setBusy(true);
     try {
-      const r = await authedFetch(ROUTE[role], { method: 'POST', body: { question: q, history } });
+      const r = await authedFetch(ROUTE[role], { method: 'POST', body: { question: q, history, language: lang } });
       setThread((tq) => [...tq, { role: 'assistant', text: r.answer, id: r.id, model: r.model, calls: r.calls || [], searchedWeb: r.searchedWeb }]);
       window.dispatchEvent(new Event('smp:assist')); // the admin's log beside the chat refreshes
     } catch (e) {
@@ -133,10 +130,14 @@ export default function AskPanel({ role = 'seller', compact = false }) {
     }
   };
 
-  const starters = STARTERS[role] || [];
+  const starters = STARTERS[role]?.[lang] || STARTERS[role]?.en || [];
 
   return (
     <div className={`flex flex-col rounded-xl border bg-card ${compact ? 'max-h-[70vh]' : 'min-h-[60vh] max-h-[78vh]'}`}>
+      <div className="flex items-center justify-between gap-2 border-b px-3 py-2">
+        <span className="text-xs text-muted-foreground">{t('Answer in')}</span>
+        <LangToggle label={t('Answer in')} />
+      </div>
       <div className="flex-1 space-y-4 overflow-y-auto p-4">
         {thread.length === 0 && (
           <div className="py-6 text-center">
@@ -243,7 +244,7 @@ export default function AskPanel({ role = 'seller', compact = false }) {
             className="field-sizing-content max-h-40 min-h-10 flex-1 resize-none rounded-lg border bg-background px-3 py-2 text-base outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring/40 md:text-sm"
             aria-label={t('Your question')}
           />
-          <MicButton role={role} language={lang === 'hi' ? 'hi' : 'auto'} onText={heard} label={t('Speak your question')} />
+          <MicButton role={role} language={lang} onText={heard} label={t('Speak your question')} />
           <button type="submit" disabled={busy || !draft.trim()} aria-label={t('Send')} className="grid size-10 shrink-0 place-items-center rounded-lg bg-brand-ink text-white disabled:opacity-40">
             <Send className="size-4" aria-hidden />
           </button>

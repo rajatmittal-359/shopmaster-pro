@@ -10,7 +10,7 @@ import { useVoice } from '@/lib/voice';
  * small line under it when there is one.
  */
 export default function MicButton({ role, language = 'auto', onText, size = 'md', shape = 'square', className = '', label = 'Speak' }) {
-  const { state, error, toggle, supported } = useVoice({ role, language, onText });
+  const { state, error, level, toggle, supported } = useVoice({ role, language, onText });
   if (!supported) return null;
   const dim = size === 'sm' ? 'size-7' : 'size-10';
   const radius = shape === 'round' ? 'rounded-full' : 'rounded-lg';
@@ -23,14 +23,17 @@ export default function MicButton({ role, language = 'auto', onText, size = 'md'
         onClick={toggle}
         aria-pressed={recording}
         aria-label={recording ? 'Stop and send' : label}
-        title={state === 'error' ? error : recording ? 'Tap to stop' : label}
+        title={state === 'error' ? error : recording ? 'Listening - stops when you pause, or tap' : label}
         className={`grid ${dim} shrink-0 place-items-center ${radius} ${shape === 'round' ? '' : 'border'} transition-colors ${
           recording ? 'border-red-500 bg-red-500 text-white' : state === 'error' ? 'border-destructive/50 text-destructive' : `${shape === 'round' ? '' : 'bg-background'} text-muted-foreground hover:bg-accent hover:text-foreground`
         }`}
       >
         {state === 'sending' ? <Loader2 className={`${icon} animate-spin`} aria-hidden /> : recording ? <Square className={icon} aria-hidden /> : <Mic className={icon} aria-hidden />}
       </button>
-      {recording && <span className={`pointer-events-none absolute -inset-1 animate-ping ${radius} border-2 border-red-500/60`} aria-hidden />}
+      {recording && (
+        // The ring grows with the voice level - the person sees it hearing them.
+        <span className={`pointer-events-none absolute inset-0 ${radius} border-2 border-red-500/70 transition-transform duration-75`} style={{ transform: `scale(${1.1 + level * 0.6})`, opacity: 0.35 + level * 0.5 }} aria-hidden />
+      )}
     </span>
   );
 }

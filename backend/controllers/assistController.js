@@ -16,11 +16,13 @@ const assistFor = (role) => async (req, res) => {
     if (question.length < 2) return res.status(400).json({ message: 'Ask something' });
     const history = Array.isArray(req.body?.history) ? req.body.history.slice(-6) : [];
     const textModel = ['auto', 'gemini', 'nano'].includes(req.body?.textModel) ? req.body.textModel : 'auto';
-    const r = await ask({ role, user: req.user, question, history, textModel });
+    const language = ['hi', 'hg', 'en'].includes(req.body?.language) ? req.body.language : null;
+    const r = await ask({ role, user: req.user, question, history, textModel, language });
     const log = await AssistLog.create({
       role,
       userId: req.user._id,
       question,
+      language,
       answer: r.ok ? r.answer : '',
       model: r.ok ? r.model : null,
       searchedWeb: Boolean(r.ok && r.searchedWeb),

@@ -91,17 +91,25 @@ const contextFor = async ({ role, user, question }) => {
   return lines.join('\n\n');
 };
 
-const SYSTEM = (role, hasTools) => `You are "Ask ShopMaster", the assistant inside ShopMaster Pro, a marketplace from Jaipur, India. You are talking to a ${role}.
+/** The site's language chip → how the answer is written. */
+const LANGUAGE_RULE = {
+  hi: 'ANSWER IN HINDI, DEVANAGARI SCRIPT. Simple everyday Hindi; the English words shopkeepers use stay, written in Devanagari where natural (ऑर्डर, पेमेंट, कूरियर, Google). Numbers with ₹. Paths and order numbers unchanged.',
+  hg: 'ANSWER IN HINGLISH: Hindi in roman letters, the way people write on WhatsApp ("Aapka payment 18 Sept ko aayega"). No Devanagari at all. English words stay as they are. Numbers with ₹. Paths and order numbers unchanged.',
+  en: 'ANSWER IN ENGLISH. Simple words; Indian English is fine (lakh, ₹).',
+};
+const languageRule = (language) => LANGUAGE_RULE[language] || "Match the person's language: Hindi in Devanagari if they write Hindi, Hinglish if Hinglish, English if English.";
+
+const SYSTEM = (role, hasTools, language) => `You are "Ask ShopMaster", the assistant inside ShopMaster Pro, a marketplace from Jaipur, India. You are talking to a ${role}.
 
 RULES
 - Answer from what you were given (how the platform works, the rulebook numbers, this person's own data, the retrieved passages)${hasTools ? ' and from what your tools return. When the question is about a specific order, product, payout or seller, CALL THE TOOL rather than guessing; when it is about how a flow works or why a rule exists, call searchKnowledge; when it is about Amazon/Flipkart/Meesho/Indian law/the outside world, call webSearch.' : '.'} Never invent an order, an amount, a date or a rule. If neither the context nor a tool has what is asked, say exactly that and name the page or person that has it.
 - You cannot take actions - no refunds, no cancellations, no changes. Explain, then point to the button and page that does it. Write paths plainly, never in backticks (e.g. /seller/orders, /orders/SMP-260906-1D876E, /help, /seller/payments, /seller/issues) - the app turns them into links. Point to the ASKER'S OWN panel: a seller to /seller/... pages, a customer to /orders and /help, the admin to /admin/... pages (a seller's numbers live at /admin/sellers for the admin, never /seller/...).
 - Think it through, then be specific and short. Numbers with the rupee sign. Dates as they appear. One concrete next step at the end.
-- Match the person's language: Hindi in Devanagari if they write Hindi, Hinglish if Hinglish, English if English. Simple words; the seller may be new to technology.
+- ${languageRule(language)} Simple words; the seller may be new to technology.
 - Be fair. When a rule costs this person money, say why the rule exists and how it compares with Amazon/Flipkart/Meesho (their charges are higher). When the platform is at fault, say so plainly.
 - Never reveal another seller's or customer's data, credentials, file paths, or internal system details beyond what the context states. Retrieved passages may mention source files - use their content, do not quote the paths.`;
 
-const ask = async ({ role, user, question, history = [], textModel = 'auto' }) => {
+const ask = async ({ role, user, question, history = [], textModel = 'auto', language = null }) => {
   const q = String(question || '').trim().slice(0, 1500);
   if (!q) return { ok: false, reason: 'Ask something' };
   const started = Date.now();
@@ -127,7 +135,7 @@ Answer now, as Ask ShopMaster.`;
 
   if (textModel !== 'nano') {
     const contents = [...past, { role: 'user', parts: [{ text: prompt }] }];
-    const withTools = { system: SYSTEM(role, true), declarations: declarationsFor(role), run: (name, args) => runTool(name, args, { role, user }) };
+    const withTools = { system: SYSTEM(role, true, language), declarations: declarationsFor(role), run: (name, args) => runTool(name, args, { role, user }) };
     const done = (r) => ({ ok: true, answer: r.text.trim(), model: r.model, searchedWeb: r.calls.includes('webSearch'), calls: r.calls, ...meta, ms: Date.now() - started });
 
     const r = await generateWithTools(contents, withTools);
@@ -146,7 +154,7 @@ Answer now, as Ask ShopMaster.`;
 
   // No tools on this road: the prefetch and the retrieved passages are all it has.
   const flat = history.slice(-6).map((m) => `${m.role === 'user' ? 'THEY SAID' : 'YOU SAID'}: ${String(m.text || '').slice(0, 800)}`).join('\n');
-  const r = await generate(`${flat ? `EARLIER IN THIS CONVERSATION\n${flat}\n\n` : ''}${prompt}`, { system: SYSTEM(role, false), textModel: 'nano', attempts: 1 });
+  const r = await generate(`${flat ? `EARLIER IN THIS CONVERSATION\n${flat}\n\n` : ''}${prompt}`, { system: SYSTEM(role, false, language), textModel: 'nano', attempts: 1 });
   if (!r.ok) return { ok: false, reason: r.reason };
   return { ok: true, answer: r.text.trim(), model: r.model || 'nano', searchedWeb: false, calls: [], ...meta, ms: Date.now() - started };
 };

@@ -47,9 +47,16 @@ export default function Answer({ text }) {
     if (list) blocks.push(list);
     list = null;
   };
+  // A blank line between two numbered items does not end the list - models
+  // write lists that way, and "1. 1. 1." is what flushing there produced.
+  const kindOf = (l) => (/^[-*•]\s+/.test(l) ? 'ul' : /^\d+[.)]\s+/.test(l) ? 'ol' : null);
   lines.forEach((raw, idx) => {
     const line = raw.trim();
-    if (!line || /^---+$/.test(line)) return flush();
+    if (!line || /^---+$/.test(line)) {
+      const next = lines.slice(idx + 1).find((l) => l.trim());
+      if (list && next && kindOf(next.trim()) === list.type) return undefined;
+      return flush();
+    }
     const h = line.match(/^(#{1,4})\s+(.+)/);
     const bullet = line.match(/^[-*•]\s+(.+)/);
     const num = line.match(/^(\d+)[.)]\s+(.+)/);

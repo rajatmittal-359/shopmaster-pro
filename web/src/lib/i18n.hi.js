@@ -36,6 +36,7 @@ const HI = {
   'Stop reading': 'सुनाना बंद',
   'Tap the mic and speak in Hindi or English - check the words, then send.': 'माइक दबाकर हिंदी या English में बोलें - शब्द देख लें, फिर भेजें।',
   Speak: 'बोलें',
+  'Answer in': 'जवाब',
   'Ask about an order, a payout, a rule, or how Amazon does it - in Hindi or English.': 'ऑर्डर, पेमेंट, नियम, या Amazon पर कैसे होता है - हिंदी या English में पूछें।',
   Home: 'होम',
   Selling: 'बिक्री',

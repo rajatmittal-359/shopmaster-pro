@@ -10,6 +10,8 @@ const assistLogSchema = new mongoose.Schema(
     role: { type: String, enum: ['seller', 'admin', 'customer'], required: true, index: true },
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     question: { type: String, required: true, maxlength: 1500 },
+    /** The language chip at the time: hi | hg | en | null (matched the question). */
+    language: { type: String, enum: ['hi', 'hg', 'en', null], default: null },
     answer: { type: String, default: '' },
     model: { type: String, default: null },
     searchedWeb: { type: Boolean, default: false },

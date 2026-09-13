@@ -1,5 +1,13 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  /*
+   * Development only (Next ignores this in production): the dev server refuses
+   * its own scripts to a page opened from another host, and a phone on the
+   * same Wi-Fi opening http://192.168.1.37:3000 got a page that never hydrated
+   * - the sign-in form posted itself as plain HTML (13 Sep 2026). Private LAN
+   * ranges are listed so the laptop's address may change.
+   */
+  allowedDevOrigins: ['192.168.*.*', '10.*.*.*', '172.16.*.*', '172.17.*.*', '172.18.*.*', '172.19.*.*', '172.2*.*.*', '172.30.*.*', '172.31.*.*'],
   images: {
     /*
      * Product images live on Cloudinary. next/image refuses any host not named
@@ -44,7 +52,17 @@ const nextConfig = {
     const api = (process.env.NEXT_PUBLIC_API_URL || 'https://shopmaster-api-sg.onrender.com/api')
       .replace(/\/api$/, '');
 
-    return [{ source: '/sitemap.xml', destination: `${api}/sitemap.xml` }];
+    return [
+      { source: '/sitemap.xml', destination: `${api}/sitemap.xml` },
+      /*
+       * Development only: a phone on the same Wi-Fi reaches the laptop on
+       * :3000 but not :5000 (this is a company laptop; the firewall is set by
+       * group policy and local rules are ignored). So in dev the API is also
+       * served through here as /dev-api/*, and lib/api.js points a non-localhost
+       * page at it. Never present in a production build.
+       */
+      ...(process.env.NODE_ENV !== 'production' ? [{ source: '/dev-api/:path*', destination: `${api}/api/:path*` }] : []),
+    ];
   },
 
   async redirects() {

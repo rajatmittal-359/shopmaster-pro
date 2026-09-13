@@ -28,8 +28,16 @@
 const GROQ_MODEL = process.env.GROQ_STT_MODEL || 'whisper-large-v3-turbo';
 const GEMINI_API = 'https://generativelanguage.googleapis.com/v1beta/models';
 
-/** Words the shop says that a generic model would mangle - a hint, not a dictionary. */
-const HINT = 'ShopMaster Pro, Charming Jewels, Jaipur, jhumka, kada, mangalsutra, kundan, meenakari, oxidised, payout, courier, Shiprocket, Borzo, Razorpay, COD, order, return, dispute, refund';
+/**
+ * Words the shop says that a generic model would mangle - a hint, not a
+ * dictionary. Hindi and Hinglish both, on purpose: Whisper reads the prompt's
+ * language as a clue to the clip's, and a short "hi, hello" from a phone once
+ * came back as Icelandic ("Hæ, halló") with an English-only hint.
+ */
+const HINT = 'नमस्ते, मेरा ऑर्डर कहाँ है, पेमेंट कब आएगा, कूरियर बुक करो. ShopMaster Pro, Charming Jewels, Jaipur, jhumka, kada, mangalsutra, kundan, meenakari, oxidised, payout, courier, Shiprocket, Borzo, Razorpay, COD, order, return, dispute, refund.';
+
+/** The languages this shop is actually spoken to in. Anything else is a misdetection. */
+const EXPECTED = new Set(['hi', 'hindi', 'en', 'english', 'ur', 'urdu']);
 
 const parseDataUrl = (dataUrl) => {
   const m = /^data:(audio\/[a-z0-9.+-]+)(?:;codecs=[^;]+)?;base64,(.+)$/i.exec(String(dataUrl || ''));
@@ -88,27 +96,77 @@ const viaGemini = async ({ mimeType, buffer }, { language }) => {
 };
 
 /**
+ * Devanagari → roman Hinglish, for the person who reads "mera payment kab
+ * aayega" faster than "मेरा पेमेंट कब आएगा". Whisper writes Hindi in
+ * Devanagari and has no roman mode; a small, fast model transliterates.
+ * Groq (≈300 ms) first, Gemini after; if both are out the Devanagari stands.
+ */
+const toHinglish = async (text) => {
+  if (!/[ऀ-ॿ]/.test(text)) return text;
+  const prompt = `Transliterate this Hindi into roman letters exactly as Indians type on WhatsApp (Hinglish). Keep English words as they are, keep numbers and order codes unchanged, no translation, no explanation. Output only the transliterated text.\n\n${text}`;
+  const key = process.env.GROQ_API_KEY;
+  if (key) {
+    try {
+      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
+        body: JSON.stringify({ model: process.env.GROQ_SMALL_MODEL || 'openai/gpt-oss-20b', messages: [{ role: 'user', content: prompt }], temperature: 0, max_tokens: 400, reasoning_effort: 'low' }),
+      });
+      const d = await res.json().catch(() => ({}));
+      const out = String(d?.choices?.[0]?.message?.content || '').trim();
+      if (res.ok && out) return out;
+    } catch {
+      /* fall through */
+    }
+  }
+  const gkey = process.env.GEMINI_API_KEY;
+  if (gkey) {
+    try {
+      const res = await fetch(`${GEMINI_API}/${process.env.GEMINI_LITE_MODEL || 'gemini-3.5-flash-lite'}:generateContent?key=${gkey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0, maxOutputTokens: 400 } }),
+      });
+      const d = await res.json().catch(() => ({}));
+      const out = (d?.candidates?.[0]?.content?.parts || []).map((x) => x.text || '').join('').trim();
+      if (res.ok && out) return out;
+    } catch {
+      /* the Devanagari stands */
+    }
+  }
+  return text;
+};
+
+/**
  * @param {string} dataUrl   data:audio/...;base64,...
- * @param {{language?: 'hi'|'en'|'auto'}} [opts]
+ * @param {{language?: 'hi'|'hg'|'en'|'auto'}} [opts]  hg = heard as Hindi, written in roman letters
  * @returns {Promise<{ok:true,text:string,model:string,language:string|null,seconds:number|null}|{ok:false,reason:string}>}
  */
-const transcribe = async (dataUrl, { language = 'auto' } = {}) => {
+const transcribe = async (dataUrl, { language: wanted = 'auto' } = {}) => {
+  const language = wanted === 'hg' ? 'hi' : wanted;
   const clip = parseDataUrl(dataUrl);
   if (!clip) return { ok: false, reason: 'That is not an audio clip' };
   if (clip.buffer.length < 2000) return { ok: false, reason: 'The clip is too short - hold the mic and speak' };
   if (clip.buffer.length > 8 * 1024 * 1024) return { ok: false, reason: 'The clip is too long - keep it under a minute' };
 
-  const first = await viaGroq(clip, { language });
-  if (first.ok) return first;
+  let first = await viaGroq(clip, { language });
+  // Auto-detect wandered off (Icelandic, Welsh, Nepali…) - a short clip does
+  // that. Hindi is the shop's default; one more pass with it forced.
+  if (first.ok && language === 'auto' && first.language && !EXPECTED.has(String(first.language).toLowerCase())) {
+    const again = await viaGroq(clip, { language: 'hi' });
+    if (again.ok) first = { ...again, redetected: first.language };
+  }
+  const finish = async (r) => (wanted === 'hg' ? { ...r, text: await toHinglish(r.text), script: 'roman' } : r);
+  if (first.ok) return finish(first);
   if (/GROQ_API_KEY|429|quota|rate|reach|5\d\d/i.test(first.reason)) {
     const second = await viaGemini(clip, { language });
     if (second.ok) {
       console.warn(`transcribe: Groq unavailable (${first.reason.slice(0, 60)}) - Gemini heard it`);
-      return { ...second, fellBack: true };
+      return finish({ ...second, fellBack: true });
     }
     return { ok: false, reason: `${first.reason}; fallback: ${second.reason}` };
   }
   return first;
 };
 
-module.exports = { transcribe, parseDataUrl, GROQ_MODEL };
+module.exports = { transcribe, parseDataUrl, toHinglish, GROQ_MODEL };

@@ -1,0 +1,106 @@
+/**
+ * English → Hinglish for the seller panel: Hindi in roman letters, the way
+ * WhatsApp is written ("Namaste, aap kaise hain"). Nav words are left out
+ * on purpose - "Orders", "Payments", "Settings" ARE the Hinglish words -
+ * so a missing line falls back to English and reads right. Sentences are
+ * what need translating. Add a line here and the panel picks it up.
+ */
+const HG = {
+  // Ask ShopMaster
+  'Ask ShopMaster': 'ShopMaster se poochho',
+  'Ask anything about your shop, an order, a payout or a rule.': 'Apni dukaan, kisi order, payment ya rule ke baare me kuch bhi poochho.',
+  'It reads your own data and the platform rules before it answers, in Hindi or English. It explains and points to the button - it never changes anything itself.': 'Jawab dene se pehle ye aapka apna data aur platform ke rules padhta hai. Ye samjhata hai aur sahi button batata hai - khud kuch badalta nahi.',
+  'Reading your data and the rules…': 'Aapka data aur rules padh raha hai…',
+  'Ask in Hindi or English…': 'Hindi, Hinglish ya English me poochho…',
+  'Your question': 'Aapka sawaal',
+  Send: 'Bhejo',
+  Checked: 'Dekha',
+  'searched the web': 'internet pe dhoondha',
+  'backup model': 'backup model',
+  Helpful: 'Kaam aaya',
+  'Not helpful': 'Kaam nahi aaya',
+  'Try again': 'Phir se try karo',
+  'Thanks - noted. For anything urgent, Help has a person.': 'Shukriya - note kar liya. Zaroori baat ho to Help me insaan se baat karo.',
+  'Answers come from your data and the rules; check anything about money on the page itself. Nothing you type is shared with other sellers.': 'Jawab aapke data aur rules se aate hain; paise ki baat page pe khud bhi dekh lo. Aapka likha kisi aur seller ko nahi dikhta.',
+  'your data and the rules': 'aapka data aur rules',
+  'the order': 'order',
+  'your orders': 'aapke orders',
+  'your payouts': 'aapke payments',
+  'the product': 'product',
+  'your performance': 'aapki performance',
+  categories: 'categories',
+  'the rulebook': 'rules',
+  'the web': 'internet',
+  'Speak your question': 'Bol kar poochho',
+  Listen: 'Suno',
+  'Read aloud': 'Padh kar sunao',
+  'Stop reading': 'Sunana band',
+  'Tap the mic and speak in Hindi or English - check the words, then send.': 'Mic dabao aur bolo - shabd dekh lo, phir bhejo.',
+  Speak: 'Bolo',
+  'Ask about an order, a payout, a rule, or how Amazon does it - in Hindi or English.': 'Order, payment, rule, ya Amazon pe kaise hota hai - jaise chaaho waise poochho.',
+  'Answer in': 'Jawab',
+
+  // Home
+  'To pack': 'Pack karne hain',
+  'Orders waiting on you': 'Orders aapka intezaar kar rahe hain',
+  'Products live': 'Live products',
+  '{n} in total': 'Kul {n}',
+  'Earned so far': 'Ab tak ki kamai',
+  'Paid orders, your lines only': 'Paid orders, sirf aapka hissa',
+  'Next:': 'Agla kaam:',
+  'Waiting on you': 'Aapka intezaar',
+  '{n} to pack and book a courier for.': '{n} pack karke courier book karne hain.',
+  'Running low': 'Stock kam hai',
+  'Out of stock': 'Stock khatam',
+  '{n} left': '{n} bache',
+  'Open the order': 'Order kholo',
+  'Pack and book {order} for {name}': '{name} ka order {order} pack karke courier book karo',
+  'Set where the courier collects - nothing ships without it': 'Batao courier kahan se saman uthayega - iske bina kuch nahi jayega',
+  'Set the address': 'Pata daalo',
+  'Add the bank account your payouts go to': 'Wo bank account jodo jisme payment aayegi',
+  'Add the account': 'Account jodo',
+  'Restock {name} - it is out': '{name} ka stock bharo - khatam ho gaya hai',
+  'Open products': 'Products kholo',
+  'Add another product - five or more is when a shop starts to look like one': 'Ek aur product jodo - paanch se dukaan dukaan lagne lagti hai',
+  'Add a product': 'Product jodo',
+  'Nothing waiting. Share your shop link - your first customers already know you': 'Kuch baaki nahi. Dukaan ka link jaan-pehchaan walon ko bhejo - pehle customer wahi honge',
+  'Open the shop': 'Dukaan kholo',
+  'Setting up': 'Setup',
+  '{n} of {total} left': '{total} me se {n} baaki',
+  'Share the link': 'Link bhejo',
+  'Cancelled by you': 'Aapne cancel kiye',
+  'Your shop': 'Aapki dukaan',
+
+  // Orders
+  'Book the pickup': 'Pickup book karo',
+  'Book courier and ship': 'Courier book karke bhejo',
+  'Cancel the shipment': 'Shipment cancel karo',
+  'I delivered this myself': 'Maine khud pahunchaya',
+  'Cancel my items': 'Mere items cancel karo',
+  'Open this order': 'Ye order kholo',
+  'Refuse it': 'Mana karo',
+  'Back to the queue': 'List pe wapas',
+  Delivered: 'Pahunch gaya',
+  Pending: 'Naya',
+  Processing: 'Taiyaar ho raha',
+  Returned: 'Wapas aaya',
+  Shipped: 'Bhej diya',
+
+  // Pages
+  'Returns and exchanges, disputes, and parcels the courier could not deliver - each with what to do next.': 'Wapsi aur badli, shikayatein, aur wo parcel jo courier pahuncha nahi paya - har ek ke saath agla kadam.',
+  'Coupon codes off your own products. They work at checkout, show on the Coupons page, and reach Google Shopping overnight.': 'Apne products pe coupon code. Checkout pe chalte hain, Coupons page pe dikhte hain, aur raat me Google Shopping tak pahunchte hain.',
+  'How your shop is doing against the rules every seller signed - the last 30 days.': 'Pichle 30 din me aapki dukaan rules ke hisaab se kaisi chali.',
+  'The agreement in plain words, the questions sellers ask, and a person to talk to.': 'Rules aasan shabdon me, sellers ke sawaal, aur baat karne ke liye ek insaan.',
+  'What the platform already does for your shop, and the ten things only you can do - in the order they pay off.': 'Platform aapki dukaan ke liye kya pehle se karta hai, aur das kaam jo sirf aap kar sakte ho - jis order me fayda milta hai.',
+  'Five short lessons - the daily work of the shop, step by step, with the button that does each thing.': 'Paanch chhote lessons - dukaan ka roz ka kaam, step by step, har kaam ke button ke saath.',
+  'What you have earned, what is on hold, and where it is paid.': 'Kitna kamaya, kitna ruka hai, aur kahan bheja jata hai.',
+
+  // Product form
+  'Where it sits in the shop': 'Dukaan me kahan rakhein',
+  'Search words': 'Search ke shabd',
+  'Save product': 'Product save karo',
+  'Write it for me': 'Mere liye likho',
+  'Write it again': 'Phir se likho',
+};
+
+export default HG;
