@@ -36,11 +36,16 @@ const { detectScript, rewriteScript } = require('./hinglish');
  *   is not there, say so and point to the page or person that has it. It
  *   cannot act - it explains and points; the buttons stay with the human.
  *
- * MODELS
- *   Gemini with tools first. On quota/outage, Pollinations nano gets the
- *   same prompt with the prefetch and retrieved chunks and no tools. The
- *   answer says which model spoke, whether it searched the web, and which
- *   lookups it made - the admin's log shows the same.
+ * MODELS - four roads, in order, all free
+ *   1. Gemini 3.5 flash, tools, full prompt (best; ~1,500 requests/day)
+ *   2. Groq gpt-oss-120b, tools, compact prompt (8k tokens/MINUTE - one
+ *      question per minute at full size, so the prompt is cut to fit)
+ *   3. Groq compound-mini, no custom tools, full prompt (70k/minute, its own
+ *      web search) - the road that holds when the two above are busy
+ *   4. Pollinations nano, compact prompt, no tools
+ *   The answer says which model spoke, whether it searched the web, and
+ *   which lookups it made - the admin's log shows the same. Whatever the
+ *   road, the answer's script is checked and fixed on the way out.
  */
 
 /** The asker's most likely facts, fetched before the model runs. */
@@ -88,6 +93,25 @@ const contextFor = async ({ role, user, question }) => {
     lines.push(`ADMIN: ${user.name}.`);
     if (d) lines.push(`PLATFORM, LAST 7 DAYS: ${d.orders} orders, sales ${money(d.sales)}, platform take ${money(d.take)}, ${d.newCustomers} new customers, ${d.newReviews} new reviews, cancels ${d.cancelledBySeller} by sellers/${d.cancelledByCustomer} by customers, ${d.returns} returns. OPEN NOW: ${d.disputesOpen} disputes, ${d.pendingSellers} sellers waiting approval, ${d.payoutsDue} payouts pending, ${d.lowStock} low-stock products, ${d.weak} weak listings of ${d.products}.${d.google ? ` Google 7d: ${d.google.impressions} impressions, ${d.google.clicks} clicks.` : ''}`);
     if (named.length) lines.push(`ORDERS THE ADMIN ASKED ABOUT:\n${named.map((o) => `${lineOrder(o)} · customer ${o.customerId?.name} (${o.customerId?.email})`).join('\n')}`);
+    // A shop named in the question gets its own block, so the roads without
+    // tools (compound, nano) do not pass the platform's digest off as the shop's.
+    const sellers = await Seller.find({}).select('businessName status isApproved commissionRate userId pickupAddress bankDetails').lean();
+    const ql = question.toLowerCase();
+    const hit = sellers.find((sl) => sl.businessName && ql.includes(String(sl.businessName).toLowerCase()));
+    if (hit) {
+      try {
+        const since = new Date(Date.now() - 30 * 86400000);
+        const [orders, products] = await Promise.all([
+          Order.find({ 'items.sellerId': hit.userId, createdAt: { $gte: since } }).select('fulfilments createdAt cancelledBy paymentMethod paymentStatus items').lean(),
+          Product.find({ sellerId: hit.userId, isDeleted: { $ne: true } }).lean(),
+        ]);
+        const live = products.filter((p) => p.isActive);
+        const perf = computePerformance({ orders, sellerId: hit.userId, products: live.map((p) => ({ ...p, score: scoreListing(p).score })) });
+        lines.push(`THE SHOP THE ADMIN ASKED ABOUT - ${hit.businessName}: status ${hit.status}, approved ${hit.isApproved}, commission ${hit.commissionRate}%, pickup set ${Boolean(hit.pickupAddress?.pincode)}, bank set ${Boolean(hit.bankDetails?.accountNumber)}. Last 30 days: ${perf.orders} orders, cancel rate ${perf.cancelRate.value ?? '-'}% (${perf.cancelRate.status}), median dispatch ${perf.dispatchHours.value ?? '-'}h (${perf.dispatchHours.status}), failed deliveries ${perf.ndr.value}, RTO ${perf.rto.value}, rating ${perf.rating.value ?? '-'} from ${perf.rating.count} reviews, listing quality ${perf.listingQuality.value ?? '-'}/100 across ${live.length} live products. (The PLATFORM line above is the whole marketplace, not this shop.)`);
+      } catch {
+        /* the tool road still has findSeller */
+      }
+    }
   }
   return lines.join('\n\n');
 };
@@ -105,9 +129,10 @@ const languageRule = (language) => LANGUAGE_RULE[language] || "Match the person'
 const SYSTEM = (role, hasTools, language) => `You are "Ask ShopMaster", the assistant inside ShopMaster Pro, a marketplace from Jaipur, India. You are talking to a ${role}.
 
 RULES
-- Answer from what you were given (how the platform works, the rulebook numbers, this person's own data, the retrieved passages)${hasTools ? ' and from what your tools return. When the question is about a specific order, product, payout or seller, CALL THE TOOL rather than guessing; when it is about how a flow works or why a rule exists, call searchKnowledge; when it is about Amazon/Flipkart/Meesho/Indian law/the outside world, call webSearch.' : '.'} Never invent an order, an amount, a date or a rule. If neither the context nor a tool has what is asked, say exactly that and name the page or person that has it.
+- Answer from what you were given (how the platform works, the rulebook numbers, this person's own data, the retrieved passages). THIS PERSON'S OWN DATA is the current state - for "what is waiting / open / needs my decision / kab aayega", answer from it. The BACKGROUND PASSAGES explain how things work and why; they are planning notes and documentation, never a to-do list and never the current state of an order or the platform${hasTools ? ' and from what your tools return. When the question is about a specific order, product, payout or seller, CALL THE TOOL rather than guessing; when it is about how a flow works or why a rule exists, call searchKnowledge; when it is about Amazon/Flipkart/Meesho/Indian law/the outside world, call webSearch.' : '.'} Never invent an order, an amount, a date or a rule. If neither the context nor a tool has what is asked, say exactly that and name the page or person that has it.
 - You cannot take actions - no refunds, no cancellations, no changes. Explain, then point to the button and page that does it. Write paths plainly, never in backticks (e.g. /seller/orders, /orders/SMP-260906-1D876E, /help, /seller/payments, /seller/issues) - the app turns them into links. Point to the ASKER'S OWN panel: a seller to /seller/... pages, a customer to /orders and /help, the admin to /admin/... pages (a seller's numbers live at /admin/sellers for the admin, never /seller/...).
-- Think it through, then be specific and short. Numbers with the rupee sign. Dates as they appear. One concrete next step at the end.
+- SHAPE OF AN ANSWER (Rajat, 13 Sep: "pinpointed, no faltu baat, wholesome"): the first line IS the answer - the number, the date, the yes/no. Then only what that answer needs: the specific order codes, amounts, dates, the reason. End with ONE concrete next step (page + button) when there is something to do; none when there is not. Under 120 words unless a list of real items is needed. No greeting, no emoji, no "Happy selling", no restating the question, no tour of the dashboard unless asked, no "let me know if". Small talk ("kaise ho", "how are you") gets ONE short warm line (under 25 words) naming, in words, what you can help with - no page paths, no order numbers, no lists, no questions back.
+- Numbers with the rupee sign. Dates as they appear.
 - ${languageRule(language)} Simple words; the seller may be new to technology.
 - Be fair. When a rule costs this person money, say why the rule exists and how it compares with Amazon/Flipkart/Meesho (their charges are higher). When the platform is at fault, say so plainly.
 - Never reveal another seller's or customer's data, credentials, file paths, or internal system details beyond what the context states. Retrieved passages may mention source files - use their content, do not quote the paths.`;
@@ -132,44 +157,70 @@ const ask = async ({ role, user, question, history = [], textModel = 'auto', lan
     retrieve(q, role, { k: 8 }).catch(() => ({ chunks: [], via: 'none' })),
   ]);
   const today = new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
-  const prompt = `CONTEXT - HOW SHOPMASTER PRO WORKS
+
+  /*
+   * Two sizes of the same prompt. Full (~6.5k tokens) for Gemini, whose free
+   * tier allows it. Compact (~3.5k) for the roads with an 8,000-tokens-per-
+   * MINUTE ceiling (every Groq chat model on the free tier, measured 13 Sep):
+   * the four nearest passages cut to 700 chars, the prefetch to 2,500. The
+   * rulebook floor stays whole - it is what keeps answers honest.
+   */
+  const buildPrompt = ({ compact }) => {
+    const chunks = compact ? found.chunks.slice(0, 4).map((c) => ({ ...c, text: c.text.slice(0, 700) })) : found.chunks;
+    const own = compact ? context.slice(0, 2500) : context;
+    return `CONTEXT - HOW SHOPMASTER PRO WORKS
 ${knowledge()}
 
 CONTEXT - THIS PERSON'S OWN DATA (today ${today})
-${context}
+${own}
 
-${found.chunks.length ? `CONTEXT - PASSAGES FROM THE PLATFORM'S OWN DOCUMENTATION AND CODE NOTES (nearest to the question)\n${asContext(found.chunks)}\n\n` : ''}THEIR QUESTION
+${chunks.length ? `BACKGROUND PASSAGES - how the platform works and why (documentation and code notes nearest to the question; NOT the current state, NOT a to-do list)\n${asContext(chunks)}\n\n` : ''}THEIR QUESTION
 ${q}
 
 Answer now, as Ask ShopMaster.`;
+  };
 
-  const past = history.slice(-6).map((m) => ({ role: m.role === 'user' ? 'user' : 'model', parts: [{ text: String(m.text || '').slice(0, 1200) }] }));
+  const turns = (limit) => history.slice(-6).map((m) => ({ role: m.role === 'user' ? 'user' : 'model', parts: [{ text: String(m.text || '').slice(0, limit) }] }));
   const meta = { retrieved: found.chunks.map((c) => c.source), via: found.via };
+  const done = async (r, extra = {}) => ({ ok: true, answer: await inScript(r.text.trim()), language, model: r.model, searchedWeb: Boolean(r.calls?.includes('webSearch')) || Boolean(extra.searchedWeb), calls: r.calls || [], ...meta, ms: Date.now() - started });
+  const retryable = (reason) => /429|quota|rate|reach|503|502|nothing|never answered/i.test(reason || '');
+  const failures = [];
 
   if (textModel !== 'nano') {
-    const contents = [...past, { role: 'user', parts: [{ text: prompt }] }];
+    // Road 1 - Gemini with tools, full prompt.
     const withTools = { system: SYSTEM(role, true, language), declarations: declarationsFor(role), run: (name, args) => runTool(name, args, { role, user }) };
-    const done = async (r) => ({ ok: true, answer: await inScript(r.text.trim()), language, model: r.model, searchedWeb: r.calls.includes('webSearch'), calls: r.calls, ...meta, ms: Date.now() - started });
-
-    const r = await generateWithTools(contents, withTools);
+    const r = await generateWithTools([...turns(1200), { role: 'user', parts: [{ text: buildPrompt({ compact: false }) }] }], withTools);
     if (r.ok) return done(r);
-    if (textModel === 'gemini' || !/429|quota|reach|503|502|nothing/i.test(r.reason)) return { ok: false, reason: r.reason };
+    if (textModel === 'gemini' || !retryable(r.reason)) return { ok: false, reason: r.reason };
+    failures.push(`gemini: ${r.reason.slice(0, 60)}`);
 
-    // Second road, tools intact: Groq's free Llama 70B, when a key is set.
-    const { groqWithTools } = require('./groq');
-    const g = await groqWithTools(contents, withTools);
+    // Road 2 - Groq gpt-oss-120b with tools, compact prompt, two rounds at most
+    // (each round re-sends the prompt against the same 8k/minute).
+    const { groqWithTools, groqPlain } = require('./groq');
+    const g = await groqWithTools([...turns(600), { role: 'user', parts: [{ text: buildPrompt({ compact: true }) }] }], { ...withTools, maxRounds: 2 });
     if (g.ok) {
-      console.warn(`assistant: Gemini unavailable (${r.reason.slice(0, 60)}) - answered by Groq ${g.model}`);
+      console.warn(`assistant: ${failures.join('; ')} - answered by Groq ${g.model}`);
       return done(g);
     }
-    console.warn(`assistant: Gemini (${r.reason.slice(0, 60)}) and Groq (${g.reason.slice(0, 60)}) unavailable - answering without tools`);
+    failures.push(`groq: ${g.reason.slice(0, 60)}`);
+
+    // Road 3 - Groq compound-mini: no custom tools, but 70k tokens/minute and
+    // its own web search; the full prompt fits.
+    const c = await groqPlain([...turns(1200), { role: 'user', parts: [{ text: buildPrompt({ compact: false }) }] }], { system: SYSTEM(role, false, language), model: 'groq/compound-mini' });
+    if (c.ok) {
+      console.warn(`assistant: ${failures.join('; ')} - answered by ${c.model}`);
+      return done(c, { searchedWeb: c.searchedWeb });
+    }
+    failures.push(`compound: ${c.reason.slice(0, 60)}`);
   }
 
-  // No tools on this road: the prefetch and the retrieved passages are all it has.
-  const flat = history.slice(-6).map((m) => `${m.role === 'user' ? 'THEY SAID' : 'YOU SAID'}: ${String(m.text || '').slice(0, 800)}`).join('\n');
-  const r = await generate(`${flat ? `EARLIER IN THIS CONVERSATION\n${flat}\n\n` : ''}${prompt}`, { system: SYSTEM(role, false, language), textModel: 'nano', attempts: 1 });
-  if (!r.ok) return { ok: false, reason: r.reason };
-  return { ok: true, answer: await inScript(r.text.trim()), language, model: r.model || 'nano', searchedWeb: false, calls: [], ...meta, ms: Date.now() - started };
+  // Road 4 - Pollinations nano, compact prompt, no tools: the prefetch and
+  // the passages are all it has.
+  const flat = history.slice(-6).map((m) => `${m.role === 'user' ? 'THEY SAID' : 'YOU SAID'}: ${String(m.text || '').slice(0, 600)}`).join('\n');
+  const r = await generate(`${flat ? `EARLIER IN THIS CONVERSATION\n${flat}\n\n` : ''}${buildPrompt({ compact: true })}`, { system: SYSTEM(role, false, language), textModel: 'nano', attempts: 1 });
+  if (!r.ok) return { ok: false, reason: [...failures, `nano: ${r.reason.slice(0, 60)}`].join('; ') };
+  if (failures.length) console.warn(`assistant: ${failures.join('; ')} - answered by ${r.model || 'nano'}`);
+  return done({ ...r, model: r.model || 'nano', calls: [] });
 };
 
 module.exports = { ask, contextFor, SYSTEM };

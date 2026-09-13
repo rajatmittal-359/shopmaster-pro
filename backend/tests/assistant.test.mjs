@@ -248,3 +248,38 @@ describe('script detection - the English chip follows the writer', () => {
     expect(detectScript('where is order SMP-260906-858D34')).toBe('en');
   });
 });
+
+describe('Groq budget - a road that cannot fit is skipped without a call', () => {
+  const realFetch = global.fetch;
+  afterEach(() => {
+    global.fetch = realFetch;
+    delete process.env.GROQ_API_KEY;
+  });
+
+  it('reads the rate-limit headers and refuses the next oversized prompt locally', async () => {
+    process.env.GROQ_API_KEY = 'g';
+    const { groqWithTools, budget } = require('../utils/ai/groq');
+    budget.clear();
+    global.fetch = vi.fn(async () => ({
+      ok: true,
+      headers: new Headers({ 'x-ratelimit-remaining-tokens': '500', 'x-ratelimit-reset-tokens': '45s', 'x-ratelimit-remaining-requests': '900', 'x-ratelimit-reset-requests': '10m' }),
+      json: async () => ({ choices: [{ message: { role: 'assistant', content: 'ok' } }] }),
+    }));
+    const small = [{ role: 'user', parts: [{ text: 'hi' }] }];
+    expect((await groqWithTools(small, { run: async () => ({}) })).ok).toBe(true);
+    const big = [{ role: 'user', parts: [{ text: 'x'.repeat(20000) }] }];
+    const r = await groqWithTools(big, { run: async () => ({}) });
+    expect(r.ok).toBe(false);
+    expect(r.skipped).toBe(true);
+    expect(r.reason).toMatch(/tokens left this minute/);
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+    budget.clear();
+  });
+
+  it('parses Groq reset durations', () => {
+    const { secondsOf } = require('../utils/ai/groq');
+    expect(secondsOf('51m50.399s')).toBeCloseTo(3110.4, 1);
+    expect(secondsOf('8ms')).toBeCloseTo(0.008, 3);
+    expect(secondsOf('2s')).toBe(2);
+  });
+});

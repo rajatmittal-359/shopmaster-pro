@@ -16,7 +16,8 @@
     "images": "node addProductImages.js",
     "backup": "node backupDb.js",
     "search-index": "node ensureSearchIndex.js",
-    "knowledge": "node indexKnowledge.js"
+    "knowledge": "node indexKnowledge.js",
+    "eval:assistant": "node evalAssistant.js"
   },
   "keywords": [],
   "author": "",
