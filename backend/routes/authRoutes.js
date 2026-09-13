@@ -40,6 +40,11 @@ router.post('/reset-password', resetPassword);
  * seller navigation from a stale token would be offering buttons the API has
  * already started refusing.
  */
+const account = require('../controllers/authController');
+router.patch('/me', authMiddleware, account.updateMe);
+router.post('/change-password', authMiddleware, account.changePassword);
+router.delete('/me', authMiddleware, account.deleteMe);
+
 router.get('/me', authMiddleware, async (req, res) => {
   const { capabilitiesFor } = require('../utils/capabilities');
 

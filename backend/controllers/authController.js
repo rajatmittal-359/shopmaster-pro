@@ -332,6 +332,10 @@ exports.login = async (req, res) => {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
+    if (user.isBlocked) {
+      return res.status(403).json({ message: 'This account has been blocked. Write to us if you think that is a mistake.' });
+    }
+
     if (!user.isVerified) {
       // Names the way forward, since the code may never have arrived.
       return res.status(401).json({
@@ -534,5 +538,73 @@ exports.resetPassword = async (req, res) => {
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// ------------------------------------------------------------ the account
+/**
+ * The three things every marketplace's Account page lets a person do and
+ * ours did not: change their name, change their password, leave.
+ */
+exports.updateMe = async (req, res) => {
+  try {
+    const name = String(req.body?.name || '').trim();
+    if (name.length < 2 || name.length > 50) return res.status(400).json({ message: 'A name between 2 and 50 characters' });
+    req.user.name = name;
+    await req.user.save();
+    res.json({ user: { id: req.user._id, name: req.user.name, email: req.user.email, role: req.user.role } });
+  } catch (error) {
+    return sendError(res, error);
+  }
+};
+
+exports.changePassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body || {};
+    if (!newPassword || String(newPassword).length < 6) return res.status(400).json({ message: 'The new password needs at least 6 characters' });
+    const user = await User.findById(req.user._id).select('+password');
+    // A Google-only account has no password yet; it may set one without a current one.
+    if (user.password) {
+      if (!currentPassword || !(await user.comparePassword(currentPassword))) {
+        return res.status(400).json({ message: 'The current password is not right' });
+      }
+    }
+    user.password = String(newPassword);
+    await user.save();
+    res.json({ message: 'Password changed' });
+  } catch (error) {
+    return sendError(res, error);
+  }
+};
+
+/**
+ * Delete my account - what India's DPDP Act calls erasure. The person's
+ * name, email and password go; orders, reviews and payouts stay as records
+ * (the law keeps ledgers), attributed to "Deleted account". A seller with
+ * money still owed is asked to wait for the payout first.
+ */
+exports.deleteMe = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).select('+password');
+    if (user.role === 'admin') return res.status(400).json({ message: 'The admin account cannot delete itself' });
+    if (user.role === 'seller') {
+      const Order = require('../models/Order');
+      const open = await Order.countDocuments({ 'fulfilments.sellerId': user._id, 'fulfilments.status': { $in: ['pending', 'processing', 'shipped'] } });
+      if (open > 0) return res.status(400).json({ message: `${open} of your parcels are still on the way. Deliver or cancel them first, then delete the account.` });
+      await Seller.updateOne({ userId: user._id }, { status: 'suspended', suspensionReason: 'Account deleted by the seller' });
+      const Product = require('../models/Product');
+      await Product.updateMany({ sellerId: user._id }, { isActive: false });
+    }
+    const stamp = `${String(user._id).slice(-6)}`;
+    user.name = 'Deleted account';
+    user.email = `deleted-${stamp}@deleted.shopmasterpro.in`;
+    user.googleId = undefined;
+    user.password = require('crypto').randomBytes(24).toString('hex');
+    user.isBlocked = true;
+    user.blockedReason = 'Deleted by the user';
+    await user.save();
+    res.json({ message: 'Your account has been deleted.' });
+  } catch (error) {
+    return sendError(res, error);
   }
 };

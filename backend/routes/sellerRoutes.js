@@ -75,6 +75,15 @@ router.get('/ai/usage', requireApprovedSeller, ai.getUsage);
 router.get('/ai/catalog', requireApprovedSeller, ai.getCatalog);
 router.patch('/ai/limits', requireApprovedSeller, ai.setLimits);
 router.get('/search/queries', requireApprovedSeller, require('../controllers/searchInsightsController').sellerQueries);
+
+// The pages every marketplace panel has (13 Sep): issues, promotions, performance, sidebar counts.
+const panel = require('../controllers/panelController');
+router.get('/issues', requireApprovedSeller, panel.sellerIssues);
+router.get('/coupons', requireApprovedSeller, panel.sellerCoupons);
+router.post('/coupons', requireApprovedSeller, panel.createSellerCoupon);
+router.patch('/coupons/:couponId/toggle', requireApprovedSeller, panel.toggleSellerCoupon);
+router.get('/performance', requireApprovedSeller, panel.sellerPerformance);
+router.get('/nav-counts', panel.sellerNavCounts);
 router.post('/ai/listing', requireApprovedSeller, ai.writeListing);
 router.post('/ai/refine', requireApprovedSeller, ai.refineText);
 router.post('/ai/keywords', requireApprovedSeller, ai.suggestKeywords);

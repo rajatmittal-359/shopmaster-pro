@@ -22,6 +22,10 @@ const authMiddleware = async (req, res, next) => {
       return res.status(401).json({ message: 'Email not verified' });
     }
 
+    if (user.isBlocked) {
+      return res.status(403).json({ message: 'This account has been blocked. Write to us if you think that is a mistake.' });
+    }
+
     req.user = user;
     next();
   } catch (error) {

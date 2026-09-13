@@ -81,6 +81,13 @@
          * on means "treat me like any seller". Meaningless on accounts that
          * were never exempt.
          */
+        /**
+         * Set by an admin from Customers. A blocked account cannot sign in
+         * or order; nothing is deleted, so the order history stays readable.
+         */
+        isBlocked: { type: Boolean, default: false },
+        blockedReason: { type: String, default: null },
+
         aiLimitsLikeSeller: {
         type: Boolean,
         default: false

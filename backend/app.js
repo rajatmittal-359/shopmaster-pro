@@ -106,6 +106,36 @@ app.use('/api/public/products', publicCatalogue, productRoutes);
 app.use('/api/public/sellers', publicCatalogue, require('./routes/publicSellerRoutes'));
 // The seller rulebook, for the agreement page and the consent checkbox - the
 // same numbers the code enforces (config/sellerRules.js).
+// The coupons a shopper may use right now - Flipkart's "My coupons" page,
+// without needing an account to see them. Codes are public by design.
+app.get('/api/public/coupons', async (req, res) => {
+  try {
+    const Coupon = require('./models/Coupon');
+    const { shopNamesFor } = require('./utils/shopNames');
+    const now = new Date();
+    const coupons = await Coupon.find({ isActive: true, $or: [{ validUntil: null }, { validUntil: { $gte: now } }], validFrom: { $lte: now } })
+      .select('code description type value maxDiscount minOrderValue validUntil fundedBy sellerId usageLimit usedCount')
+      .lean();
+    const live = coupons.filter((c) => !c.usageLimit || c.usedCount < c.usageLimit);
+    const names = await shopNamesFor(live.map((c) => c.sellerId).filter(Boolean));
+    res.set('Cache-Control', 'public, max-age=300');
+    res.json({
+      coupons: live.map((c) => ({
+        code: c.code,
+        description: c.description,
+        type: c.type,
+        value: c.value,
+        maxDiscount: c.maxDiscount,
+        minOrderValue: c.minOrderValue,
+        validUntil: c.validUntil,
+        shop: c.fundedBy === 'seller' ? names.get(String(c.sellerId)) || null : null,
+      })),
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Coupons unavailable' });
+  }
+});
+
 app.get('/api/public/seller-rules', (req, res) => {
   res.set('Cache-Control', 'public, max-age=300');
   res.json(require('./config/sellerRules'));
