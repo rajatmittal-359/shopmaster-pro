@@ -46,7 +46,9 @@ export default function SubcategoryRow({ categories, params }) {
     'rounded-full border px-3 py-1.5 text-sm transition whitespace-nowrap';
 
   return (
-    <nav aria-label={`Inside ${parent.name}`} className="mb-5">
+    /* On a wide screen the category tree in the rail already lists these;
+       the row stays for phones, where the rail is behind the Filters button. */
+    <nav aria-label={`Inside ${parent.name}`} className="mb-5 md:hidden">
       <ul className="flex flex-wrap gap-2">
         <li>
           <Link

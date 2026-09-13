@@ -72,7 +72,14 @@ async function buildCatalogueFilter({ category, search, minPrice, maxPrice, colo
    * shopping for one. The value is escaped because it arrives from the URL.
    */
   if (color) {
-    filter.color = { $regex: `^${escapeRegex(String(color).trim())}$`, $options: 'i' };
+    // Several colours arrive comma-separated ("Gold,Red" - the panel is a
+    // real multi-select); one colour stays the single anchored regex the
+    // tests pin down, so the two shapes never drift apart.
+    const wanted = String(color).split(',').map((c) => c.trim()).filter(Boolean);
+    filter.color =
+      wanted.length > 1
+        ? { $in: wanted.map((c) => new RegExp(`^${escapeRegex(c)}$`, 'i')) }
+        : { $regex: `^${escapeRegex(wanted[0] || '')}$`, $options: 'i' };
   }
 
   /*
@@ -82,7 +89,11 @@ async function buildCatalogueFilter({ category, search, minPrice, maxPrice, colo
    * regex cares about, like "8.5" and "M/L".
    */
   if (size) {
-    filter.size = { $regex: `^${escapeRegex(String(size).trim())}$`, $options: 'i' };
+    const wanted = String(size).split(',').map((c) => c.trim()).filter(Boolean);
+    filter.size =
+      wanted.length > 1
+        ? { $in: wanted.map((c) => new RegExp(`^${escapeRegex(c)}$`, 'i')) }
+        : { $regex: `^${escapeRegex(wanted[0] || '')}$`, $options: 'i' };
   }
 
   /*

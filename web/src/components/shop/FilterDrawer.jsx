@@ -14,9 +14,8 @@ import FilterPanel from '@/components/shop/FilterPanel';
  */
 export default function FilterDrawer({ params, ...panel }) {
   const [open, setOpen] = useState(false);
-  const on = ['category', 'color', 'size', 'minRating', 'minPrice', 'maxPrice'].filter((k) => params[k]).length;
-  // minPrice + maxPrice read as one "Price" filter.
-  const count = on - (params.minPrice && params.maxPrice ? 1 : 0);
+  const many = (v) => String(v || '').split(',').filter(Boolean).length;
+  const count = (params.category ? 1 : 0) + many(params.color) + many(params.size) + (params.minRating ? 1 : 0) + (params.minPrice || params.maxPrice ? 1 : 0);
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>

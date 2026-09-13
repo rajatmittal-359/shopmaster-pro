@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Check, ChevronDown, Star } from 'lucide-react';
+import { Check, ChevronDown, ChevronLeft, Star } from 'lucide-react';
 import { shopHref } from '@/lib/shopUrl';
 import PriceFilter from '@/components/shop/PriceFilter';
 
@@ -15,6 +15,15 @@ import PriceFilter from '@/components/shop/PriceFilter';
  *   price as a slider with the two boxes under it, ratings as stars. Options
  *   with nothing behind them are not shown - Baymard's dead-end rule: a
  *   filter that empties the page teaches people not to touch filters.
+ *
+ * CATEGORY IS A TREE, NOT A CHECKBOX (Rajat, 13 Sep: "ek baar me ek select,
+ * par checkbox dikh raha hai - galat")
+ *   A checkbox promises "pick several"; a category is one place you are
+ *   standing in. Amazon's "Department" and Flipkart's category rail both
+ *   draw it as a tree: where you are in bold, its children indented, a
+ *   "‹ back" to the level above. Colour and size ARE checkboxes, and so
+ *   they now truly multi-select (color=Gold,Red) - the control keeps its
+ *   promise both ways.
  *
  * WHAT DID NOT CHANGE
  *   Every option is still a LINK. Each filtered view keeps a real URL that
@@ -74,18 +83,49 @@ function Section({ title, open: initial = true, count, children }) {
   );
 }
 
-/** A row that reads like a checkbox and behaves like a link. */
+/**
+ * A row that reads like a radio (one of these) and behaves like a link.
+ * Rating is "at least N stars" - two rows, one answer - so it draws as a
+ * radio, not a checkbox; the control's shape says how many you may pick.
+ */
 function Option({ href, on, children, count }) {
   return (
     <li>
       <Link href={href} aria-current={on ? 'true' : undefined} className="group flex items-center gap-2.5 rounded-md py-1.5 pr-1 hover:text-foreground">
         <span
-          className={`grid size-4 shrink-0 place-items-center rounded-[4px] border transition ${on ? 'border-brand-ink bg-brand-ink text-white' : 'border-border bg-background group-hover:border-foreground/40'}`}
+          className={`grid size-4 shrink-0 place-items-center rounded-full border transition ${on ? 'border-brand-ink' : 'border-border bg-background group-hover:border-foreground/40'}`}
           aria-hidden
         >
-          {on && <Check className="size-3" strokeWidth={3} />}
+          {on && <span className="size-2 rounded-full bg-brand-ink" />}
         </span>
         <span className={`min-w-0 flex-1 truncate ${on ? 'font-medium text-foreground' : 'text-muted-foreground group-hover:text-foreground'}`}>{children}</span>
+        {count != null && <span className="text-xs tabular-nums text-muted-foreground/70">{count}</span>}
+      </Link>
+    </li>
+  );
+}
+
+/** Comma-separated multi-values in the URL: toggle one in or out. */
+const listOf = (v) => String(v || '').split(',').map((x) => x.trim()).filter(Boolean);
+const toggled = (v, value) => {
+  const has = listOf(v).some((x) => x.toLowerCase() === String(value).toLowerCase());
+  const next = has ? listOf(v).filter((x) => x.toLowerCase() !== String(value).toLowerCase()) : [...listOf(v), value];
+  return next.join(',');
+};
+const hasValue = (v, value) => listOf(v).some((x) => x.toLowerCase() === String(value).toLowerCase());
+
+/** One line of the category tree: no box - you are either here or you go there. */
+function TreeItem({ href, on, depth = 0, count, children }) {
+  return (
+    <li>
+      <Link
+        href={href}
+        aria-current={on ? 'page' : undefined}
+        className={`flex items-center gap-2 rounded-md py-1.5 pr-1 ${on ? 'font-semibold text-brand-ink' : 'text-muted-foreground hover:text-foreground'}`}
+        style={{ paddingLeft: `${depth * 0.875}rem` }}
+      >
+        {on && <span aria-hidden className="h-4 w-0.5 rounded-full bg-brand-ink" />}
+        <span className="min-w-0 flex-1 truncate">{children}</span>
         {count != null && <span className="text-xs tabular-nums text-muted-foreground/70">{count}</span>}
       </Link>
     </li>
@@ -95,60 +135,69 @@ function Option({ href, on, children, count }) {
 export default function FilterPanel({ params, categories, colors, sizes = [], price }) {
   const active = (key, value) => String(params[key] || '') === String(value);
   const live = categories.filter((c) => c.productCount > 0);
+  const currentParent = live.find((c) => active('category', c.slug) || (c.children || []).some((ch) => active('category', ch.slug)));
 
   return (
     <aside className="space-y-4 text-sm">
       <Section title="Category">
-        <ul className="space-y-0.5">
-          <Option href={shopHref(params, { category: '' })} on={!params.category}>
-            Everything
-          </Option>
-          {live.map((cat) => {
-            const children = (cat.children || []).filter((c) => c.productCount > 0);
-            const inThisBranch = active('category', cat.slug) || children.some((c) => active('category', c.slug));
-            return (
-              <li key={cat._id}>
-                <ul>
-                  <Option href={shopHref(params, { category: cat.slug })} on={active('category', cat.slug)} count={cat.productCount}>
-                    {cat.name}
-                  </Option>
-                </ul>
-                {inThisBranch && children.length > 0 && (
-                  <ul className="mt-0.5 mb-1 ml-2 space-y-0.5 border-l pl-3">
-                    {children.map((child) => (
-                      <Option key={child._id} href={shopHref(params, { category: child.slug })} on={active('category', child.slug)} count={child.productCount}>
-                        {child.name}
-                      </Option>
-                    ))}
-                  </ul>
-                )}
-              </li>
-            );
-          })}
-        </ul>
+        {!currentParent ? (
+          /* Top level: every department with its count. */
+          <ul className="space-y-0.5">
+            <TreeItem href={shopHref(params, { category: '' })} on>
+              Everything
+            </TreeItem>
+            {live.map((cat) => (
+              <TreeItem key={cat._id} href={shopHref(params, { category: cat.slug })} count={cat.productCount} depth={1}>
+                {cat.name}
+              </TreeItem>
+            ))}
+          </ul>
+        ) : (
+          /* Inside a department: a way up, the department, its children. The
+             other departments step aside - Amazon's rail does the same. */
+          <ul className="space-y-0.5">
+            <li>
+              <Link href={shopHref(params, { category: '' })} className="flex items-center gap-1 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground">
+                <ChevronLeft className="size-3.5" /> All categories
+              </Link>
+            </li>
+            <TreeItem href={shopHref(params, { category: currentParent.slug })} on={active('category', currentParent.slug)} count={currentParent.productCount}>
+              {currentParent.name}
+            </TreeItem>
+            {(currentParent.children || [])
+              .filter((c) => c.productCount > 0)
+              .map((child) => (
+                <TreeItem key={child._id} href={shopHref(params, { category: active('category', child.slug) ? currentParent.slug : child.slug })} on={active('category', child.slug)} count={child.productCount} depth={1}>
+                  {child.name}
+                </TreeItem>
+              ))}
+          </ul>
+        )}
       </Section>
 
       <PriceFilter key={`${price?.min}-${price?.max}-${params.minPrice || ''}-${params.maxPrice || ''}`} params={params} range={price} />
 
       {colors.filter((c) => c.count > 0).length > 0 && (
-        <Section title="Colour" count={params.color ? 1 : 0}>
+        <Section title="Colour" count={listOf(params.color).length}>
           <ul className="space-y-0.5">
             {colors
               .filter((c) => c.count > 0)
               .map((c) => {
-                const on = active('color', c.value);
+                const on = hasValue(params.color, c.value);
                 return (
                   <li key={c.value}>
                     <Link
-                      href={shopHref(params, { color: on ? '' : c.value })}
+                      href={shopHref(params, { color: toggled(params.color, c.value) })}
                       aria-current={on ? 'true' : undefined}
                       className="group flex items-center gap-2.5 rounded-md py-1.5 pr-1"
                     >
                       <span
+                        className={`grid size-4 shrink-0 place-items-center rounded-[4px] border transition ${on ? 'border-brand-ink bg-brand-ink text-white' : 'border-border bg-background group-hover:border-foreground/40'}`}
                         aria-hidden
-                        className={`size-5 shrink-0 rounded-full border shadow-inner ${on ? 'ring-2 ring-brand-ink ring-offset-2 ring-offset-background' : 'border-black/10'}`}
-                        style={{ background: swatchFor(c.value) }}
-                      />
+                      >
+                        {on && <Check className="size-3" strokeWidth={3} />}
+                      </span>
+                      <span aria-hidden className="size-4 shrink-0 rounded-full border border-black/10 shadow-inner" style={{ background: swatchFor(c.value) }} />
                       <span className={`min-w-0 flex-1 truncate ${on ? 'font-medium text-foreground' : 'text-muted-foreground group-hover:text-foreground'}`}>{c.value}</span>
                       <span className="text-xs tabular-nums text-muted-foreground/70">{c.count}</span>
                     </Link>
@@ -160,14 +209,14 @@ export default function FilterPanel({ params, categories, colors, sizes = [], pr
       )}
 
       {sizes.length > 0 && (
-        <Section title="Size" count={params.size ? 1 : 0}>
+        <Section title="Size" count={listOf(params.size).length}>
           <ul className="flex flex-wrap gap-2">
             {sizes.map((s) => {
-              const on = active('size', s.value);
+              const on = hasValue(params.size, s.value);
               return (
                 <li key={s.value}>
                   <Link
-                    href={shopHref(params, { size: on ? '' : s.value })}
+                    href={shopHref(params, { size: toggled(params.size, s.value) })}
                     aria-current={on ? 'true' : undefined}
                     className={`block min-w-10 rounded-full border px-3 py-1.5 text-center text-sm transition ${
                       on ? 'border-brand-ink bg-brand-ink font-medium text-white' : 'border-border text-muted-foreground hover:border-foreground/40 hover:text-foreground'

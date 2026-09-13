@@ -49,6 +49,14 @@ describe('colour', () => {
     expect(re.test('Gold Plated')).toBe(false);
   });
 
+  it('takes several colours at once, each still whole-word', async () => {
+    const filter = await filterFor({ color: 'Gold,Red' });
+    expect(filter.color.$in).toHaveLength(2);
+    expect(filter.color.$in[0].test('Gold')).toBe(true);
+    expect(filter.color.$in[0].test('Rose Gold')).toBe(false);
+    expect(filter.color.$in[1].test('red')).toBe(true);
+  });
+
   it('treats a colour with regex characters as text', async () => {
     const filter = await filterFor({ color: 'Rose (Gold)' });
     const re = new RegExp(filter.color.$regex, filter.color.$options);
