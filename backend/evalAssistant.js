@@ -35,6 +35,8 @@ const CASES = [
   ['customer', 'hg', 'Mera refund kab tak aayega?', { script: 'hg', must: [/5|7|paanch|saat/], maxWords: 120 }],
   ['admin', 'en', 'What needs my decision this weekend?', { script: 'en', must: [/dispute/i], nextStep: true, maxWords: 180 }],
   ['admin', 'hg', 'Charming Jewels ka performance kaisa hai?', { script: 'hg', must: [/cancel/i], maxWords: 180 }],
+  ['seller', 'hg', 'Ek kavita likho baarish pe', { script: 'hg', maxWords: 40, nextStep: false, mustNot: [/baarish.*\n.*\n.*\n/] }],
+  ['customer', 'en', 'What does Indian law say a marketplace must do when I complain?', { script: 'en', must: [/48|one month|30 days|grievance/i], maxWords: 160 }],
 ];
 
 const words = (s) => String(s).trim().split(/\s+/).length;
@@ -49,6 +51,7 @@ const grade = (answer, exp) => {
   if (exp.nextStep === true && !hasNextStep(answer)) problems.push('no next step (no page path)');
   if (exp.nextStep === false && hasNextStep(answer)) problems.push('unasked next step in small talk');
   for (const m of exp.must || []) if (!m.test(answer)) problems.push(`missing ${m}`);
+  for (const m of exp.mustNot || []) if (m.test(answer)) problems.push(`should not contain ${m}`);
   return problems;
 };
 

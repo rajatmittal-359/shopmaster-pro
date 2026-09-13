@@ -220,9 +220,15 @@ const TOOLS = [
     description: 'Search the web (Google) for facts outside ShopMaster: how Amazon/Flipkart/Meesho/Myntra handle something, Indian consumer law, courier practice, GST, current events. Returns a sourced summary.',
     parameters: { type: 'OBJECT', properties: { query: STR('The search question') }, required: ['query'] },
     run: async ({ query }) => {
+      const ask = `Search the web and answer factually with sources (site names) in under 200 words: ${String(query).slice(0, 400)}`;
       const { generate } = require('../gemini');
-      const r = await generate(`Search the web and answer factually with sources (site names) in under 200 words: ${String(query).slice(0, 400)}`, { grounded: true, textModel: 'gemini', attempts: 1, temperature: 0.2 });
-      return r.ok ? { summary: r.text } : { error: `web search unavailable: ${r.reason.slice(0, 100)}` };
+      const r = await generate(ask, { grounded: true, textModel: 'gemini', attempts: 1, temperature: 0.2 });
+      if (r.ok) return { summary: r.text, via: 'google' };
+      // Gemini's grounding is out for the day: Groq's compound-mini carries its
+      // own web search (70k tokens/minute), so the outside world stays reachable.
+      const { groqPlain } = require('./groq');
+      const g = await groqPlain([{ role: 'user', parts: [{ text: ask }] }], { model: 'groq/compound-mini', temperature: 0.2 });
+      return g.ok ? { summary: g.text, via: 'compound' } : { error: `web search unavailable: ${r.reason.slice(0, 60)}; ${g.reason.slice(0, 60)}` };
     },
   },
 ];
