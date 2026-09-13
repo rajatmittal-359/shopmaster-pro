@@ -393,6 +393,8 @@ exports.checkout = async (req, res) => {
         console.error('COD order email failed:', emailErr.message);
       }
     });
+    // The seller's phone: what to pack, one button to the order.
+    setImmediate(() => require('../utils/notifySeller').newOrder(order[0]._id));
   } catch (err) {
     await session.abortTransaction();
     console.error('CHECKOUT ERROR:', err.message);
@@ -816,6 +818,8 @@ exports.cancelOrderItem = async (req, res) => {
       });
 
       await order.save();
+      // Every seller whose parcel is coming back hears it the same minute.
+      for (const f of eligible) setImmediate(() => require('../utils/notifySeller').returnRequested(order._id, f.sellerId));
 
       res.json({
         success: true,
@@ -1106,6 +1110,7 @@ exports.raiseDispute = async (req, res) => {
     });
 
     await order.save();
+    setImmediate(() => require('../utils/notifySeller').disputeOpened(order._id));
 
     console.warn(`Dispute raised on ${order.orderNumber} by customer ${req.user._id}`);
 

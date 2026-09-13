@@ -507,6 +507,7 @@ exports.verifyRazorpayPayment = async (req, res) => {
     // Reflect the committed state in the response payload.
     order.paymentMethod = "razorpay";
     order.paymentStatus = "paid";
+    setImmediate(() => require('../utils/notifySeller').newOrder(order._id));
     order.razorpayPaymentId = razorpay_payment_id;
     order.razorpaySignature = razorpay_signature;
 
@@ -643,6 +644,8 @@ exports.handleRazorpayWebhook = async (req, res) => {
           await session.abortTransaction();
           return res.json({ status: 'already_processed' });
         }
+        // Told once, here, because the claim above ran exactly once.
+        setImmediate(() => require('../utils/notifySeller').newOrder(order._id));
 
         // ✅ Same atomic stock commitment as the verify path. Without this the
         // webhook kept the original read-then-write decrement and could still
