@@ -46,6 +46,45 @@ describe('tool walls', () => {
   it('every tool is read-only by name', () => {
     for (const t of TOOLS) expect(t.name).not.toMatch(/create|update|delete|refund|cancel|set|book/i);
   });
+
+  // plan 2.24
+  it('the new tools sit behind the right walls', () => {
+    const c = declarationsFor('customer').map((d) => d.name);
+    const a = declarationsFor('admin').map((d) => d.name);
+    const s = declarationsFor('seller').map((d) => d.name);
+    expect(c).toEqual(expect.arrayContaining(['myPayments', 'checkCoupon']));
+    expect(c).not.toContain('disputeBrief');
+    expect(c).not.toContain('customerRisk');
+    expect(a).toEqual(expect.arrayContaining(['disputeBrief', 'customerRisk']));
+    expect(a).not.toContain('myPayments');
+    expect(s).toContain('checkCoupon');
+    expect(s).not.toContain('myPayments');
+  });
+
+  it('a suspended seller keeps orders, rules and performance - loses listings and payouts', async () => {
+    const names = declarationsFor('seller', { sellerStatus: 'suspended' }).map((d) => d.name);
+    expect(names).toEqual(expect.arrayContaining(['getOrder', 'myRecentOrders', 'myPerformance', 'searchKnowledge']));
+    expect(names).not.toContain('myPayouts');
+    expect(names).not.toContain('productScore');
+    expect(names).not.toContain('checkCoupon');
+    const r = await runTool('myPayouts', {}, { role: 'seller', user: { _id: 's1', sellerStatus: 'suspended' } });
+    expect(r.error).toMatch(/No tool/);
+  });
+
+  it('checkCoupon never invents a code and normalises what was typed', async () => {
+    const Coupon = require('../models/Coupon');
+    const orig = Coupon.findOne;
+    const seen = [];
+    Coupon.findOne = vi.fn((f) => { seen.push(f); return { lean: async () => null }; });
+    try {
+      const r = await runTool('checkCoupon', { code: ' diwali20 ' }, { role: 'customer', user: { _id: 'c1' } });
+      expect(seen[0]).toEqual({ code: 'DIWALI20' });
+      expect(r.valid).toBe(false);
+      expect(r.reason).toMatch(/do not have/);
+    } finally {
+      Coupon.findOne = orig;
+    }
+  });
 });
 
 describe('getOrder scopes by session, not by argument', () => {

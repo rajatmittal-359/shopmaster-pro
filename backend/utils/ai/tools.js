@@ -8,6 +8,10 @@ const { sellerPayoutStateFor, getPayableSummary } = require('../payout');
 const { scoreListing } = require('../listingScore');
 const { computePerformance } = require('../performance');
 const { retrieve } = require('./retrieve');
+const User = require('../../models/User');
+const Coupon = require('../../models/Coupon');
+const { evaluateCoupon } = require('../applyCoupon');
+const { escapeRegex } = require('../catalogueFilter');
 
 /**
  * What the assistant may look up, by role. Read-only, every one of them.
@@ -191,6 +195,85 @@ const TOOLS = [
     },
   },
   {
+    name: 'myPayments',
+    roles: ['customer'],
+    description: "The customer's money on recent orders: what was paid and how, and every refund - its amount, whether it is done, pending or failed, and when it was sent. Use for 'refund kab aayega', 'paisa kata', 'payment failed'.",
+    parameters: { type: 'OBJECT', properties: { orderNumber: STR('Optional: one order number like SMP-260906-1D876E. Omit for the last 8 orders.') } },
+    run: async ({ orderNumber } = {}, { user }) => {
+      const filter = { customerId: user._id, ...REAL_ORDER };
+      if (orderNumber) filter.orderNumber = String(orderNumber).toUpperCase();
+      const orders = await Order.find(filter).sort({ createdAt: -1 }).limit(orderNumber ? 1 : 8).lean();
+      if (!orders.length) return { note: orderNumber ? 'No such order on this account.' : 'No orders yet.' };
+      return {
+        payments: orders.map((o) => {
+          const refunds = [];
+          if (o.refundId) refunds.push(`order-level refund ${money(o.refundAmount || 0)}: ${o.refundStatus || 'initiated'}${o.refundedAt ? `, credited ${when(o.refundedAt)}` : ''}`);
+          for (const i of o.items || []) if (i.refundId) refunds.push(`${i.name}: ${money(i.refundAmount || i.price * i.quantity)} ${i.refundStatus || 'initiated'}${i.refundedAt ? `, credited ${when(i.refundedAt)}` : ''}`);
+          return `${o.orderNumber} · ${money(o.totalAmount)} · ${o.paymentMethod === 'cod' ? 'cash on delivery' : `paid online${o.razorpayPaymentId ? ' (Razorpay)' : ''}`} · payment ${o.paymentStatus}${refunds.length ? ` · refunds: ${refunds.join('; ')}` : ' · no refunds'}`;
+        }),
+        rule: 'A completed refund reaches the bank or card in 5-7 working days from the credited date; a COD order is refunded to the bank details the customer gives on the order page.',
+      };
+    },
+  },
+  {
+    name: 'checkCoupon',
+    roles: ['customer', 'seller'],
+    description: 'Look up one coupon code: whether it is live, what it gives (percent or flat, any cap), the minimum order, the expiry, whose products it covers, and how many uses remain. Never invents a code.',
+    parameters: { type: 'OBJECT', properties: { code: STR('The code as typed, e.g. DIWALI20') }, required: ['code'] },
+    run: async ({ code } = {}, { user }) => {
+      const c = await Coupon.findOne({ code: String(code || '').trim().toUpperCase() }).lean();
+      if (!c) return { valid: false, reason: 'We do not have a code by that name.' };
+      const v = evaluateCoupon(c, { lines: [], customerId: user._id });
+      const gives = c.type === 'percent' ? `${c.value}% off${c.maxDiscount ? ` (up to ${money(c.maxDiscount)})` : ''}` : `${money(c.value)} off`;
+      return {
+        code: c.code,
+        live: Boolean(c.isActive) && (!c.validUntil || new Date(c.validUntil) > new Date()),
+        gives,
+        minimumOrder: c.minOrderValue ? money(c.minOrderValue) : 'none',
+        validUntil: c.validUntil ? when(c.validUntil) : 'no expiry',
+        covers: c.fundedBy === 'seller' ? 'one seller\'s products only' : 'the whole marketplace',
+        usesLeft: c.usageLimit ? Math.max(0, c.usageLimit - (c.usedCount || 0)) : 'unlimited',
+        wouldApplyNow: v.ok ? 'yes, on an eligible basket' : v.reason,
+      };
+    },
+  },
+  {
+    name: 'disputeBrief',
+    roles: ['admin'],
+    description: "The decision agent's brief for a disputed or contested-return parcel: the facts (proof of delivery, pack proof, photos, return timeline), a recommendation with confidence, and the note to write. Costs one model call unless cached; use when the admin asks what to decide on an order.",
+    parameters: { type: 'OBJECT', properties: { orderNumber: STR('The order number, e.g. SMP-260906-1D876E'), sellerId: STR('Optional: the seller user id when the order has several parcels') }, required: ['orderNumber'] },
+    run: async ({ orderNumber, sellerId } = {}) => {
+      const o = await Order.findOne({ orderNumber: String(orderNumber || '').toUpperCase() }).select('_id fulfilments').lean();
+      if (!o) return { error: 'No such order.' };
+      const contested = (o.fulfilments || []).filter((f) => f.disputeStatus || f.returnStage);
+      const sid = sellerId || (contested.length === 1 ? contested[0].sellerId : null);
+      if (!sid) return { error: `This order has ${contested.length} contested parcels - say which seller.`, sellers: contested.map((f) => String(f.sellerId)) };
+      const { briefDispute } = require('./decisionAgent');
+      const r = await briefDispute(o._id, sid);
+      if (!r.ok) return { error: r.reason };
+      return { brief: r.brief, model: r.model, decideAt: '/admin/orders' };
+    },
+  },
+  {
+    name: 'customerRisk',
+    roles: ['admin'],
+    description: "A customer's 180-day record (orders, returns and return rate, refused COD, disputes won/lost, RTO, empty-box claims, goodwill used) plus the risk level an admin set and its reason. Find the customer by email or name.",
+    parameters: { type: 'OBJECT', properties: { email: STR('The customer\'s email, if known'), name: STR('Or a name to search') } },
+    run: async ({ email, name } = {}) => {
+      const filter = email ? { email: String(email).trim().toLowerCase() } : name ? { name: new RegExp(escapeRegex(String(name).trim()), 'i') } : null;
+      if (!filter) return { error: 'Give an email or a name.' };
+      const users = await User.find({ ...filter, role: { $ne: 'admin' } }).select('name email risk createdAt').limit(3).lean();
+      if (!users.length) return { note: 'No customer matches.' };
+      const { customerRisk } = require('../risk');
+      const out = [];
+      for (const u of users) {
+        const r = await customerRisk(u._id);
+        out.push({ name: u.name, email: u.email, since: when(u.createdAt), setByAdmin: u.risk?.level && u.risk.level !== 'none' ? `${u.risk.level}: ${u.risk.reason || ''}` : 'none', record: `${r.orders} orders, ${r.delivered} delivered, ${r.returns} returns (${r.returnRate}%), ${r.refused} COD refused, disputes won ${r.disputesWon}/lost ${r.disputesLost}, RTO ${r.rto}, empty-box ${r.emptyBox}, goodwill ${r.goodwill}`, signals: r.signals, level: r.level, manageAt: '/admin/customers' });
+      }
+      return { customers: out };
+    },
+  },
+  {
     name: 'listCategories',
     roles: ['seller', 'customer', 'admin'],
     description: 'The category tree (main categories and their sub-categories) as it exists on the platform right now.',
@@ -233,12 +316,20 @@ const TOOLS = [
   },
 ];
 
-const declarationsFor = (role) =>
-  TOOLS.filter((t) => t.roles.includes(role)).map(({ name, description, parameters }) => ({ name, description, parameters }));
+/**
+ * A suspended seller may still ask - about open orders, the rule they broke,
+ * how to come back - but not plan growth. So: the read-only tools about
+ * their own orders and the rulebook, nothing about listings or payouts.
+ */
+const SUSPENDED_SELLER_TOOLS = ['getOrder', 'myRecentOrders', 'myPerformance', 'searchKnowledge', 'webSearch'];
+const allowed = (t, role, user) => t.roles.includes(role) && !(role === 'seller' && user?.sellerStatus === 'suspended' && !SUSPENDED_SELLER_TOOLS.includes(t.name));
+
+const declarationsFor = (role, user = null) =>
+  TOOLS.filter((t) => allowed(t, role, user)).map(({ name, description, parameters }) => ({ name, description, parameters }));
 
 /** Runs one tool for this asker; a tool outside the role is "unknown". */
 const runTool = async (name, args, { role, user }) => {
-  const tool = TOOLS.find((t) => t.name === name && t.roles.includes(role));
+  const tool = TOOLS.find((t) => t.name === name && allowed(t, role, user));
   if (!tool) return { error: `No tool named ${name}` };
   return tool.run(args || {}, { role, user });
 };

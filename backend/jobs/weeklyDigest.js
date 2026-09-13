@@ -65,8 +65,18 @@ const gather = async () => {
     google = null;
   }
 
+  // Money in vs money out (plan 2.24) - never fails the mail.
+  let settlement = null;
+  try {
+    const { weekSettlement, settlementLine } = require('../utils/settlements');
+    settlement = settlementLine(await weekSettlement({ since }));
+  } catch {
+    settlement = null;
+  }
+
   return {
     since,
+    settlement,
     orders: orders.length,
     sales,
     take,
@@ -109,6 +119,7 @@ const render = (d) => {
       ${row('Cancelled', `${d.cancelledBySeller} by sellers · ${d.cancelledByCustomer} by customers`)}
       ${row('Returns opened', d.returns)}
       ${d.google ? row('Google, 7 days', `${d.google.impressions} shown · ${d.google.clicks} clicks`) : ''}
+      ${d.settlement ? row('Money in / out', d.settlement) : ''}
     </table>
     ${d.google && d.google.top.length ? `<p style="font-size:13px;color:#555;margin:8px 0 0">People searched: ${d.google.top.map((q) => `“${esc(q)}”`).join(', ')}</p>` : ''}
     <h3 style="margin:22px 0 8px;font-size:16px">${needs.length ? 'Needs you this weekend' : 'Nothing needs you this weekend 🎉'}</h3>

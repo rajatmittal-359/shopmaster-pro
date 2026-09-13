@@ -126,10 +126,11 @@ const LANGUAGE_RULE = {
 };
 const languageRule = (language) => LANGUAGE_RULE[language] || "Match the person's language: Hindi in Devanagari if they write Hindi, Hinglish if Hinglish, English if English.";
 
-const SYSTEM = (role, hasTools, language) => `You are "Ask ShopMaster", the assistant inside ShopMaster Pro, a marketplace from Jaipur, India. You are talking to a ${role}.
+const SYSTEM = (role, hasTools, language, user = null) => `You are "Ask ShopMaster", the assistant inside ShopMaster Pro, a marketplace from Jaipur, India. You are talking to a ${role}.${role === 'seller' && user?.sellerStatus === 'suspended' ? `
+THIS SELLER IS SUSPENDED${user.suspendedReason ? ` (reason on file: "${user.suspendedReason}")` : ''}. They cannot list, edit or ship. Answer only about: their open orders and returns (which must still be honoured), what the rule they broke says and why it exists, and how to come back - write to Help (/seller/help) with what changed. No growth or listing advice while suspended; say so kindly and once.` : ''}
 
 RULES
-- Answer from what you were given (how the platform works, the rulebook numbers, this person's own data, the retrieved passages). THIS PERSON'S OWN DATA is the current state - for "what is waiting / open / needs my decision / kab aayega", answer from it. The BACKGROUND PASSAGES explain how things work and why; they are planning notes and documentation, never a to-do list and never the current state of an order or the platform${hasTools ? ' and from what your tools return. When the question is about a specific order, product, payout or seller, CALL THE TOOL rather than guessing; when it is about how a flow works or why a rule exists, call searchKnowledge; when it is about Amazon/Flipkart/Meesho/Indian law/the outside world, call webSearch.' : '.'} Never invent an order, an amount, a date or a rule. If neither the context nor a tool has what is asked, say exactly that and name the page or person that has it.
+- Answer from what you were given (how the platform works, the rulebook numbers, this person's own data, the retrieved passages). THIS PERSON'S OWN DATA is the current state - for "what is waiting / open / needs my decision / kab aayega", answer from it. The BACKGROUND PASSAGES explain how things work and why; they are planning notes and documentation, never a to-do list and never the current state of an order or the platform${hasTools ? ' and from what your tools return. When the question is about a specific order, product, payout or seller, CALL THE TOOL rather than guessing; when it is about how a flow works or why a rule exists, call searchKnowledge; when it is about Amazon/Flipkart/Meesho/Indian law/the outside world, call webSearch; when a coupon code is named, call checkCoupon before saying anything about it; when a customer asks about a refund or a payment, call myPayments.' : '.'} Never invent an order, an amount, a date or a rule. If neither the context nor a tool has what is asked, say exactly that and name the page or person that has it.
 - You cannot take actions - no refunds, no cancellations, no changes. Explain, then point to the button and page that does it. Write paths plainly, never in backticks (e.g. /seller/orders, /orders/SMP-260906-1D876E, /help, /seller/payments, /seller/issues) - the app turns them into links. Point to the ASKER'S OWN panel: a seller to /seller/... pages, a customer to /orders and /help, the admin to /admin/... pages (a seller's numbers live at /admin/sellers for the admin, never /seller/...).
 - SHAPE OF AN ANSWER (Rajat, 13 Sep: "pinpointed, no faltu baat, wholesome"): the first line IS the answer - the number, the date, the yes/no. Then only what that answer needs: the specific order codes, amounts, dates, the reason. End with ONE concrete next step (page + button) when there is something to do; none when there is not. Under 120 words unless a list of real items is needed. No greeting, no emoji, no "Happy selling", no restating the question, no tour of the dashboard unless asked, no "let me know if". Small talk ("kaise ho", "how are you") gets ONE short warm line (under 25 words) naming, in words, what you can help with - no page paths, no order numbers, no lists, no questions back.
 - Numbers with the rupee sign. Dates as they appear.
@@ -190,11 +191,20 @@ Answer now, as Ask ShopMaster.`;
 
   if (textModel !== 'nano') {
     // Road 1 - Gemini with tools, full prompt.
-    const withTools = { system: SYSTEM(role, true, language), declarations: declarationsFor(role), run: (name, args) => runTool(name, args, { role, user }) };
-    const r = await generateWithTools([...turns(1200), { role: 'user', parts: [{ text: buildPrompt({ compact: false }) }] }], withTools);
+    const withTools = { system: SYSTEM(role, true, language, user), declarations: declarationsFor(role, user), run: (name, args) => runTool(name, args, { role, user }) };
+    let r = await generateWithTools([...turns(1200), { role: 'user', parts: [{ text: buildPrompt({ compact: false }) }] }], withTools);
     if (r.ok) return done(r);
     if (textModel === 'gemini' || !retryable(r.reason)) return { ok: false, reason: r.reason };
     failures.push(`gemini: ${r.reason.slice(0, 60)}`);
+
+    // Road 1b - Gemini flash-lite, same tools. Its free quota is separate from
+    // flash's (14 Sep 2026: flash said "free_tier_requests, limit: 20" while
+    // lite answered at once) - a second Gemini before we leave Google's tools.
+    if (/429|quota/i.test(r.reason)) {
+      r = await generateWithTools([...turns(1200), { role: 'user', parts: [{ text: buildPrompt({ compact: false }) }] }], { ...withTools, model: process.env.GEMINI_LITE_MODEL || 'gemini-3.5-flash-lite' });
+      if (r.ok) return done(r);
+      failures.push(`gemini-lite: ${r.reason.slice(0, 60)}`);
+    }
 
     // Road 2 - Groq gpt-oss-120b with tools, compact prompt, two rounds at most
     // (each round re-sends the prompt against the same 8k/minute).
@@ -208,7 +218,7 @@ Answer now, as Ask ShopMaster.`;
 
     // Road 3 - Groq compound-mini: no custom tools, but 70k tokens/minute and
     // its own web search; the full prompt fits.
-    const c = await groqPlain([...turns(1200), { role: 'user', parts: [{ text: buildPrompt({ compact: false }) }] }], { system: SYSTEM(role, false, language), model: 'groq/compound-mini' });
+    const c = await groqPlain([...turns(1200), { role: 'user', parts: [{ text: buildPrompt({ compact: false }) }] }], { system: SYSTEM(role, false, language, user), model: 'groq/compound-mini' });
     if (c.ok) {
       console.warn(`assistant: ${failures.join('; ')} - answered by ${c.model}`);
       return done(c, { searchedWeb: c.searchedWeb });
@@ -219,7 +229,7 @@ Answer now, as Ask ShopMaster.`;
   // Road 4 - Pollinations nano, compact prompt, no tools: the prefetch and
   // the passages are all it has.
   const flat = history.slice(-6).map((m) => `${m.role === 'user' ? 'THEY SAID' : 'YOU SAID'}: ${String(m.text || '').slice(0, 600)}`).join('\n');
-  const r = await generate(`${flat ? `EARLIER IN THIS CONVERSATION\n${flat}\n\n` : ''}${buildPrompt({ compact: true })}`, { system: SYSTEM(role, false, language), textModel: 'nano', attempts: 1 });
+  const r = await generate(`${flat ? `EARLIER IN THIS CONVERSATION\n${flat}\n\n` : ''}${buildPrompt({ compact: true })}`, { system: SYSTEM(role, false, language, user), textModel: 'nano', attempts: 1 });
   if (!r.ok) return { ok: false, reason: [...failures, `nano: ${r.reason.slice(0, 60)}`].join('; ') };
   if (failures.length) console.warn(`assistant: ${failures.join('; ')} - answered by ${r.model || 'nano'}`);
   return done({ ...r, model: r.model || 'nano', calls: [] });

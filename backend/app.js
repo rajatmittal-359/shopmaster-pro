@@ -96,6 +96,27 @@ app.get('/', (req, res) => {
 const { authLimiter, checkoutLimiter, aiLimiter } = require('./middlewares/rateLimits');
 app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/admin', adminRoutes);
+/*
+ * A suspended seller may still ask the assistant (plan 2.24): about the
+ * orders they must still deliver, the rule they broke, how to come back.
+ * Everything else under /api/seller stays behind checkSellerStatus's wall;
+ * this one path is mounted first so it is matched first. The tool set is
+ * narrowed inside utils/ai/tools (SUSPENDED_SELLER_TOOLS).
+ */
+app.post('/api/seller/assist', require('./middlewares/authMiddleware'), require('./middlewares/roleMiddleware')('seller'), async (req, res, next) => {
+  try {
+    const Seller = require('./models/Seller');
+    const seller = await Seller.findOne({ userId: req.user._id }).select('status isApproved suspendedReason suspensionReason').lean();
+    if (!seller) return res.status(403).json({ message: 'Seller profile not found' });
+    if (seller.status === 'suspended') {
+      req.user.sellerStatus = 'suspended';
+      req.user.suspendedReason = seller.suspendedReason || seller.suspensionReason || null;
+    }
+    return require('./controllers/assistController').seller(req, res, next);
+  } catch (error) {
+    return next(error);
+  }
+});
 app.use('/api/seller', sellerRoutes);
 app.use(['/api/customer/checkout-cod', '/api/customer/checkout-online'], checkoutLimiter);
 app.use(['/api/seller/ai', '/api/admin/ai', '/api/seller/assist', '/api/admin/assist', '/api/customer/assist', '/api/seller/voice', '/api/admin/voice', '/api/customer/voice', '/api/public/voice'], aiLimiter);
