@@ -4,6 +4,8 @@ const sellerRules = require('../config/sellerRules');
 const Product = require('../models/Product');
 const Order = require('../models/Order');
 const Seller = require('../models/Seller');
+/** Plan 2.32: up to six short Q&As, text only. */
+const sanitiseFaqs = (faqs) => (Array.isArray(faqs) ? faqs : []).map((x) => ({ q: String(x?.q || '').replace(/<[^>]*>/g, '').trim().slice(0, 120), a: String(x?.a || '').replace(/<[^>]*>/g, '').trim().slice(0, 400) })).filter((x) => x.q && x.a).slice(0, 6);
 const InventoryLog = require('../models/Inventory');
 const Category = require('../models/Category');
 const mongoose = require('mongoose');
@@ -279,6 +281,8 @@ exports.addProduct = async (req, res) => {
       variantGroupId,
       // Fair Returns: the seller's promise, inside the category's allowance; null = the category's default.
       returnMode: returnMode || null,
+      // Plan 2.32: the Q&A under the product.
+      faqs: sanitiseFaqs(req.body?.faqs),
     });
 
     // Check the details BEFORE spending anything on the pictures. Uploading
@@ -396,6 +400,7 @@ exports.updateProduct = async (req, res) => {
       if (modeError) return res.status(400).json({ message: modeError });
       product.returnMode = returnMode || null;
     }
+    if (req.body?.faqs !== undefined) product.faqs = sanitiseFaqs(req.body.faqs);
     if (isActive !== undefined) product.isActive = isActive;
     if (typeof lowStockThreshold === 'number') {
   product.lowStockThreshold = lowStockThreshold;

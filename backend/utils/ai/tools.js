@@ -274,6 +274,41 @@ const TOOLS = [
     },
   },
   {
+    name: 'googleReadiness',
+    roles: ['seller', 'admin'],
+    description: "The Google coach for one of the seller's products: its readiness score out of 100, the fixes in order of points, and the search words real people typed (Google Search Console, ShopMaster's own search box, the synonym family) with counts. Use for 'Google pe kaise aaye', 'SEO', 'keywords', 'title kaisa ho', 'near me'. For shop-level questions call it without a product.",
+    parameters: { type: 'OBJECT', properties: { productName: STR('Part of the product title, or omit for the shop-level list') } },
+    run: async ({ productName } = {}, { role, user }) => {
+      const { keywordEvidence, shopReadiness } = require('../googleReadiness');
+      const sellerId = role === 'seller' ? user._id : null;
+      if (!productName) {
+        if (!sellerId) return { error: 'Name a product, or ask as the seller for the shop-level list.' };
+        const r = await shopReadiness(sellerId);
+        return {
+          products: `${r.products.total} products, average readiness ${r.products.avg}/100, ${r.products.weak.length} under 80`,
+          weakest: r.products.weak.slice(0, 5).map((p) => `${p.name}: ${p.score}/100 - first fix: ${p.topFix}`),
+          nearMe: `location shown on shop page: ${r.nearMe.showLocation ? 'yes' : 'NO'} · city named in About: ${r.nearMe.cityInAbout ? 'yes' : 'NO'} · pickup address set: ${r.nearMe.pickupSet ? 'yes' : 'NO'} · Google Business Profile linked: ${r.nearMe.gbpLinked ? 'yes' : 'NO'}`,
+          faqsMissing: `${r.faqsMissing} products without two Q&As`,
+          fixAt: '/seller/products (open a product), /seller/settings (location, About, links), /seller/grow',
+        };
+      }
+      const filter = { name: new RegExp(escapeRegex(String(productName).trim()), 'i'), isDeleted: { $ne: true } };
+      if (sellerId) filter.sellerId = sellerId;
+      const p = await Product.findOne(filter).populate('category', 'name').lean();
+      if (!p) return { note: 'No product by that name' + (sellerId ? ' in this shop.' : '.') };
+      const r = scoreListing(p);
+      const ev = await keywordEvidence({ sellerId: p.sellerId, name: p.name, categoryName: p.category?.name, tags: p.tags, description: p.description }).catch(() => ({ words: [], google: false }));
+      return {
+        product: p.name,
+        readiness: `${Math.round((r.score / r.max) * 100)}/100`,
+        fixes: r.fixes.slice(0, 6).map((x) => `+${x.points}: ${x.text}`),
+        searchWords: ev.words.slice(0, 10).map((w) => `${w.word} - ${w.note}`),
+        googleData: ev.google ? 'Search Console read' : 'Search Console not available - words are from our shoppers and the synonym family',
+        editAt: `/seller/products/${p._id}`,
+      };
+    },
+  },
+  {
     name: 'listCategories',
     roles: ['seller', 'customer', 'admin'],
     description: 'The category tree (main categories and their sub-categories) as it exists on the platform right now.',

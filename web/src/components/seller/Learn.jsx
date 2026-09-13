@@ -78,6 +78,20 @@ const LESSONS = {
       href: '/seller/grow',
       cta: 'मैसेज कॉपी करें',
     },
+    {
+      title: 'Google पर दिखना - आपके हाथ में क्या है',
+      when: 'हर नया प्रोडक्ट डालते समय, और महीने में एक बार पुराने के लिए',
+      steps: [
+        ['टाइटल वैसे लिखें जैसे लोग खोजते हैं: चीज़ + धातु/रंग + किसके लिए।', 'जैसे "ऑक्सिडाइज़्ड सिल्वर झुमका, महिलाओं के लिए" - सिर्फ़ "झुमका" नहीं। फ़ॉर्म में स्कोर खुद बताएगा।'],
+        ['"Suggest search words" दबाएँ और G / S वाले शब्द जोड़ें।', 'G = Google पर लोगों ने यही टाइप किया, S = ShopMaster पर। नंबर बताता है कितनी बार। ये अंदाज़ा नहीं, असली खोजें हैं।'],
+        ['"Questions shoppers ask" में 2-3 जवाब रखें - "Draft 3 with AI" से शुरू करें, फिर अपने शब्दों में ठीक करें।', 'Google के AI जवाब और ChatGPT जैसे असिस्टेंट उन्हीं पेजों को दोहराते हैं जिनमें साफ़ जवाब लिखे हों।'],
+        ['तीन फोटो, रंग, साइज़, वज़न - हर खाली खाना भरें। स्कोर 80 से ऊपर रखें।', 'Google Shopping में मुफ़्त दिखने के लिए यही सब चाहिए; कमी हो तो प्रोडक्ट छपता ही नहीं।'],
+        ['"Near me" के लिए: Settings में शहर दिखाएँ, About में अपना शहर लिखें, Business Profile जोड़ें।', 'पास वाली दुकान दूर वाली बड़ी दुकान से ऊपर आती है - बस Google को पता होना चाहिए आप कहाँ हैं।'],
+        ['Grow पेज पर "How Google reads your shop" हफ़्ते में एक बार देखें।', 'जो प्रोडक्ट 80 से नीचे हैं वहीं दिखेंगे, पहला सुधार लिखा होगा - एक-एक करके ठीक करें।'],
+      ],
+      href: '/seller/grow',
+      cta: 'Grow खोलें',
+    },
   ],
   en: [
     {
@@ -141,6 +155,20 @@ const LESSONS = {
       ],
       href: '/seller/grow',
       cta: 'Copy the message',
+    },
+    {
+      title: 'Being found on Google - the part that is yours',
+      when: 'Every time you add a product, and once a month for the old ones',
+      steps: [
+        ['Write the title the way people search: the thing + material or colour + who it is for.', '"Oxidised silver jhumka earrings for women", not "Jhumka". The score in the form tells you.'],
+        ['Press "Suggest search words" and add the G and S ones.', 'G = typed on Google by real people, S = typed in ShopMaster\'s own search. The number is how many times. Not guesses - searches.'],
+        ['Keep 2-3 answers under "Questions shoppers ask" - start with "Draft 3 with AI", then fix them in your words.', 'Google\'s AI answers and assistants like ChatGPT repeat pages that answer plainly.'],
+        ['Three photos, colour, size, weight - fill every box. Keep the score at 80 or above.', 'That is what free Google Shopping listings need; a missing fact means the product is not shown at all.'],
+        ['For "near me": show your city in Settings, name it in your About, link your Business Profile.', 'The shop nearby beats the big shop far away - Google only has to know where you are.'],
+        ['Once a week, look at "How Google reads your shop" on Grow.', 'Products under 80 are listed there with their first fix - do them one at a time.'],
+      ],
+      href: '/seller/grow',
+      cta: 'Open Grow',
     },
   ],
 };

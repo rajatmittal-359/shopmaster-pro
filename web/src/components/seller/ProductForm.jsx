@@ -4,9 +4,11 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Sparkles, Loader2, Cpu } from 'lucide-react';
 import { authedFetch } from '@/lib/client';
+import { toast } from 'sonner';
 import { getCategories } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import MediaManager from '@/components/seller/MediaManager';
@@ -62,6 +64,7 @@ const left = (n) => (n === null || n === undefined ? '∞' : n);
 
 const EMPTY = {
   returnMode: '',
+  faqs: [],
   name: '',
   description: '',
   category: '',
@@ -143,6 +146,7 @@ export default function ProductForm({ productId, copyFromId }) {
   const [parents, setParents] = useState([]);
   const [state, setState] = useState({ status: 'loading' });
   const [keywords, setKeywords] = useState('');
+  const [faqBusy, setFaqBusy] = useState(false);
   // Which model writes: 'auto' (Gemini, nano behind it), 'gemini', 'nano'. The
   // same rule as the photo tools - the seller always sees who is doing the work.
   const [textModel, setTextModel] = useState('auto');
@@ -288,6 +292,7 @@ export default function ProductForm({ productId, copyFromId }) {
     const body = {
       ...form,
       returnMode: form.returnMode || null,
+      faqs: (form.faqs || []).filter((x) => x && x.q && x.a),
       price: Number(form.price),
       mrp: form.mrp === '' ? undefined : Number(form.mrp),
       stock: Number(form.stock),
@@ -569,6 +574,52 @@ export default function ProductForm({ productId, copyFromId }) {
             </fieldset>
           );
         })()}
+      </Card>
+
+      {/* Q&A under the product (plan 2.32). AI overviews and shopping assistants
+          quote pages that answer plainly; Amazon's Q&A and Etsy's FAQ do the same
+          job. Drafted from the facts and the rulebook, kept by the seller. */}
+      <Card
+        id="faqs"
+        title="Questions shoppers ask"
+        lead="Two to six short answers - material, care, size, what is in the box, delivery. Google's AI answers and the assistants people ask quote pages like this."
+      >
+        <div className="space-y-3">
+          {(form.faqs || []).map((x, idx) => (
+            <div key={idx} className="rounded-lg border p-3">
+              <Input value={x.q} maxLength={120} placeholder="Question, e.g. Is this real silver?" onChange={(e) => setForm((f) => ({ ...f, faqs: f.faqs.map((y, k) => (k === idx ? { ...y, q: e.target.value } : y)) }))} />
+              <Textarea value={x.a} maxLength={400} rows={2} className="mt-2" placeholder="Answer in one or two plain sentences" onChange={(e) => setForm((f) => ({ ...f, faqs: f.faqs.map((y, k) => (k === idx ? { ...y, a: e.target.value } : y)) }))} />
+              <button type="button" className="mt-1 text-xs text-muted-foreground hover:text-destructive" onClick={() => setForm((f) => ({ ...f, faqs: f.faqs.filter((_, k) => k !== idx) }))}>Remove</button>
+            </div>
+          ))}
+          <div className="flex flex-wrap gap-2">
+            {(form.faqs || []).length < 6 && (
+              <Button type="button" size="sm" variant="outline" onClick={() => setForm((f) => ({ ...f, faqs: [...(f.faqs || []), { q: '', a: '' }] }))}>Add a question</Button>
+            )}
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={!form.name || faqBusy}
+              onClick={async () => {
+                setFaqBusy(true);
+                try {
+                  const r = await authedFetch('/seller/ai/faqs', { method: 'POST', body: { name: form.name, description: form.description, categoryName: categories.find((c) => c._id === form.category)?.label, material: form.material, color: form.color, size: form.size, returnMode: form.returnMode || categories.find((c) => c._id === form.category)?.returnMode || 'R', textModel } });
+                  const have = new Set((form.faqs || []).map((x) => x.q.trim().toLowerCase()));
+                  const fresh = (r.faqs || []).filter((x) => !have.has(x.q.trim().toLowerCase()));
+                  setForm((f) => ({ ...f, faqs: [...(f.faqs || []).filter((x) => x.q || x.a), ...fresh].slice(0, 6) }));
+                  toast.success(`${fresh.length} drafted by ${r.writtenBy} - read them, they are yours now`);
+                } catch (e) {
+                  toast.error(e.message);
+                } finally {
+                  setFaqBusy(false);
+                }
+              }}
+            >
+              {faqBusy ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />} Draft 3 with AI
+            </Button>
+          </div>
+        </div>
       </Card>
 
       {/* 5. DETAILS THE CHANNELS NEED */}

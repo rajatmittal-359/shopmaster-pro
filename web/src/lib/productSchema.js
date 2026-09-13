@@ -138,3 +138,18 @@ export const breadcrumbSchema = (crumbs) => ({
     item: c.url,
   })),
 });
+
+/**
+ * The seller's Q&A as FAQPage (plan 2.32). Google stopped showing FAQ rich
+ * results for most sites in 2023; the markup still tells AI overviews and
+ * assistants which sentence answers which question, and costs nothing.
+ */
+export const faqSchema = (faqs) => ({
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: faqs.map((x) => ({
+    '@type': 'Question',
+    name: x.q,
+    acceptedAnswer: { '@type': 'Answer', text: x.a },
+  })),
+});

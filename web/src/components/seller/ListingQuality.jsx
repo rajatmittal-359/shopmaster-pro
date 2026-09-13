@@ -72,6 +72,7 @@ export default function ListingQuality({ form, photos, productId, categoryLabel,
           description: form.description,
           categoryName: categoryLabel,
           color: form.color,
+          tags: form.tags,
           imageUrl: first?.kind === 'existing' ? first.src : undefined,
           textModel,
         },
@@ -132,15 +133,20 @@ export default function ListingQuality({ form, photos, productId, categoryLabel,
             {kw ? 'Suggest again' : 'Suggest search words'}
           </Button>
         </div>
-        {!kw && <p className="mt-1 text-xs text-muted-foreground">The AI reads the title, colour and category and lists the phrases shoppers actually use. Missing ones can be added to your search words in one tap.</p>}
+        {!kw && <p className="mt-1 text-xs text-muted-foreground">First the words real people typed - on Google for your pages, in ShopMaster&apos;s own search box - each with its count; then the AI fills the gaps. Missing ones can be added to your search words in one tap.</p>}
         {kw && (
           <>
             <div className="mt-2 flex flex-wrap gap-1.5">
               {kw.keywords.map((k) => {
                 const have = k.present || (form.tags || []).includes(k.word);
+                // Where the word came from (plan 2.32): G = Google searchers, S = ShopMaster shoppers, ≈ = same-thing word, AI = suggested.
+                const badge = k.source === 'google' ? 'G' : k.source === 'shop' ? 'S' : k.source === 'family' ? '≈' : 'AI';
+                const badgeClass = k.source === 'google' ? 'bg-sky-500/15 text-sky-800 dark:text-sky-200' : k.source === 'shop' ? 'bg-amber-500/15 text-amber-800 dark:text-amber-200' : 'bg-muted text-muted-foreground';
+                const tip = k.note || (k.source === 'ai' ? 'Suggested by AI from the facts' : '');
                 return have ? (
-                  <span key={k.word} className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs text-emerald-800 dark:text-emerald-200">
+                  <span key={k.word} title={tip} className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs text-emerald-800 dark:text-emerald-200">
                     <Check className="size-3" /> {k.word}
+                    {k.count > 1 && <span className="opacity-70">· {k.count}</span>}
                   </span>
                 ) : (
                   <button
@@ -148,9 +154,10 @@ export default function ListingQuality({ form, photos, productId, categoryLabel,
                     type="button"
                     onClick={() => onAddTags([k.word])}
                     className="inline-flex items-center gap-1 rounded-full border border-dashed px-2.5 py-1 text-xs hover:border-primary hover:text-brand-ink"
-                    title="Add to search words"
+                    title={tip || 'Add to search words'}
                   >
                     <Plus className="size-3" /> {k.word}
+                    <span className={`ml-0.5 rounded px-1 text-[0.6rem] font-semibold ${badgeClass}`}>{badge}{k.count > 1 ? ` ${k.count}` : ''}</span>
                   </button>
                 );
               })}
@@ -161,7 +168,9 @@ export default function ListingQuality({ form, photos, productId, categoryLabel,
               </button>
             )}
             {kw.titleTip && <p className="mt-2 text-xs text-muted-foreground">Title: {kw.titleTip}</p>}
-            <p className="mt-1 text-[11px] text-muted-foreground">By {kw.writtenBy}. Green = already in your title or description.</p>
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              Green = already in your title or description. <b>G</b> = typed on Google{kw.evidence?.google ? '' : ' (Search Console not read yet)'}, <b>S</b> = typed in ShopMaster&apos;s search, ≈ = a same-thing word, AI = suggested by {kw.writtenBy}. Numbers are how many times.
+            </p>
           </>
         )}
       </div>

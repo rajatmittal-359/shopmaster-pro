@@ -187,6 +187,8 @@ exports.listProducts = async (req, res) => {
     }
 
     const total = await Product.countDocuments(filter);
+    // What our shoppers type, for the sellers' keyword coach (plan 2.32). Never awaited.
+    if (search) require('../models/SearchLog').record(search, total);
 
     res.json({
       // Each with its shop's name - the page says "Sold by Charming Jewels",

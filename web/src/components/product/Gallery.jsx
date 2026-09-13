@@ -26,7 +26,7 @@ import Image from 'next/image';
  *   first photograph stays the LCP element and the thing Google indexes.
  *   `preload="none"` so nothing downloads until the play button is pressed.
  */
-export default function Gallery({ images = [], video = null, name }) {
+export default function Gallery({ images = [], video = null, name, facts = '' }) {
   const [active, setActive] = useState(0);
 
   const tiles = images.map((src) => ({ kind: 'image', src }));
@@ -70,7 +70,7 @@ export default function Gallery({ images = [], video = null, name }) {
         ) : (
           <Image
             src={current.src}
-            alt={`${name} - photograph ${photoNumber(active)} of ${images.length}`}
+            alt={`${name}${facts ? ` - ${facts}` : ''} - photo ${photoNumber(active)} of ${images.length}`}
             fill
             priority={active === 0}
             /*

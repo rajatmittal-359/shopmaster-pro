@@ -8,6 +8,7 @@ import { authedFetch } from '@/lib/client';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import PanelCard from '@/components/panel/PanelCard';
+import GoogleReadiness from '@/components/seller/GoogleReadiness';
 import { useT } from '@/lib/i18n';
 
 /**
@@ -131,6 +132,8 @@ export default function Grow() {
 
       <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
         <div className="space-y-6">
+          {/* Plan 2.32: the products Google reads worst, and the near-me facts. */}
+          <GoogleReadiness />
           <PanelCard title="Your ten steps, in the order they pay off" lead="Each tick comes from your own products and settings - nothing here is a box you tick yourself.">
             <ol className="divide-y">
               {data.steps.map((s, i) => (

@@ -50,18 +50,26 @@ exports.productGoogle = async (req, res) => {
   }
 };
 
+/** Google queries that landed on one seller's product pages (also used by the keyword coach, plan 2.32). */
+const sellerGoogleQueries = async (sellerId, days = 28) => {
+  const result = await siteQueries(days);
+  if (!result.ok) return result;
+  const mine = await Product.find({ sellerId }).select('slug').lean();
+  const slugs = new Set(mine.map((p) => p.slug).filter(Boolean));
+  const rows = result.rows.filter((r) => {
+    const m = /\/products\/([^/?#]+)/.exec(r.page);
+    return m && slugs.has(m[1]);
+  });
+  return { ok: true, days: result.days, rows, site: result.rows };
+};
+exports.sellerGoogleQueries = sellerGoogleQueries;
+
 exports.sellerQueries = async (req, res) => {
   try {
-    const result = await siteQueries(daysFrom(req));
+    const result = await sellerGoogleQueries(req.user._id, daysFrom(req));
     if (!result.ok) return res.json(result);
-    const mine = await Product.find({ sellerId: req.user._id }).select('slug').lean();
-    const slugs = new Set(mine.map((p) => p.slug).filter(Boolean));
-    const rows = result.rows.filter((r) => {
-      const m = /\/products\/([^/?#]+)/.exec(r.page);
-      return m && slugs.has(m[1]);
-    });
     res.set('Cache-Control', 'private, max-age=600');
-    res.json({ ok: true, days: result.days, rows });
+    res.json({ ok: true, days: result.days, rows: result.rows });
   } catch (error) {
     sendError(res, error);
   }

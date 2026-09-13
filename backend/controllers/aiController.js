@@ -545,10 +545,16 @@ const suggestKeywords = async (req, res) => {
     const textModel = ['gemini', 'nano'].includes(req.body?.textModel) ? req.body.textModel : 'auto';
     const facts = [name && `Title: ${name}`, categoryName && `Category: ${categoryName}`, color && `Colour: ${color}`,
       description && `Description (text): ${String(description).replace(/<[^>]*>/g, ' ').slice(0, 800)}`].filter(Boolean).join('\n');
+    // Plan 2.32: the words real people typed come first - Google (Search
+    // Console), our own search box, the synonym family - each with its count.
+    // The model then fills the gaps and is told what is already known.
+    const evidence = await require('../utils/googleReadiness').keywordEvidence({ sellerId: req.user._id, name, categoryName, tags: req.body?.tags, description }).catch(() => ({ words: [], google: false }));
+    const known = evidence.words.slice(0, 12).map((w) => `${w.word} (${w.source === 'google' ? 'Google' : w.source === 'shop' ? 'our shoppers' : 'same-thing word'}, ${w.count})`).join(', ');
     const prompt = `You help a small Indian marketplace seller be found on Google and in the shop's own search.
 
 Product facts:
 ${facts}
+${known ? `\nWords real people already typed for products like this (source, count): ${known}\nDo not repeat these; add what is missing around them.` : ''}
 
 Give 8 to 12 search phrases an Indian shopper would actually type for THIS product - a mix of: the plain product type, type + colour, type + occasion or use, type + material or style words that are true from the facts, and one or two Hinglish spellings people use (e.g. "jhumka", "kurti", "payal"). Lowercase. 1-4 words each. No brand names, no prices, no invented materials or purity claims.
 
@@ -567,12 +573,19 @@ Answer with ONE JSON object: {"keywords": ["..."], "titleTip": "one short senten
       return res.status(502).json({ message: 'The model did not return usable search words. Try again.' });
     }
     const hay = `${name || ''} ${String(description || '').replace(/<[^>]*>/g, ' ')}`.toLowerCase();
-    const keywords = [...new Set((parsed.keywords || []).map((k) => String(k).toLowerCase().trim()).filter((k) => k && k.length <= 40))]
-      .slice(0, 12)
-      .map((k) => ({ word: k, present: hay.includes(k) }));
+    const fromModel = [...new Set((parsed.keywords || []).map((k) => String(k).toLowerCase().trim()).filter((k) => k && k.length <= 40))].slice(0, 12);
+    const seen = new Set();
+    const keywords = [
+      ...evidence.words.slice(0, 12).map((w) => ({ word: w.word, source: w.source, count: w.count, note: w.note })),
+      ...fromModel.map((k) => ({ word: k, source: 'ai', count: 0, note: 'Suggested by AI from the facts' })),
+    ]
+      .filter((k) => (seen.has(k.word) ? false : seen.add(k.word)))
+      .slice(0, 20)
+      .map((k) => ({ ...k, present: hay.includes(k.word) }));
     await AiUsage.record(req.user._id, { kind: 'text', provider: answer.provider || 'gemini' });
     res.json({
       keywords,
+      evidence: { google: evidence.google, fromGoogle: keywords.filter((k) => k.source === 'google').length, fromShop: keywords.filter((k) => k.source === 'shop').length },
       titleTip: String(parsed.titleTip || '').slice(0, 200),
       writtenBy: answer.provider === 'pollinations' ? 'gpt-5.4-nano (Pollinations)' : 'Gemini',
       usage: await usageFor(req.user._id, exempt),
@@ -582,4 +595,56 @@ Answer with ONE JSON object: {"keywords": ["..."], "titleTip": "one short senten
   }
 };
 
-module.exports = { getUsage, getCatalog, setLimits, writeListing, listingFromSpeech, refineText, suggestKeywords, makeImage, attachToProduct, listDrafts, adminUsage, CAPS, ownImage };
+/**
+ * POST /seller/ai/faqs  { name, description, categoryName, material?, returnMode?, deliveryDays? }
+ * Three questions a shopper asks before buying, answered from the facts and
+ * the rulebook - never a claim the facts do not support (plan 2.32).
+ */
+const draftFaqs = async (req, res) => {
+  try {
+    const exempt = await isExempt(req.user._id);
+    const usage = await usageFor(req.user._id, exempt);
+    if (!exempt && usage.remaining.texts === 0) {
+      return res.status(429).json({ message: `You have used today's ${CAPS.textsPerSellerPerDay} AI drafts. It resets at midnight.`, usage });
+    }
+    const { name, description, categoryName, material, color, returnMode, size } = req.body || {};
+    if (!name) return res.status(400).json({ message: 'Give the product a title first.' });
+    const rules = require('../config/sellerRules');
+    const returnLine = returnMode === 'none' ? 'This item is not returnable (only a wrong or damaged item is).' : returnMode === 'exchange' ? 'Exchange only, within 7 days of delivery; no refund for change of mind.' : 'Return or exchange within 7 days of delivery, unused with the tag on; damaged or wrong items reported within 48 hours with photos.';
+    const prompt = `You write the short Q&A under a product on ShopMaster Pro, an Indian marketplace. Buyers and AI assistants read it.
+
+Product facts:
+Title: ${name}
+${categoryName ? `Category: ${categoryName}` : ''}
+${material ? `Material: ${material}` : ''}
+${color ? `Colour: ${color}` : ''}
+${size ? `Size: ${size}` : ''}
+Description: ${String(description || '').replace(/<[^>]*>/g, ' ').slice(0, 900)}
+Return policy for this item: ${returnLine}
+Delivery: usually 3-6 days across India; the seller ships within 2 working days.
+
+Write 3 questions a shopper genuinely asks before buying THIS product (care, material truth, size or fit, what is in the box, gifting, delivery/return), each with a plain 1-2 sentence answer in simple Indian English. Only state what the facts support - if the facts do not say the purity, weight or origin, do not invent it; say "as described" or leave that question out. No emoji, no marketing words.
+
+Answer with ONE JSON object: {"faqs":[{"q":"...","a":"..."}]}`;
+    const answer = await require('../utils/gemini').generate(prompt, {
+      responseSchema: { type: 'object', properties: { faqs: { type: 'array', items: { type: 'object', properties: { q: { type: 'string' }, a: { type: 'string' } }, required: ['q', 'a'] } } }, required: ['faqs'] },
+      temperature: 0.4,
+      textModel: ['gemini', 'nano'].includes(req.body?.textModel) ? req.body.textModel : 'auto',
+    });
+    if (!answer.ok) return res.status(502).json({ message: answer.reason });
+    let parsed;
+    try {
+      parsed = JSON.parse(answer.text);
+    } catch {
+      return res.status(502).json({ message: 'The model did not return usable questions. Try again.' });
+    }
+    const faqs = (parsed.faqs || []).map((x) => ({ q: String(x.q || '').trim().slice(0, 120), a: String(x.a || '').trim().slice(0, 400) })).filter((x) => x.q && x.a).slice(0, 4);
+    await AiUsage.record(req.user._id, { kind: 'text', provider: answer.provider || 'gemini' });
+    void rules;
+    res.json({ faqs, writtenBy: answer.provider === 'pollinations' ? 'gpt-5.4-nano (Pollinations)' : 'Gemini', usage: await usageFor(req.user._id, exempt) });
+  } catch (error) {
+    sendError(res, error);
+  }
+};
+
+module.exports = { draftFaqs, getUsage, getCatalog, setLimits, writeListing, listingFromSpeech, refineText, suggestKeywords, makeImage, attachToProduct, listDrafts, adminUsage, CAPS, ownImage };

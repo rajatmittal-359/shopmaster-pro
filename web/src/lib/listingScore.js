@@ -82,6 +82,25 @@ const CHECKS = [
   { key: 'identity', points: 5, field: 'brand', text: 'Add a brand or your own item code', ok: (p) => Boolean(p.brand) || Boolean(p.sku) },
   { key: 'weight', points: 5, field: 'weight', text: 'Add the packed weight - the courier quotes on it', ok: (p) => Number(p.weight) > 0 },
   { key: 'tags', points: 5, field: 'tags', text: 'Add three or more search words people would type', ok: (p) => (p.tags || []).length >= 3 },
+  // plan 2.32 - what Google's shopping results and AI answers actually read
+  {
+    key: 'title-formula',
+    points: 5,
+    field: 'name',
+    text: 'Title like a search: what it is + material or colour + who it is for (e.g. "Oxidised silver jhumka earrings for women")',
+    ok: (p) => {
+      const n = String(p.name || '').toLowerCase();
+      const facts = [p.color, p.material, p.gender].filter(Boolean).map((v) => String(v).toLowerCase());
+      return n.split(/\s+/).filter(Boolean).length >= 4 && (facts.some((v) => v && n.includes(v)) || /silver|gold|brass|cotton|silk|wood|steel|leather|oxidi|kundan|pearl|women|men|kids|girl|boy/.test(n));
+    },
+  },
+  {
+    key: 'faqs',
+    points: 5,
+    field: 'faqs',
+    text: 'Answer two questions a shopper asks before buying - AI answers and Google quote plain answers',
+    ok: (p) => (p.faqs || []).filter((x) => x && x.q && x.a).length >= 2,
+  },
 ];
 
 const scoreListing = (p = {}) => {

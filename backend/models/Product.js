@@ -372,6 +372,26 @@ const productSchema = new mongoose.Schema(
   },
   saleStartsAt: { type: Date, default: null },
   saleEndsAt: { type: Date, default: null },
+  /**
+     * Questions a shopper asks before buying, answered by the seller (plan 2.32).
+     *
+     * WHY
+     *   Google's AI overviews and the assistants people now ask ("is this
+     *   real silver?", "will it tarnish?") quote pages that answer plainly.
+     *   Amazon's Q&A and Etsy's FAQ exist for the same reason. Two to six,
+     *   short; drafted by AI from the listing and the rulebook, kept by the
+     *   seller. Shown on the product page and marked up as FAQPage.
+     */
+    faqs: {
+      type: [
+        {
+          q: { type: String, trim: true, maxlength: 120, required: true },
+          a: { type: String, trim: true, maxlength: 400, required: true },
+        },
+      ],
+      default: [],
+      validate: { validator: (arr) => arr.length <= 6, message: 'Up to six questions' },
+    },
   tags: [
     {
       type: String,

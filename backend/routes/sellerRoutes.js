@@ -101,6 +101,16 @@ router.post('/ai/listing', requireApprovedSeller, ai.writeListing);
 router.post('/ai/listing-from-speech', requireApprovedSeller, ai.listingFromSpeech);
 router.post('/ai/refine', requireApprovedSeller, ai.refineText);
 router.post('/ai/keywords', requireApprovedSeller, ai.suggestKeywords);
+router.post('/ai/faqs', requireApprovedSeller, ai.draftFaqs);
+// The Google coach's shop-level list for Grow (plan 2.32)
+router.get('/google/readiness', requireApprovedSeller, async (req, res) => {
+  try {
+    res.set('Cache-Control', 'private, max-age=120');
+    res.json(await require('../utils/googleReadiness').shopReadiness(req.user._id));
+  } catch (error) {
+    require('../utils/apiError').sendError(res, error);
+  }
+});
 router.get('/products/:productId/google', requireApprovedSeller, require('../controllers/searchInsightsController').productGoogle);
 router.post('/ai/image', requireApprovedSeller, ai.makeImage);
 router.post('/ai/attach', requireApprovedSeller, ai.attachToProduct);

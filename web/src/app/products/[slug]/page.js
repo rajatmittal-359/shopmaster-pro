@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import { getProduct, getReviews, getRelated, getSimilar } from '@/lib/api';
 import { priceOf } from '@/lib/pricing';
 import { serialiseJsonLd } from '@/lib/jsonLd';
-import { productSchema, breadcrumbSchema } from '@/lib/productSchema';
+import { faqSchema, productSchema, breadcrumbSchema } from '@/lib/productSchema';
 import { POLICY, BUSINESS } from '@/config/policy';
 import Gallery from '@/components/product/Gallery';
 import BuyBox from '@/components/product/BuyBox';
@@ -77,6 +77,9 @@ export default async function ProductPage({ params }) {
     { name: product.name, url: `${SITE}${path}` },
   ];
 
+  // The seller's Q&A (plan 2.32) - shown, and marked up when there are at least two.
+  const faqs = (product.faqs || []).filter((x) => x && x.q && x.a);
+
   return (
     <div className="mx-auto max-w-5xl px-4 py-6 pb-28 md:pb-6">
       <script
@@ -91,6 +94,9 @@ export default async function ProductPage({ params }) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: serialiseJsonLd(breadcrumbSchema(crumbs)) }}
       />
+      {faqs.length >= 2 && (
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serialiseJsonLd(faqSchema(faqs)) }} />
+      )}
 
       {/* The trail, shown as well as marked up. Google made breadcrumb rich
           results desktop-only in 2025; the value now is that a visitor who
@@ -113,7 +119,7 @@ export default async function ProductPage({ params }) {
       </nav>
 
       <div className="grid gap-8 md:grid-cols-2">
-        <Gallery images={product.images} video={product.video} name={product.name} />
+        <Gallery images={product.images} video={product.video} name={product.name} facts={[product.color, product.material, product.category?.name].filter(Boolean).join(', ')} />
 
         <div className="space-y-5">
           <div>
@@ -256,6 +262,21 @@ export default async function ProductPage({ params }) {
                   <dd className="font-medium">{value}</dd>
                 </div>
               ))}
+          </dl>
+        </section>
+      )}
+
+      {faqs.length > 0 && (
+        <section className="mt-12 max-w-3xl">
+          <h2 className="text-lg font-semibold">Questions shoppers ask</h2>
+          <p className="mt-1 text-sm text-muted-foreground">Answered by the seller.</p>
+          <dl className="mt-4 divide-y rounded-xl border">
+            {faqs.map((x) => (
+              <div key={x.q} className="px-4 py-3">
+                <dt className="font-medium">{x.q}</dt>
+                <dd className="mt-1 text-[15px] leading-7 text-muted-foreground">{x.a}</dd>
+              </div>
+            ))}
           </dl>
         </section>
       )}
