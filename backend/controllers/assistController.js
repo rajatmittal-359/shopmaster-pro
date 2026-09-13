@@ -22,7 +22,7 @@ const assistFor = (role) => async (req, res) => {
       role,
       userId: req.user._id,
       question,
-      language,
+      language: r.ok ? r.language || language : language,
       answer: r.ok ? r.answer : '',
       model: r.ok ? r.model : null,
       searchedWeb: Boolean(r.ok && r.searchedWeb),
@@ -32,7 +32,7 @@ const assistFor = (role) => async (req, res) => {
       ok: r.ok,
     }).catch(() => null);
     if (!r.ok) return res.status(503).json({ message: `The assistant could not answer right now (${r.reason}). Try again in a minute, or ask a person from Help.` });
-    res.json({ answer: r.answer, model: r.model, searchedWeb: r.searchedWeb, calls: r.calls || [], id: log?._id || null });
+    res.json({ answer: r.answer, language: r.language, model: r.model, searchedWeb: r.searchedWeb, calls: r.calls || [], id: log?._id || null });
   } catch (error) {
     sendError(res, error);
   }

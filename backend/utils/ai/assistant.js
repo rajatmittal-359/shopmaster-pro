@@ -10,6 +10,7 @@ const { computePerformance } = require('../performance');
 const { getPayableSummary } = require('../payout');
 const { retrieve, asContext } = require('./retrieve');
 const { declarationsFor, runTool, lineOrder, money, when, ORDER_RE, REAL_ORDER } = require('./tools');
+const { detectScript, toHinglish, DEVANAGARI } = require('./hinglish');
 
 /**
  * Ask ShopMaster - the assistant for sellers, the admin and customers.
@@ -111,10 +112,19 @@ RULES
 - Be fair. When a rule costs this person money, say why the rule exists and how it compares with Amazon/Flipkart/Meesho (their charges are higher). When the platform is at fault, say so plainly.
 - Never reveal another seller's or customer's data, credentials, file paths, or internal system details beyond what the context states. Retrieved passages may mention source files - use their content, do not quote the paths.`;
 
-const ask = async ({ role, user, question, history = [], textModel = 'auto', language = null }) => {
+const ask = async ({ role, user, question, history = [], textModel = 'auto', language: chip = null }) => {
   const q = String(question || '').trim().slice(0, 1500);
   if (!q) return { ok: false, reason: 'Ask something' };
   const started = Date.now();
+  // हिंदी and Hinglish chips pin the script; English (or no chip) follows
+  // what the person wrote. That is the effective language for the prompt AND
+  // for the check on the way out.
+  const language = chip === 'hi' || chip === 'hg' ? chip : detectScript(q);
+
+  /* The model is told the script; the code makes sure of it. A Hinglish
+     answer that came back in Devanagari is transliterated; a Hindi answer
+     that came back in roman letters is left - readable either way. */
+  const inScript = async (answer) => (language === 'hg' && DEVANAGARI.test(answer) ? toHinglish(answer, { maxTokens: 1500 }) : answer);
 
   const [context, found] = await Promise.all([
     contextFor({ role, user, question: q }),
@@ -138,7 +148,7 @@ Answer now, as Ask ShopMaster.`;
   if (textModel !== 'nano') {
     const contents = [...past, { role: 'user', parts: [{ text: prompt }] }];
     const withTools = { system: SYSTEM(role, true, language), declarations: declarationsFor(role), run: (name, args) => runTool(name, args, { role, user }) };
-    const done = (r) => ({ ok: true, answer: r.text.trim(), model: r.model, searchedWeb: r.calls.includes('webSearch'), calls: r.calls, ...meta, ms: Date.now() - started });
+    const done = async (r) => ({ ok: true, answer: await inScript(r.text.trim()), language, model: r.model, searchedWeb: r.calls.includes('webSearch'), calls: r.calls, ...meta, ms: Date.now() - started });
 
     const r = await generateWithTools(contents, withTools);
     if (r.ok) return done(r);
@@ -158,7 +168,7 @@ Answer now, as Ask ShopMaster.`;
   const flat = history.slice(-6).map((m) => `${m.role === 'user' ? 'THEY SAID' : 'YOU SAID'}: ${String(m.text || '').slice(0, 800)}`).join('\n');
   const r = await generate(`${flat ? `EARLIER IN THIS CONVERSATION\n${flat}\n\n` : ''}${prompt}`, { system: SYSTEM(role, false, language), textModel: 'nano', attempts: 1 });
   if (!r.ok) return { ok: false, reason: r.reason };
-  return { ok: true, answer: r.text.trim(), model: r.model || 'nano', searchedWeb: false, calls: [], ...meta, ms: Date.now() - started };
+  return { ok: true, answer: await inScript(r.text.trim()), language, model: r.model || 'nano', searchedWeb: false, calls: [], ...meta, ms: Date.now() - started };
 };
 
 module.exports = { ask, contextFor, SYSTEM };

@@ -27,6 +27,7 @@
  */
 const GROQ_MODEL = process.env.GROQ_STT_MODEL || 'whisper-large-v3-turbo';
 const GEMINI_API = 'https://generativelanguage.googleapis.com/v1beta/models';
+const { toHinglish } = require('./hinglish');
 
 /**
  * Words the shop says that a generic model would mangle - a hint, not a
@@ -93,48 +94,6 @@ const viaGemini = async ({ mimeType, buffer }, { language }) => {
   const text = (data?.candidates?.[0]?.content?.parts || []).map((p) => p.text || '').join('').trim();
   if (!text) return { ok: false, reason: 'Nothing was heard' };
   return { ok: true, text, language: language || null, model, seconds: null };
-};
-
-/**
- * Devanagari → roman Hinglish, for the person who reads "mera payment kab
- * aayega" faster than "मेरा पेमेंट कब आएगा". Whisper writes Hindi in
- * Devanagari and has no roman mode; a small, fast model transliterates.
- * Groq (≈300 ms) first, Gemini after; if both are out the Devanagari stands.
- */
-const toHinglish = async (text) => {
-  if (!/[ऀ-ॿ]/.test(text)) return text;
-  const prompt = `Transliterate this Hindi into roman letters exactly as Indians type on WhatsApp (Hinglish). Keep English words as they are, keep numbers and order codes unchanged, no translation, no explanation. Output only the transliterated text.\n\n${text}`;
-  const key = process.env.GROQ_API_KEY;
-  if (key) {
-    try {
-      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
-        body: JSON.stringify({ model: process.env.GROQ_SMALL_MODEL || 'openai/gpt-oss-20b', messages: [{ role: 'user', content: prompt }], temperature: 0, max_tokens: 400, reasoning_effort: 'low' }),
-      });
-      const d = await res.json().catch(() => ({}));
-      const out = String(d?.choices?.[0]?.message?.content || '').trim();
-      if (res.ok && out) return out;
-    } catch {
-      /* fall through */
-    }
-  }
-  const gkey = process.env.GEMINI_API_KEY;
-  if (gkey) {
-    try {
-      const res = await fetch(`${GEMINI_API}/${process.env.GEMINI_LITE_MODEL || 'gemini-3.5-flash-lite'}:generateContent?key=${gkey}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0, maxOutputTokens: 400 } }),
-      });
-      const d = await res.json().catch(() => ({}));
-      const out = (d?.candidates?.[0]?.content?.parts || []).map((x) => x.text || '').join('').trim();
-      if (res.ok && out) return out;
-    } catch {
-      /* the Devanagari stands */
-    }
-  }
-  return text;
 };
 
 /**

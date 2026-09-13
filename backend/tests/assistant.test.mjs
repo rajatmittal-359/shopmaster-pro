@@ -237,3 +237,14 @@ describe('groqWithTools - the second road keeps the tools', () => {
     expect(bodies[1].messages.at(-1)).toEqual({ role: 'tool', tool_call_id: 'c1', content: '{"order":"shipped"}' });
   });
 });
+
+describe('script detection - the English chip follows the writer', () => {
+  const { detectScript } = require('../utils/ai/hinglish');
+  it('tells Devanagari, Hinglish and English apart', () => {
+    expect(detectScript('मेरा पेमेंट कब आएगा')).toBe('hi');
+    expect(detectScript('Mereko mera payment chahiye')).toBe('hg');
+    expect(detectScript('kaise ho')).toBe('hg');
+    expect(detectScript('how are you')).toBe('en');
+    expect(detectScript('where is order SMP-260906-858D34')).toBe('en');
+  });
+});
