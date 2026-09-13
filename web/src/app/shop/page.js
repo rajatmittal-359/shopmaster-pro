@@ -140,12 +140,12 @@ export default async function ShopPage({ searchParams }) {
       <div className="grid gap-8 md:grid-cols-[15rem_1fr]">
         {/* The rail on a wide screen; behind a "Filters" button on a phone. */}
         <div className="hidden md:block">
-          <FilterPanel params={params} categories={categories} colors={filters.colors || []} sizes={filters.sizes || []} price={filters.price} />
+          <FilterPanel params={params} categories={categories} colors={filters.colors || []} sizes={filters.sizes || []} price={filters.price} ratings={filters.ratings} />
         </div>
 
         <div>
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <FilterDrawer params={params} categories={categories} colors={filters.colors || []} sizes={filters.sizes || []} price={filters.price} />
+            <FilterDrawer params={params} categories={categories} colors={filters.colors || []} sizes={filters.sizes || []} price={filters.price} ratings={filters.ratings} />
             <AppliedFilters params={params} categoryName={category?.name} />
             <div className="ml-auto">
               <SortSelect params={params} />

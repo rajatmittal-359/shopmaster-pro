@@ -346,8 +346,11 @@ exports.filters = async (req, res) => {
     // them from the current price filter would shrink the slider each time it
     // was moved, and there would be no way to widen it again.
     const forPrices = await buildCatalogueFilter({ category, search });
+    // Rating counted with everything but itself, like the others - so "4★ & up"
+    // can say how many, and grey out when the answer is none.
+    const forRatings = await buildCatalogueFilter({ category, search, minPrice, maxPrice, color, size });
 
-    const [colors, sizes, priceRange] = await Promise.all([
+    const [colors, sizes, priceRange, ratings] = await Promise.all([
       Product.aggregate([
         { $match: forColours.filter },
         { $match: { color: { $nin: [null, ''] } } },
@@ -366,6 +369,16 @@ exports.filters = async (req, res) => {
         { $match: forPrices.filter },
         { $group: { _id: null, min: { $min: '$price' }, max: { $max: '$price' } } },
       ]),
+      Product.aggregate([
+        { $match: forRatings.filter || {} },
+        {
+          $group: {
+            _id: null,
+            four: { $sum: { $cond: [{ $gte: ['$avgRating', 4] }, 1, 0] } },
+            three: { $sum: { $cond: [{ $gte: ['$avgRating', 3] }, 1, 0] } },
+          },
+        },
+      ]),
     ]);
 
     res.json({
@@ -374,6 +387,7 @@ exports.filters = async (req, res) => {
       price: priceRange[0]
         ? { min: Math.floor(priceRange[0].min), max: Math.ceil(priceRange[0].max) }
         : null,
+      ratings: { 4: ratings[0]?.four || 0, 3: ratings[0]?.three || 0 },
     });
   } catch (error) {
     res.status(500).json({ message: error.message });

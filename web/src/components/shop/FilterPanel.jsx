@@ -88,7 +88,19 @@ function Section({ title, open: initial = true, count, children }) {
  * Rating is "at least N stars" - two rows, one answer - so it draws as a
  * radio, not a checkbox; the control's shape says how many you may pick.
  */
-function Option({ href, on, children, count }) {
+function Option({ href, on, children, count, disabled = false }) {
+  // Nothing behind it in the current view: shown greyed and inert, so the
+  // panel never leads to an empty page (Baymard's dead-end rule) but the
+  // shopper still sees the option exists.
+  if (disabled) {
+    return (
+      <li className="flex items-center gap-2.5 py-1.5 pr-1 opacity-40">
+        <span className="size-4 shrink-0 rounded-full border border-border" aria-hidden />
+        <span className="min-w-0 flex-1 truncate text-muted-foreground">{children}</span>
+        <span className="text-xs tabular-nums text-muted-foreground/70">0</span>
+      </li>
+    );
+  }
   return (
     <li>
       <Link href={href} aria-current={on ? 'true' : undefined} className="group flex items-center gap-2.5 rounded-md py-1.5 pr-1 hover:text-foreground">
@@ -132,7 +144,7 @@ function TreeItem({ href, on, depth = 0, count, children }) {
   );
 }
 
-export default function FilterPanel({ params, categories, colors, sizes = [], price }) {
+export default function FilterPanel({ params, categories, colors, sizes = [], price, ratings = null }) {
   const active = (key, value) => String(params[key] || '') === String(value);
   const live = categories.filter((c) => c.productCount > 0);
   const currentParent = live.find((c) => active('category', c.slug) || (c.children || []).some((ch) => active('category', ch.slug)));
@@ -234,7 +246,7 @@ export default function FilterPanel({ params, categories, colors, sizes = [], pr
       <Section title="Rating" count={params.minRating ? 1 : 0}>
         <ul className="space-y-0.5">
           {[4, 3].map((r) => (
-            <Option key={r} href={shopHref(params, { minRating: active('minRating', r) ? '' : r })} on={active('minRating', r)}>
+            <Option key={r} href={shopHref(params, { minRating: active('minRating', r) ? '' : r })} on={active('minRating', r)} count={ratings ? ratings[r] : undefined} disabled={ratings ? ratings[r] === 0 && !active('minRating', r) : false}>
               <span className="inline-flex items-center gap-1">
                 <span className="inline-flex text-amber-500" aria-hidden>
                   {[1, 2, 3, 4, 5].map((i) => (
