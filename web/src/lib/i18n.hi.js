@@ -224,6 +224,10 @@ const HI = {
   'Money transferred to your bank': 'आपके बैंक में भेजा गया पैसा',
   'Account': 'खाता',
   'Approval, commission, rules': 'मंज़ूरी, कमीशन, नियम',
+  // Docked assistant (plan 2.33)
+  'Open Ask ShopMaster': 'ShopMaster से पूछें खोलें',
+  'Minimise - keep the answer in view': 'छोटा करें - जवाब दिखता रहे',
+  'Close': 'बंद करें',
 };
 
 export default HI;

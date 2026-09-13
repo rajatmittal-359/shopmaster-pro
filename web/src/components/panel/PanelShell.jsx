@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { PanelLeft } from 'lucide-react';
+import { PanelLeft, Sparkles } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import PanelNav from '@/components/panel/PanelNav';
 import Logo from '@/components/brand/Logo';
@@ -10,6 +10,8 @@ import HeaderAccount from '@/components/layout/HeaderAccount';
 import RoleSwitch from '@/components/layout/RoleSwitch';
 import ThemeToggle from '@/components/layout/ThemeToggle';
 import LangToggle from '@/components/panel/LangToggle';
+import AssistDrawer from '@/components/assist/AssistDrawer';
+import { useDock, setDock } from '@/lib/assistDock';
 
 /**
  * The frame around the seller panel and the admin panel - its OWN frame.
@@ -38,6 +40,8 @@ import LangToggle from '@/components/panel/LangToggle';
  */
 export default function PanelShell({ title, groups, countsUrl = null, identity = null, children }) {
   const [open, setOpen] = useState(false);
+  const dock = useDock();
+  const role = title === 'Admin' ? 'admin' : 'seller';
 
   return (
     <div className="min-h-dvh bg-muted/30">
@@ -75,6 +79,16 @@ export default function PanelShell({ title, groups, countsUrl = null, identity =
                 Selling | Admin, the current one lit. Replaces "View shop". */}
             <RoleSwitch />
             {title === 'Seller' && <LangToggle compact />}
+            {/* Ask ShopMaster as a drawer beside the page (plan 2.33) - the answer stays while the person follows it. */}
+            <button
+              type="button"
+              onClick={() => setDock(dock === 'open' ? 'min' : 'open')}
+              aria-pressed={dock === 'open'}
+              aria-label="Ask ShopMaster"
+              className={`inline-flex size-8 items-center justify-center rounded-md transition-colors hover:bg-accent ${dock === 'open' ? 'text-brand-from' : 'text-muted-foreground hover:text-foreground'}`}
+            >
+              <Sparkles className="size-5" />
+            </button>
             <HeaderAccount showCart={false} />
             <ThemeToggle />
           </div>
@@ -92,6 +106,7 @@ export default function PanelShell({ title, groups, countsUrl = null, identity =
 
         <div className="min-w-0 flex-1">{children}</div>
       </div>
+      <AssistDrawer role={role} />
     </div>
   );
 }

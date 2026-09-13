@@ -177,6 +177,10 @@ const HG = {
   'Money transferred to your bank': 'Aapke bank me bheja gaya paisa',
   'Account': 'Account',
   'Approval, commission, rules': 'Approval, commission, niyam',
+  // Docked assistant (plan 2.33)
+  'Open Ask ShopMaster': 'Ask ShopMaster kholo',
+  'Minimise - keep the answer in view': 'Chhota karo - jawab dikhta rahe',
+  'Close': 'Band karo',
 };
 
 export default HG;

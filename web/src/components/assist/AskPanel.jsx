@@ -54,10 +54,39 @@ const STARTERS = {
 
 const ROUTE = { seller: '/seller/assist', admin: '/admin/assist', customer: '/customer/assist' };
 
-export default function AskPanel({ role = 'seller', compact = false }) {
+export default function AskPanel({ role = 'seller', compact = false, fill = false, persistKey = null }) {
   const t = useT();
   const lang = useLang();
   const [thread, setThread] = useState([]);
+  const [restored, setRestored] = useState(!persistKey);
+
+  // The docked drawer keeps its conversation across pages and a reload (plan 2.33):
+  // read once after mount (sessionStorage is browser-only), write on every change.
+  useEffect(() => {
+    if (!persistKey) return;
+    let cancelled = false;
+    Promise.resolve().then(() => {
+      if (cancelled) return;
+      try {
+        const saved = JSON.parse(sessionStorage.getItem(persistKey) || '[]');
+        if (Array.isArray(saved) && saved.length) setThread(saved.slice(-30));
+      } catch {
+        /* ignore */
+      }
+      setRestored(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [persistKey]);
+  useEffect(() => {
+    if (!persistKey || !restored) return;
+    try {
+      sessionStorage.setItem(persistKey, JSON.stringify(thread.slice(-30)));
+    } catch {
+      /* ignore */
+    }
+  }, [thread, persistKey, restored]);
   const [speaking, setSpeaking] = useState(null); // index of the answer being read
   const [draft, setDraft] = useState('');
   const [busy, setBusy] = useState(false);
@@ -133,7 +162,7 @@ export default function AskPanel({ role = 'seller', compact = false }) {
   const starters = STARTERS[role]?.[lang] || STARTERS[role]?.en || [];
 
   return (
-    <div className={`flex flex-col rounded-xl border bg-card ${compact ? 'max-h-[70vh]' : 'min-h-[60vh] max-h-[78vh]'}`}>
+    <div className={`flex flex-col bg-card ${fill ? 'h-full min-h-0' : `rounded-xl border ${compact ? 'max-h-[70vh]' : 'min-h-[60vh] max-h-[78vh]'}`}`}>
       <div className="flex items-center justify-between gap-2 border-b px-3 py-2">
         <span className="text-xs text-muted-foreground">{t('Language')}</span>
         <LangToggle label={t('Language')} />
