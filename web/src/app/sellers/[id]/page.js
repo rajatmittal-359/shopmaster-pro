@@ -4,6 +4,7 @@ import { getSeller } from '@/lib/api';
 import ProductCard from '@/components/product/ProductCard';
 import Stars from '@/components/product/Stars';
 import { Globe, MapPin, Link2, Camera, Video } from 'lucide-react';
+import { serialiseJsonLd } from '@/lib/jsonLd';
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.shopmasterpro.in';
 // lucide dropped the brand glyphs; plain signifiers do the job.
@@ -69,7 +70,8 @@ export default async function SellerPage({ params }) {
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(shopSchema) }} />
+      {/* serialiseJsonLd escapes < > & - the About is seller-written text. */}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serialiseJsonLd(shopSchema) }} />
       <nav aria-label="Breadcrumb" className="mb-4 text-sm text-muted-foreground">
         <Link href="/" className="hover:text-brand-ink">
           Home

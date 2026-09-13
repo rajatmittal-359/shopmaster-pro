@@ -1692,7 +1692,9 @@ exports.updateSettings = async (req, res) => {
       seller.offersFreeShipping = Boolean(offersFreeShipping);
     }
 
-    if (about !== undefined) seller.about = String(about).slice(0, 600).trim();
+    // Plain text only: no tags, no control characters - it is printed on the
+    // shop page and inside its structured data.
+    if (about !== undefined) seller.about = String(about).replace(/<[^>]*>/g, '').replace(/[ -  ]/g, ' ').slice(0, 600).trim();
     if (showLocation !== undefined) seller.showLocation = Boolean(showLocation);
     if (links && typeof links === 'object') {
       // Only http(s) links, only to the hosts each field is for - a link that
