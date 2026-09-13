@@ -117,7 +117,21 @@ Rajat, 13 Sep 04:00: *"sidebar wagerah improve karo. Seller ka maine chhota karw
 | C3 | Account menu order: Orders · Saved · Addresses · Account · Help · (switch) · Sign out | Flipkart's order | small |
 | C4 | Mobile nav: categories first, then account, then policies — keep; add **Track order** shortcut | Meesho app | small |
 
-**Admin** — keep the sidebar (he likes it). One addition when it earns it: **Sellers → Performance** column (already partly there) and a **Catalogue quality** list (listing score < 60) once more sellers list.
+**Admin — reference spine (CS-Cart Multi-Vendor, Dokan, Mirakl operator: Dashboard · Orders/refunds · Vendors · Products · Customers · Finance · Marketing incl. banners/announcements · Reports · Settings).** Ours matches except:
+| # | Item | Why | New work |
+|---|---|---|---|
+| A1 | **Products** (CATALOGUE) — every seller's catalogue in one list: listing score, hidden/inactive, Google verdict, out of stock | catalogue QA is the marketplace's job; today the admin cannot see all products anywhere | page over existing product + score + Google data |
+| A2 | **Customers** (new group PEOPLE) — who, orders, spend, COD refusals/cancels, block | every marketplace admin has it; fraud signals (F11) live here | backend `GET /admin/customers` + page |
+| A3 | Announcements & banners (GROWTH) — a message to all sellers, a homepage banner | later, at 5+ sellers | — |
+| A4 | Settings — default commission, shipping rate, rulebook version, staff | later; env today | — |
+
+**Customer — reference (Amazon, Flipkart, Myntra, Meesho account menus and apps).** Beyond C1–C4 above:
+| # | Item | Why | New work |
+|---|---|---|---|
+| C5 | Header: **♥ wishlist icon** beside the cart; drop the "Shop" and "Contact" text links (the category strip is Shop; Contact moves to Help) | Myntra/Flipkart header shape | small |
+| C6 | Account menu adds **My reviews** (backend `GET /reviews/me` already exists) and **Coupons** (available codes, with the rules) | Flipkart/Myntra menus | reviews page small; coupons page needs a public "active coupons" endpoint |
+| C7 | **Mobile bottom tab bar**: Home · Categories · Wishlist · Cart · You | Flipkart, Meesho, Myntra apps - the single biggest "app-like" difference on a phone | component + hide the hamburger's duplicates |
+| C8 | Delete account inside Account (C1) | Myntra shows it in the menu; DPDP | with C1 |
 
 **Features worth building next (free, gate named)** — pick, do not take all
 | # | Feature | Role | Gate | Free how |
