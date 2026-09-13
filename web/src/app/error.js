@@ -33,8 +33,8 @@ export default function Error({ error, reset }) {
 
       <div className="mt-6 flex justify-center gap-3">
         <Button onClick={reset}>Try again</Button>
-        <Button variant="outline" asChild>
-          <Link href="/shop">Back to the shop</Link>
+        <Button variant="outline" nativeButton={false} render={<Link href="/shop" />}>
+          Back to the shop
         </Button>
       </div>
 

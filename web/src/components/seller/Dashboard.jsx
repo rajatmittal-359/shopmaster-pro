@@ -34,6 +34,7 @@ const when = (iso) => new Date(iso).toLocaleDateString('en-IN', { day: 'numeric'
 const WAITING = ['pending', 'processing'];
 
 export default function SellerDashboard() {
+  const t = useT();
   const [data, setData] = useState(null);
   const [state, setState] = useState({ status: 'loading' });
   // "Share your shop" is done when they copied the link once. Local, per

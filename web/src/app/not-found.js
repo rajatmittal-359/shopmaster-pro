@@ -25,11 +25,11 @@ export default function NotFound() {
       </p>
 
       <div className="mt-6 flex justify-center gap-3">
-        <Button asChild>
-          <Link href="/shop">Browse the shop</Link>
+        <Button nativeButton={false} render={<Link href="/shop" />}>
+          Browse the shop
         </Button>
-        <Button variant="outline" asChild>
-          <Link href="/contact">Ask us</Link>
+        <Button variant="outline" nativeButton={false} render={<Link href="/contact" />}>
+          Ask us
         </Button>
       </div>
     </div>

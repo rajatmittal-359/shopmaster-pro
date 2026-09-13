@@ -53,11 +53,11 @@ export default function ApplyToSell() {
   if (!signedIn) {
     return (
       <div className="flex flex-wrap gap-3">
-        <Button asChild size="lg">
-          <Link href="/register?sell=1">Create an account and apply</Link>
+        <Button size="lg" nativeButton={false} render={<Link href="/register?sell=1" />}>
+          Create an account and apply
         </Button>
-        <Button asChild variant="outline" size="lg">
-          <Link href="/login?next=%2Fsell">I already have an account</Link>
+        <Button variant="outline" size="lg" nativeButton={false} render={<Link href="/login?next=%2Fsell" />}>
+          I already have an account
         </Button>
       </div>
     );
@@ -76,8 +76,8 @@ export default function ApplyToSell() {
             ? 'Your dashboard has your orders, products and earnings.'
             : 'You can open your dashboard now, but nothing of yours is public until it is approved.'}
         </p>
-        <Button asChild className="mt-3">
-          <Link href="/seller">Open the seller dashboard</Link>
+        <Button className="mt-3" nativeButton={false} render={<Link href="/seller" />}>
+          Open the seller dashboard
         </Button>
       </div>
     );
