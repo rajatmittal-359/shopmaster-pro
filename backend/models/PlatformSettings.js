@@ -76,7 +76,7 @@ const settingsSchema = new mongoose.Schema(
     announcement: {
       enabled: { type: Boolean, default: false },
       text: { type: String, trim: true, maxlength: 140, default: '' },
-      href: { type: String, trim: true, default: '' },
+      href: { type: String, trim: true, default: '', match: [/^$|^\/(?!\/)|^https?:\/\//i, 'The link must be a path on this site or an http(s) address'] },
       /** Show to: everyone, or only signed-in sellers. */
       audience: { type: String, enum: ['everyone', 'sellers'], default: 'everyone' },
     },
