@@ -88,6 +88,7 @@ router.get('/grow', requireApprovedSeller, require('../controllers/growControlle
 const assist = require('../controllers/assistController');
 router.post('/assist', requireApprovedSeller, assist.seller);
 router.patch('/assist/:id', assist.rate);
+router.post('/voice/transcribe', require('../controllers/voiceController').transcribe);
 router.get('/category-requests', requireApprovedSeller, panel.myCategoryRequests);
 router.post('/category-requests', requireApprovedSeller, panel.requestCategory);
 router.post('/ai/listing', requireApprovedSeller, ai.writeListing);

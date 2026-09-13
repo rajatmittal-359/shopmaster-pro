@@ -95,7 +95,7 @@ app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/seller', sellerRoutes);
 app.use(['/api/customer/checkout-cod', '/api/customer/checkout-online'], checkoutLimiter);
-app.use(['/api/seller/ai', '/api/admin/ai', '/api/seller/assist', '/api/admin/assist', '/api/customer/assist'], aiLimiter);
+app.use(['/api/seller/ai', '/api/admin/ai', '/api/seller/assist', '/api/admin/assist', '/api/customer/assist', '/api/seller/voice', '/api/admin/voice', '/api/customer/voice', '/api/public/voice'], aiLimiter);
 app.use('/api/customer', customerRoutes);
 app.use('/api/public/products', publicCatalogue, productRoutes);
 
@@ -143,6 +143,8 @@ app.get('/api/public/seller-rules', (req, res) => {
 });
 // What the storefront needs to draw itself: identity, links, switches, banner.
 app.get('/api/public/settings', require('./controllers/settingsController').publicSettings);
+// The search bar's mic before sign-in. Rate-limited above like every AI route.
+app.post('/api/public/voice/transcribe', require('./controllers/voiceController').transcribe);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/inventory', inventoryRoutes);
 app.use('/api/pincode', require('./routes/pincodeRoutes'));

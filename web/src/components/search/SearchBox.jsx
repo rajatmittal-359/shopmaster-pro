@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Search, X } from 'lucide-react';
 import { apiBase } from '@/lib/api';
 import { priceOf } from '@/lib/pricing';
+import MicButton from '@/components/voice/MicButton';
 
 /**
  * The search field, and the suggestions under it.
@@ -28,6 +29,14 @@ import { priceOf } from '@/lib/pricing';
  *   On a phone the list is trapped between the field above it and the keyboard
  *   below, and the research puts the usable ceiling at five or six. The server
  *   enforces the same numbers, so this cannot quietly ask for more.
+ *
+ * WHY THERE IS A MIC (13 Sep 2026, plan 2.18)
+ *   Flipkart and Meesho put one in the search bar because most of their
+ *   orders come from people who would rather say "oxidised jhumka" than type
+ *   it - Hindi voice searches grew 400% in a few years. What was heard lands
+ *   in the field with the suggestions open, not straight into a results
+ *   page: the person sees the words first. Hidden where the browser cannot
+ *   record (http, old WebViews) - the field is unchanged then.
  *
  * WHY IT IS A COMBOBOX AND NOT A DIV WITH A LIST IN IT
  *   Arrow keys, Enter and Escape are how a lot of people use a search field,
@@ -175,23 +184,36 @@ export default function SearchBox({ className = '', autoFocus = false, onDone = 
           aria-activedescendant={active >= 0 ? `${listId}-${active}` : undefined}
           /* The native clear cross is suppressed because it appears only in
              some browsers and sits under our own button. */
-          className="h-10 w-full rounded-full border border-input bg-background/70 pr-9 pl-9 text-sm outline-none transition focus:border-ring focus:ring-2 focus:ring-ring/30 [&::-webkit-search-cancel-button]:appearance-none"
+          className="h-10 w-full rounded-full border border-input bg-background/70 pr-[4.25rem] pl-9 text-sm outline-none transition focus:border-ring focus:ring-2 focus:ring-ring/30 [&::-webkit-search-cancel-button]:appearance-none"
         />
 
-        {term && (
-          <button
-            type="button"
-            onClick={() => {
-              setTerm('');
-              setResults({ products: [], categories: [] });
+        <span className="absolute top-1/2 right-1.5 flex -translate-y-1/2 items-center gap-0.5">
+          {term && (
+            <button
+              type="button"
+              onClick={() => {
+                setTerm('');
+                setResults({ products: [], categories: [] });
+                inputRef.current?.focus();
+              }}
+              aria-label="Clear search"
+              className="flex size-7 items-center justify-center rounded-full text-muted-foreground hover:bg-accent hover:text-foreground"
+            >
+              <X className="size-4" />
+            </button>
+          )}
+          <MicButton
+            role="public"
+            size="sm"
+            shape="round"
+            label="Search by voice"
+            onText={(text) => {
+              setTerm(text);
+              setOpen(true);
               inputRef.current?.focus();
             }}
-            aria-label="Clear search"
-            className="absolute top-1/2 right-2 flex size-7 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground hover:bg-accent hover:text-foreground"
-          >
-            <X className="size-4" />
-          </button>
-        )}
+          />
+        </span>
       </form>
 
       {showList && (

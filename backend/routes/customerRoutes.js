@@ -81,6 +81,7 @@ router.post("/coupons/preview", customerCtrl.previewCoupon);
 const assist = require("../controllers/assistController");
 router.post("/assist", assist.customer);
 router.patch("/assist/:id", assist.rate);
+router.post("/voice/transcribe", require("../controllers/voiceController").transcribe);
 router.patch("/orders/:orderId/items/:itemId/cancel", cancelOrderItem);
 
 // Wishlist

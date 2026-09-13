@@ -1,10 +1,12 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Send, ThumbsUp, ThumbsDown, Sparkles, Globe, Database, RotateCcw } from 'lucide-react';
+import { Send, ThumbsUp, ThumbsDown, Sparkles, Globe, Database, RotateCcw, Volume2, VolumeX } from 'lucide-react';
 import { toast } from 'sonner';
 import { authedFetch } from '@/lib/client';
-import { useT } from '@/lib/i18n';
+import { useT, useLang } from '@/lib/i18n';
+import { speak, stopSpeaking } from '@/lib/voice';
+import MicButton from '@/components/voice/MicButton';
 import Answer from './Answer';
 
 /**
@@ -19,6 +21,13 @@ import Answer from './Answer';
  *   short). What none of them show and ours does: WHICH lookups the answer
  *   came from - "checked: your payouts, web" - so a shopkeeper can trust a
  *   number, and the admin can see where a wrong one came from.
+ *
+ * VOICE (13 Sep 2026, plan 2.18)
+ *   A mic in the prompt bar: what was heard lands in the box, the person
+ *   reads it and sends - never straight to a send. A speaker on every answer
+ *   reads it aloud in the browser's Hindi/English voice. Both for the
+ *   shopkeeper who would rather talk than type; neither costs a call beyond
+ *   the transcription itself.
  *
  * The thread lives in this component only. Nothing is stored in the
  * browser; the server keeps a 90-day log for the admin.
@@ -50,7 +59,9 @@ const ROUTE = { seller: '/seller/assist', admin: '/admin/assist', customer: '/cu
 
 export default function AskPanel({ role = 'seller', compact = false }) {
   const t = useT();
+  const lang = useLang();
   const [thread, setThread] = useState([]);
+  const [speaking, setSpeaking] = useState(null); // index of the answer being read
   const [draft, setDraft] = useState('');
   const [busy, setBusy] = useState(false);
   const endRef = useRef(null);
@@ -59,6 +70,32 @@ export default function AskPanel({ role = 'seller', compact = false }) {
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
   }, [thread, busy]);
+
+  useEffect(() => () => stopSpeaking(), []);
+
+  const readAloud = (i, text) => {
+    if (speaking === i) {
+      stopSpeaking();
+      setSpeaking(null);
+      return;
+    }
+    if (speak(text, { lang })) {
+      setSpeaking(i);
+      const done = () => setSpeaking(null);
+      // speechSynthesis has no promise; poll until it stops talking.
+      const tick = setInterval(() => {
+        if (!window.speechSynthesis.speaking) {
+          clearInterval(tick);
+          done();
+        }
+      }, 400);
+    }
+  };
+
+  const heard = (text) => {
+    setDraft((d) => (d ? `${d} ${text}` : text));
+    inputRef.current?.focus();
+  };
 
   const send = async (text) => {
     const q = String(text || draft).trim();
@@ -154,6 +191,10 @@ export default function AskPanel({ role = 'seller', compact = false }) {
                         </span>
                       )}
                       {m.model && !/gemini/i.test(m.model) && <span>· {t('backup model')}</span>}
+                      <button type="button" onClick={() => readAloud(i, m.text)} aria-label={speaking === i ? t('Stop reading') : t('Read aloud')} className={`inline-flex items-center gap-1 rounded px-1 py-0.5 hover:bg-muted ${speaking === i ? 'text-brand-ink' : ''}`}>
+                        {speaking === i ? <VolumeX className="size-3.5" aria-hidden /> : <Volume2 className="size-3.5" aria-hidden />}
+                        {t('Listen')}
+                      </button>
                       {m.id && (
                         <span className="ml-auto inline-flex items-center gap-1">
                           <button type="button" aria-label={t('Helpful')} onClick={() => rate(m.id, true)} className={`rounded p-1 hover:bg-muted ${m.helpful === true ? 'text-emerald-600' : ''}`}>
@@ -202,11 +243,12 @@ export default function AskPanel({ role = 'seller', compact = false }) {
             className="field-sizing-content max-h-40 min-h-10 flex-1 resize-none rounded-lg border bg-background px-3 py-2 text-base outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring/40 md:text-sm"
             aria-label={t('Your question')}
           />
+          <MicButton role={role} language={lang === 'hi' ? 'hi' : 'auto'} onText={heard} label={t('Speak your question')} />
           <button type="submit" disabled={busy || !draft.trim()} aria-label={t('Send')} className="grid size-10 shrink-0 place-items-center rounded-lg bg-brand-ink text-white disabled:opacity-40">
             <Send className="size-4" aria-hidden />
           </button>
         </div>
-        <p className="mt-1.5 px-1 text-[11px] text-muted-foreground">{t('Answers come from your data and the rules; check anything about money on the page itself. Nothing you type is shared with other sellers.')}</p>
+        <p className="mt-1.5 px-1 text-[11px] text-muted-foreground">{t('Tap the mic and speak in Hindi or English - check the words, then send.')} {t('Answers come from your data and the rules; check anything about money on the page itself. Nothing you type is shared with other sellers.')}</p>
       </form>
     </div>
   );
