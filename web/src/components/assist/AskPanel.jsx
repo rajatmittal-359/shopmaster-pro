@@ -135,8 +135,8 @@ export default function AskPanel({ role = 'seller', compact = false }) {
   return (
     <div className={`flex flex-col rounded-xl border bg-card ${compact ? 'max-h-[70vh]' : 'min-h-[60vh] max-h-[78vh]'}`}>
       <div className="flex items-center justify-between gap-2 border-b px-3 py-2">
-        <span className="text-xs text-muted-foreground">{t('Answer in')}</span>
-        <LangToggle label={t('Answer in')} />
+        <span className="text-xs text-muted-foreground">{t('Language')}</span>
+        <LangToggle label={t('Language')} />
       </div>
       <div className="flex-1 space-y-4 overflow-y-auto p-4">
         {thread.length === 0 && (

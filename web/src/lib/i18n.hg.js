@@ -38,7 +38,7 @@ const HG = {
   'Tap the mic and speak in Hindi or English - check the words, then send.': 'Mic dabao aur bolo - shabd dekh lo, phir bhejo.',
   Speak: 'Bolo',
   'Ask about an order, a payout, a rule, or how Amazon does it - in Hindi or English.': 'Order, payment, rule, ya Amazon pe kaise hota hai - jaise chaaho waise poochho.',
-  'Answer in': 'Jawab',
+  Language: 'Bhasha',
 
   // Home
   'To pack': 'Pack karne hain',
