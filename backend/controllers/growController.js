@@ -158,7 +158,27 @@ exports.sellerGrow = async (req, res) => {
     const scored = products.map((p) => ({ ...p, score: scoreListing({ ...p, category: (p.category && p.category._id) || p.category }).score }));
     const steps = stepsFor({ seller, products, scored, reviews, coupons });
     const done = steps.filter((s) => s.done).length;
+
+    // Market insights (plan 2.20): Google's benchmark price per product and
+    // this week's best sellers in the seller's categories - when Google has
+    // switched the reports on (it does so itself, with traffic).
+    let market = { enabled: false, reason: 'not connected', prices: [], bestSellers: [] };
+    try {
+      const { marketInsights, priceVsMarket } = require('../utils/google/marketInsights');
+      const m = await marketInsights();
+      const mine = new Set(products.map((p) => (p.category && p.category.name) || '').filter(Boolean));
+      market = {
+        enabled: m.enabled,
+        reason: m.reason || null,
+        fetchedAt: m.fetchedAt,
+        prices: products.map((p) => ({ productId: p._id, name: p.name, price: p.price, ...(priceVsMarket(p, m.prices) || {}) })).filter((x) => x.benchmark),
+        bestSellers: m.bestSellers.filter((b) => !mine.size || [...mine].some((c) => b.category.toLowerCase().includes(c.toLowerCase().split(' ')[0]))).slice(0, 10),
+      };
+    } catch {
+      /* the page still shows the ten steps */
+    }
     res.json({
+      market,
       products: products.length,
       score: Math.round(steps.reduce((t, s) => t + (s.value || 0), 0) / steps.length),
       done,

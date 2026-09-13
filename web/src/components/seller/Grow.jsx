@@ -8,6 +8,7 @@ import { authedFetch } from '@/lib/client';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import PanelCard from '@/components/panel/PanelCard';
+import { useT } from '@/lib/i18n';
 
 /**
  * Get found on Google - the seller's workspace for the outside world.
@@ -62,6 +63,7 @@ function Ring({ value }) {
 }
 
 export default function Grow() {
+  const t = useT();
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
 
@@ -162,6 +164,47 @@ export default function Grow() {
                 </li>
               ))}
             </ol>
+          </PanelCard>
+
+          {/* Market insights (plan 2.20): Google's own view of our prices and the
+              week's sellers. Amazon's Product Opportunity Explorer, free, once
+              Google has traffic to learn from. Until then the card says so. */}
+          <PanelCard title={t('What the market is doing')} lead={t("Google's benchmark price for your products and what sells in your categories this week - free, from Merchant Center.")}>
+            {!data.market?.enabled ? (
+              <p className="text-sm text-muted-foreground">{t('Google switches this on by itself once the shop has enough clicks - usually a few weeks after launch. Nothing to set up.')}</p>
+            ) : (
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <p className="text-sm font-medium">{t('Your prices vs the market')}</p>
+                  {data.market.prices.length === 0 ? (
+                    <p className="mt-1 text-sm text-muted-foreground">{t('No benchmark yet for your products.')}</p>
+                  ) : (
+                    <ul className="mt-2 divide-y text-sm">
+                      {data.market.prices.slice(0, 8).map((p) => (
+                        <li key={p.productId} className="flex items-center justify-between gap-3 py-1.5">
+                          <span className="truncate">{p.name}</span>
+                          <span className={`shrink-0 tabular-nums ${p.verdict === 'above' ? 'text-destructive' : p.verdict === 'below' ? 'text-emerald-700' : 'text-muted-foreground'}`}>
+                            ₹{p.price.toLocaleString('en-IN')} · {p.pct > 0 ? '+' : ''}{p.pct}% {t('vs')} ₹{p.benchmark.toLocaleString('en-IN')}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+                <div>
+                  <p className="text-sm font-medium">{t('Selling this week in your categories')}</p>
+                  {data.market.bestSellers.length === 0 ? (
+                    <p className="mt-1 text-sm text-muted-foreground">{t('No best-seller list for your categories yet.')}</p>
+                  ) : (
+                    <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm">
+                      {data.market.bestSellers.map((b) => (
+                        <li key={`${b.rank}-${b.title}`}><span className="font-medium">{b.title}</span>{b.brand ? ` · ${b.brand}` : ''}{b.priceRange ? ` · ${b.priceRange}` : ''}<span className="block text-xs text-muted-foreground">{b.category}</span></li>
+                      ))}
+                    </ol>
+                  )}
+                </div>
+              </div>
+            )}
           </PanelCard>
 
           <PanelCard title="Google Business Profile - the ten-minute guide" lead="Your shop on Google Maps and in the box beside a search. Free. Done once, kept alive with a photo a week.">

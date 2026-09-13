@@ -170,3 +170,23 @@ exports.adminSpeed = async (req, res) => {
     sendError(res, error);
   }
 };
+
+
+/**
+ * GET /admin/google/market - Merchant Center's Market insights for the whole
+ * catalogue (plan 2.20): every product against Google's benchmark price, and
+ * the week's best sellers in India. {enabled:false} until Google turns the
+ * reports on for the account.
+ */
+exports.adminMarket = async (req, res) => {
+  try {
+    const { marketInsights, priceVsMarket } = require('../utils/google/marketInsights');
+    const Product = require('../models/Product');
+    const m = await marketInsights({ fresh: Boolean(req.query.fresh) });
+    const products = m.enabled ? await Product.find({ isActive: true, isDeleted: { $ne: true } }).select('name price sellerId').lean() : [];
+    const prices = products.map((p) => ({ productId: p._id, name: p.name, price: p.price, sellerId: p.sellerId, ...(priceVsMarket(p, m.prices) || {}) })).filter((x) => x.benchmark).sort((a, b) => b.pct - a.pct);
+    res.json({ enabled: m.enabled, reason: m.reason || null, fetchedAt: m.fetchedAt, prices, bestSellers: m.bestSellers.slice(0, 50) });
+  } catch (error) {
+    sendError(res, error);
+  }
+};

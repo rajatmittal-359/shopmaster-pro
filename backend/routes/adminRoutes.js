@@ -133,6 +133,7 @@ router.post('/digest/send', async (req, res) => {
 router.patch('/category-requests/:requestId', panel.decideCategoryRequest);
 router.get('/google/traffic', require('../controllers/searchInsightsController').adminTraffic);
 router.get('/google/speed', require('../controllers/searchInsightsController').adminSpeed);
+router.get('/google/market', require('../controllers/searchInsightsController').adminMarket);
 router.post('/ai/listing', ai.writeListing);
 router.post('/ai/refine', ai.refineText);
 router.post('/ai/keywords', ai.suggestKeywords);
