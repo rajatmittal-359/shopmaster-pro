@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
 import PanelCard from '@/components/panel/PanelCard';
 
@@ -38,6 +39,9 @@ import PanelCard from '@/components/panel/PanelCard';
  */
 const formFrom = (settings) => ({
   offersFreeShipping: Boolean(settings.offersFreeShipping),
+  about: settings.about || '',
+  showLocation: Boolean(settings.showLocation),
+  links: { instagram: '', facebook: '', googleBusiness: '', youtube: '', website: '', ...(settings.links || {}) },
   pickupAddress: {
     contactName: '',
     phone: '',
@@ -95,7 +99,7 @@ export default function SellerSettings() {
       // Only what changed. The server checks a pickup address in full, so
       // sending an untouched empty one would stop a new seller from flipping
       // the delivery switch until they had typed an address.
-      const body = { offersFreeShipping: form.offersFreeShipping };
+      const body = { offersFreeShipping: form.offersFreeShipping, about: form.about, showLocation: form.showLocation, links: form.links };
       if (!same(form.pickupAddress, saved.pickupAddress)) body.pickupAddress = form.pickupAddress;
       const data = await authedFetch('/seller/settings', { method: 'PATCH', body });
       const next = data.settings || settings;
@@ -202,6 +206,42 @@ export default function SellerSettings() {
           </div>
         </div>
       </PanelCard>
+
+      {/* The shop's public face - what the shop page and Google see. Reached
+          from "Get found on Google" as #web. */}
+      <div id="web" className="scroll-mt-20">
+        <PanelCard title="Your shop on the web" lead="Shown on your shop page and read by Google. Two honest sentences and your real profiles do more than any keyword.">
+          <div className="space-y-5">
+            <Field id="about" label="About your shop" hint={`${form.about.length}/600 · who you are, what you make or sell, since when. It becomes your page's description on Google.`}>
+              <Textarea id="about" value={form.about} onChange={(e) => setForm({ ...form, about: e.target.value.slice(0, 600) })} rows={3} placeholder="Family-run jewellery shop in Devi Nagar, Jaipur, since 1998. Kundan, meenakari and pearl pieces made by hand; every piece photographed on the actual item." />
+            </Field>
+            <div className="grid gap-4 sm:grid-cols-2">
+              {[
+                ['instagram', 'Instagram', 'instagram.com/yourshop'],
+                ['googleBusiness', 'Google Business Profile', 'the Share → Copy link from your Google listing'],
+                ['facebook', 'Facebook page', 'facebook.com/yourshop'],
+                ['youtube', 'YouTube channel', 'youtube.com/@yourshop'],
+                ['website', 'Your own website', 'yourshop.in'],
+              ].map(([key, label, ph]) => (
+                <Field key={key} id={`link-${key}`} label={label}>
+                  <Input id={`link-${key}`} value={form.links[key] || ''} onChange={(e) => setForm({ ...form, links: { ...form.links, [key]: e.target.value } })} placeholder={ph} className="h-10" inputMode="url" />
+                </Field>
+              ))}
+            </div>
+            <div className="flex items-start justify-between gap-4 rounded-lg border p-3">
+              <div>
+                <Label htmlFor="showLocation" className="text-sm font-medium">
+                  Show my city on the shop page
+                </Label>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {form.pickupAddress.city ? `“${form.pickupAddress.city}, ${form.pickupAddress.state}” - the city only, never the address.` : 'Add a pickup address above first; only the city is shown.'}
+                </p>
+              </div>
+              <Switch id="showLocation" checked={form.showLocation} onCheckedChange={(checked) => setForm({ ...form, showLocation: checked })} className="mt-0.5" disabled={!form.pickupAddress.city} />
+            </div>
+          </div>
+        </PanelCard>
+      </div>
 
       <PanelCard title="Delivery">
         <div className="flex items-start justify-between gap-4">

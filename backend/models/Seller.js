@@ -101,6 +101,26 @@ const sellerSchema = new mongoose.Schema(
      * Shiprocket panel; bookings send that rather than the address itself,
      * which is how their pickup API works.
      */
+    /**
+     * The shop's public face - what the shop page and Google see.
+     *   about        two or three honest sentences; the page's description
+     *   links        the same shop elsewhere: Google reads them as sameAs
+     *                and joins the shop page to profiles it already trusts
+     *   showLocation the city from the pickup address on the shop page -
+     *                Jaipur is the trust story, and "near me" searches
+     *                need a place; off by default because a pickup address
+     *                can be a home
+     */
+    about: { type: String, trim: true, maxlength: 600, default: '' },
+    links: {
+      instagram: { type: String, trim: true, default: '' },
+      facebook: { type: String, trim: true, default: '' },
+      googleBusiness: { type: String, trim: true, default: '' },
+      youtube: { type: String, trim: true, default: '' },
+      website: { type: String, trim: true, default: '' },
+    },
+    showLocation: { type: Boolean, default: false },
+
     pickupAddress: {
       contactName: { type: String, trim: true },
       address1: { type: String, trim: true },

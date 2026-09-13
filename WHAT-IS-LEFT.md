@@ -79,6 +79,7 @@ product word; 2 pages indexed, 8 not.
 | G18 | **reCAPTCHA v3** on register / login / coupon apply — bots arrive with real coupons | 10k/month | enable + site key, at launch | middleware + score threshold | ☐ launch |
 | G19 | **YouTube link as product video** — seller pastes a link (watch / youtu.be / Shorts), we embed; no upload, no 7 MB limit, no key (thumbnail from i.ytimg, nocookie player) | ✅ | — | ✅ 13 Sep: `utils/youtube.js` + `lib/youtube.js`, VideoSlot "or paste a YouTube link", Gallery iframe, schema `VideoObject` (embedUrl/thumbnail) for every video incl. uploads. Verified via API (set / reject vimeo / remove) | ✅ |
 | G20 | **Map on Contact** — Google's keyless embed (no key, no billing, no quota) + "Get directions" | ✅ | — | ✅ 13 Sep, pin lands on Charming Jewels. Seller shop pages: only when a seller opts in to show location (a pickup address can be a home) — later | ✅ |
+| G21 | **Get found on Google - per-seller workspace** (Rajat 13 Sep: a second seller must not redo Charming Jewels' twelve tabs by hand) | ✅ | — | ✅ 13 Sep — `/seller/grow`, measured ten-step checklist, GBP guide, review message, Settings → Your shop on the web, shop page `sameAs` schema (plan §4.35). Later: per-seller Merchant status once the marketplace account exists (G14) | ✅ |
 | G10 | Cutover — the React app is why 8 pages are not indexed (client-rendered); Next renders them | — | October, Render card | already built | ☐ Oct |
 | — | Keyword Planner / Trends volume | needs Ads account + approval | not now | — | dropped |
 

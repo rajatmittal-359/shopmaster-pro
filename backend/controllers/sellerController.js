@@ -1649,6 +1649,9 @@ exports.getSettings = async (req, res) => {
         // /payout-details; the dashboard only needs to know they exist.
         pickupSet: Boolean(seller.pickupAddress && seller.pickupAddress.pincode),
         bankSet: Boolean(seller.bankDetails && seller.bankDetails.accountNumber && seller.bankDetails.ifscCode),
+        about: seller.about || '',
+        links: seller.links || {},
+        showLocation: Boolean(seller.showLocation),
 
         /*
          * Shown, not editable. A seller seeing what the platform charges them
@@ -1678,7 +1681,7 @@ exports.getSettings = async (req, res) => {
 
 exports.updateSettings = async (req, res) => {
   try {
-    const { offersFreeShipping, pickupAddress } = req.body || {};
+    const { offersFreeShipping, pickupAddress, about, links, showLocation } = req.body || {};
 
     const seller = await Seller.findOne({ userId: req.user._id });
     if (!seller) {
@@ -1687,6 +1690,32 @@ exports.updateSettings = async (req, res) => {
 
     if (offersFreeShipping !== undefined) {
       seller.offersFreeShipping = Boolean(offersFreeShipping);
+    }
+
+    if (about !== undefined) seller.about = String(about).slice(0, 600).trim();
+    if (showLocation !== undefined) seller.showLocation = Boolean(showLocation);
+    if (links && typeof links === 'object') {
+      // Only http(s) links, only to the hosts each field is for - a link that
+      // goes somewhere else is not a mistake worth publishing on the shop page.
+      const HOSTS = { instagram: /(^|\.)instagram\.com$/, facebook: /(^|\.)facebook\.com$/, youtube: /(^|\.)(youtube\.com|youtu\.be)$/, googleBusiness: /(^|\.)(google\.com|goo\.gl|g\.page|share\.google|maps\.app\.goo\.gl)$/, website: /./ };
+      for (const key of Object.keys(HOSTS)) {
+        if (links[key] === undefined) continue;
+        const raw = String(links[key] || '').trim();
+        if (!raw) {
+          seller.links[key] = '';
+          continue;
+        }
+        let url;
+        try {
+          url = new URL(raw.startsWith('http') ? raw : `https://${raw}`);
+        } catch {
+          return res.status(400).json({ success: false, message: `That ${key} link does not look like a web address` });
+        }
+        if (!HOSTS[key].test(url.hostname.replace(/^www\./, ''))) {
+          return res.status(400).json({ success: false, message: `That does not look like a ${key === 'googleBusiness' ? 'Google' : key} link` });
+        }
+        seller.links[key] = url.toString();
+      }
     }
 
     if (pickupAddress) {
@@ -1735,6 +1764,11 @@ exports.updateSettings = async (req, res) => {
       settings: {
         offersFreeShipping: Boolean(seller.offersFreeShipping),
         pickupAddress: seller.pickupAddress || {},
+        pickupSet: Boolean(seller.pickupAddress && seller.pickupAddress.pincode),
+        bankSet: Boolean(seller.bankDetails && seller.bankDetails.accountNumber && seller.bankDetails.ifscCode),
+        about: seller.about || '',
+        links: seller.links || {},
+        showLocation: Boolean(seller.showLocation),
       },
     });
   } catch (error) {

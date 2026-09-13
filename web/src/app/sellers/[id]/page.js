@@ -3,6 +3,12 @@ import { notFound } from 'next/navigation';
 import { getSeller } from '@/lib/api';
 import ProductCard from '@/components/product/ProductCard';
 import Stars from '@/components/product/Stars';
+import { Globe, MapPin, Link2, Camera, Video } from 'lucide-react';
+
+const SITE = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.shopmasterpro.in';
+// lucide dropped the brand glyphs; plain signifiers do the job.
+const LINK_ICON = { instagram: Camera, facebook: Link2, youtube: Video, googleBusiness: MapPin, website: Globe };
+const LINK_LABEL = { instagram: 'Instagram', facebook: 'Facebook', youtube: 'YouTube', googleBusiness: 'On Google Maps', website: 'Website' };
 
 /**
  * A seller, as a place rather than a name.
@@ -31,7 +37,7 @@ export async function generateMetadata({ params }) {
 
   return {
     title: data.seller.businessName,
-    description: `${data.seller.businessName} sells on ShopMaster Pro - ${data.seller.productCount} products, delivered across India with 7-day returns.`,
+    description: data.seller.about || `${data.seller.businessName} sells on ShopMaster Pro - ${data.seller.productCount} products, delivered across India with 7-day returns.`,
     alternates: { canonical: `/sellers/${id}` },
   };
 }
@@ -46,8 +52,24 @@ export default async function SellerPage({ params }) {
 
   const { seller, products } = data;
 
+  // The shop as an Organization Google can join to the seller's own profiles
+  // (sameAs) - the one line of structured data that is about the SELLER,
+  // not the platform. Only what the page shows in words.
+  const shopSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'OnlineStore',
+    name: seller.businessName,
+    url: `${SITE}/sellers/${seller.id}`,
+    ...(seller.about ? { description: seller.about } : {}),
+    ...(Object.keys(seller.links || {}).length ? { sameAs: Object.values(seller.links) } : {}),
+    ...(seller.city ? { address: { '@type': 'PostalAddress', addressLocality: seller.city.city, addressRegion: seller.city.state || undefined, addressCountry: 'IN' } } : {}),
+    ...(seller.rating ? { aggregateRating: { '@type': 'AggregateRating', ratingValue: seller.rating.average, reviewCount: seller.rating.reviews } } : {}),
+    parentOrganization: { '@type': 'Organization', name: 'ShopMaster Pro', url: SITE },
+  };
+
   return (
     <div className="mx-auto max-w-5xl px-4 py-8">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(shopSchema) }} />
       <nav aria-label="Breadcrumb" className="mb-4 text-sm text-muted-foreground">
         <Link href="/" className="hover:text-brand-ink">
           Home
@@ -81,7 +103,31 @@ export default async function SellerPage({ params }) {
           </span>
 
           {seller.sellingSince && <span>Selling here since {since(seller.sellingSince)}</span>}
+          {seller.city && (
+            <span className="flex items-center gap-1">
+              <MapPin className="size-3.5" /> {seller.city.city}
+              {seller.city.state ? `, ${seller.city.state}` : ''}
+            </span>
+          )}
         </div>
+
+        {/* The seller's own words, and the seller's own profiles. Both are
+            what a buyer checks before trusting a shop they have not heard of. */}
+        {seller.about && <p className="mt-4 max-w-2xl text-sm leading-relaxed">{seller.about}</p>}
+        {Object.keys(seller.links || {}).length > 0 && (
+          <ul className="mt-3 flex flex-wrap gap-2">
+            {Object.entries(seller.links).map(([key, url]) => {
+              const Icon = LINK_ICON[key] || Globe;
+              return (
+                <li key={key}>
+                  <a href={url} target="_blank" rel="noopener noreferrer me" className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs text-muted-foreground hover:border-brand-ink hover:text-brand-ink">
+                    <Icon className="size-3.5" /> {LINK_LABEL[key] || key}
+                  </a>
+                </li>
+              );
+            })}
+          </ul>
+        )}
 
         <p className="mt-4 text-sm text-muted-foreground">
           Orders from this shop are delivered by ShopMaster Pro, with the same{' '}

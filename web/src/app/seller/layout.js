@@ -49,6 +49,7 @@ const GROUPS = [
         ],
       },
       { href: '/seller/promotions', label: 'Promotions', icon: 'TicketPercent' },
+      { href: '/seller/grow', label: 'Get found on Google', icon: 'Globe' },
     ],
   },
   { label: 'Money', items: [{ href: '/seller/payments', label: 'Payments', icon: 'IndianRupee' }] },
