@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ArrowRight, Check, Circle, IndianRupee, Package, Tag } from 'lucide-react';
 import { authedFetch } from '@/lib/client';
+import { useT } from '@/lib/i18n';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import PanelCard from '@/components/panel/PanelCard';
@@ -116,9 +117,9 @@ export default function SellerDashboard() {
   const setupDone = agreed && pickupSet && bankSet && productsTotal > 0 && shared;
 
   const cards = [
-    { icon: Package, label: 'To pack', value: waiting.length, href: '/seller/orders?tab=pack', note: 'Orders waiting on you' },
-    { icon: Tag, label: 'Products live', value: analytics?.products?.active ?? 0, href: '/seller/products', note: `${productsTotal} in total` },
-    { icon: IndianRupee, label: 'Earned so far', value: money(analytics?.revenue), href: '/seller/payments', note: 'Paid orders, your lines only' },
+    { icon: Package, label: t('To pack'), value: waiting.length, href: '/seller/orders?tab=pack', note: t('Orders waiting on you') },
+    { icon: Tag, label: t('Products live'), value: analytics?.products?.active ?? 0, href: '/seller/products', note: t('{n} in total', { n: productsTotal }) },
+    { icon: IndianRupee, label: t('Earned so far'), value: money(analytics?.revenue), href: '/seller/payments', note: t('Paid orders, your lines only') },
   ];
 
   return (
@@ -172,8 +173,8 @@ export default function SellerDashboard() {
       <div className="grid gap-6 lg:grid-cols-5">
         <PanelCard
           className="min-w-0 lg:col-span-3"
-          title="Waiting on you"
-          lead={waiting.length ? `${waiting.length} to pack and book a courier for.` : undefined}
+          title={t('Waiting on you')}
+          lead={waiting.length ? t('{n} to pack and book a courier for.', { n: waiting.length }) : undefined}
           aside={
             waiting.length > 0 && (
               <Link href="/seller/orders?tab=pack" className="text-sm text-brand-ink hover:underline">
@@ -215,7 +216,7 @@ export default function SellerDashboard() {
           )}
         </PanelCard>
 
-        <PanelCard className="min-w-0 lg:col-span-2" title="Running low">
+        <PanelCard className="min-w-0 lg:col-span-2" title={t('Running low')}>
           {lowStock.length === 0 ? (
             <Empty>Nothing is close to running out.</Empty>
           ) : (
@@ -233,7 +234,7 @@ export default function SellerDashboard() {
                     <Circle
                       className={`size-2 ${product.stock === 0 ? 'fill-destructive' : 'fill-amber-500 text-amber-500'}`}
                     />
-                    {product.stock === 0 ? 'Out of stock' : `${product.stock} left`}
+                    {product.stock === 0 ? t('Out of stock') : t('{n} left', { n: product.stock })}
                   </span>
                 </li>
               ))}
@@ -256,6 +257,7 @@ export default function SellerDashboard() {
  * of it. (A brand-new shop meets the wizard instead - Onboarding.jsx.)
  */
 function SetupGuide({ agreed, pickupSet, bankSet, productsTotal, shared, onShared }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const steps = [
     { done: agreed, short: 'Agreement', title: 'Accept the Seller Agreement', href: '/seller/settings' },
@@ -279,7 +281,7 @@ function SetupGuide({ agreed, pickupSet, bankSet, productsTotal, shared, onShare
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
         <button type="button" onClick={() => setOpen((o) => !o)} className="flex items-center gap-2 text-sm font-medium" aria-expanded={open}>
           <span>Set up your shop</span>
-          <span className="text-muted-foreground">· {left.length} of {steps.length} left</span>
+          <span className="text-muted-foreground">· {t('{n} of {total} left', { n: left.length, total: steps.length })}</span>
           <span className={`text-xs text-muted-foreground transition ${open ? 'rotate-90' : ''}`} aria-hidden>▸</span>
         </button>
         <div className="h-1.5 w-28 overflow-hidden rounded bg-muted" aria-hidden>
@@ -325,19 +327,20 @@ function SetupGuide({ agreed, pickupSet, bankSet, productsTotal, shared, onShare
 }
 
 function NextUp({ waiting, pickupSet, bankSet, lowStock, productsTotal }) {
+  const t = useT();
   let next;
   if (waiting.length) {
     const o = waiting[0];
-    next = { text: `Pack and book ${o.orderNumber || 'the order'} for ${o.customerId?.name || 'a customer'}`, href: `/seller/orders/${o._id}`, cta: 'Open the order' };
-  } else if (!pickupSet) next = { text: 'Set where the courier collects - nothing ships without it', href: '/seller/settings', cta: 'Set the address' };
-  else if (!bankSet) next = { text: 'Add the bank account your payouts go to', href: '/seller/payments', cta: 'Add the account' };
-  else if (lowStock.some((p) => p.stock === 0)) next = { text: `Restock ${lowStock.find((p) => p.stock === 0).name} - it is out`, href: '/seller/products?tab=out', cta: 'Open products' };
-  else if (productsTotal < 5) next = { text: 'Add another product - five or more is when a shop starts to look like one', href: '/seller/products/new', cta: 'Add a product' };
-  else next = { text: 'Nothing waiting. Share your shop link - your first customers already know you', href: '/shop', cta: 'Open the shop' };
+    next = { text: t('Pack and book {order} for {name}', { order: o.orderNumber || 'the order', name: o.customerId?.name || 'a customer' }), href: `/seller/orders/${o._id}`, cta: t('Open the order') };
+  } else if (!pickupSet) next = { text: t('Set where the courier collects - nothing ships without it'), href: '/seller/settings', cta: t('Set the address') };
+  else if (!bankSet) next = { text: t('Add the bank account your payouts go to'), href: '/seller/payments', cta: t('Add the account') };
+  else if (lowStock.some((p) => p.stock === 0)) next = { text: t('Restock {name} - it is out', { name: lowStock.find((p) => p.stock === 0).name }), href: '/seller/products?tab=out', cta: t('Open products') };
+  else if (productsTotal < 5) next = { text: t('Add another product - five or more is when a shop starts to look like one'), href: '/seller/products/new', cta: t('Add a product') };
+  else next = { text: t('Nothing waiting. Share your shop link - your first customers already know you'), href: '/shop', cta: t('Open the shop') };
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/30 bg-primary/5 px-4 py-3 text-sm">
       <p>
-        <span className="font-medium text-brand-ink">Next:</span> {next.text}
+        <span className="font-medium text-brand-ink">{t('Next:')}</span> {next.text}
       </p>
       <Button size="sm" nativeButton={false} render={<Link href={next.href} />}>
         {next.cta}

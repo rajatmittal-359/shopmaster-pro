@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Store, ShieldCheck } from 'lucide-react';
 import { useSession } from '@/lib/session';
 import { authedFetch } from '@/lib/client';
+import { useT } from '@/lib/i18n';
 
 /**
  * The block at the top of the sidebar that says whose panel this is.
@@ -15,6 +16,7 @@ import { authedFetch } from '@/lib/client';
  */
 export default function PanelIdentity({ kind }) {
   const { user } = useSession();
+  const t = useT();
   const [shop, setShop] = useState(null);
 
   useEffect(() => {
@@ -30,8 +32,8 @@ export default function PanelIdentity({ kind }) {
     };
   }, [kind]);
 
-  const title = kind === 'admin' ? 'ShopMaster Pro' : shop || 'Your shop';
-  const sub = kind === 'admin' ? 'Platform admin' : user?.name ? `Seller · ${user.name}` : 'Seller';
+  const title = kind === 'admin' ? 'ShopMaster Pro' : shop || t('Your shop');
+  const sub = kind === 'admin' ? 'Platform admin' : user?.name ? `${t('Seller')} · ${user.name}` : t('Seller');
   const Icon = kind === 'admin' ? ShieldCheck : Store;
 
   return (

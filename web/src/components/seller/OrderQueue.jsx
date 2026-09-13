@@ -7,6 +7,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { authedFetch } from '@/lib/client';
+import { useT } from '@/lib/i18n';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -74,6 +75,7 @@ function StatusBadge({ order }) {
 }
 
 export default function OrderQueue() {
+  const t = useT();
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
@@ -324,7 +326,7 @@ export default function OrderQueue() {
                           variant="outline"
                           size="sm"
                         >
-                          Book the pickup
+                          {t('Book the pickup')}
                         </Button>
                       )}
                       {['requested', 'picked'].includes(order.returnStage) && (
@@ -345,7 +347,7 @@ export default function OrderQueue() {
                             variant="outline"
                             size="sm"
                           >
-                            Refuse it
+                            {t('Refuse it')}
                           </Button>
                         </>
                       )}
@@ -367,7 +369,7 @@ export default function OrderQueue() {
                       variant="outline"
                       size="sm"
                     >
-                      Cancel the shipment
+                      {t('Cancel the shipment')}
                     </Button>
                   )}
 
@@ -381,7 +383,7 @@ export default function OrderQueue() {
                       variant="outline"
                       size="sm"
                     >
-                      I delivered this myself
+                      {t('I delivered this myself')}
                     </Button>
                   )}
 
@@ -392,7 +394,7 @@ export default function OrderQueue() {
                       variant="ghost"
                       size="sm"
                     >
-                      Cancel my items
+                      {t('Cancel my items')}
                     </Button>
                   )}
 
@@ -400,7 +402,7 @@ export default function OrderQueue() {
                     href={`/seller/orders/${order._id}`}
                     className="ml-auto text-sm text-brand-ink hover:underline"
                   >
-                    Open this order
+                    {t('Open this order')}
                   </Link>
                 </div>
 

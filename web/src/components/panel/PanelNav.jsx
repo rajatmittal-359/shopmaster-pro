@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import * as Icons from 'lucide-react';
 import { authedFetch } from '@/lib/client';
+import { useT } from '@/lib/i18n';
 
 /**
  * The list of links inside a panel sidebar.
@@ -29,6 +30,7 @@ import { authedFetch } from '@/lib/client';
  */
 export default function PanelNav({ groups, onNavigate = null, countsUrl = null }) {
   const pathname = usePathname();
+  const t = useT();
   const [counts, setCounts] = useState({});
 
   useEffect(() => {
@@ -67,7 +69,7 @@ export default function PanelNav({ groups, onNavigate = null, countsUrl = null }
         >
           {active && <span aria-hidden className="absolute top-1.5 bottom-1.5 -left-2 w-0.5 rounded-full bg-brand-ink" />}
           <Icon className={`size-4 shrink-0 ${active ? '' : 'opacity-80 group-hover:opacity-100'}`} />
-          <span className="min-w-0 flex-1 truncate">{label}</span>
+          <span className="min-w-0 flex-1 truncate">{t(label)}</span>
           {count > 0 && (
             <span
               className="rounded-full bg-brand-ink px-1.5 py-0.5 text-[0.65rem] leading-none font-semibold text-white tabular-nums"
@@ -91,7 +93,7 @@ export default function PanelNav({ groups, onNavigate = null, countsUrl = null }
                       childActive ? 'font-medium text-brand-ink' : 'text-muted-foreground hover:text-foreground'
                     }`}
                   >
-                    {child.label}
+                    {t(child.label)}
                   </Link>
                 </li>
               );
@@ -108,7 +110,7 @@ export default function PanelNav({ groups, onNavigate = null, countsUrl = null }
   const renderGroup = (group) => (
     <div key={group.label || 'main'}>
       {group.label && (
-        <p className="mb-1.5 px-3 text-[0.68rem] font-semibold tracking-[0.12em] text-muted-foreground/80 uppercase">{group.label}</p>
+        <p className="mb-1.5 px-3 text-[0.68rem] font-semibold tracking-[0.12em] text-muted-foreground/80 uppercase">{t(group.label)}</p>
       )}
       <ul className="space-y-0.5">{group.items.map(renderItem)}</ul>
     </div>

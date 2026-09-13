@@ -2020,3 +2020,12 @@ Rajat: the filter rail was a text list - "bakwaas tarika, mazaa nahi aa raha". *
 **What it needed underneath:** `Seller.about / links / showLocation` (Settings → *Your shop on the web*, `#web`; links validated by host - a "facebook" link must be facebook.com), the public shop page shows the About, the city (never the address) and the profile chips, and emits an **OnlineStore JSON-LD with `sameAs`** - the one line of structured data that is about the seller, not the platform. Charming Jewels' page now carries its Instagram and GBP links and "Jaipur, Rajasthan". Verified live: score 24 → 64 after About, links and city were set.
 
 **Admin's side:** unchanged and platform-level - `/admin/google` (index, Shopping, traffic, speed), Merchant Center, Search Console, GA4, the feeds. The admin never fills a seller's About; the admin watches the numbers.
+
+### 4.36 Built for who actually runs it (13 Sep 2026)
+
+Rajat: he works Monday–Friday and manages on weekends; his mother - a 1970s-generation shopkeeper, at home, on a phone, new to this - runs Charming Jewels day to day. Both are "the seller"; he is also the admin. Four things followed:
+
+- **The seller's phone buzzes** (`utils/notifySeller.js`): new order, return requested, dispute opened → an email in Hindi then English with one button to the order. The template had existed since the React days and nothing sent it.
+- **Saturday 8 AM digest to the admin** (`jobs/weeklyDigest.js`, cron Asia/Kolkata; `GET /admin/digest` to preview): the week in numbers, then "needs you this weekend" with links. Read over tea; open the panel only when something does.
+- **Hindi in the seller panel** (`lib/i18n.js` + `i18n.hi.js`, no library - `t('Orders')` with the English as the key and as the fallback; हिं/EN toggle in the panel bar, remembered per device). Done so far: nav, identity, page headers, Home, order actions, product form labels and the AI button. Untranslated strings simply stay English - the rest follows page by page.
+- **सीखें / Learn** (`/seller/learn`): five lessons in Hindi (English under the toggle) - an order came in; adding a product from a photo; a return; when the money comes; asking for and answering reviews - each in five steps with the button that does it. Meesho's Learn and Amazon's Seller University do this with video; text loads on any phone.

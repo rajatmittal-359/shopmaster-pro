@@ -16,6 +16,7 @@ import CategoryPicker from '@/components/seller/CategoryPicker';
 import FieldAssist from '@/components/seller/FieldAssist';
 import ListingQuality from '@/components/seller/ListingQuality';
 import SuggestCategory from '@/components/seller/SuggestCategory';
+import { useT } from '@/lib/i18n';
 
 /**
  * Listing something for sale.
@@ -78,10 +79,11 @@ const leavesOf = (categories, trail = []) =>
 
 /** A small, consistent field: label above, hint below. */
 function Field({ id, label, hint, aside, children, className = '' }) {
+  const t = useT();
   return (
     <div className={className}>
       <div className="flex items-center justify-between gap-2">
-        <Label htmlFor={id}>{label}</Label>
+        <Label htmlFor={id}>{typeof label === 'string' ? t(label) : label}</Label>
         {aside}
       </div>
       <div className="mt-1.5">{children}</div>
@@ -91,12 +93,13 @@ function Field({ id, label, hint, aside, children, className = '' }) {
 }
 
 function Card({ id, title, lead, aside, children }) {
+  const t = useT();
   return (
     <section id={id} className="space-y-5 rounded-xl border bg-card p-5 scroll-mt-20">
       {(title || aside) && (
         <div className="flex items-start justify-between gap-4">
           <div>
-            {title && <h2 className="font-semibold">{title}</h2>}
+            {title && <h2 className="font-semibold">{t(title)}</h2>}
             {lead && <p className="mt-1 text-sm text-muted-foreground">{lead}</p>}
           </div>
           {aside}
@@ -108,6 +111,7 @@ function Card({ id, title, lead, aside, children }) {
 }
 
 export default function ProductForm({ productId, copyFromId }) {
+  const t = useT();
   const router = useRouter();
   const [form, setForm] = useState(EMPTY);
   const [photos, setPhotos] = useState([]); // [{ src, kind: 'existing' | 'new' }], in display order
@@ -319,7 +323,7 @@ export default function ProductForm({ productId, copyFromId }) {
             className="shrink-0 border-primary/40 text-brand-ink hover:bg-primary/5"
           >
             {ai.status === 'writing' ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
-            {ai.status === 'writing' ? 'Writing…' : ai.status === 'done' ? 'Write it again' : 'Write it for me'}
+            {ai.status === 'writing' ? 'Writing…' : ai.status === 'done' ? t('Write it again') : t('Write it for me')}
           </Button>
         }
       >

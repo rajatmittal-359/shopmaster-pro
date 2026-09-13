@@ -59,6 +59,7 @@ const GROUPS = [
     items: [
       { href: '/seller/performance', label: 'Performance', icon: 'Gauge' },
       { href: '/seller/settings', label: 'Settings', icon: 'Settings' },
+      { href: '/seller/learn', label: 'Learn', icon: 'GraduationCap' },
       { href: '/seller/help', label: 'Help & rules', icon: 'LifeBuoy' },
     ],
   },

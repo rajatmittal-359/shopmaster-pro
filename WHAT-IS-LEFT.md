@@ -91,6 +91,9 @@ description, relevance order, regex fallback if Search is ever unavailable.
 Live: jhumki → Pearl Drop Jhumka, kundn choker → Kundan Choker Set. Later:
 synonyms collection (jhumka/jhumki/झुमका), Gemini query → filters.
 
+| 2.13 | **Hindi, the rest of the seller panel** — foundation and the daily loop done 13 Sep (plan §4.36); left: Orders page body text, Returns & issues, Products list, Settings, Payments, Help/Grow copy, toasts. Add lines to `lib/i18n.hi.js` page by page | plan §4.36 | — |
+| 2.14 | **One account, two hats in production** — in the dev seed the admin (`rajatmittal359`) and the Charming Jewels seller are two users. At the production seed the admin user must also own the Charming Jewels `Seller` doc (capabilities already grant `seller` to an admin with one) so 359 is admin + seller as Rajat intends | seed --minimal | cutover |
+
 ## 3. Rajat's call — researched, waiting on a decision
 
 ### 3a. The 13 Sep night list — sidebars and the next features

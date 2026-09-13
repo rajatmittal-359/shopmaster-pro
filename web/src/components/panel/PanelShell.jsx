@@ -9,6 +9,7 @@ import Logo from '@/components/brand/Logo';
 import HeaderAccount from '@/components/layout/HeaderAccount';
 import RoleSwitch from '@/components/layout/RoleSwitch';
 import ThemeToggle from '@/components/layout/ThemeToggle';
+import LangToggle from '@/components/panel/LangToggle';
 
 /**
  * The frame around the seller panel and the admin panel - its OWN frame.
@@ -73,6 +74,7 @@ export default function PanelShell({ title, groups, countsUrl = null, identity =
             {/* The same switch the storefront header carries: Shopping |
                 Selling | Admin, the current one lit. Replaces "View shop". */}
             <RoleSwitch />
+            {title === 'Seller' && <LangToggle />}
             <HeaderAccount showCart={false} />
             <ThemeToggle />
           </div>
