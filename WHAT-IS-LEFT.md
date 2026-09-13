@@ -169,6 +169,22 @@ Rajat, 13 Sep 04:00: *"sidebar wagerah improve karo. Seller ka maine chhota karw
 - **Request-validation layer** (Zod/Joi) — controllers validate by hand today; add when a second pair of hands starts writing endpoints.
 - **Direct-to-Cloudinary uploads** once 7 MB video clips stop being enough — needs an unsigned upload preset in the Cloudinary console. (OPS backlog)
 
+### 3b. AI beyond images and text — researched 13 Sep 2026, waiting on Rajat's pick
+
+Rajat: "kae tarah ke AI hote hai… free mil raha ho, quality mast ho, professional, unique, logo ko helpful". Researched every kind that is free without a card and held each against the goals. Sources: Groq docs (Whisper v3 turbo free: 2,000 req/day, 7,200 audio-s/hour), Gemini API (audio understanding + TTS preview, Hindi), Groq `openai/gpt-oss-safeguard-20b` (bring-your-own-policy moderation; Llama Guard deprecated Feb 2026), Meesho (≈60% orders tier-4+, 70% prefer vernacular; voice+vernacular lifted conversion), Flipkart (Hindi voice search), WISMO = 25–40% of ecommerce support contacts.
+
+| # | Kind | Free source | What it does for ShopMaster | Goal | Verdict |
+|---|---|---|---|---|---|
+| A1 | **Speech → text (Hindi/Hinglish)** | Groq Whisper v3 turbo; Gemini audio as fallback | Mic in Ask ShopMaster (Mummy bolke pooche), mic in the customer search bar (Flipkart/Meesho pattern), **"bol ke listing"** — seller speaks name/material/price, the form fills | seller ease · liquidity | **Build first** |
+| A2 | Text → speech | Browser `speechSynthesis` (Hindi voice, zero API) first; Gemini TTS preview later | Assistant reads its answer aloud | seller ease | With A1, browser-only |
+| A3 | **Moderation, own policy** | Groq gpt-oss-safeguard-20b | Reviews, dispute text, seller About/links, coupon names → flag abuse, phone numbers, off-platform deals → admin weekend queue, auto-hold | trust · weekend admin | Build small |
+| A4 | **Embeddings → similar products + Hinglish search** | Gemini embeddings (have) + 3rd Atlas vector slot | "Aapko ye bhi pasand aayega", jhumka⇄earrings⇄झुमका, typo-proof search | liquidity | Build |
+| A5 | Review highlights ("Customers say") | Gemini text, cached per product | Needs ≥5 reviews/product | trust | Later, at volume |
+| A6 | Photo search (upload → find) | Gemini vision → text → search | Flipkart has it; our catalogue is small | liquidity | Later |
+| A7 | Real-time voice agent (Gemini Live), video/music gen, OCR invoices, demand forecasting | — | No goal served now | — | No |
+
+Assistant gaps found in the same pass (problem taxonomy in the chat of 13 Sep): suspended seller cannot reach the assistant (`requireApprovedSeller`) though they need it most; no `myPayments` (Razorpay attempt/refund status) tool; no `checkCoupon` tool; admin lacks `disputeBrief` and `customerRisk` tools; payouts-vs-Razorpay-settlement reconciliation is unseen by anyone. Each is a half-day; none started without a yes.
+
 ## 4. Ideas raised, not decided — do not start without a yes
 
 - Google Cloud extras (Always-Free page read 13 Sep: docs.cloud.google.com/free/docs/free-cloud-features), each gated on a real need appearing: **Web Risk** (100k URI checks/month) to screen links sellers paste (website, video) once unknown sellers join · **Cloud Run** (2M req/month) as the hosting fallback if Render's paid tier bites after cutover · Vision SafeSearch to auto-moderate seller photos (1k/month free) when unknown sellers join · Speech-to-Text (60 min/month) or Groq Whisper for voice listing · Sheets API order export for the CA · Web push (FCM) for "shipped" · Google Wallet loyalty pass · photo-to-search via Gemini vision + Atlas Search.
