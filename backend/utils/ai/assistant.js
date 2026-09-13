@@ -224,9 +224,20 @@ Answer now, as Ask ShopMaster.`;
       return done(c, { searchedWeb: c.searchedWeb });
     }
     failures.push(`compound: ${c.reason.slice(0, 60)}`);
+
+    // Road 4 - Cloudflare Workers AI (Llama 3.3 70B) with our tools, compact
+    // prompt: the last road that can still look an order up (plan 2.25;
+    // 10k neurons/day shared with the image editor).
+    const { cloudflareWithTools } = require('./cloudflareText');
+    const cf = await cloudflareWithTools([...turns(600), { role: 'user', parts: [{ text: buildPrompt({ compact: true }) }] }], { ...withTools, maxRounds: 2 });
+    if (cf.ok) {
+      console.warn(`assistant: ${failures.join('; ')} - answered by ${cf.model}`);
+      return done(cf);
+    }
+    failures.push(`cloudflare: ${cf.reason.slice(0, 60)}`);
   }
 
-  // Road 4 - Pollinations nano, compact prompt, no tools: the prefetch and
+  // Road 5 - Pollinations nano, compact prompt, no tools: the prefetch and
   // the passages are all it has.
   const flat = history.slice(-6).map((m) => `${m.role === 'user' ? 'THEY SAID' : 'YOU SAID'}: ${String(m.text || '').slice(0, 600)}`).join('\n');
   const r = await generate(`${flat ? `EARLIER IN THIS CONVERSATION\n${flat}\n\n` : ''}${buildPrompt({ compact: true })}`, { system: SYSTEM(role, false, language, user), textModel: 'nano', attempts: 1 });

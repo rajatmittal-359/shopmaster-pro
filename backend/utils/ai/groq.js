@@ -153,4 +153,4 @@ const groqPlain = async (contents, opts = {}) => {
   return { ok: true, text, model, calls: [], searchedWeb };
 };
 
-module.exports = { groqWithTools, groqPlain, MODEL, budget, cannotFit, secondsOf };
+module.exports = { groqWithTools, groqPlain, MODEL, budget, cannotFit, secondsOf, lower, toMessages };

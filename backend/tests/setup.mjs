@@ -26,6 +26,7 @@ process.env.GEMINI_API_KEY = '';
 process.env.GROQ_API_KEY = '';
 process.env.POLLINATIONS_API_KEY = '';
 process.env.CLOUDFLARE_API_TOKEN = '';
+process.env.CLOUDFLARE_ACCOUNT_ID = '';
 process.env.CLOUDFLARE_AI_GATEWAY = ''; // tests mock the direct provider URLs
 process.env.HF_TOKEN = '';
 process.env.NVIDIA_API_KEY = '';

@@ -31,6 +31,9 @@ on:
     - cron: '15 */2 * * *'
     # 03:30 UTC is 09:00 IST - morning in Jaipur, when a seller can act on it.
     - cron: '30 3 * * *'
+    # Sunday 22:00 UTC = 03:30 IST Monday - the quiet hour. Re-embeds products
+    # that changed (plan 2.17) and, when the secrets exist, the knowledge base.
+    - cron: '0 22 * * 0'
   # So it can be run by hand from the Actions tab without waiting for the clock.
   workflow_dispatch:
     inputs:
@@ -39,7 +42,7 @@ on:
         required: true
         default: reconcile
         type: choice
-        options: [reconcile, low-stock]
+        options: [reconcile, low-stock, vectors]
 
 env:
   # The Singapore service. Renaming the old one did NOT free its subdomain -
@@ -60,6 +63,8 @@ jobs:
             echo "name=${{ inputs.job }}" >> "$GITHUB_OUTPUT"
           elif [ "${{ github.event.schedule }}" = "30 3 * * *" ]; then
             echo "name=low-stock" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event.schedule }}" = "0 22 * * 0" ]; then
+            echo "name=vectors" >> "$GITHUB_OUTPUT"
           else
             echo "name=reconcile" >> "$GITHUB_OUTPUT"
           fi
@@ -95,3 +100,42 @@ jobs:
             echo "::error::Job $JOB failed with HTTP $code"
             exit 1
           fi
+
+  # The knowledge base (Ask ShopMaster's RAG) is built from the repo's own
+  # files - plans, rules, page comments - so it cannot run on Render. Weekly,
+  # here, with a checkout. Skips itself, loudly, until the two secrets exist:
+  #   Settings -> Secrets and variables -> Actions -> MONGO_URI, GEMINI_API_KEY
+  knowledge:
+    if: github.event.schedule == '0 22 * * 0' || inputs.job == 'vectors'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - name: skip until the secrets exist
+        id: gate
+        env:
+          HAVE_MONGO: ${{ secrets.MONGO_URI != '' }}
+          HAVE_GEMINI: ${{ secrets.GEMINI_API_KEY != '' }}
+        run: |
+          if [ "$HAVE_MONGO" != "true" ] || [ "$HAVE_GEMINI" != "true" ]; then
+            echo "::notice::knowledge re-index skipped - add MONGO_URI and GEMINI_API_KEY as repository secrets to enable it"
+            echo "go=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "go=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: install
+        if: steps.gate.outputs.go == 'true'
+        working-directory: backend
+        run: npm ci --no-audit --no-fund
+      - name: re-index the knowledge base
+        if: steps.gate.outputs.go == 'true'
+        working-directory: backend
+        env:
+          MONGO_URI: ${{ secrets.MONGO_URI }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          NODE_ENV: production
+        run: node indexKnowledge.js

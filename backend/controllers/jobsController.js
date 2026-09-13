@@ -41,6 +41,22 @@ const JOBS = {
     requires: 'SHIPROCKET_API_EMAIL',
   },
   'low-stock': { run: () => lowStock.runLowStockAlerts() },
+  /*
+   * Plan 2.17: product embeddings for "You may also like" and semantic
+   * top-up (2.21) go stale as sellers edit; this embeds what changed (hash)
+   * and keeps the Atlas index. Weekly from GitHub Actions. Needs Gemini for
+   * the vectors - refuses plainly without it. The knowledge index is NOT
+   * here: it reads the repo's own files, so it runs in Actions with a checkout.
+   */
+  vectors: {
+    run: async () => {
+      const { embedProducts } = require('../utils/productVectors');
+      const lines = [];
+      const r = await embedProducts({ log: (m) => lines.push(String(m)) });
+      return { ...(r || {}), log: lines.slice(-20) };
+    },
+    requires: 'GEMINI_API_KEY',
+  },
 };
 
 /**
