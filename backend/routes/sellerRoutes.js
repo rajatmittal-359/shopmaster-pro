@@ -92,6 +92,7 @@ router.post('/voice/transcribe', require('../controllers/voiceController').trans
 router.get('/category-requests', requireApprovedSeller, panel.myCategoryRequests);
 router.post('/category-requests', requireApprovedSeller, panel.requestCategory);
 router.post('/ai/listing', requireApprovedSeller, ai.writeListing);
+router.post('/ai/listing-from-speech', requireApprovedSeller, ai.listingFromSpeech);
 router.post('/ai/refine', requireApprovedSeller, ai.refineText);
 router.post('/ai/keywords', requireApprovedSeller, ai.suggestKeywords);
 router.get('/products/:productId/google', requireApprovedSeller, require('../controllers/searchInsightsController').productGoogle);

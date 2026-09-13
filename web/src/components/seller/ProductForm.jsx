@@ -14,6 +14,8 @@ import VideoSlot from '@/components/seller/VideoSlot';
 import RichTextEditor from '@/components/seller/RichTextEditor';
 import CategoryPicker from '@/components/seller/CategoryPicker';
 import FieldAssist from '@/components/seller/FieldAssist';
+import MicButton from '@/components/voice/MicButton';
+import { useLang } from '@/lib/i18n';
 import ListingQuality from '@/components/seller/ListingQuality';
 import SuggestCategory from '@/components/seller/SuggestCategory';
 import { useT } from '@/lib/i18n';
@@ -42,10 +44,22 @@ import { useT } from '@/lib/i18n';
  *   accessories). A product created without a colour is one Merchant Center
  *   holds in "Under review", silently. Seventeen of ours sat there.
  *
+ * "BOL KE LISTING" (13 Sep 2026, plan 2.18)
+ *   The mic beside "Write it for me". The shopkeeper says "oxidised silver ka
+ *   kada, 1250 rupaye, MRP 1800, 5 piece, free size" - the numbers land in
+ *   price/MRP/stock/size, the words become the listing through the same
+ *   draft road as the photo. What was heard is shown above the fields, so a
+ *   wrong number is seen before it is saved. Built for the person who
+ *   would rather talk than type; the photo road and the typed road are
+ *   unchanged.
+ *
  * WHY THE CATEGORY LIST IS LEAVES ONLY
  *   The API refuses a parent category (validateLeafCategory), so offering one
  *   would be offering a choice that always fails.
  */
+/* An exempt account has no cap: show ∞, not a blank. */
+const left = (n) => (n === null || n === undefined ? '∞' : n);
+
 const EMPTY = {
   name: '',
   description: '',
@@ -186,6 +200,45 @@ export default function ProductForm({ productId, copyFromId }) {
     setForm({ ...form, [key]: e.target.type === 'checkbox' ? e.target.checked : e.target.value });
   const setValue = (key) => (value) => setForm((f) => ({ ...f, [key]: value }));
 
+  const lang = useLang();
+  const [heard, setHeard] = useState('');
+
+  /* The spoken road: transcript → numbers into the form, words into the draft. */
+  const listFromSpeech = async (transcript) => {
+    if (!transcript?.trim()) return;
+    setHeard(transcript);
+    setAi({ status: 'writing' });
+    try {
+      const first = photos[0];
+      const body = {
+        transcript,
+        categoryId: form.category || undefined,
+        ...(first?.kind === 'existing' ? { imageUrl: first.src } : {}),
+        ...(first?.kind === 'new' ? { imageDataUrl: first.src } : {}),
+        textModel,
+      };
+      const { draft, warnings, usage: u, writtenBy } = await authedFetch('/seller/ai/listing-from-speech', { method: 'POST', body });
+      setForm((f) => ({
+        ...f,
+        name: draft.name || f.name,
+        description: draft.description || f.description,
+        category: draft.categoryId || f.category,
+        price: draft.price ?? f.price,
+        mrp: draft.mrp ?? f.mrp,
+        stock: draft.stock ?? f.stock,
+        color: draft.color || f.color,
+        size: draft.size || f.size,
+        gender: draft.gender || f.gender,
+        ageGroup: draft.ageGroup || f.ageGroup,
+        tags: draft.tags?.length ? draft.tags : f.tags,
+      }));
+      if (u) setUsage(u);
+      setAi({ status: 'done', warnings: warnings || [], writtenBy });
+    } catch (err) {
+      setAi({ status: 'error', message: err.message });
+    }
+  };
+
   const writeForMe = async () => {
     setAi({ status: 'writing' });
     try {
@@ -294,9 +347,9 @@ export default function ProductForm({ productId, copyFromId }) {
             <p className="shrink-0 rounded-lg bg-muted px-2.5 py-1.5 text-right text-xs leading-tight text-muted-foreground">
               <span className="font-medium text-foreground">AI today</span>
               <br />
-              {usage.remaining.images} photos · {usage.remaining.premiumImages} premium
+              {left(usage.remaining.images)} photos · {left(usage.remaining.premiumImages)} premium
               <br />
-              {usage.remaining.texts} drafts
+              {left(usage.remaining.texts)} drafts
             </p>
           )
         }
@@ -315,22 +368,31 @@ export default function ProductForm({ productId, copyFromId }) {
       <Card
         title="2 · Words"
         aside={
-          <Button
-            type="button"
-            variant="outline"
-            onClick={writeForMe}
-            disabled={ai.status === 'writing' || (photos.length === 0 && !form.name && !keywords.trim())}
-            className="shrink-0 border-primary/40 text-brand-ink hover:bg-primary/5"
-          >
-            {ai.status === 'writing' ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
-            {ai.status === 'writing' ? 'Writing…' : ai.status === 'done' ? t('Write it again') : t('Write it for me')}
-          </Button>
+          <div className="flex shrink-0 items-center gap-2">
+            {/* Say it: the mic writes the numbers and the words at once. */}
+            <MicButton role="seller" language={lang === 'en' ? 'auto' : lang} onText={listFromSpeech} label={t('Say the product, price and stock')} />
+            <Button
+              type="button"
+              variant="outline"
+              onClick={writeForMe}
+              disabled={ai.status === 'writing' || (photos.length === 0 && !form.name && !keywords.trim())}
+              className="border-primary/40 text-brand-ink hover:bg-primary/5"
+            >
+              {ai.status === 'writing' ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
+              {ai.status === 'writing' ? t('Writing…') : ai.status === 'done' ? t('Write it again') : t('Write it for me')}
+            </Button>
+          </div>
         }
       >
         <div className="rounded-lg border border-primary/20 bg-primary/5 p-3">
           <Label htmlFor="keywords" className="text-xs text-muted-foreground">
-            ✦ A photo or a few words - any language - and the AI fills 2 to 5
+            ✦ {t('A photo, a few words, or just say it (mic) - any language - and the AI fills 2 to 5')}
           </Label>
+          {heard && (
+            <p className="mt-1.5 rounded-md bg-background px-2 py-1 text-xs text-muted-foreground">
+              {t('Heard')}: <span className="text-foreground">“{heard}”</span>
+            </p>
+          )}
           <Input
             id="keywords"
             value={keywords}

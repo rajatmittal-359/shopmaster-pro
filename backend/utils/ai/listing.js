@@ -68,12 +68,13 @@ const JEWELLERY_WORDS =
 
 const looksLikeJewellery = (...texts) => texts.some((t) => JEWELLERY_WORDS.test(String(t || '')));
 
-const promptFor = ({ name, keywords, price, categoryName, categoryOptions = [], hasImage }) => {
+const promptFor = ({ name, keywords, price, stock, categoryName, categoryOptions = [], hasImage }) => {
   const facts = [
     name ? `Seller's product name: ${name}` : null,
     keywords ? `Seller's keywords: ${keywords}` : null,
     categoryName ? `Seller's chosen category: ${categoryName}` : null,
     price ? `Price: INR ${price}` : null,
+    stock ? `Quantity the seller has in stock: ${stock} (an inventory count - NOT a set, pack or pair; never mention it in the listing)` : null,
   ]
     .filter(Boolean)
     .join('\n');

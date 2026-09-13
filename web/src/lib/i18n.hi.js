@@ -138,6 +138,10 @@ const HI = {
   Size: 'साइज़',
   'Save product': 'प्रोडक्ट सेव करें',
   'Write it for me': 'मेरे लिए लिखो',
+  'Writing…': 'लिख रहा है…',
+  'Say the product, price and stock': 'बोलें - क्या है, दाम कितना, कितने पीस',
+  'A photo, a few words, or just say it (mic) - any language - and the AI fills 2 to 5': 'फोटो, दो-चार शब्द, या बस बोल दें (माइक) - किसी भी भाषा में - AI 2 से 5 भर देगा',
+  Heard: 'सुना',
   'Write it again': 'फिर से लिखो',
 
   // Common

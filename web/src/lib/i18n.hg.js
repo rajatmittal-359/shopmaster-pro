@@ -100,6 +100,10 @@ const HG = {
   'Search words': 'Search ke shabd',
   'Save product': 'Product save karo',
   'Write it for me': 'Mere liye likho',
+  'Writing…': 'Likh raha hai…',
+  'Say the product, price and stock': 'Bolo - kya hai, daam kitna, kitne piece',
+  'A photo, a few words, or just say it (mic) - any language - and the AI fills 2 to 5': 'Photo, do-chaar shabd, ya bas bol do (mic) - kisi bhi bhasha me - AI 2 se 5 bhar dega',
+  Heard: 'Suna',
   'Write it again': 'Phir se likho',
 };
 

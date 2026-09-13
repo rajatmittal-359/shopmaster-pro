@@ -214,6 +214,88 @@ const writeListing = async (req, res) => {
 };
 
 /**
+ * POST /api/seller/ai/listing-from-speech
+ * body: { transcript, categoryId?, imageUrl?, imageDataUrl?, textModel? }
+ *
+ * "Bol ke listing": the shopkeeper said what the thing is, what it costs and
+ * how many there are. The numbers and short labels come out of the sentence
+ * (utils/ai/speechListing - fast model + regex); the words go to the same
+ * draftListing the photo road uses, as keywords in whatever language they
+ * were spoken. One AI draft against the day's cap, like "Write it for me".
+ * Everything comes back as a draft the seller sees and changes before saving.
+ */
+const listingFromSpeech = async (req, res) => {
+  try {
+    const transcript = String(req.body?.transcript || '').trim().slice(0, 800);
+    if (transcript.length < 3) return res.status(400).json({ message: 'Say what the product is, its price and how many you have.' });
+    const exempt = await isExempt(req);
+    const usage = await usageFor(req.user._id, exempt);
+    if (!exempt && usage.remaining.texts === 0) {
+      return res.status(429).json({ message: `You have used today's ${CAPS.textsPerSellerPerDay} AI drafts. It resets at midnight.`, usage });
+    }
+    const { categoryId, imageUrl, imageDataUrl } = req.body || {};
+    const textModel = ['gemini', 'nano'].includes(req.body?.textModel) ? req.body.textModel : 'auto';
+    if (imageUrl && !ownImage(imageUrl)) return res.status(400).json({ message: 'That photo is not one of yours.' });
+    if (imageDataUrl && !isImageDataUrl(imageDataUrl)) return res.status(400).json({ message: 'That photo could not be read. JPEG, PNG or WebP under 5MB.' });
+
+    const { factsFromSpeech } = require('../utils/ai/speechListing');
+    const { facts, via } = await factsFromSpeech(transcript);
+
+    const browsable = await Category.getBrowsableIds();
+    const cats = await Category.find({ _id: { $in: browsable } }).select('name ancestors').lean();
+    const parentIds = new Set(cats.flatMap((x) => (x.ancestors || []).map(String)));
+    const leaves = cats.filter((x) => !parentIds.has(String(x._id)));
+    const chosen = categoryId ? cats.find((x) => String(x._id) === String(categoryId)) : null;
+
+    // The sentence minus its numbers: "1250 rupaye, 5 piece" are facts for the
+    // form, not words for the description (a first draft turned 5 in stock
+    // into "Set of 5").
+    const words = transcript
+      .replace(/(?:₹|rs\.?|rupees?|rupaye|रुपये|रुपए|mrp|एमआरपी|price|daam|dam|दाम|rate|quantity|stock|qty)\s*(?:hai|है|:)?\s*[\d,]+(?:\.\d+)?/gi, ' ')
+      .replace(/[\d,]+(?:\.\d+)?\s*(?:₹|rs\.?|rupees?|rupaye|रुपये|रुपए|piece|pieces|pcs|pc|nag|नग|पीस|units?|items?)/gi, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    const result = await draftListing({
+      name: facts.name || undefined,
+      keywords: words || transcript,
+      price: facts.price || undefined,
+      stock: facts.stock || undefined,
+      categoryName: chosen?.name,
+      categoryOptions: leaves.map((x) => x.name),
+      imageUrl,
+      imageDataUrl,
+      brand: req.seller?.businessName,
+      textModel,
+    });
+
+    // Even when every prose model is out, the numbers the person said still land in the form.
+    const draft = result.ok ? result.draft : { name: facts.name || '', description: '', tags: [], color: '', size: '', gender: '', ageGroup: '', categoryName: '' };
+    const match = leaves.find((x) => x.name === draft.categoryName);
+    if (result.ok) await AiUsage.record(req.user._id, { kind: 'text', provider: result.provider || 'gemini' });
+
+    res.json({
+      heard: transcript,
+      facts,
+      factsVia: via,
+      draft: {
+        ...draft,
+        categoryId: match ? match._id : null,
+        price: facts.price,
+        mrp: facts.mrp,
+        stock: facts.stock,
+        color: draft.color || facts.color || '',
+        size: draft.size || facts.size || '',
+      },
+      warnings: [...(result.ok ? result.warnings : [`The description could not be written right now (${result.reason}). The numbers are filled in - add the words yourself or try "Write it for me" later.`])],
+      writtenBy: !result.ok ? null : result.provider === 'pollinations' ? 'gpt-5.4-nano (Pollinations, Gemini\'s quota is used up today)' : 'Gemini',
+      usage: await usageFor(req.user._id, exempt),
+    });
+  } catch (error) {
+    sendError(res, error);
+  }
+};
+
+/**
  * POST /api/seller/ai/image
  * body: { mode: 'clean'|'lifestyle'|'angle', imageUrl, productName?, tier?: 'premium'|'standard' }
  *
@@ -500,4 +582,4 @@ Answer with ONE JSON object: {"keywords": ["..."], "titleTip": "one short senten
   }
 };
 
-module.exports = { getUsage, getCatalog, setLimits, writeListing, refineText, suggestKeywords, makeImage, attachToProduct, listDrafts, adminUsage, CAPS, ownImage };
+module.exports = { getUsage, getCatalog, setLimits, writeListing, listingFromSpeech, refineText, suggestKeywords, makeImage, attachToProduct, listDrafts, adminUsage, CAPS, ownImage };
