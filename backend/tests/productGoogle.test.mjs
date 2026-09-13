@@ -136,10 +136,13 @@ describe('the score', () => {
       brand: 'Charming Jewels',
       weight: 60,
       tags: ['kundan', 'choker', 'bridal'],
+      faqs: [{ q: 'Is it real kundan?', a: 'Glass kundan set in brass, as described.' }, { q: 'Will it tarnish?', a: 'Keep it dry and in its pouch; it keeps its shine for years.' }],
       needsSize: false,
     });
     expect(full.score).toBe(100);
     expect(full.fixes).toEqual([]);
+    // plan 2.32: without the Q&A the same listing is 95 - always out of 100, whatever the factors weigh
+    expect(scoreListing({ name: 'Green Kundan Choker Set for Weddings', images: ['a', 'b', 'c'], description: '<p>' + 'word '.repeat(95) + '</p><ul><li>one</li></ul>', category: 'x', color: 'Green', gender: 'female', ageGroup: 'adult', brand: 'Charming Jewels', weight: 60, tags: ['kundan', 'choker', 'bridal'], needsSize: false }).score).toBe(95);
     const partial = scoreListing({ name: 'Choker', images: ['a'], color: 'Green' });
     expect(partial.score).toBeGreaterThan(0);
     expect(partial.fixes[0]).toHaveProperty('points');

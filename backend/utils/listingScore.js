@@ -101,15 +101,22 @@ const CHECKS = [
   },
 ];
 
+/**
+ * Always out of 100. The factors' points add up to more than 100 since the
+ * Google-coach factors joined (plan 2.32); every consumer - Grow's "80 or
+ * more", the digest's "under 60", performance - reads a percentage, so the
+ * raw sum is scaled here and nowhere else.
+ */
 const scoreListing = (p = {}) => {
-  let score = 0;
+  let raw = 0;
   const fixes = [];
+  const total = CHECKS.reduce((s, c) => s + c.points, 0);
   for (const c of CHECKS) {
-    if (c.ok(p)) score += c.points;
+    if (c.ok(p)) raw += c.points;
     else fixes.push({ key: c.key, points: c.points, text: c.text, field: c.field });
   }
   fixes.sort((a, b) => b.points - a.points);
-  return { score, fixes, max: CHECKS.reduce((s, c) => s + c.points, 0) };
+  return { score: Math.round((raw / total) * 100), fixes, max: 100, raw, total };
 };
 
 module.exports = { scoreListing, CHECKS };
