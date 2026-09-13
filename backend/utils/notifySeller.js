@@ -20,7 +20,10 @@ const { frontendUrl } = require('./appUrl');
  *
  * Never throws - a mail failure must not fail the order.
  */
-const money = (n) => `₹${Number(n || 0).toLocaleString('en-IN')}`;
+// Customer-written text (names, reasons) is escaped before it enters HTML.
+const esc = (v) => String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+// Subjects are headers: one line, no markup.
+const plain = (v) => String(v ?? '').replace(/[\r\n]+/g, ' ').replace(/&amp;/g, '&').replace(/&lt;|&gt;|&quot;|&#39;/g, '');
 const panelUrl = (path) => `${frontendUrl()}/seller${path}`;
 
 const shell = (title, lines, href, label) => `
@@ -34,7 +37,7 @@ const shell = (title, lines, href, label) => `
 const itemsOf = (order, sellerId) =>
   (order.items || [])
     .filter((i) => String(i.sellerId) === String(sellerId))
-    .map((i) => `${i.name}${i.quantity > 1 ? ` × ${i.quantity}` : ''}`)
+    .map((i) => `${esc(i.name)}${i.quantity > 1 ? ` × ${Number(i.quantity)}` : ''}`)
     .join(', ');
 
 const sellerIdsOf = (order) => [...new Set((order.items || []).map((i) => String(i.sellerId)))];
@@ -56,13 +59,13 @@ const newOrder = async (orderId) => {
   for (const sellerId of sellerIdsOf(order)) {
     const what = itemsOf(order, sellerId);
     const cod = order.paymentMethod === 'cod';
-    const subject = `नया ऑर्डर · New order ${order.orderNumber} - ${what}`;
+    const subject = plain(`नया ऑर्डर · New order ${order.orderNumber} - ${what}`);
     const href = panelUrl(`/orders/${order._id}`);
     const html = shell(
       'नया ऑर्डर आया है 🎉',
       [
         `<b>${what}</b>`,
-        `${order.customerId?.name || 'Customer'} · ${cod ? 'Cash on delivery' : 'Paid online'}`,
+        `${esc(order.customerId?.name || 'Customer')} · ${cod ? 'Cash on delivery' : 'Paid online'}`,
         'पैक करके ऑर्डर पेज पर <b>Book courier</b> दबाएँ - राइडर आकर ले जाएगा। 2 दिन के अंदर भेजना है।',
         `Pack it and press <b>Book courier</b> on the order page - the rider collects. Dispatch within 2 working days.`,
       ],
@@ -83,14 +86,14 @@ const returnRequested = async (orderId, sellerId) => {
     'ग्राहक ने वापसी माँगी है · Return requested',
     [
       `<b>${what}</b> · ${order.orderNumber}`,
-      `कारण / reason: ${f.returnReason || '-'}${f.returnResolution === 'replacement' ? ' · exchange (same item again)' : ' · refund'}`,
+      `कारण / reason: ${esc(f.returnReason || '-')}${f.returnResolution === 'replacement' ? ' · exchange (same item again)' : ' · refund'}`,
       'अभी कुछ नहीं करना - पिकअप बुक हो रहा है। सामान पहुँचे तब ऑर्डर पेज से settle करें।',
       'Nothing to do yet - the pickup is being booked. When it reaches you, settle it from the order page.',
     ],
     href,
     'ऑर्डर देखें · See the order'
   );
-  await send(sellerId, `वापसी · Return requested ${order.orderNumber} - ${what}`, html, `Return requested on ${order.orderNumber}: ${what}. ${href}`);
+  await send(sellerId, plain(`वापसी · Return requested ${order.orderNumber} - ${what}`), html, `Return requested on ${order.orderNumber}: ${what}. ${href}`);
 };
 
 const disputeOpened = async (orderId) => {
@@ -104,14 +107,14 @@ const disputeOpened = async (orderId) => {
       'शिकायत आई है · A dispute is open',
       [
         `<b>${what}</b> · ${order.orderNumber}`,
-        `ग्राहक कहता है / customer says: “${f.disputeReason || '-'}”`,
+        `ग्राहक कहता है / customer says: “${esc(f.disputeReason || '-')}”`,
         '<b>72 घंटे</b> में अपनी बात और सबूत (कूरियर का प्रूफ, फोटो) ऑर्डर पेज पर जोड़ें। फैसला एडमिन करेगा।',
         'Add your side and evidence (courier proof, photos) on the order page within <b>72 hours</b>. An admin decides.',
       ],
       href,
       'जवाब दें · Reply now'
     );
-    await send(f.sellerId, `शिकायत · Dispute on ${order.orderNumber} - ${what}`, html, `Dispute opened on ${order.orderNumber}: ${what}. Reply within 72h: ${href}`);
+    await send(f.sellerId, plain(`शिकायत · Dispute on ${order.orderNumber} - ${what}`), html, `Dispute opened on ${order.orderNumber}: ${what}. Reply within 72h: ${href}`);
   }
 };
 

@@ -95,6 +95,25 @@ router.get('/customers', panel.adminCustomers);
 router.patch('/customers/:userId/block', panel.setCustomerBlocked);
 router.get('/nav-counts', panel.adminNavCounts);
 router.get('/category-requests', panel.adminCategoryRequests);
+// The Saturday mail, on demand: read it now, or send it now.
+router.get('/digest', async (req, res) => {
+  try {
+    const { gather, render } = require('../jobs/weeklyDigest');
+    const data = await gather();
+    const mail = render(data);
+    res.json({ data, subject: mail.subject, html: mail.html });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+router.post('/digest/send', async (req, res) => {
+  try {
+    const r = await require('../jobs/weeklyDigest').sendWeeklyDigest();
+    res.json({ sent: r.sent, subject: require('../jobs/weeklyDigest').render(r.data).subject });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
 router.patch('/category-requests/:requestId', panel.decideCategoryRequest);
 router.get('/google/traffic', require('../controllers/searchInsightsController').adminTraffic);
 router.get('/google/speed', require('../controllers/searchInsightsController').adminSpeed);

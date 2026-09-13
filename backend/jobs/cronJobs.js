@@ -30,6 +30,16 @@ exports.startCronJobs = () => {
     return;
   }
 
+  // Saturday 8 AM IST - the admin's week in one mail (jobs/weeklyDigest).
+  cron.schedule('0 8 * * 6', async () => {
+    try {
+      const r = await require('./weeklyDigest').sendWeeklyDigest();
+      console.log(`✅ Weekly digest sent to ${r.sent} admin(s)`);
+    } catch (err) {
+      console.error('❌ Weekly digest failed:', err.message);
+    }
+  }, { timezone: 'Asia/Kolkata' });
+
   // Daily at 9 AM - low stock alert.
   cron.schedule('0 9 * * *', async () => {
     try {
