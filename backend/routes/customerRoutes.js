@@ -78,6 +78,9 @@ router.post("/orders/:orderId/dispute", customerCtrl.raiseDispute);
 // Checking a coupon before committing. Never spends a use - the checkout
 // re-evaluates from scratch, so this is a preview and not a promise.
 router.post("/coupons/preview", customerCtrl.previewCoupon);
+const assist = require("../controllers/assistController");
+router.post("/assist", assist.customer);
+router.patch("/assist/:id", assist.rate);
 router.patch("/orders/:orderId/items/:itemId/cancel", cancelOrderItem);
 
 // Wishlist

@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { POLICY, businessFrom } from '@/config/policy';
 import { getSettings } from '@/lib/api';
+import HelpAsk from '@/components/assist/HelpAsk';
 
 export const metadata = {
   title: 'Help',
@@ -44,6 +45,8 @@ export default async function HelpPage() {
           </div>
         ))}
       </dl>
+
+      <HelpAsk />
 
       <section className="mt-8 rounded-xl border bg-card p-5">
         <h2 className="font-semibold">Talk to a person</h2>

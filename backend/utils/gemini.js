@@ -73,7 +73,10 @@ const fallbackOr = async (failure, prompt, opts) => {
 Answer with ONE JSON object only, matching this JSON schema exactly (no prose, no markdown):
 ${JSON.stringify(opts.responseSchema)}`
     : '';
-  const second = await pollinationsText(prompt + schemaNote, {
+  // The system instruction folds into the prompt for a model without one.
+  const second = await pollinationsText((opts.system ? `${opts.system}
+
+` : '') + prompt + schemaNote, {
     imageUrl: opts.imageUrl,
     imageDataUrl: opts.imageDataUrl,
     json: Boolean(opts.responseSchema),
@@ -81,7 +84,7 @@ ${JSON.stringify(opts.responseSchema)}`
   });
   if (!second.ok) return { ...failure, reason: `${failure.reason}; fallback: ${second.reason}` };
   console.warn(`Gemini unavailable (${failure.reason.slice(0, 60)}) - answered by Pollinations ${second.model}`);
-  return second;
+  return { ...second, fellBack: true };
 };
 
 const generate = async (prompt, opts = {}) => {
@@ -130,6 +133,10 @@ const generate = async (prompt, opts = {}) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ parts }],
+          // Google Search grounding when asked for (opts.grounded): the model
+          // may search and cite; the free tier allows a modest daily number.
+          ...(opts.grounded ? { tools: [{ google_search: {} }] } : {}),
+          ...(opts.system ? { systemInstruction: { parts: [{ text: opts.system }] } } : {}),
           generationConfig: {
             ...(opts.responseSchema
               ? { responseMimeType: 'application/json', responseSchema: opts.responseSchema }
@@ -164,7 +171,7 @@ const generate = async (prompt, opts = {}) => {
         .join('')
         .trim();
 
-      if (text) return { ok: true, text };
+      if (text) return { ok: true, text, model };
 
       /*
        * A 200 with no text is a refusal, usually a safety block. Retrying the
@@ -196,4 +203,89 @@ const generate = async (prompt, opts = {}) => {
   return { ok: false, reason: 'Gemini did not answer' };
 };
 
-module.exports = { generate, DEFAULT_MODEL };
+/**
+ * Ask Gemini for text while letting it call our functions on the way.
+ *
+ * The assistant's road. The model gets the declarations of a few
+ * read-only tools (getOrder, myPayouts, searchKnowledge …); when it answers
+ * with a functionCall part instead of text, the caller's `run(name, args)`
+ * is invoked, its result goes back as a functionResponse, and the model
+ * continues - up to `maxRounds` times, so a stuck model cannot loop.
+ *
+ * The model's own turn is echoed back whole (thought signatures included -
+ * the current models refuse a tool reply without them). No fallback here:
+ * the second provider has no function calling, so the caller decides what
+ * to do with the prefetched context when this returns not-ok.
+ *
+ * @param {Array<{role:'user'|'model', parts:Array}>} contents
+ * @param {object} opts  system, declarations, run(name,args)=>Promise<object>, model, maxRounds, temperature
+ * @returns {Promise<{ok:true,text:string,model:string,calls:string[]}|{ok:false,reason:string,status?:number}>}
+ */
+const generateWithTools = async (contents, opts = {}) => {
+  const key = process.env.GEMINI_API_KEY;
+  if (!key) return { ok: false, reason: 'GEMINI_API_KEY is not set' };
+  const model = opts.model || DEFAULT_MODEL;
+  const maxRounds = opts.maxRounds ?? 6;
+  const calls = [];
+  const thread = [...contents];
+
+  for (let round = 0; round <= maxRounds; round += 1) {
+    let response;
+    let data;
+    for (let attempt = 1; attempt <= 3; attempt += 1) {
+      try {
+        response = await fetch(`${API}/${model}:generateContent?key=${key}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: thread,
+            ...(opts.system ? { systemInstruction: { parts: [{ text: opts.system }] } } : {}),
+            ...(opts.declarations?.length ? { tools: [{ functionDeclarations: opts.declarations }], toolConfig: { functionCallingConfig: { mode: 'AUTO' } } } : {}),
+            generationConfig: { temperature: opts.temperature ?? 0.4, maxOutputTokens: opts.maxOutputTokens ?? 8192 },
+          }),
+        });
+      } catch (networkErr) {
+        if (attempt === 3) return { ok: false, reason: `Could not reach Gemini: ${networkErr.message}` };
+        await sleep(attempt * 1500);
+        continue;
+      }
+      if (response.ok) {
+        data = await response.json().catch(() => null);
+        break;
+      }
+      const body = await response.text().catch(() => '');
+      if (!RETRYABLE.has(response.status) || response.status === 429 || attempt === 3) {
+        return { ok: false, status: response.status, reason: `Gemini said ${response.status}: ${body.slice(0, 200)}` };
+      }
+      await sleep(attempt * 1500);
+    }
+
+    const content = data?.candidates?.[0]?.content;
+    const parts = content?.parts || [];
+    const fnCalls = parts.filter((p) => p.functionCall);
+    if (!fnCalls.length) {
+      const text = parts.map((p) => p.text || '').join('').trim();
+      if (text) return { ok: true, text, model, calls };
+      return { ok: false, reason: `Gemini returned nothing (${data?.candidates?.[0]?.finishReason || 'no reason given'})` };
+    }
+    if (round === maxRounds) return { ok: false, reason: 'Gemini kept asking for tools and never answered' };
+
+    thread.push({ role: 'model', parts });
+    const responses = [];
+    for (const p of fnCalls) {
+      const { name, args } = p.functionCall;
+      calls.push(name);
+      let result;
+      try {
+        result = await opts.run(name, args || {});
+      } catch (err) {
+        result = { error: err.message };
+      }
+      responses.push({ functionResponse: { name, response: result && typeof result === 'object' ? result : { result } } });
+    }
+    thread.push({ role: 'user', parts: responses });
+  }
+  return { ok: false, reason: 'Gemini did not answer' };
+};
+
+module.exports = { generate, generateWithTools, DEFAULT_MODEL };

@@ -85,6 +85,9 @@ router.patch('/coupons/:couponId/toggle', requireApprovedSeller, panel.toggleSel
 router.get('/performance', requireApprovedSeller, panel.sellerPerformance);
 router.get('/nav-counts', panel.sellerNavCounts);
 router.get('/grow', requireApprovedSeller, require('../controllers/growController').sellerGrow);
+const assist = require('../controllers/assistController');
+router.post('/assist', requireApprovedSeller, assist.seller);
+router.patch('/assist/:id', assist.rate);
 router.get('/category-requests', requireApprovedSeller, panel.myCategoryRequests);
 router.post('/category-requests', requireApprovedSeller, panel.requestCategory);
 router.post('/ai/listing', requireApprovedSeller, ai.writeListing);

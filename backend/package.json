@@ -15,7 +15,8 @@
     "sitemap": "node generateSitemap.js",
     "images": "node addProductImages.js",
     "backup": "node backupDb.js",
-    "search-index": "node ensureSearchIndex.js"
+    "search-index": "node ensureSearchIndex.js",
+    "knowledge": "node indexKnowledge.js"
   },
   "keywords": [],
   "author": "",

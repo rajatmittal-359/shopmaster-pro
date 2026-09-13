@@ -95,7 +95,7 @@ app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/seller', sellerRoutes);
 app.use(['/api/customer/checkout-cod', '/api/customer/checkout-online'], checkoutLimiter);
-app.use(['/api/seller/ai', '/api/admin/ai'], aiLimiter);
+app.use(['/api/seller/ai', '/api/admin/ai', '/api/seller/assist', '/api/admin/assist', '/api/customer/assist'], aiLimiter);
 app.use('/api/customer', customerRoutes);
 app.use('/api/public/products', publicCatalogue, productRoutes);
 

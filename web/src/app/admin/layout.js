@@ -57,7 +57,10 @@ const GROUPS = [
   },
   {
     label: "AI",
-    items: [{ href: "/admin/ai", label: "AI Studio", icon: "Sparkles" }],
+    items: [
+      { href: "/admin/ask", label: "Ask ShopMaster", icon: "MessageCircleQuestion" },
+      { href: "/admin/ai", label: "AI Studio", icon: "Sparkles" },
+    ],
   },
   {
     label: "Platform",

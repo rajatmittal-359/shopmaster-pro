@@ -1,0 +1,63 @@
+/**
+ * What ShopMaster Pro is and how it works - the assistant's ground truth.
+ *
+ * Written for a model, in plain sentences, from the code that actually runs
+ * (cancelOrder, payout, deliveryTruth, sellerRules, the policies). Numbers
+ * come from the live rulebook at call time; nothing here is a promise the
+ * platform does not keep. When this and the code disagree, the code is
+ * right and this file has a bug.
+ */
+const RULES = require('./sellerRules');
+
+const knowledge = () => `
+ABOUT
+- ShopMaster Pro is a multi-seller marketplace run from Jaipur, India. It sells anything; the frame never names a category. The operator's own shop, Charming Jewels (jewellery, Devi Nagar, Jaipur), is one seller on it. The admin is the platform team.
+- Two accounts, two roles: the admin runs the platform; a seller runs one shop; a customer buys. One person may hold more than one role and switches with the Shopping | Selling | Admin control in the header.
+
+ORDERS
+- A customer pays online (Razorpay: UPI, cards, netbanking, wallets) or chooses cash on delivery (COD). A prepaid order that was never paid is an abandoned checkout, not an order - sellers never see it.
+- An order may contain items from several sellers; each seller has their own parcel ("fulfilment") with its own status: pending → processing → shipped → delivered; or cancelled; or returned. The order's overall status follows its parcels.
+- The seller must dispatch within ${RULES.dispatchDays} working days. On the order page, "Book courier and ship" books Shiprocket (pan-India) or Borzo (same-day, within Jaipur) and the rider collects from the seller's pickup address; the rider brings the label. The customer is emailed at each step and can track scans on their order page.
+- Stock is reserved when an order is placed and consumed when it is paid/shipped; a cancel releases it.
+
+CANCELLATIONS
+- A customer can cancel before the parcel is handed to the courier, from their order page; a prepaid cancel is refunded to the original method within 5–7 working days.
+- A seller may cancel their own lines before shipping. ${RULES.cancelFreePer30Days} seller cancels in a rolling 30 days are free; each further one costs ₹${RULES.cancelPenalty}, deducted from the next payout and shown on the payout line. Above ${RULES.cancelRateReviewPct}% of orders cancelled by the seller in 30 days the account is reviewed. The platform never charges a cancel that the customer asked for or that the platform made.
+
+RETURNS AND EXCHANGES
+- The customer has ${RULES.returnWindowDays} days from delivery to ask for a return (refund) or an exchange (same item again), from their order page. A reverse pickup is booked; the rider brings the label; the customer prints nothing.
+- Return stages: requested → picked (on its way back) → received (seller has it) → settled (refund issued, or replacement shipped free). A seller may refuse a return that arrives wrong or used, with photos - an admin then decides.
+- Change-of-mind returns: the customer pays the return courier; if the fault is the seller's (wrong, damaged, not as described), the platform/seller pays.
+
+DISPUTES
+- "Something's wrong" on the customer's order page opens a dispute (e.g. "tracking says delivered but nothing came"). The seller has ${RULES.disputeResponseHours} hours to add their side and evidence (courier proof of delivery, photos). An admin - never the seller, never the customer - decides, weighing courier scans and evidence, and the result is written on the order for both. Indian consumer forums decide such cases on evidence the same way.
+
+PAYOUTS AND MONEY
+- Money is per seller. A seller's payout for a parcel is released ${RULES.payoutAfterDeliveryDays} days after delivery (the return window has to close). Payouts go to the bank account the seller entered under Payments; each payout lists every order line, the commission, and any deduction with its reason.
+- Commission: ${RULES.defaultCommissionPct}% of the item price by default; the platform's own shop pays 0%; an admin may set a different rate for a shop. There is no listing fee, no monthly fee; shipping is not commissioned. Neither the platform nor the house shop is GST-registered; no GST is added to charges.
+- Nothing is refunded to a customer "immediately" - refunds move on a schedule and on evidence; the platform holds the money until the return or dispute is settled.
+
+SELLER RULES (Seller Agreement v${RULES.version}, effective ${RULES.effectiveFrom})
+- Every seller accepts the agreement at signup and again whenever a rule changes. The agreement is at /selling-policy; the seller panel's Help & rules page has the numbers.
+- Honest listings: real photos of the actual item, the MRP as printed, correct colour/size. Misrepresentation is a ground for suspension; a suspended seller's products leave the storefront the same minute.
+
+THE SELLER PANEL (what a seller can do themselves)
+- Home (next thing to do, setup progress), Orders (pack, book courier, mark delivered), Returns & issues (returns, disputes with the 72-hour clock, failed deliveries), Products (add from a photo - the AI writes the listing; the Listing Quality score shows the three fixes; photo studio; stock), Promotions (their own coupons, live at checkout and on Google Shopping overnight), Get found on Google (ten measured steps + Google Business Profile guide), Payments (bank account, payouts), Performance (cancel rate, dispatch time, NDR/RTO, rating, listing quality against the rulebook), Settings (pickup address, free delivery, About, links, city), Learn (five lessons), Help & rules. A Hindi toggle sits in the panel bar.
+- A seller cannot create a category (they request one under the category picker; the admin creates it), cannot see other sellers' data, cannot change commission.
+
+THE ADMIN (what the platform team does)
+- Approves sellers, decides disputes, releases payouts, creates coupons and categories, watches every product's listing quality and Google verdict (/admin/google), blocks abusive customers, edits the platform settings (identity, rulebook, switches like COD on/off, announcement bar). The admin gets a Saturday-morning digest email.
+
+CUSTOMER PROMISES
+- Prices include taxes. Delivery pan-India by courier; same-day in Jaipur when the seller is in Jaipur too. Returns ${RULES.returnWindowDays} days. Refunds 5–7 working days. Reviews only from delivered orders - every review is a verified purchase. Contact: /help and /contact.
+
+WHERE THINGS ARE (paths to point people to - use the asker's own panel)
+- Customer: /orders (my orders, track, cancel, return, "Something's wrong"), /orders/<orderNumber>, /account, /addresses, /wishlist, /cart, /coupons, /reviews, /help (FAQ + contact), /contact, /refund-policy, /shipping-policy, /terms, /privacy, /sell (become a seller).
+- Seller: /seller (home), /seller/orders (pack, book courier), /seller/issues (returns, disputes, failed deliveries), /seller/products, /seller/products/studio (photo studio), /seller/products/stock, /seller/promotions, /seller/grow (Get found on Google), /seller/payments (bank, payouts), /seller/performance, /seller/settings, /seller/learn, /seller/help (rules), /seller/ask (this assistant).
+- Admin: /admin (overview), /admin/orders (orders AND disputes - decisions are made here), /admin/sellers (approve, commission, suspend), /admin/payouts, /admin/products (every listing's quality), /admin/customers (block), /admin/categories (+ seller requests), /admin/coupons, /admin/inventory, /admin/google (Search Console, Merchant verdicts, traffic, speed), /admin/settings (identity, rulebook, switches, announcement), /admin/ask (this assistant + its log).
+
+GOOGLE AND THE OUTSIDE WORLD
+- The platform runs Search Console, the Merchant Center feed (Google Shopping), Analytics, structured data, the sitemap and Google Customer Reviews for every seller automatically. The seller's part: complete listings, real photos, search words, an About, their Instagram/Google Business Profile links, city shown, reviews, a video, a promotion, and their own Google Business Profile - all on the Get found on Google page.
+`.trim();
+
+module.exports = { knowledge };

@@ -61,6 +61,7 @@ const GROUPS = [
       { href: '/seller/settings', label: 'Settings', icon: 'Settings' },
       { href: '/seller/learn', label: 'Learn', icon: 'GraduationCap' },
       { href: '/seller/help', label: 'Help & rules', icon: 'LifeBuoy' },
+      { href: '/seller/ask', label: 'Ask ShopMaster', icon: 'MessageCircleQuestion' },
     ],
   },
 ];
