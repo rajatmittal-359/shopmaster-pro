@@ -94,6 +94,14 @@ router.get('/products', panel.adminProducts);
 router.get('/customers', panel.adminCustomers);
 router.patch('/customers/:userId/block', panel.setCustomerBlocked);
 router.get('/nav-counts', panel.adminNavCounts);
+// Fair Returns + the decision agent (plan §4.39, 2.19)
+const fair = require('../controllers/fairReturnsController');
+router.get('/customers/:id/risk', fair.customerRisk);
+router.patch('/customers/:id/risk', fair.setCustomerRisk);
+router.get('/sellers/:userId/risk', fair.sellerRisk);
+router.post('/orders/:orderId/return/approve', fair.approveReturn);
+router.get('/orders/:orderId/dispute-brief', fair.disputeBrief);
+
 const assist = require('../controllers/assistController');
 router.post('/assist', assist.admin);
 router.patch('/assist/:id', assist.rate);

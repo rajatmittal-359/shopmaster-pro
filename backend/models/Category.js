@@ -48,6 +48,22 @@ const categorySchema = new mongoose.Schema(
      * Set from config/taxonomy.js, editable by the admin.
      */
     googleProductCategory: { type: String, trim: true, default: null },
+
+    /**
+     * Fair Returns (plan §4.39). What a product in this category may promise:
+     *   R  return for refund or exchange (7 days, tag intact, unused)
+     *   X  exchange only
+     *   N  no return - hygiene (pierced jewellery, innerwear, cosmetics),
+     *      custom / engraved, made-to-order, perishable
+     * `returnMode` is the default a new product gets; `returnModesAllowed` is
+     * the set a seller may choose from. Whatever the mode, a wrong, damaged,
+     * defective or not-as-described item is always returnable - that is the
+     * law (Consumer Protection (E-Commerce) Rules 2020), not a setting.
+     */
+    returnMode: { type: String, enum: ['R', 'X', 'N'], default: 'R' },
+    returnModesAllowed: { type: [String], default: ['R', 'X', 'N'] },
+    /** True once an admin chose the mode by hand; the backfill script then leaves it alone. */
+    returnModeSetByAdmin: { type: Boolean, default: false },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User'

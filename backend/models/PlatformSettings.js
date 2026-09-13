@@ -61,6 +61,13 @@ const settingsSchema = new mongoose.Schema(
       payoutAfterDeliveryDays: { type: Number, default: 7, min: 0 },
       disputeResponseHours: { type: Number, default: 72, min: 1 },
       defaultCommissionPct: { type: Number, default: 8, min: 0, max: 50 },
+      // Fair Returns (plan §4.39)
+      damagedClaimHours: { type: Number, default: 48, min: 1 },
+      receiptCheckHours: { type: Number, default: 48, min: 1 },
+      goodwillCapRupees: { type: Number, default: 500, min: 0 },
+      otpDeliveryAbove: { type: Number, default: 2000, min: 0 },
+      unboxingVideoAbove: { type: Number, default: 2000, min: 0 },
+      adminReviewAbove: { type: Number, default: 5000, min: 0 },
     },
 
     shop: {

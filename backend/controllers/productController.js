@@ -446,7 +446,10 @@ exports.getProduct = async (req, res) => {
     }
 
     const [withShopName] = await withShop([product]);
-    res.json({ product: withShopName, variants });
+    // Fair Returns: the promise the page shows before anyone buys.
+    const { effectiveReturnMode, MODE_LABEL } = require('../utils/returnPolicy');
+    const returnMode = effectiveReturnMode(product, product.category);
+    res.json({ product: { ...withShopName, returnMode, returnModeLabel: MODE_LABEL[returnMode] }, variants });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

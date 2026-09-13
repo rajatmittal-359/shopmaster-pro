@@ -196,6 +196,13 @@ const productSchema = new mongoose.Schema(
      * reads this, and a deleted product is also marked inactive, so those
      * checks stay correct for both cases.
      */
+    /**
+     * The seller's return promise for this item, inside what the category
+     * allows (Category.returnModesAllowed). null = the category's default.
+     * Read through utils/returnPolicy.effectiveReturnMode, never directly.
+     */
+    returnMode: { type: String, enum: ['R', 'X', 'N', null], default: null },
+
     isActive: {
       type: Boolean,
       default: true,

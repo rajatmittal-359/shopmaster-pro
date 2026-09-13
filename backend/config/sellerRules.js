@@ -51,6 +51,22 @@ const RULES = {
   disputeResponseHours: 72,
   /** The platform's share of each sale, unless an admin set a different rate for the shop. */
   defaultCommissionPct: 8,
+
+  /*
+   * Fair Returns (plan §4.39, 13 Sep 2026). The numbers both sides are held to.
+   */
+  /** Hours after delivery in which "damaged / wrong / defective" may be claimed, with photos. */
+  damagedClaimHours: 48,
+  /** Hours the seller has, after a return arrives, to mark it OK or not-OK with photos. */
+  receiptCheckHours: 48,
+  /** Below this amount, a return with no evidence either way is refunded as goodwill - once per customer per 90 days. */
+  goodwillCapRupees: 500,
+  /** At or above this order value the courier delivers against an OTP. */
+  otpDeliveryAbove: 2000,
+  /** At or above this amount an unboxing video is required for a wrong / missing item claim. */
+  unboxingVideoAbove: 2000,
+  /** At or above this amount every return and dispute goes to the admin, whatever the evidence. */
+  adminReviewAbove: 5000,
 };
 
 const DEFAULTS = Object.freeze({ ...RULES });

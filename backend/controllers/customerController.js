@@ -188,6 +188,12 @@ exports.checkout = async (req, res) => {
   if (live && live.shop && live.shop.codEnabled === false) {
     return res.status(400).json({ success: false, message: 'Cash on delivery is paused right now - please pay online.' });
   }
+  // Fair Returns: a customer an admin put on prepaid-only pays online. The
+  // reason was shown on their account; it is repeated here so the refusal
+  // is never a mystery at the last step.
+  if (req.user?.risk?.level === 'prepaid_only') {
+    return res.status(400).json({ success: false, message: `Cash on delivery is not available on this account${req.user.risk.reason ? ` (${req.user.risk.reason})` : ''} - please pay online.` });
+  }
 
   const session = await mongoose.startSession();
   session.startTransaction();
@@ -804,12 +810,61 @@ exports.cancelOrderItem = async (req, res) => {
         });
       }
 
+      /*
+       * Fair Returns (plan §4.39). When the request says WHAT KIND of return
+       * it is, the policy runs: the item's mode (R/X/N from product/category),
+       * the kind's window and evidence, the tag confirmation, the customer's
+       * standing. Without a kind (the old React app, until the cutover) the
+       * request is taken as before - the cutover list makes `kind` required.
+       */
+      const kind = req.body?.kind ? String(req.body.kind) : null;
+      let evidence = [];
+      let needsApproval = false;
+      let finalResolution = resolution;
+      if (kind) {
+        const { evaluateReturnRequest, effectiveReturnMode } = require('../utils/returnPolicy');
+        const { uploadEvidence } = require('../utils/evidence');
+        const Category = require('../models/Category');
+        const ids = order.items.map((i) => i.productId).filter(Boolean);
+        const products = ids.length ? await Product.find({ _id: { $in: ids } }).select('category returnMode').lean() : [];
+        const cats = await Category.find({ _id: { $in: [...new Set(products.map((p) => String(p.category)))] } }).select('returnMode returnModesAllowed').lean();
+        const catById = new Map(cats.map((c) => [String(c._id), c]));
+        const prodById = new Map(products.map((p) => [String(p._id), p]));
+        // The strictest mode among the parcel's items decides (one N item makes the parcel N for change of mind).
+        const rank = { R: 0, X: 1, N: 2 };
+        let mode = 'R';
+        for (const f of eligible) {
+          for (const it of order.items.filter((i) => String(i.sellerId) === String(f.sellerId))) {
+            const p = prodById.get(String(it.productId));
+            const m = effectiveReturnMode(p, p ? catById.get(String(p.category)) : null);
+            if (rank[m] > rank[mode]) mode = m;
+          }
+        }
+        const amount = eligible.reduce((sum, f) => sum + order.items.filter((i) => String(i.sellerId) === String(f.sellerId)).reduce((s, i) => s + Number(i.price || 0) * Number(i.quantity || 1), 0), 0);
+        const deliveredAt = eligible.map((f) => f.deliveredAt).filter(Boolean).sort((a, b) => new Date(b) - new Date(a))[0] || order.deliveredAt || order.updatedAt;
+        const photos = Array.isArray(req.body?.evidence) ? req.body.evidence : [];
+        const verdict = evaluateReturnRequest({ mode, kind, resolution, deliveredAt, amount, evidenceCount: photos.length, tagIntact: Boolean(req.body?.tagIntact), riskLevel: req.user?.risk?.level || 'none' });
+        if (!verdict.ok) return res.status(400).json({ message: verdict.message, mode });
+        const up = await uploadEvidence(photos, 'shopmaster-returns', { max: 3 });
+        if (!up.ok) return res.status(400).json({ message: up.message });
+        evidence = up.urls;
+        needsApproval = verdict.needsApproval;
+        finalResolution = verdict.resolution;
+      }
+
       const requestedAt = new Date();
       eligible.forEach((f) => {
         f.returnStage = 'requested';
         f.returnRequestedAt = requestedAt;
         f.returnReason = reason;
-        f.returnResolution = resolution;
+        f.returnResolution = finalResolution;
+        if (kind) {
+          f.returnKind = kind;
+          f.returnEvidence = evidence;
+          f.returnTagIntact = Boolean(req.body?.tagIntact);
+          f.returnNeedsApproval = needsApproval;
+          f.returnApprovedAt = null;
+        }
 
         /*
          * A finished exchange is cleared so the payout hold reads the NEW
@@ -830,10 +885,12 @@ exports.cancelOrderItem = async (req, res) => {
 
       res.json({
         success: true,
-        message:
-          resolution === 'replacement'
+        message: needsApproval
+          ? 'Return requested. An admin checks this one first; you will hear within a day.'
+          : finalResolution === 'replacement'
             ? 'Replacement requested. Once the item is back with the seller, a new one is sent out.'
             : 'Return requested. Once the item is back with the seller your refund is processed.',
+        needsApproval,
         order,
       });
     } catch (err) {

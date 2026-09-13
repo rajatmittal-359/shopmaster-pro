@@ -65,6 +65,12 @@ router.post(
   require('../controllers/sellerController').settleReturn
 );
 
+// Fair Returns (plan §4.39): evidence on the seller's side.
+const fair = require('../controllers/fairReturnsController');
+router.post('/orders/:orderId/pack-proof', requireApprovedSeller, fair.packProof);
+router.post('/orders/:orderId/receipt-check', requireApprovedSeller, fair.receiptCheck);
+router.post('/orders/:orderId/dispute/respond', requireApprovedSeller, fair.disputeRespond);
+
 /*
  * The AI a seller can reach. Approved sellers only - these spend a free
  * allowance that belongs to the whole platform, and an unapproved account has

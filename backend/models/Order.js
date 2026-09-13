@@ -237,6 +237,31 @@ const fulfilmentSchema = new mongoose.Schema(
     returnReason: { type: String, default: null },
     returnNote: { type: String, default: null },
 
+    /*
+     * Fair Returns (plan §4.39): the same return, with its evidence.
+     *
+     *   returnKind        why - decides the evidence needed, the window and who
+     *                     pays the courier (utils/returnPolicy)
+     *   returnEvidence    the customer's photos / video at the request
+     *   returnTagIntact   the customer confirmed the tag/seal is on (change of mind)
+     *   returnNeedsApproval  a customer under 'returns_approval' risk: the seller
+     *                     cannot book the pickup until an admin approves
+     *   receiptCheck      the seller's verdict when it comes back, with photos,
+     *                     inside receiptCheckHours. not-OK opens a dispute; the
+     *                     refund waits for the admin
+     */
+    returnKind: { type: String, enum: ['damaged', 'wrong', 'defective', 'not_as_described', 'change_of_mind', 'size', null], default: null },
+    returnEvidence: { type: [String], default: [] },
+    returnTagIntact: { type: Boolean, default: null },
+    returnNeedsApproval: { type: Boolean, default: false },
+    returnApprovedAt: { type: Date, default: null },
+    receiptCheck: {
+      ok: { type: Boolean, default: null },
+      photos: { type: [String], default: [] },
+      note: { type: String, default: null },
+      at: { type: Date, default: null },
+    },
+
     /**
      * What the customer asked for when they opened the return: their money
      * back, or the same item again.
@@ -312,6 +337,36 @@ const fulfilmentSchema = new mongoose.Schema(
     disputeRaisedAt: { type: Date, default: null },
     disputeResolvedAt: { type: Date, default: null },
     disputeResolution: { type: String, default: null },
+    /** Who opened it: the customer (nothing came / wrong item) or the seller (the return came back wrong). */
+    disputeRaisedBy: { type: String, enum: ['customer', 'seller', null], default: null },
+    /** The seller's side, inside disputeResponseHours: a note and photos / the courier's proof. */
+    disputeSellerNote: { type: String, default: null },
+    disputeSellerEvidence: { type: [String], default: [] },
+    disputeSellerRespondedAt: { type: Date, default: null },
+    /**
+     * The decision agent's brief (plan 2.19): what each side has shown, what
+     * the rulebook says, a recommendation and its confidence. Drafted for
+     * the admin; the admin decides. Kept so the log shows what was advised.
+     */
+    disputeBrief: {
+      text: { type: String, default: null },
+      recommendation: { type: String, enum: ['customer', 'seller', 'partial', 'need_more', null], default: null },
+      confidence: { type: Number, default: null },
+      model: { type: String, default: null },
+      at: { type: Date, default: null },
+    },
+
+    /**
+     * Pack proof: the seller's photo of the packed item with its tag, taken
+     * before "Book courier". The seller's strongest evidence in a "damaged /
+     * wrong / empty box" claim - and the one thing a shopkeeper can do in one
+     * tap that Myntra and Flipkart spend QC teams on.
+     */
+    packProof: {
+      url: { type: String, default: null },
+      publicId: { type: String, default: null },
+      at: { type: Date, default: null },
+    },
 
     // Courier details for this seller's parcel.
     shippingProvider: {

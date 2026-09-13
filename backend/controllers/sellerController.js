@@ -37,6 +37,20 @@ const sellerActiveFilter = (sellerId) => ({ ...sellerCatalogueFilter(sellerId), 
  * own fulfilmentFor helper. Write paths, which always hold a real document,
  * still use order.fulfilmentFor.
  */
+/**
+ * Fair Returns: a product's return mode must be one the category allows.
+ * Empty means "the category's default", which is always allowed.
+ */
+const returnModeError = async (mode, categoryId) => {
+  if (mode === undefined || mode === null || mode === '') return null;
+  if (!['R', 'X', 'N'].includes(mode)) return 'returnMode must be R (return), X (exchange only) or N (no return)';
+  if (!categoryId) return null;
+  const cat = await Category.findById(categoryId).select('returnModesAllowed name').lean();
+  const allowed = cat?.returnModesAllowed?.length ? cat.returnModesAllowed : ['R', 'X', 'N'];
+  if (!allowed.includes(mode)) return `${cat?.name || 'This category'} allows only: ${allowed.map((m) => ({ R: 'return', X: 'exchange only', N: 'no return' })[m]).join(', ')}.`;
+  return null;
+};
+
 const fulfilmentOf = (order, sellerId) =>
   (order.fulfilments || []).find((f) => String(f.sellerId) === String(sellerId));
 
@@ -223,12 +237,15 @@ exports.addProduct = async (req, res) => {
       ageGroup,
       size,
       variantGroupId,
+      returnMode,
     } = req.body;
 
     const categoryError = await validateLeafCategory(category);
     if (categoryError) {
       return res.status(400).json({ message: categoryError });
     }
+    const modeError = await returnModeError(returnMode, category);
+    if (modeError) return res.status(400).json({ message: modeError });
 
     const product = new Product({
       name,
@@ -260,6 +277,8 @@ exports.addProduct = async (req, res) => {
       ageGroup,
       size,
       variantGroupId,
+      // Fair Returns: the seller's promise, inside the category's allowance; null = the category's default.
+      returnMode: returnMode || null,
     });
 
     // Check the details BEFORE spending anything on the pictures. Uploading
@@ -337,6 +356,7 @@ exports.updateProduct = async (req, res) => {
       freeShipping,
       salePrice,
       saleEndsAt,
+      returnMode,
     } = req.body;
 
     // Scoped to the catalogue: a deleted product must not be editable. It
@@ -371,6 +391,11 @@ exports.updateProduct = async (req, res) => {
     if (category) product.category = category;
     if (price !== undefined) product.price = price;
     if (stock !== undefined) product.stock = stock;
+    if (returnMode !== undefined) {
+      const modeError = await returnModeError(returnMode, category || product.category);
+      if (modeError) return res.status(400).json({ message: modeError });
+      product.returnMode = returnMode || null;
+    }
     if (isActive !== undefined) product.isActive = isActive;
     if (typeof lowStockThreshold === 'number') {
   product.lowStockThreshold = lowStockThreshold;
@@ -1466,6 +1491,10 @@ exports.settleReturn = async (req, res) => {
         return res
           .status(400)
           .json({ success: false, message: 'There is no open return here' });
+      }
+      if (fulfilment.returnNeedsApproval && !fulfilment.returnApprovedAt) {
+        // Fair Returns: this customer's returns wait for an admin's yes.
+        return res.status(409).json({ success: false, message: 'This return is waiting for the admin to approve it - you will be told when to book the pickup.' });
       }
       if (fulfilment.returnAwb || fulfilment.returnOrderId) {
         // Booking twice sends two riders and spends the fee twice.

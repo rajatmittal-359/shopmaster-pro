@@ -82,6 +82,20 @@
          * were never exempt.
          */
         /**
+         * Fair Returns (plan §4.39): a customer's standing, set by an admin from
+         * the computed risk (return %, refused returns, lost disputes, RTO):
+         *   none | warn | prepaid_only (COD refused) | returns_approval (every
+         *   return waits for an admin). Blocking is isBlocked below. The reason is
+         *   shown to the customer - a consequence with no reason is a grievance.
+         */
+        risk: {
+          level: { type: String, enum: ['none', 'warn', 'prepaid_only', 'returns_approval'], default: 'none' },
+          reason: { type: String, default: null },
+          setAt: { type: Date, default: null },
+          setBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+        },
+
+        /**
          * Set by an admin from Customers. A blocked account cannot sign in
          * or order; nothing is deleted, so the order history stays readable.
          */
