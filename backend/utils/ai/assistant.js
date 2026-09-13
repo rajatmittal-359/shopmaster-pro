@@ -10,7 +10,7 @@ const { computePerformance } = require('../performance');
 const { getPayableSummary } = require('../payout');
 const { retrieve, asContext } = require('./retrieve');
 const { declarationsFor, runTool, lineOrder, money, when, ORDER_RE, REAL_ORDER } = require('./tools');
-const { detectScript, toHinglish, DEVANAGARI } = require('./hinglish');
+const { detectScript, rewriteScript } = require('./hinglish');
 
 /**
  * Ask ShopMaster - the assistant for sellers, the admin and customers.
@@ -95,10 +95,10 @@ const contextFor = async ({ role, user, question }) => {
 /** The site's language chip → how the answer is written. */
 const LANGUAGE_RULE = {
   hi: 'ANSWER IN HINDI, DEVANAGARI SCRIPT. Simple everyday Hindi; the English words shopkeepers use stay, written in Devanagari where natural (ऑर्डर, पेमेंट, कूरियर, Google). Numbers with ₹. Paths and order numbers unchanged.',
-  hg: 'ANSWER IN HINGLISH: Hindi in roman letters, the way people write on WhatsApp ("Aapka payment 18 Sept ko aayega"). No Devanagari at all. English words stay as they are. Numbers with ₹. Paths and order numbers unchanged.',
+  hg: 'ANSWER IN HINGLISH (whatever language earlier messages used): Hindi in roman letters, the way people write on WhatsApp ("Aapka payment 18 Sept ko aayega"). No Devanagari at all. English words stay as they are. Numbers with ₹. Paths and order numbers unchanged.',
   // Rajat (13 Sep): the English chip is not a wall - "kaise ho" gets a Hinglish
   // answer, "how are you" gets an English one. Only हिंदी and Hinglish pin the script.
-  en: 'ANSWER IN THE LANGUAGE THE PERSON WROTE IN: English if they wrote English; Hinglish (Hindi in roman letters, no Devanagari) if they wrote Hinglish; Hindi in Devanagari if they wrote Devanagari. Simple words; Indian English is fine (lakh, ₹).',
+  en: 'ANSWER IN ENGLISH - the LAST message was written in English, whatever language earlier messages used. Simple words; Indian English is fine (lakh, ₹).',
 };
 const languageRule = (language) => LANGUAGE_RULE[language] || "Match the person's language: Hindi in Devanagari if they write Hindi, Hinglish if Hinglish, English if English.";
 
@@ -121,10 +121,11 @@ const ask = async ({ role, user, question, history = [], textModel = 'auto', lan
   // for the check on the way out.
   const language = chip === 'hi' || chip === 'hg' ? chip : detectScript(q);
 
-  /* The model is told the script; the code makes sure of it. A Hinglish
-     answer that came back in Devanagari is transliterated; a Hindi answer
-     that came back in roman letters is left - readable either way. */
-  const inScript = async (answer) => (language === 'hg' && DEVANAGARI.test(answer) ? toHinglish(answer, { maxTokens: 1500 }) : answer);
+  /* The model is told the script; the code makes sure of it. The answer's
+     script is read the way the question's was and rewritten (one fast call)
+     when it is not the one due - a model that drifted with the history, or a
+     backup model that ignored the rule. */
+  const inScript = async (answer) => (detectScript(answer) === language ? answer : rewriteScript(answer, language, { maxTokens: 1500 }));
 
   const [context, found] = await Promise.all([
     contextFor({ role, user, question: q }),

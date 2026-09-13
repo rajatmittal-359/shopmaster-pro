@@ -14,9 +14,11 @@
 const DEVANAGARI = /[ऀ-ॿ]/;
 
 /* Common Hindi function words as people type them in roman letters. Two
-   hits in a sentence and it is Hinglish, whatever else is in it. */
+   hits in a sentence and it is Hinglish, whatever else is in it. Words that
+   are also English (the, to, me, hi, ho, par, ya, ab…) are left OUT on
+   purpose - "the" alone made every English answer look Hinglish. */
 const HINGLISH_WORDS = new Set(
-  'mera meri mere mujhe mereko muje hai hain ho hu hoon tha thi the kab kya kyu kyun kaise kaisa kaisi kitna kitni kahan kaha kon kaun nahi nhi na mat aur ya par lekin to toh bhi hi ka ki ke ko se me mein pe par wala wali wale chahiye chaiye karo kar karna karu karun kardo kiya kiye kya hua hoga hogi honge aaya aayega aayegi gaya gayi jao ja raha rahi rahe abhi ab kal aaj phir fir sab kuch koi thoda zyada jyada bahut bhot bohot accha acha theek thik sahi galat batao bata dikhao dekho bolo suno paisa paise rupaye rupee bhai yaar ji please plz'.split(
+  'mera meri mere mujhe mereko muje hai hain hoon tha thi kab kya kyu kyun kaise kaisa kaisi kitna kitni kahan kaha kaun nahi nhi mat aur lekin toh bhi ka ki ke ko se mein pe wala wali wale chahiye chaiye karo karna karu karun kardo kiya kiye hua hoga hogi honge aaya aayega aayegi gaya gayi jao raha rahi rahe abhi kal aaj phir fir sab kuch koi thoda zyada jyada bahut bhot bohot accha acha theek thik sahi galat batao bata dikhao dekho bolo suno paisa paise rupaye bhai yaar'.split(
     ' '
   )
 );
@@ -39,9 +41,16 @@ const GEMINI_API = 'https://generativelanguage.googleapis.com/v1beta/models';
  * Gemini after; if both are out the Devanagari stands - a right answer in
  * the wrong script beats no answer.
  */
-const toHinglish = async (text, { maxTokens = 400 } = {}) => {
-  if (!DEVANAGARI.test(text)) return text;
-  const prompt = `Rewrite this text so every Hindi word is in roman letters (Hinglish, as Indians type on WhatsApp). Keep English words, numbers, ₹ amounts, dates, order codes, URLs and paths exactly as they are. Keep the markdown formatting (headings, bullets, bold) exactly. No translation, no additions, no explanation. Output only the rewritten text.\n\n${text}`;
+const PROMPTS = {
+  hg: 'Rewrite this text so every Hindi word is in roman letters (Hinglish, as Indians type on WhatsApp). Keep English words, numbers, ₹ amounts, dates, order codes, URLs and paths exactly as they are. Keep the markdown formatting (headings, bullets, bold) exactly. No translation, no additions, no explanation. Output only the rewritten text.',
+  en: 'Rewrite this text in plain English (Indian English is fine). Keep numbers, ₹ amounts, dates, order codes, URLs and paths exactly as they are. Keep the markdown formatting (headings, bullets, bold) exactly. Same meaning, nothing added, no explanation. Output only the rewritten text.',
+  hi: 'Rewrite this text in Hindi, Devanagari script; the English words shopkeepers use may stay (order, payment, courier). Keep numbers, ₹ amounts, dates, order codes, URLs and paths exactly as they are. Keep the markdown formatting exactly. Same meaning, nothing added, no explanation. Output only the rewritten text.',
+};
+
+/** Rewrite `text` into the target script/language ('hg' | 'en' | 'hi'); on failure the text stands. */
+const rewriteScript = async (text, target, { maxTokens = 400 } = {}) => {
+  const check = target === 'hg' ? (out) => !DEVANAGARI.test(out) : target === 'hi' ? (out) => DEVANAGARI.test(out) : (out) => detectScript(out) === 'en';
+  const prompt = `${PROMPTS[target] || PROMPTS.en}\n\n${text}`;
   const key = process.env.GROQ_API_KEY;
   if (key) {
     try {
@@ -52,7 +61,7 @@ const toHinglish = async (text, { maxTokens = 400 } = {}) => {
       });
       const d = await res.json().catch(() => ({}));
       const out = String(d?.choices?.[0]?.message?.content || '').trim();
-      if (res.ok && out && !DEVANAGARI.test(out)) return out;
+      if (res.ok && out && check(out)) return out;
     } catch {
       /* fall through */
     }
@@ -67,12 +76,14 @@ const toHinglish = async (text, { maxTokens = 400 } = {}) => {
       });
       const d = await res.json().catch(() => ({}));
       const out = (d?.candidates?.[0]?.content?.parts || []).map((x) => x.text || '').join('').trim();
-      if (res.ok && out) return out;
+      if (res.ok && out && check(out)) return out;
     } catch {
-      /* the Devanagari stands */
+      /* the text stands */
     }
   }
   return text;
 };
 
-module.exports = { detectScript, toHinglish, DEVANAGARI };
+const toHinglish = (text, opts) => (DEVANAGARI.test(text) ? rewriteScript(text, 'hg', opts) : Promise.resolve(text));
+
+module.exports = { detectScript, toHinglish, rewriteScript, DEVANAGARI };
