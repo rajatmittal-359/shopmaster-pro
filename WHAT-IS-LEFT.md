@@ -94,7 +94,7 @@ synonyms collection (jhumka/jhumki/झुमका), Gemini query → filters.
 | 2.15 | **Cutover code**: `next.config` 301 map from the React app's indexed URLs to the Next ones; `migrateToProd.js` per the OPS "Production data" plan | OPS cutover plan | at cutover |
 | 2.16 | **Settings, the rest of the consumers**: policy pages, Bill, seller Help still read the code's BUSINESS defaults (server pages can take `businessFrom(await getSettings())` like Footer/Contact/Help/home do); `sameDayEnabled` and `freeShippingAbove` are stored but not yet enforced in `utils/shipping.js` | plan §4.37 | — |
 | 2.13 | **Hindi, the rest of the seller panel** — foundation and the daily loop done 13 Sep (plan §4.36); left: Orders page body text, Returns & issues, Products list, Settings, Payments, Help/Grow copy, toasts. Add lines to `lib/i18n.hi.js` page by page | plan §4.36 | — |
-| 2.14 | **One account, two hats in production** — in the dev seed the admin (`rajatmittal359`) and the Charming Jewels seller are two users. At the production seed the admin user must also own the Charming Jewels `Seller` doc (capabilities already grant `seller` to an admin with one) so 359 is admin + seller as Rajat intends | seed --minimal | cutover |
+| 2.14 | **Two accounts in production, fixed (Rajat 13 Sep):** `rajatmittal6908@gmail.com` = the Charming Jewels **seller** account, `rajatmittal359@gmail.com` = the **admin** account. Never merged. The production seed / data move must create the seller user as 6908 and attach the Charming Jewels `Seller` doc to it; today's dev seller user has a different email — fix in `migrateToProd.js` | OPS production data | cutover |
 
 ## 3. Rajat's call — researched, waiting on a decision
 
