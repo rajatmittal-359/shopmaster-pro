@@ -1,6 +1,7 @@
 const cron = require('node-cron');
 const { runLowStockAlerts } = require('./lowStock');
 const { reconcileOnce } = require('./trackingReconcile');
+const { captureJobError } = require('../utils/monitoring');
 
 /**
  * Scheduled work, when this process is the one doing the scheduling.
@@ -37,6 +38,7 @@ exports.startCronJobs = () => {
       console.log(`✅ Weekly digest sent to ${r.sent} admin(s)`);
     } catch (err) {
       console.error('❌ Weekly digest failed:', err.message);
+      captureJobError('weeklyDigest', err);
     }
   }, { timezone: 'Asia/Kolkata' });
 
@@ -50,6 +52,7 @@ exports.startCronJobs = () => {
       );
     } catch (err) {
       console.error('❌ Low stock cron failed:', err.message);
+      captureJobError('lowStock', err);
     }
   });
 
@@ -76,6 +79,7 @@ exports.startCronJobs = () => {
         }
       } catch (err) {
         console.error('❌ Tracking reconcile failed:', err.message);
+        captureJobError('trackingReconcile', err);
       }
     });
     console.log('📦 Tracking reconcile scheduled');

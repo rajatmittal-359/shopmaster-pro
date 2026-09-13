@@ -65,7 +65,12 @@ const describeError = (err) => {
  */
 const sendError = (res, err) => {
   const { status, body } = describeError(err);
-  if (status >= 500) console.error('Error:', err);
+  if (status >= 500) {
+    console.error('Error:', err);
+    // Controllers catch their own errors, so Express's error middleware never
+    // sees them - this is the only place a 500 from a controller can be reported.
+    require('./monitoring').captureError(err, res.req);
+  }
   return res.status(status).json(body);
 };
 

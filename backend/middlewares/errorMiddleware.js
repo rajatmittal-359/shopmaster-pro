@@ -12,6 +12,7 @@ const errorMiddleware = (err, req, res, next) => {
   if (status >= 500) {
     console.error('Error:', err.message);
     console.error(err.stack);
+    require('../utils/monitoring').captureError(err, req);
   }
 
   return res.status(status).json({
