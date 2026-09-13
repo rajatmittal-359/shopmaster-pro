@@ -9,9 +9,9 @@ const HG = {
   // Ask ShopMaster
   'Ask ShopMaster': 'ShopMaster se poochho',
   'Ask anything about your shop, an order, a payout or a rule.': 'Apni dukaan, kisi order, payment ya rule ke baare me kuch bhi poochho.',
-  'It reads your own data and the platform rules before it answers, in Hindi or English. It explains and points to the button - it never changes anything itself.': 'Jawab dene se pehle ye aapka apna data aur platform ke rules padhta hai. Ye samjhata hai aur sahi button batata hai - khud kuch badalta nahi.',
+  'It reads your own data and the platform rules before it answers, in Hindi, Hinglish or English. It explains and points to the button - it never changes anything itself.': 'Jawab dene se pehle ye aapka apna data aur platform ke rules padhta hai. Ye samjhata hai aur sahi button batata hai - khud kuch badalta nahi.',
   'Reading your data and the rules…': 'Aapka data aur rules padh raha hai…',
-  'Ask in Hindi or English…': 'Hindi, Hinglish ya English me poochho…',
+  'Ask in Hindi, Hinglish or English…': 'Hindi, Hinglish ya English me poochho…',
   'Your question': 'Aapka sawaal',
   Send: 'Bhejo',
   Checked: 'Dekha',
@@ -35,9 +35,9 @@ const HG = {
   Listen: 'Suno',
   'Read aloud': 'Padh kar sunao',
   'Stop reading': 'Sunana band',
-  'Tap the mic and speak in Hindi or English - check the words, then send.': 'Mic dabao aur bolo - shabd dekh lo, phir bhejo.',
+  'Tap the mic and speak in Hindi, Hinglish or English - check the words, then send.': 'Mic dabao aur bolo - shabd dekh lo, phir bhejo.',
   Speak: 'Bolo',
-  'Ask about an order, a payout, a rule, or how Amazon does it - in Hindi or English.': 'Order, payment, rule, ya Amazon pe kaise hota hai - jaise chaaho waise poochho.',
+  'Ask about an order, a payout, a rule, or how Amazon does it - in Hindi, Hinglish or English.': 'Order, payment, rule, ya Amazon pe kaise hota hai - jaise chaaho waise poochho.',
   Language: 'Bhasha',
 
   // Home

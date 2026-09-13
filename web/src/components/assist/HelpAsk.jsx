@@ -16,7 +16,7 @@ export default function HelpAsk() {
   return (
     <section className="mt-8">
       <h2 className="font-semibold">Ask ShopMaster</h2>
-      <p className="mt-1 text-sm text-muted-foreground">Where your order is, when a refund lands, how a return works - answered from your own orders, in Hindi or English.</p>
+      <p className="mt-1 text-sm text-muted-foreground">Where your order is, when a refund lands, how a return works - answered from your own orders, in Hindi, Hinglish or English.</p>
       {signedIn ? (
         <div className="mt-3">
           <AskPanel role="customer" compact />

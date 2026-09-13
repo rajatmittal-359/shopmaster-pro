@@ -6,7 +6,7 @@ export const metadata = { title: 'Ask ShopMaster' };
 export default function SellerAskPage() {
   return (
     <>
-      <PageHeader title="Ask ShopMaster" lead="Ask about an order, a payout, a rule, or how Amazon does it - in Hindi or English." />
+      <PageHeader title="Ask ShopMaster" lead="Ask about an order, a payout, a rule, or how Amazon does it - in Hindi, Hinglish or English." />
       <AskPanel role="seller" />
     </>
   );

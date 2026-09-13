@@ -146,7 +146,7 @@ export default function AskPanel({ role = 'seller', compact = false }) {
             </div>
             <p className="font-medium">{t('Ask anything about your shop, an order, a payout or a rule.')}</p>
             <p className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">
-              {t('It reads your own data and the platform rules before it answers, in Hindi or English. It explains and points to the button - it never changes anything itself.')}
+              {t('It reads your own data and the platform rules before it answers, in Hindi, Hinglish or English. It explains and points to the button - it never changes anything itself.')}
             </p>
             <div className="mt-4 flex flex-wrap justify-center gap-2">
               {starters.map((s) => (
@@ -240,7 +240,7 @@ export default function AskPanel({ role = 'seller', compact = false }) {
             onKeyDown={onKey}
             rows={1}
             maxLength={1500}
-            placeholder={t('Ask in Hindi or English…')}
+            placeholder={t('Ask in Hindi, Hinglish or English…')}
             className="field-sizing-content max-h-40 min-h-10 flex-1 resize-none rounded-lg border bg-background px-3 py-2 text-base outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring/40 md:text-sm"
             aria-label={t('Your question')}
           />
@@ -250,7 +250,7 @@ export default function AskPanel({ role = 'seller', compact = false }) {
             <Send className="size-4" aria-hidden />
           </button>
         </div>
-        <p className="mt-1.5 px-1 text-[11px] text-muted-foreground">{t('Tap the mic and speak in Hindi or English - check the words, then send.')} {t('Answers come from your data and the rules; check anything about money on the page itself. Nothing you type is shared with other sellers.')}</p>
+        <p className="mt-1.5 px-1 text-[11px] text-muted-foreground">{t('Tap the mic and speak in Hindi, Hinglish or English - check the words, then send.')} {t('Answers come from your data and the rules; check anything about money on the page itself. Nothing you type is shared with other sellers.')}</p>
       </form>
     </div>
   );
