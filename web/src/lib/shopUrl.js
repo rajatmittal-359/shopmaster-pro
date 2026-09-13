@@ -11,10 +11,26 @@
  * SO: CHANGING A FILTER ALWAYS RETURNS TO PAGE 1. Only an explicit `page`
  * change keeps a page number.
  */
+/** The refinements that belong to one place and not the next. */
+const REFINEMENTS = ['color', 'size', 'minRating', 'minPrice', 'maxPrice'];
+
 export const shopHref = (current = {}, changes = {}) => {
   const merged = { ...current, ...changes };
 
   if (!('page' in changes)) delete merged.page;
+
+  /*
+   * CHANGING THE CATEGORY IS GOING SOMEWHERE ELSE, NOT NARROWING HERE.
+   * Amazon drops every refinement when the department changes; Flipkart
+   * drops the ones that belong to a category. Rajat, 13 Sep: a "4 stars"
+   * filter set in Men's Fashion followed him into Jewellery - "jabardasti".
+   * So a category change (including "All categories") clears colour, size,
+   * rating and price; the search term and the sort order, which are about
+   * the shopper rather than the place, stay.
+   */
+  if ('category' in changes && String(changes.category || '') !== String(current.category || '')) {
+    for (const key of REFINEMENTS) delete merged[key];
+  }
 
   const params = new URLSearchParams();
   for (const [key, value] of Object.entries(merged)) {
