@@ -59,5 +59,7 @@ Liquidity · Trust · Seller recruitment · October 2026 cutover. Stage: one Atl
 | `Payout` | Money leaving. Amount from `sellerMoneyFor` at the time; state forward-only; who marked it paid. |
 | `AiUsage` / `AiProviderState` | Keyed per day / period; `$inc` not read-modify-save; unique index is the lock. |
 | `Category` | Ancestors array kept true on move; products only on leaves. |
+| `Notification` (14 Sep) | A person's bell. Write only through `utils/notify` (never `Notification.create` from a controller). `tag` is the dedupe key - unique partial index `{userId, tag}`; `{userId, createdAt:-1}`, `{userId, readAt}`; TTL 90 days on `createdAt`. Backfill: `npm run notifications:backfill` (idempotent). |
+| `PushSubscription` (14 Sep) | One browser on one device. `endpoint` unique; `userId` indexed. Rows are deleted by the sender on 404/410 - never "clean up" by hand. |
 
 **Categories (13 Sep 2026):** two levels, names unique, `googleProductCategory` on each (Google Product Taxonomy path; the feed sends it, leaf falls back to parent). The tree lives in `config/taxonomy.js` (23 mains / 168 subs) and `seedCategories.js` grows a database to it add-only. Sellers never create categories - they file a `CategoryRequest`; the admin creates or declines from the Categories page.
