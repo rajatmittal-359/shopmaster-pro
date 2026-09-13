@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import Link from 'next/link';
+import { ShoppingBag } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useSession, clearSession, setCapabilities } from '@/lib/session';
 import { authedFetch } from '@/lib/client';
@@ -74,8 +75,8 @@ export default function HeaderAccount({ showCart = true }) {
   return (
     <div className="flex items-center gap-4 text-sm">
       {showCart && (
-        <Link href="/cart" className="text-muted-foreground hover:text-brand-ink">
-          Cart
+        <Link href="/cart" aria-label="Cart" className="inline-flex text-muted-foreground hover:text-brand-ink">
+          <ShoppingBag className="size-5" />
         </Link>
       )}
 
@@ -91,9 +92,15 @@ export default function HeaderAccount({ showCart = true }) {
             <DropdownMenuLabel>{user?.email || 'Signed in'}</DropdownMenuLabel>
             <DropdownMenuSeparator />
 
+            {/* Flipkart's order: what you bought, what you saved, what you can
+                use, what you said, where you live, who you are, and help. */}
             <DropdownMenuItem render={<Link href="/orders" />}>My orders</DropdownMenuItem>
             <DropdownMenuItem render={<Link href="/wishlist" />}>Saved items</DropdownMenuItem>
+            <DropdownMenuItem render={<Link href="/coupons" />}>Coupons</DropdownMenuItem>
+            <DropdownMenuItem render={<Link href="/reviews" />}>My reviews</DropdownMenuItem>
             <DropdownMenuItem render={<Link href="/addresses" />}>Addresses</DropdownMenuItem>
+            <DropdownMenuItem render={<Link href="/account" />}>Account</DropdownMenuItem>
+            <DropdownMenuItem render={<Link href="/help" />}>Help</DropdownMenuItem>
 
             {/* Shown only to accounts that actually have the capability - and
                 these are LINKS, not a mode switch: the same account keeps its

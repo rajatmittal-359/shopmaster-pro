@@ -134,6 +134,15 @@ export default function MobileNav({ categories = [] }) {
               <Link href="/wishlist" onClick={close} className={link}>
                 Saved items
               </Link>
+              <Link href="/coupons" onClick={close} className={link}>
+                Coupons
+              </Link>
+              <Link href="/reviews" onClick={close} className={link}>
+                My reviews
+              </Link>
+              <Link href="/account" onClick={close} className={link}>
+                Account
+              </Link>
               <Link href="/addresses" onClick={close} className={link}>
                 Addresses
               </Link>
@@ -161,6 +170,9 @@ export default function MobileNav({ categories = [] }) {
 
           <div className="my-3 h-px bg-border" />
 
+          <Link href="/help" onClick={close} className={`${link} text-muted-foreground`}>
+            Help
+          </Link>
           <Link href="/contact" onClick={close} className={`${link} text-muted-foreground`}>
             Contact us
           </Link>

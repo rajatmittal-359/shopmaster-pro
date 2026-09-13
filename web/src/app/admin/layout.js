@@ -1,6 +1,7 @@
 import AdminGuard from "@/components/admin/AdminGuard";
 import Tour from "@/components/panel/Tour";
 import PanelShell from "@/components/panel/PanelShell";
+import PanelIdentity from "@/components/panel/PanelIdentity";
 
 export const metadata = {
   title: { default: "Admin", template: "%s · Admin · ShopMaster Pro" },
@@ -26,26 +27,27 @@ const GROUPS = [
   },
   {
     label: "Money",
-    items: [{ href: "/admin/payouts", label: "Payouts", icon: "IndianRupee" }],
+    items: [{ href: "/admin/payouts", label: "Payouts", icon: "IndianRupee", badge: "payouts" }],
   },
   {
     label: "Needs a person",
     items: [
-      {
-        href: "/admin/orders",
-        label: "Orders & disputes",
-        icon: "MessageSquareWarning",
-      },
-      { href: "/admin/sellers", label: "Sellers", icon: "Store" },
+      { href: "/admin/orders", label: "Orders & disputes", icon: "MessageSquareWarning", badge: "orders" },
+      { href: "/admin/sellers", label: "Sellers", icon: "Store", badge: "sellers" },
     ],
   },
   {
     label: "Catalogue",
     items: [
+      { href: "/admin/products", label: "Products", icon: "Tag" },
       { href: "/admin/categories", label: "Categories", icon: "FolderTree" },
       { href: "/admin/coupons", label: "Coupons", icon: "TicketPercent" },
       { href: "/admin/google", label: "Google", icon: "Globe" },
     ],
+  },
+  {
+    label: "People",
+    items: [{ href: "/admin/customers", label: "Customers", icon: "Users" }],
   },
   {
     label: "Records",
@@ -61,7 +63,7 @@ const GROUPS = [
 
 export default function AdminLayout({ children }) {
   return (
-    <PanelShell title="Admin" groups={GROUPS}>
+    <PanelShell title="Admin" groups={GROUPS} countsUrl="/admin/nav-counts" identity={<PanelIdentity kind="admin" />}>
       <AdminGuard>
         {children}
         <Tour

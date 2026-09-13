@@ -19,7 +19,9 @@ const TABS = [
 export default function ProductsNav() {
   const pathname = usePathname();
   return (
-    <nav aria-label="Products" className="mb-5 flex gap-1 border-b">
+    /* On a wide screen the sidebar shows these as sub-items under Products;
+       the tab row stays for phones, where the sidebar is behind a button. */
+    <nav aria-label="Products" className="mb-5 flex gap-1 border-b lg:hidden">
       {TABS.map((t) => {
         const active = t.end ? pathname === t.href : pathname.startsWith(t.href);
         return (

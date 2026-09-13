@@ -3,6 +3,7 @@ import PanelShell from '@/components/panel/PanelShell';
 import AgreementBanner from '@/components/seller/AgreementBanner';
 import Onboarding from '@/components/seller/Onboarding';
 import Tour from '@/components/panel/Tour';
+import PanelIdentity from '@/components/panel/PanelIdentity';
 
 export const metadata = {
   title: { default: 'Seller', template: '%s · Seller · ShopMaster Pro' },
@@ -17,28 +18,54 @@ export const metadata = {
  * find - which is not an authorisation failure by itself, but every one of
  * those visits is a wasted crawl of a shop that has little crawl budget.
  *
- * FIVE NAMES, NO GROUPS (12 Sep 2026). Shopify's admin, Seller Central and
- * Meesho's supplier panel all run on the same five nouns - Home, Orders,
- * Products, Payments, Settings - and none of them has an "AI" page: the AI
- * sits inside the product work. So the photo studio and the stock history
- * became tabs of Products, "Earnings" became Payments (the word every
- * platform uses), and the group labels went - five items need no headings.
+ * NINE NAMES IN FIVE GROUPS (13 Sep 2026). The first cut had five items and
+ * Rajat called it too thin. Meesho's supplier panel, Flipkart Seller Hub,
+ * Amazon's 2026 workspaces and Shopify were laid side by side: every one has
+ * Returns, Promotions, Performance and Help besides the five, so this does
+ * too - in our words. Groups because nine names need headings; badges on
+ * the queues; Products carries its own sub-items; Settings and Help pinned
+ * low. The AI still has no page of its own: it sits inside the product work.
  */
 const GROUPS = [
+  { items: [{ href: '/seller', label: 'Home', icon: 'LayoutDashboard', end: true }] },
   {
+    label: 'Selling',
     items: [
-      { href: '/seller', label: 'Home', icon: 'LayoutDashboard', end: true },
-      { href: '/seller/orders', label: 'Orders', icon: 'Package' },
-      { href: '/seller/products', label: 'Products', icon: 'Tag' },
-      { href: '/seller/payments', label: 'Payments', icon: 'IndianRupee' },
+      { href: '/seller/orders', label: 'Orders', icon: 'Package', badge: 'orders' },
+      { href: '/seller/issues', label: 'Returns & issues', icon: 'Undo2', badge: 'issues' },
+    ],
+  },
+  {
+    label: 'Catalogue',
+    items: [
+      {
+        href: '/seller/products',
+        label: 'Products',
+        icon: 'Tag',
+        children: [
+          { href: '/seller/products', label: 'All products', end: true },
+          { href: '/seller/products/studio', label: 'Photo studio' },
+          { href: '/seller/products/stock', label: 'Stock history' },
+        ],
+      },
+      { href: '/seller/promotions', label: 'Promotions', icon: 'TicketPercent' },
+    ],
+  },
+  { label: 'Money', items: [{ href: '/seller/payments', label: 'Payments', icon: 'IndianRupee' }] },
+  {
+    label: 'Account',
+    pinned: true,
+    items: [
+      { href: '/seller/performance', label: 'Performance', icon: 'Gauge' },
       { href: '/seller/settings', label: 'Settings', icon: 'Settings' },
+      { href: '/seller/help', label: 'Help & rules', icon: 'LifeBuoy' },
     ],
   },
 ];
 
 export default function SellerLayout({ children }) {
   return (
-    <PanelShell title="Seller" groups={GROUPS}>
+    <PanelShell title="Seller" groups={GROUPS} countsUrl="/seller/nav-counts" identity={<PanelIdentity kind="seller" />}>
       <SellerGuard>
         <Onboarding>
           <AgreementBanner />

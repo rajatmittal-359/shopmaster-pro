@@ -137,3 +137,13 @@ export const getSellerRules = async () => {
     return null;
   }
 };
+
+/** Every coupon a shopper can use right now (public; codes are meant to be seen). */
+export const getCoupons = async () => {
+  try {
+    const data = await get('/public/coupons', { revalidate: 300 });
+    return data?.coupons || [];
+  } catch {
+    return [];
+  }
+};

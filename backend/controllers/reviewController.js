@@ -210,7 +210,7 @@ exports.deleteReview = async (req, res) => {
 exports.getMyReviews = async (req, res) => {
   try {
     const reviews = await Review.find({ userId: req.user._id })
-      .populate('productId', 'name images price')
+      .populate('productId', 'name images price slug')
       .sort({ createdAt: -1 });
 
     res.json({

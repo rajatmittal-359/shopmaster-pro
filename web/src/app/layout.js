@@ -9,6 +9,7 @@ import ShopChrome from '@/components/layout/ShopChrome';
 import { Suspense } from 'react';
 import GoogleAnalytics from '@/components/analytics/GoogleAnalytics';
 import GoogleOneTap from '@/components/auth/GoogleOneTap';
+import BottomNav from '@/components/layout/BottomNav';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -73,9 +74,11 @@ export default function RootLayout({ children }) {
             <GoogleOneTap />
           </ShopChrome>
           {/* flex-1 so a short page still pushes the footer to the bottom. */}
-          <main className="flex-1">{children}</main>
+          {/* pb on phones so the bottom tab bar never covers the last row. */}
+          <main className="flex-1 pb-16 md:pb-0">{children}</main>
           <ShopChrome>
             <Footer />
+            <BottomNav />
           </ShopChrome>
           {/* One toaster for the whole site: undo after a removal, a word after
               a save. Bottom-right, out of the way of the sticky buy bar. */}

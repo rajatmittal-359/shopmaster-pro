@@ -35,7 +35,7 @@ import ThemeToggle from '@/components/layout/ThemeToggle';
  * WHY THE SIDEBAR IS GROUPED AND ALWAYS VISIBLE
  *   Section 4.12. Below `lg` it becomes a drawer behind one button.
  */
-export default function PanelShell({ title, groups, children }) {
+export default function PanelShell({ title, groups, countsUrl = null, identity = null, children }) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -55,8 +55,9 @@ export default function PanelShell({ title, groups, children }) {
               <SheetHeader className="border-b px-4 py-3">
                 <SheetTitle>{title}</SheetTitle>
               </SheetHeader>
-              <div className="px-3 py-4">
-                <PanelNav groups={groups} onNavigate={() => setOpen(false)} />
+              <div className="flex h-[calc(100dvh-3.5rem)] flex-col px-3 py-4">
+                {identity}
+                <PanelNav groups={groups} onNavigate={() => setOpen(false)} countsUrl={countsUrl} />
               </div>
             </SheetContent>
           </Sheet>
@@ -79,9 +80,11 @@ export default function PanelShell({ title, groups, children }) {
       </header>
 
       <div className="mx-auto flex max-w-7xl gap-8 px-4 py-6">
-        <aside className="hidden w-56 shrink-0 lg:block">
-          <div className="sticky top-20">
-            <PanelNav groups={groups} />
+        <aside className="hidden w-60 shrink-0 lg:block">
+          {/* Full height so "pinned" groups (Settings, Help) can sit at the bottom the way Shopify's do. */}
+          <div className="sticky top-20 flex max-h-[calc(100dvh-6rem)] flex-col">
+            {identity}
+            <PanelNav groups={groups} countsUrl={countsUrl} />
           </div>
         </aside>
 

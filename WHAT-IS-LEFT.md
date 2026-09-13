@@ -92,7 +92,9 @@ synonyms collection (jhumka/jhumki/झुमका), Gemini query → filters.
 
 ## 3. Rajat's call — researched, waiting on a decision
 
-### 3a. The 13 Sep night list — sidebars and the next features (decide in the morning)
+### 3a. The 13 Sep night list — sidebars and the next features
+
+**Decided 13 Sep 05:00 ("abhi kardo"): S1–S9, A1–A2, C1–C8 built and pushed — plan §4.32.** Still to eyeball in the browser signed in as seller and admin (the session had expired when I looked): the new sidebars with badges, Returns & issues, Promotions form, Performance, Help, admin Products/Customers. A3/A4 wait; F1–F12 still Rajat's pick.
 
 Rajat, 13 Sep 04:00: *"sidebar wagerah improve karo. Seller ka maine chhota karwaya tha, par ab zyada hi chhota ho gaya - itna chhota nahi chahiye, kisi premium reference se lo. Admin ka badhiya hai. Customer ki kuch cheezein sahi nahi lag rahi. Future scope dekho, research karo, free me jo mile, har role ko mazaa aaye."* Researched against Shopify admin (Home · Orders · Products · Customers · Marketing · Discounts · Content · Analytics · Settings), Amazon Seller Central (Catalog · Inventory · Orders · Advertising · Performance/Account Health · Reports) and Meesho's supplier panel (Catalog · Orders · Payments · Returns · Ads · Settings — [TrackEcom](https://trackecom.in/blog/meesho-supplier-panel-walkthrough), [WareIQ](https://wareiq.com/resources/blogs/meesho-seller/)). What is real today: seller nav has 5 items; there is **no seller coupon UI** (the model supports `fundedBy: 'seller'`, only admin creates); there is **no customer account page** (name/phone/password/delete); "Contact" sits in the customer's primary nav where no marketplace puts it.
 
