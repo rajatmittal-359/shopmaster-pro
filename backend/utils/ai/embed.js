@@ -9,7 +9,7 @@
  */
 const MODEL = process.env.EMBED_MODEL || 'gemini-embedding-001';
 const DIMS = 768;
-const API = 'https://generativelanguage.googleapis.com/v1beta/models';
+const { GEMINI_MODELS: API } = require('./endpoints');
 
 const embed = async (text, { taskType = 'RETRIEVAL_DOCUMENT' } = {}) => {
   const key = process.env.GEMINI_API_KEY;

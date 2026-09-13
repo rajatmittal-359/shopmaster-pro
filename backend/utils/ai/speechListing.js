@@ -12,7 +12,7 @@
  * runs regardless and fills anything the model left empty, so the form gets
  * the price even when every model is out.
  */
-const GEMINI_API = 'https://generativelanguage.googleapis.com/v1beta/models';
+const { GEMINI_MODELS: GEMINI_API, GROQ_OPENAI } = require('./endpoints');
 
 const SCHEMA_TEXT = `{"name": string|null (short product name in simple English, e.g. "Oxidised silver kada"), "price": number|null (selling price in rupees), "mrp": number|null (MRP if a second, higher price is said), "stock": number|null (how many pieces), "color": string|null (one colour in English), "size": string|null (e.g. "Free size", "M", "2.6"), "material": string|null (e.g. "oxidised silver", "cotton")}`;
 
@@ -34,7 +34,7 @@ const viaGroq = async (transcript) => {
   const key = process.env.GROQ_API_KEY;
   if (!key) return null;
   try {
-    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    const res = await fetch(`${GROQ_OPENAI}/chat/completions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
       body: JSON.stringify({ model: process.env.GROQ_SMALL_MODEL || 'openai/gpt-oss-20b', messages: [{ role: 'user', content: prompt(transcript) }], temperature: 0, max_tokens: 300, reasoning_effort: 'low', response_format: { type: 'json_object' } }),

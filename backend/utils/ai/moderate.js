@@ -53,7 +53,7 @@ const byModel = async (text, context) => {
   const key = process.env.GROQ_API_KEY;
   if (!key) return null;
   try {
-    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    const res = await fetch(`${require('./endpoints').GROQ_OPENAI}/chat/completions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
       body: JSON.stringify({ model: process.env.GROQ_MODERATION_MODEL || 'openai/gpt-oss-safeguard-20b', messages: [{ role: 'system', content: POLICY }, { role: 'user', content: `Context: ${context}\nText: """${String(text).slice(0, 1500)}"""` }], temperature: 0, max_tokens: 200 }),

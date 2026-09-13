@@ -10,7 +10,7 @@
  * JSON-schema lower-case, `functionDeclarations` → `tools[].function`) so
  * utils/ai/tools.js is written once. Off entirely until GROQ_API_KEY is set.
  */
-const API = 'https://api.groq.com/openai/v1/chat/completions';
+const API = `${require('./endpoints').GROQ_OPENAI}/chat/completions`;
 
 /*
  * THE BUDGET, READ FROM GROQ ITSELF

@@ -33,7 +33,7 @@
  */
 const DEFAULT_MODEL = process.env.GEMINI_MODEL || 'gemini-3.5-flash';
 
-const API = 'https://generativelanguage.googleapis.com/v1beta/models';
+const { GEMINI_MODELS: API } = require('./ai/endpoints');
 
 /** Transient on Gemini's side: worth waiting for. Anything else is ours. */
 const RETRYABLE = new Set([429, 500, 502, 503, 504]);

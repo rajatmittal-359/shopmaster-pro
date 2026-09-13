@@ -26,7 +26,7 @@
  *   clip at 60 seconds in the browser, which is well under 1 MB.
  */
 const GROQ_MODEL = process.env.GROQ_STT_MODEL || 'whisper-large-v3-turbo';
-const GEMINI_API = 'https://generativelanguage.googleapis.com/v1beta/models';
+const { GEMINI_MODELS: GEMINI_API, GROQ_OPENAI } = require('./endpoints');
 const { toHinglish } = require('./hinglish');
 
 /**
@@ -60,7 +60,7 @@ const viaGroq = async ({ mimeType, buffer }, { language }) => {
   if (language && language !== 'auto') form.append('language', language);
   let res;
   try {
-    res = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', { method: 'POST', headers: { Authorization: `Bearer ${key}` }, body: form });
+    res = await fetch(`${GROQ_OPENAI}/audio/transcriptions`, { method: 'POST', headers: { Authorization: `Bearer ${key}` }, body: form });
   } catch (err) {
     return { ok: false, reason: `Could not reach Groq: ${err.message}` };
   }

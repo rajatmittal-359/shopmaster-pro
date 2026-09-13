@@ -33,7 +33,7 @@ const detectScript = (text) => {
   return hits >= 2 || (hits >= 1 && words.length <= 3) ? 'hg' : 'en';
 };
 
-const GEMINI_API = 'https://generativelanguage.googleapis.com/v1beta/models';
+const { GEMINI_MODELS: GEMINI_API, GROQ_OPENAI } = require('./endpoints');
 
 /**
  * Devanagari → roman Hinglish, the way Indians type on WhatsApp. Markdown,
@@ -54,7 +54,7 @@ const rewriteScript = async (text, target, { maxTokens = 400 } = {}) => {
   const key = process.env.GROQ_API_KEY;
   if (key) {
     try {
-      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      const res = await fetch(`${GROQ_OPENAI}/chat/completions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
         body: JSON.stringify({ model: process.env.GROQ_SMALL_MODEL || 'openai/gpt-oss-20b', messages: [{ role: 'user', content: prompt }], temperature: 0, max_tokens: maxTokens, reasoning_effort: 'low' }),
