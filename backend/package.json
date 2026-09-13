@@ -18,7 +18,8 @@
     "search-index": "node ensureSearchIndex.js",
     "knowledge": "node indexKnowledge.js",
     "eval:assistant": "node evalAssistant.js",
-    "return-modes": "node backfillReturnModes.js"
+    "return-modes": "node backfillReturnModes.js",
+    "seed:fair-returns": "node seedFairReturns.js"
   },
   "keywords": [],
   "author": "",
