@@ -14,6 +14,21 @@ process.env.CLOUDINARY_API_SECRET = 'test';
 // The shipping fallback charges a same-city delivery less, and works that out
 // from the pickup pincode. Fixed here so the zone split is deterministic.
 process.env.SHIPROCKET_PICKUP_PINCODE = '302019';
+/*
+ * No AI provider is ever on the line under test. utils/sendEmail.js calls
+ * dotenv.config() when imported, and dotenv never overwrites a variable that
+ * is already set - so blanking these first is what keeps the real keys in
+ * backend/.env out of the suite. (13 Sep 2026: a Groq test went live the
+ * moment a real GROQ_API_KEY landed in .env.) Tests that need a key set a
+ * dummy one themselves.
+ */
+process.env.GEMINI_API_KEY = '';
+process.env.GROQ_API_KEY = '';
+process.env.POLLINATIONS_API_KEY = '';
+process.env.CLOUDFLARE_API_TOKEN = '';
+process.env.HF_TOKEN = '';
+process.env.NVIDIA_API_KEY = '';
+process.env.SENTRY_DSN = '';
 
 /*
  * The seller-charge ledger and the 30-day cancellation count sit on the cancel
