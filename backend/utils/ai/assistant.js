@@ -184,7 +184,8 @@ Answer now, as Ask ShopMaster.`;
   const turns = (limit) => history.slice(-6).map((m) => ({ role: m.role === 'user' ? 'user' : 'model', parts: [{ text: String(m.text || '').slice(0, limit) }] }));
   const meta = { retrieved: found.chunks.map((c) => c.source), via: found.via };
   const done = async (r, extra = {}) => ({ ok: true, answer: await inScript(r.text.trim()), language, model: r.model, searchedWeb: Boolean(r.calls?.includes('webSearch')) || Boolean(extra.searchedWeb), calls: r.calls || [], ...meta, ms: Date.now() - started });
-  const retryable = (reason) => /429|quota|rate|reach|503|502|nothing|never answered/i.test(reason || '');
+  // A missing key is a reason to take the next road, not to stop (Render had Groq before Gemini, 13 Sep).
+  const retryable = (reason) => /429|quota|rate|reach|503|502|nothing|never answered|not set/i.test(reason || '');
   const failures = [];
 
   if (textModel !== 'nano') {
