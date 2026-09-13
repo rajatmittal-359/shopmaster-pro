@@ -2,7 +2,7 @@
  * Groq - the assistant's second road when Gemini's free quota is spent.
  *
  * Free tier, no card (console.groq.com), OpenAI-compatible API, and its
- * Llama 3.3 70B does function calling - so the fallback keeps the TOOLS,
+ * gpt-oss-120b does function calling - so the fallback keeps the TOOLS,
  * not only the prose. Pollinations nano stays behind it for the day both
  * are out (no tools there; the prefetch carries the answer).
  *
@@ -11,7 +11,9 @@
  * utils/ai/tools.js is written once. Off entirely until GROQ_API_KEY is set.
  */
 const API = 'https://api.groq.com/openai/v1/chat/completions';
-const MODEL = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
+// Checked against the account's model list on 13 Sep 2026: the Llama 3.x
+// models are gone; gpt-oss-120b is the strongest tool-calling model served free.
+const MODEL = process.env.GROQ_MODEL || 'openai/gpt-oss-120b';
 
 const lower = (schema) => {
   if (Array.isArray(schema)) return schema.map(lower);
