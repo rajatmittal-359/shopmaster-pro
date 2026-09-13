@@ -95,7 +95,9 @@ const contextFor = async ({ role, user, question }) => {
 const LANGUAGE_RULE = {
   hi: 'ANSWER IN HINDI, DEVANAGARI SCRIPT. Simple everyday Hindi; the English words shopkeepers use stay, written in Devanagari where natural (ऑर्डर, पेमेंट, कूरियर, Google). Numbers with ₹. Paths and order numbers unchanged.',
   hg: 'ANSWER IN HINGLISH: Hindi in roman letters, the way people write on WhatsApp ("Aapka payment 18 Sept ko aayega"). No Devanagari at all. English words stay as they are. Numbers with ₹. Paths and order numbers unchanged.',
-  en: 'ANSWER IN ENGLISH. Simple words; Indian English is fine (lakh, ₹).',
+  // Rajat (13 Sep): the English chip is not a wall - "kaise ho" gets a Hinglish
+  // answer, "how are you" gets an English one. Only हिंदी and Hinglish pin the script.
+  en: 'ANSWER IN THE LANGUAGE THE PERSON WROTE IN: English if they wrote English; Hinglish (Hindi in roman letters, no Devanagari) if they wrote Hinglish; Hindi in Devanagari if they wrote Devanagari. Simple words; Indian English is fine (lakh, ₹).',
 };
 const languageRule = (language) => LANGUAGE_RULE[language] || "Match the person's language: Hindi in Devanagari if they write Hindi, Hinglish if Hinglish, English if English.";
 

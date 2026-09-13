@@ -12,7 +12,9 @@ import HG from '@/lib/i18n.hg';
  *   hg  Hinglish  Hindi in roman letters, the way WhatsApp is written:
  *                 "Namaste, aap kaise hain". Rajat's own register, and most
  *                 of the sellers we will recruit.
- *   en  English
+ *   en  English - and "as written": a Hinglish question under this chip
+ *       gets a Hinglish answer, an English one an English answer. Only the
+ *       first two pin the script (Rajat, 13 Sep).
  *
  * Rajat (13 Sep 2026): "har jagah jaha bhi language ki baat hai ye option
  * chip ki tarah dikha do - app pe, AI ke input/output pe". So the same

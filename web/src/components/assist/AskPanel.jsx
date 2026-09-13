@@ -244,7 +244,8 @@ export default function AskPanel({ role = 'seller', compact = false }) {
             className="field-sizing-content max-h-40 min-h-10 flex-1 resize-none rounded-lg border bg-background px-3 py-2 text-base outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring/40 md:text-sm"
             aria-label={t('Your question')}
           />
-          <MicButton role={role} language={lang} onText={heard} label={t('Speak your question')} />
+          {/* English chip = follow the speaker: Hindi speech still comes out as Hindi. */}
+          <MicButton role={role} language={lang === 'en' ? 'auto' : lang} onText={heard} label={t('Speak your question')} />
           <button type="submit" disabled={busy || !draft.trim()} aria-label={t('Send')} className="grid size-10 shrink-0 place-items-center rounded-lg bg-brand-ink text-white disabled:opacity-40">
             <Send className="size-4" aria-hidden />
           </button>
