@@ -91,6 +91,18 @@ export const getReviews = async (productId) => {
  * Asks for one extra and drops the current product client-side: filtering by id
  * in the query would need an endpoint change, and this costs one row.
  */
+/**
+ * "Aapko ye bhi pasand aayega" (plan 2.21): the products whose vectors sit
+ * nearest this one - jewellery next to jewellery, a bridal set next to a
+ * bridal set - falling back to the category when the vectors cannot answer.
+ * Cached like the catalogue; a product's neighbours change when the
+ * catalogue does, not per visitor.
+ */
+export const getSimilar = async (productIdOrSlug, limit = 8) => {
+  const data = await get(`/public/products/${encodeURIComponent(productIdOrSlug)}/similar`);
+  return (data?.products || []).slice(0, limit);
+};
+
 export const getRelated = async (categorySlug, excludeId, limit = 4) => {
   if (!categorySlug) return [];
   const data = await get(

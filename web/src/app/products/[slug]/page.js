@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { getProduct, getReviews, getRelated } from '@/lib/api';
+import { getProduct, getReviews, getRelated, getSimilar } from '@/lib/api';
 import { priceOf } from '@/lib/pricing';
 import { serialiseJsonLd } from '@/lib/jsonLd';
 import { productSchema, breadcrumbSchema } from '@/lib/productSchema';
@@ -62,9 +62,10 @@ export default async function ProductPage({ params }) {
 
   // Fetched after the product exists, and deliberately not inside Suspense:
   // both are small, and nothing a crawler needs may sit behind a boundary.
-  const [reviews, related] = await Promise.all([
+  const [reviews, related, similar] = await Promise.all([
     getReviews(product._id),
     getRelated(product.category?.slug, product._id),
+    getSimilar(product._id).catch(() => []),
   ]);
 
   const crumbs = [
@@ -339,6 +340,20 @@ export default async function ProductPage({ params }) {
           </>
         )}
       </section>
+
+      {/* Amazon's "Customers who viewed this also viewed", at our size: the
+          nearest products by meaning (plan 2.21), before the category list. */}
+      {similar.length > 0 && (
+        <section className="mt-12">
+          <h2 className="text-lg font-semibold">You may also like</h2>
+          <p className="mt-1 text-sm text-muted-foreground">Pieces close to this one - style, material, occasion.</p>
+          <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
+            {similar.slice(0, 8).map((p) => (
+              <ProductCard key={p._id} product={p} />
+            ))}
+          </div>
+        </section>
+      )}
 
       {related.length > 0 && (
         <section className="mt-12">

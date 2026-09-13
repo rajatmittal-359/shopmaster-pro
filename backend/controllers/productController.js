@@ -255,7 +255,7 @@ exports.suggest = async (req, res) => {
      * utils/atlasSearch), the regex as the fallback it always was. `ids` is
      * best-first; the find below is reordered to keep that.
      */
-    const ids = await searchProductIds(q, { limit: 12, filterIds: browsable });
+    const ids = await searchProductIds(require('../utils/searchSynonyms').expandQuery(q), { limit: 12, filterIds: browsable });
     const base = await withoutHiddenSellers({ isActive: true, isDeleted: { $ne: true }, stock: { $gt: 0 }, category: { $in: browsable } });
     let productQuery = Product.find(
       ids
@@ -458,3 +458,37 @@ exports.getProduct = async (req, res) => {
   }
 };
 
+
+
+/**
+ * GET /public/products/:productId/similar - "aapko ye bhi pasand aayega"
+ * (plan 2.21). Vector neighbours first; the same category by rating when the
+ * vectors cannot answer. Never the product itself, never a hidden seller,
+ * never out of stock.
+ */
+exports.similarProducts = async (req, res) => {
+  try {
+    const { productId } = req.params;
+    const product = await Product.findOne(mongoose.isValidObjectId(productId) ? { $or: [{ slug: productId }, { _id: productId }] } : { slug: productId }).select('category').lean();
+    if (!product) return res.status(404).json({ message: 'Product not found' });
+    const { similarIds } = require('../utils/productVectors');
+    const hidden = await hiddenSellerIds();
+    const base = { isActive: true, stock: { $gt: 0 }, isDeleted: { $ne: true }, _id: { $ne: product._id }, ...(hidden.length ? { sellerId: { $nin: hidden } } : {}) };
+    const near = await similarIds(product._id, { k: 12 });
+    let docs = [];
+    let via = 'vectors';
+    if (near.length) {
+      const found = await Product.find({ ...base, _id: { $in: near.map((n) => n.id) } }).select('name slug price salePrice saleEndsAt mrp images avgRating totalReviews sellerId category color').lean();
+      const rank = new Map(near.map((n, i) => [n.id, i]));
+      docs = found.sort((a, b) => rank.get(String(a._id)) - rank.get(String(b._id))).slice(0, 8);
+    }
+    if (docs.length < 4) {
+      via = docs.length ? 'vectors+category' : 'category';
+      const more = await Product.find({ ...base, category: product.category, _id: { $nin: [product._id, ...docs.map((d) => d._id)] } }).sort({ avgRating: -1, totalReviews: -1 }).limit(8 - docs.length).select('name slug price salePrice saleEndsAt mrp images avgRating totalReviews sellerId category color').lean();
+      docs = [...docs, ...more];
+    }
+    res.json({ products: await withShop(docs), via });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};

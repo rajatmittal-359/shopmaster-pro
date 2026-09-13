@@ -19,7 +19,8 @@
     "knowledge": "node indexKnowledge.js",
     "eval:assistant": "node evalAssistant.js",
     "return-modes": "node backfillReturnModes.js",
-    "seed:fair-returns": "node seedFairReturns.js"
+    "seed:fair-returns": "node seedFairReturns.js",
+    "vectors:products": "node indexProducts.js"
   },
   "keywords": [],
   "author": "",

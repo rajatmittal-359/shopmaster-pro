@@ -45,7 +45,18 @@ async function buildCatalogueFilter({ category, search, minPrice, maxPrice, colo
     // the regex it always was when it does not. `searchIds` travels back so
     // the list can keep relevance order.
     const { searchProductIds } = require('./atlasSearch');
-    const ids = await searchProductIds(search, { limit: 200 });
+    const { expandQuery } = require('./searchSynonyms');
+    // Hinglish and Hindi words widened to the English the listings use
+    // (jhumka → earrings, lal → red), the original words first.
+    let ids = await searchProductIds(expandQuery(search), { limit: 200 });
+    if (ids && ids.length < 6) {
+      // Few or no text matches: ask the vectors what the query MEANS
+      // ("chhoti ladki ke liye gift"). Text matches keep their place at the top.
+      const { semanticSearchIds } = require('./productVectors');
+      const near = await semanticSearchIds(search, { k: 24 });
+      const seen = new Set(ids);
+      for (const n of near) if (!seen.has(n.id)) ids.push(n.id);
+    }
     if (ids) {
       filter._id = { $in: ids };
       filter.__searchIds = ids;

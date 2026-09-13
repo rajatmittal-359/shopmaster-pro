@@ -203,6 +203,14 @@ const productSchema = new mongoose.Schema(
      */
     returnMode: { type: String, enum: ['R', 'X', 'N', null], default: null },
 
+    /**
+     * The product's embedding (plan 2.21) and the hash of the text it was
+     * made from - utils/productVectors. select:false: 768 numbers have no
+     * business in a product list response.
+     */
+    vector: { type: [Number], default: undefined, select: false },
+    vectorHash: { type: String, default: null, select: false },
+
     isActive: {
       type: Boolean,
       default: true,
