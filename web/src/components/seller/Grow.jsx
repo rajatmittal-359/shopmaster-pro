@@ -63,6 +63,14 @@ function Ring({ value }) {
   );
 }
 
+/** Essential / Optional / Automatic - one word, one colour, next to the item. */
+const Level = ({ level, t }) => {
+  if (!level) return null;
+  const cls = level === 'essential' ? 'bg-brand-ink/10 text-brand-ink' : level === 'auto' ? 'bg-emerald-500/15 text-emerald-800 dark:text-emerald-200' : 'bg-muted text-muted-foreground';
+  const word = level === 'essential' ? t('Essential') : level === 'auto' ? t('Automatic') : t('Optional');
+  return <span className={`ml-2 rounded px-1.5 py-0.5 align-middle text-[0.6rem] font-semibold uppercase tracking-wide ${cls}`}>{word}</span>;
+};
+
 export default function Grow() {
   const t = useT();
   const [data, setData] = useState(null);
@@ -134,16 +142,21 @@ export default function Grow() {
         <div className="space-y-6">
           {/* Plan 2.32: the products Google reads worst, and the near-me facts. */}
           <GoogleReadiness />
-          <PanelCard title="Your ten steps, in the order they pay off" lead="Each tick comes from your own products and settings - nothing here is a box you tick yourself.">
+          {/* Two worlds (15 Sep 2026): what a seller does HERE and what only they can do ON GOOGLE.
+              Each step carries essential/optional; the ticks come from data, never from a checkbox. */}
+          <PanelCard title={t('On ShopMaster - you do it here')} lead={t('Ticks come from your own products and settings. Essential first.')}>
             <ol className="divide-y">
-              {data.steps.map((s, i) => (
+              {data.steps.filter((x) => x.world !== 'google').map((s, i) => (
                 <li key={s.key} className="flex gap-3 py-3">
                   <span className={`mt-0.5 grid size-6 shrink-0 place-items-center rounded-full text-xs font-semibold ${s.done ? 'bg-emerald-600 text-white' : 'bg-muted text-muted-foreground'}`}>
                     {s.done ? <Check className="size-3.5" strokeWidth={3} /> : i + 1}
                   </span>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-baseline justify-between gap-x-3">
-                      <p className={`font-medium ${s.done ? 'text-muted-foreground line-through decoration-muted-foreground/40' : ''}`}>{s.title}</p>
+                      <p className={`font-medium ${s.done ? 'text-muted-foreground line-through decoration-muted-foreground/40' : ''}`}>
+                        {t(s.title)}
+                        <Level level={s.level} t={t} />
+                      </p>
                       <span className="text-xs tabular-nums text-muted-foreground">{s.progress}</span>
                     </div>
                     {!s.done && (
@@ -167,6 +180,57 @@ export default function Grow() {
                 </li>
               ))}
             </ol>
+          </PanelCard>
+
+          <PanelCard title={t('On Google - only you can do this')} lead={t('Outside ShopMaster, from your own Google account. This is where "near me" and Maps are won.')}>
+            <ol className="divide-y">
+              {data.steps.filter((x) => x.world === 'google').map((s) => (
+                <li key={s.key} className="flex gap-3 py-3">
+                  <span className={`mt-0.5 grid size-6 shrink-0 place-items-center rounded-full text-xs font-semibold ${s.done ? 'bg-emerald-600 text-white' : 'bg-muted text-muted-foreground'}`}>
+                    {s.done ? <Check className="size-3.5" strokeWidth={3} /> : '1'}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium">{t(s.title)}<Level level={s.level} t={t} /></p>
+                    <p className="mt-1 text-sm text-muted-foreground">{s.why}</p>
+                    {!s.done && <p className="mt-1 text-sm"><span className="text-muted-foreground">{t('How')}: </span>{s.how} <Link href={s.href} className="font-medium text-brand-ink hover:underline">{t('Go')} →</Link></p>}
+                  </div>
+                </li>
+              ))}
+              {(data.outside || []).map((o, i) => (
+                <li key={o.task} className="flex gap-3 py-3">
+                  <span className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-full bg-muted text-xs font-semibold text-muted-foreground">{i + 2}</span>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium">{t(o.task)}<Level level={o.level} t={t} /></p>
+                    <p className="mt-1 text-sm text-muted-foreground">{t(o.gives)}</p>
+                    {o.href && <a href={o.href} target="_blank" rel="noreferrer" className="text-sm font-medium text-brand-ink hover:underline">{t('Open')} →</a>}
+                  </div>
+                </li>
+              ))}
+            </ol>
+          </PanelCard>
+
+          <PanelCard title={t('Every field that matters, and what it earns')} lead={t('Essential = Google or the courier needs it. Optional = earns more clicks. Where to fill it, and why.')}>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-xs uppercase tracking-wide text-muted-foreground">
+                    <th className="pb-2 pr-3 font-medium">{t('Field')}</th>
+                    <th className="pb-2 pr-3 font-medium">{t('Where')}</th>
+                    <th className="pb-2 font-medium">{t('Earns')}</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {(data.fields || []).map((x) => (
+                    <tr key={x.field}>
+                      <td className="py-2 pr-3 align-top"><Link href={x.href} className="hover:underline">{t(x.field)}</Link><Level level={x.level} t={t} /></td>
+                      <td className="py-2 pr-3 align-top text-muted-foreground">{t(x.where)}</td>
+                      <td className="py-2 align-top text-muted-foreground">{t(x.gives)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="mt-3 text-xs text-muted-foreground">{t('Never: bought backlinks, keyword stuffing, city names sprinkled in descriptions - Google penalises all three, and at our size they earn nothing.')}</p>
           </PanelCard>
 
           {/* Market insights (plan 2.20): Google's own view of our prices and the

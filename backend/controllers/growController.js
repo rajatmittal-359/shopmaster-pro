@@ -28,10 +28,13 @@ const stepsFor = ({ seller, products, scored, reviews, coupons }) => {
   const about = (seller && seller.about) || '';
   const city = seller && seller.pickupAddress && seller.pickupAddress.city;
   const gbp = seller && seller.links && seller.links.googleBusiness;
+  const withFaqs = products.filter((p) => (p.faqs || []).filter((x) => x && x.q && x.a).length >= 2).length;
 
   return [
     {
       key: 'listings',
+      world: 'shopmaster',
+      level: 'essential',
       title: 'Every listing scores 80 or more',
       done: n > 0 && strong === n,
       progress: `${strong} of ${n}`,
@@ -43,6 +46,8 @@ const stepsFor = ({ seller, products, scored, reviews, coupons }) => {
     },
     {
       key: 'photos',
+      world: 'shopmaster',
+      level: 'essential',
       title: 'Three or more photos on each product',
       done: n > 0 && photos3 === n,
       progress: `${photos3} of ${n}`,
@@ -54,6 +59,8 @@ const stepsFor = ({ seller, products, scored, reviews, coupons }) => {
     },
     {
       key: 'tags',
+      world: 'shopmaster',
+      level: 'optional',
       title: 'Search words on every product',
       done: n > 0 && tagged === n,
       progress: `${tagged} of ${n}`,
@@ -65,6 +72,8 @@ const stepsFor = ({ seller, products, scored, reviews, coupons }) => {
     },
     {
       key: 'about',
+      world: 'shopmaster',
+      level: 'essential',
       title: 'Tell shoppers about your shop',
       done: about.length >= 80,
       progress: about ? `${about.length} characters` : 'empty',
@@ -76,6 +85,8 @@ const stepsFor = ({ seller, products, scored, reviews, coupons }) => {
     },
     {
       key: 'links',
+      world: 'shopmaster',
+      level: 'optional',
       title: 'Link your Instagram, Google listing or website',
       done: links >= 1,
       progress: links ? `${links} linked` : 'none',
@@ -87,6 +98,8 @@ const stepsFor = ({ seller, products, scored, reviews, coupons }) => {
     },
     {
       key: 'location',
+      world: 'shopmaster',
+      level: 'essential',
       title: 'Show your city on your shop page',
       done: Boolean(seller && seller.showLocation && city),
       progress: seller && seller.showLocation ? city || 'no city yet' : 'hidden',
@@ -98,6 +111,8 @@ const stepsFor = ({ seller, products, scored, reviews, coupons }) => {
     },
     {
       key: 'reviews',
+      world: 'shopmaster',
+      level: 'essential',
       title: 'Ask every delivered customer for a review',
       done: reviews >= 10,
       progress: `${reviews} review${reviews === 1 ? '' : 's'}`,
@@ -109,6 +124,8 @@ const stepsFor = ({ seller, products, scored, reviews, coupons }) => {
     },
     {
       key: 'video',
+      world: 'shopmaster',
+      level: 'optional',
       title: 'A short video on your best sellers',
       done: videos >= 1,
       progress: `${videos} product${videos === 1 ? '' : 's'} with video`,
@@ -120,6 +137,8 @@ const stepsFor = ({ seller, products, scored, reviews, coupons }) => {
     },
     {
       key: 'promotion',
+      world: 'shopmaster',
+      level: 'optional',
       title: 'Run one promotion',
       done: coupons >= 1,
       progress: coupons ? `${coupons} live` : 'none live',
@@ -130,7 +149,22 @@ const stepsFor = ({ seller, products, scored, reviews, coupons }) => {
       minutes: 2,
     },
     {
+      key: 'faqs',
+      world: 'shopmaster',
+      level: 'optional',
+      title: 'Two answers under every product',
+      done: n > 0 && withFaqs === n,
+      progress: `${withFaqs} of ${n}`,
+      value: pct(withFaqs, n),
+      why: 'Google\'s AI answers and the assistants people ask ("is this real silver?") quote pages that answer plainly. Two short answers per product is enough.',
+      how: 'Open a product → "Questions shoppers ask" → Draft 3 with AI, then keep them in your words.',
+      href: '/seller/products',
+      minutes: 3,
+    },
+    {
       key: 'gbp',
+      world: 'google',
+      level: 'essential',
       title: 'Your own Google Business Profile',
       done: Boolean(gbp),
       progress: gbp ? 'linked' : 'not linked',
@@ -177,7 +211,37 @@ exports.sellerGrow = async (req, res) => {
     } catch {
       /* the page still shows the ten steps */
     }
+    /*
+     * The two worlds and the fields (15 Sep 2026 - Rajat: "essentials + optional,
+     * kya website se hoga, kya Google pe, kiska kya faeda"). One list the
+     * page draws; the product form and Settings are where each is filled.
+     */
+    const fields = [
+      { field: 'Title: what it is + material or colour + who it is for (4+ words)', level: 'essential', where: 'Product form', gives: 'Search match; the title Google Shopping shows', href: '/seller/products' },
+      { field: 'Three photos, the first on a clean background', level: 'essential', where: 'Product form', gives: 'Shopping listing needs one; three earn the click', href: '/seller/products' },
+      { field: 'Category (the last level)', level: 'essential', where: 'Product form', gives: "Google's own product category in the feed - where it appears", href: '/seller/products' },
+      { field: 'Price and stock', level: 'essential', where: 'Product form', gives: 'The feed refuses a product without them', href: '/seller/products' },
+      { field: 'Colour; size for clothing and footwear; who it is for', level: 'essential', where: 'Product form', gives: 'Shopping filters; Google rejects clothing without size', href: '/seller/products' },
+      { field: 'Description, 80+ words, in short paragraphs', level: 'essential', where: 'Product form', gives: 'Rank; the text AI answers read', href: '/seller/products' },
+      { field: 'Return promise (return / exchange / none)', level: 'essential', where: 'Product form', gives: 'Shown under the price in Google; Fair Returns', href: '/seller/products' },
+      { field: 'Packed weight', level: 'essential', where: 'Product form', gives: 'The courier quote - not Google, but the sale', href: '/seller/products' },
+      { field: 'Search words - the G and S chips', level: 'optional', where: 'Product form → Suggest search words', gives: 'Real searches from Google and ShopMaster added to your listing', href: '/seller/products' },
+      { field: 'Questions shoppers ask (2-6)', level: 'optional', where: 'Product form → Draft 3 with AI', gives: 'AI Overviews and assistants quote plain answers', href: '/seller/products' },
+      { field: 'Brand or your item code', level: 'optional', where: 'Product form', gives: 'Identity in the feed', href: '/seller/products' },
+      { field: 'Show your city; name it in About; pickup address', level: 'essential', where: 'Settings', gives: '"Near me" - local results rank on distance', href: '/seller/settings' },
+      { field: 'Google Business Profile link; Instagram', level: 'essential', where: 'Settings → Your shop on the web', gives: 'Maps + the box on the right of a search; sameAs for Google', href: '/seller/settings#web' },
+      { field: 'Ask for a review after delivery (the message below)', level: 'essential', where: 'WhatsApp, after each delivery', gives: 'Stars in search results; the biggest local factor', href: '/seller/grow' },
+    ];
+    const outside = [
+      { task: 'Claim the Business Profile; right category, hours, phone, 5+ photos', level: 'essential', gives: 'Maps, "near me", calls - the single biggest free asset', href: 'https://business.google.com' },
+      { task: 'Reviews: 2 → 30, and reply to each', level: 'essential', gives: '47% of people skip a shop under 20 reviews', href: 'https://business.google.com' },
+      { task: 'One post a week on the profile (a product, a festival)', level: 'optional', gives: 'Freshness; it shows in the profile and Maps', href: 'https://business.google.com' },
+      { task: 'Same name, phone and address on Instagram / Justdial / profile', level: 'optional', gives: 'Consistency is a local ranking signal', href: null },
+      { task: 'Products on the profile', level: 'auto', gives: 'Appear on their own once the platform links Merchant Center to your profile', href: null },
+    ];
     res.json({
+      fields,
+      outside,
       market,
       products: products.length,
       score: Math.round(steps.reduce((t, s) => t + (s.value || 0), 0) / steps.length),
