@@ -33,6 +33,7 @@ const stepsFor = ({ seller, products, scored, reviews, coupons }) => {
   return [
     {
       key: 'listings',
+      gate: 'Google',
       world: 'shopmaster',
       level: 'essential',
       title: 'Every listing scores 80 or more',
@@ -46,6 +47,7 @@ const stepsFor = ({ seller, products, scored, reviews, coupons }) => {
     },
     {
       key: 'photos',
+      gate: 'Google',
       world: 'shopmaster',
       level: 'essential',
       title: 'Three or more photos on each product',
@@ -72,6 +74,7 @@ const stepsFor = ({ seller, products, scored, reviews, coupons }) => {
     },
     {
       key: 'about',
+      gate: 'Maps',
       world: 'shopmaster',
       level: 'essential',
       title: 'Tell shoppers about your shop',
@@ -98,6 +101,7 @@ const stepsFor = ({ seller, products, scored, reviews, coupons }) => {
     },
     {
       key: 'location',
+      gate: 'Maps',
       world: 'shopmaster',
       level: 'essential',
       title: 'Show your city on your shop page',
@@ -111,6 +115,7 @@ const stepsFor = ({ seller, products, scored, reviews, coupons }) => {
     },
     {
       key: 'reviews',
+      gate: 'Maps',
       world: 'shopmaster',
       level: 'essential',
       title: 'Ask every delivered customer for a review',
@@ -163,6 +168,7 @@ const stepsFor = ({ seller, products, scored, reviews, coupons }) => {
     },
     {
       key: 'gbp',
+      gate: 'Maps',
       world: 'google',
       level: 'essential',
       title: 'Your own Google Business Profile',
@@ -217,24 +223,24 @@ exports.sellerGrow = async (req, res) => {
      * page draws; the product form and Settings are where each is filled.
      */
     const fields = [
-      { field: 'Title: what it is + material or colour + who it is for (4+ words)', level: 'essential', where: 'Product form', gives: 'Search match; the title Google Shopping shows', href: '/seller/products' },
-      { field: 'Three photos, the first on a clean background', level: 'essential', where: 'Product form', gives: 'Shopping listing needs one; three earn the click', href: '/seller/products' },
-      { field: 'Category (the last level)', level: 'essential', where: 'Product form', gives: "Google's own product category in the feed - where it appears", href: '/seller/products' },
-      { field: 'Price and stock', level: 'essential', where: 'Product form', gives: 'The feed refuses a product without them', href: '/seller/products' },
-      { field: 'Colour; size for clothing and footwear; who it is for', level: 'essential', where: 'Product form', gives: 'Shopping filters; Google rejects clothing without size', href: '/seller/products' },
-      { field: 'Description, 80+ words, in short paragraphs', level: 'essential', where: 'Product form', gives: 'Rank; the text AI answers read', href: '/seller/products' },
-      { field: 'Return promise (return / exchange / none)', level: 'essential', where: 'Product form', gives: 'Shown under the price in Google; Fair Returns', href: '/seller/products' },
-      { field: 'Packed weight', level: 'essential', where: 'Product form', gives: 'The courier quote - not Google, but the sale', href: '/seller/products' },
+      { field: 'Title: what it is + material or colour + who it is for (4+ words)', level: 'essential', gate: 'Google', where: 'Product form', gives: 'Search match; the title Google Shopping shows', href: '/seller/products' },
+      { field: 'Three photos, the first on a clean background', level: 'essential', gate: 'Google', where: 'Product form', gives: 'Shopping listing needs one; three earn the click', href: '/seller/products' },
+      { field: 'Category (the last level)', level: 'essential', gate: 'Google', where: 'Product form', gives: "Google's own product category in the feed - where it appears", href: '/seller/products' },
+      { field: 'Price and stock', level: 'essential', gate: 'Google', where: 'Product form', gives: 'The feed refuses a product without them', href: '/seller/products' },
+      { field: 'Colour; size for clothing and footwear; who it is for', level: 'essential', gate: 'Google', where: 'Product form', gives: 'Shopping filters; Google rejects clothing without size', href: '/seller/products' },
+      { field: 'Description, 80+ words, in short paragraphs', level: 'essential', gate: 'Google', where: 'Product form', gives: 'Rank; the text AI answers read', href: '/seller/products' },
+      { field: 'Return promise (return / exchange / none)', level: 'essential', gate: 'Policy', where: 'Product form', gives: 'Shown under the price in Google; Fair Returns', href: '/seller/products' },
+      { field: 'Packed weight', level: 'essential', gate: 'Courier', where: 'Product form', gives: 'The courier quote - not Google, but the sale', href: '/seller/products' },
       { field: 'Search words - the G and S chips', level: 'optional', where: 'Product form → Suggest search words', gives: 'Real searches from Google and ShopMaster added to your listing', href: '/seller/products' },
       { field: 'Questions shoppers ask (2-6)', level: 'optional', where: 'Product form → Draft 3 with AI', gives: 'AI Overviews and assistants quote plain answers', href: '/seller/products' },
       { field: 'Brand or your item code', level: 'optional', where: 'Product form', gives: 'Identity in the feed', href: '/seller/products' },
-      { field: 'Show your city; name it in About; pickup address', level: 'essential', where: 'Settings', gives: '"Near me" - local results rank on distance', href: '/seller/settings' },
-      { field: 'Google Business Profile link; Instagram', level: 'essential', where: 'Settings → Your shop on the web', gives: 'Maps + the box on the right of a search; sameAs for Google', href: '/seller/settings#web' },
-      { field: 'Ask for a review after delivery (the message below)', level: 'essential', where: 'WhatsApp, after each delivery', gives: 'Stars in search results; the biggest local factor', href: '/seller/grow' },
+      { field: 'Show your city; name it in About; pickup address', level: 'essential', gate: 'Maps', where: 'Settings', gives: '"Near me" - local results rank on distance', href: '/seller/settings' },
+      { field: 'Google Business Profile link; Instagram', level: 'essential', gate: 'Maps', where: 'Settings → Your shop on the web', gives: 'Maps + the box on the right of a search; sameAs for Google', href: '/seller/settings#web' },
+      { field: 'Ask for a review after delivery (the message below)', level: 'essential', gate: 'Maps', where: 'WhatsApp, after each delivery', gives: 'Stars in search results; the biggest local factor', href: '/seller/grow' },
     ];
     const outside = [
-      { task: 'Claim the Business Profile; right category, hours, phone, 5+ photos', level: 'essential', gives: 'Maps, "near me", calls - the single biggest free asset', href: 'https://business.google.com' },
-      { task: 'Reviews: 2 → 30, and reply to each', level: 'essential', gives: '47% of people skip a shop under 20 reviews', href: 'https://business.google.com' },
+      { task: 'Claim the Business Profile; right category, hours, phone, 5+ photos', level: 'essential', gate: 'Maps', gives: 'Maps, "near me", calls - the single biggest free asset', href: 'https://business.google.com' },
+      { task: 'Reviews: 2 → 30, and reply to each', level: 'essential', gate: 'Maps', gives: '47% of people skip a shop under 20 reviews', href: 'https://business.google.com' },
       { task: 'One post a week on the profile (a product, a festival)', level: 'optional', gives: 'Freshness; it shows in the profile and Maps', href: 'https://business.google.com' },
       { task: 'Same name, phone and address on Instagram / Justdial / profile', level: 'optional', gives: 'Consistency is a local ranking signal', href: null },
       { task: 'Products on the profile', level: 'auto', gives: 'Appear on their own once the platform links Merchant Center to your profile', href: null },

@@ -314,6 +314,12 @@ const HI = {
   'A short video on your best sellers': 'सबसे ज़्यादा बिकने वालों पर छोटा वीडियो',
   'Run one promotion': 'एक प्रमोशन चलाएँ',
   'Your own Google Business Profile': 'आपकी अपनी Google Business Profile',
+  // gatekeepers
+  'Maps': 'Maps',
+  'Courier': 'कूरियर',
+  'Policy': 'नियम',
+  'Google': 'Google',
+  'Essential names who refuses without it: Google = the Shopping feed drops the product · Maps = local results skip the shop · Courier = no quote · Policy = the return promise cannot be shown. Optional = nobody refuses, it just sells better.': 'ज़रूरी के साथ लिखा है कौन मना करता है: Google = Shopping फ़ीड प्रोडक्ट छोड़ देता है · Maps = लोकल नतीजों में दुकान नहीं आती · कूरियर = भाव नहीं · नियम = वापसी का वादा दिखा नहीं सकते। वैकल्पिक = कोई मना नहीं करता, बस बिक्री बेहतर होती है।',
 };
 
 export default HI;

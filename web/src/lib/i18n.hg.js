@@ -267,6 +267,12 @@ const HG = {
   'A short video on your best sellers': 'Best sellers pe chhota video',
   'Run one promotion': 'Ek promotion chalao',
   'Your own Google Business Profile': 'Aapki apni Google Business Profile',
+  // gatekeepers
+  'Maps': 'Maps',
+  'Courier': 'Courier',
+  'Policy': 'Niyam',
+  'Google': 'Google',
+  'Essential names who refuses without it: Google = the Shopping feed drops the product · Maps = local results skip the shop · Courier = no quote · Policy = the return promise cannot be shown. Optional = nobody refuses, it just sells better.': 'Zaroori ke saath likha hai kaun mana karta hai: Google = Shopping feed product chhod deta hai · Maps = local results me dukaan nahi aati · Courier = bhaav nahi · Niyam = return ka vaada dikha nahi sakte. Optional = koi mana nahi karta, bas sale behtar hoti hai.',
 };
 
 export default HG;

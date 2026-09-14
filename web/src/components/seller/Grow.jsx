@@ -64,10 +64,11 @@ function Ring({ value }) {
 }
 
 /** Essential / Optional / Automatic - one word, one colour, next to the item. */
-const Level = ({ level, t }) => {
+const Level = ({ level, gate, t }) => {
   if (!level) return null;
   const cls = level === 'essential' ? 'bg-brand-ink/10 text-brand-ink' : level === 'auto' ? 'bg-emerald-500/15 text-emerald-800 dark:text-emerald-200' : 'bg-muted text-muted-foreground';
-  const word = level === 'essential' ? t('Essential') : level === 'auto' ? t('Automatic') : t('Optional');
+  // Essential always names who refuses without it - Google's feed, Maps, the courier, our policy (Rajat, 15 Sep: "essential kiske liye?").
+  const word = level === 'essential' ? `${t('Essential')}${gate ? ` · ${t(gate)}` : ''}` : level === 'auto' ? t('Automatic') : t('Optional');
   return <span className={`ml-2 rounded px-1.5 py-0.5 align-middle text-[0.6rem] font-semibold uppercase tracking-wide ${cls}`}>{word}</span>;
 };
 
@@ -155,7 +156,7 @@ export default function Grow() {
                     <div className="flex flex-wrap items-baseline justify-between gap-x-3">
                       <p className={`font-medium ${s.done ? 'text-muted-foreground line-through decoration-muted-foreground/40' : ''}`}>
                         {t(s.title)}
-                        <Level level={s.level} t={t} />
+                        <Level level={s.level} gate={s.gate} t={t} />
                       </p>
                       <span className="text-xs tabular-nums text-muted-foreground">{s.progress}</span>
                     </div>
@@ -190,7 +191,7 @@ export default function Grow() {
                     {s.done ? <Check className="size-3.5" strokeWidth={3} /> : '1'}
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="font-medium">{t(s.title)}<Level level={s.level} t={t} /></p>
+                    <p className="font-medium">{t(s.title)}<Level level={s.level} gate={s.gate} t={t} /></p>
                     <p className="mt-1 text-sm text-muted-foreground">{s.why}</p>
                     {!s.done && <p className="mt-1 text-sm"><span className="text-muted-foreground">{t('How')}: </span>{s.how} <Link href={s.href} className="font-medium text-brand-ink hover:underline">{t('Go')} →</Link></p>}
                   </div>
@@ -200,7 +201,7 @@ export default function Grow() {
                 <li key={o.task} className="flex gap-3 py-3">
                   <span className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-full bg-muted text-xs font-semibold text-muted-foreground">{i + 2}</span>
                   <div className="min-w-0 flex-1">
-                    <p className="font-medium">{t(o.task)}<Level level={o.level} t={t} /></p>
+                    <p className="font-medium">{t(o.task)}<Level level={o.level} gate={o.gate} t={t} /></p>
                     <p className="mt-1 text-sm text-muted-foreground">{t(o.gives)}</p>
                     {o.href && <a href={o.href} target="_blank" rel="noreferrer" className="text-sm font-medium text-brand-ink hover:underline">{t('Open')} →</a>}
                   </div>
@@ -222,7 +223,7 @@ export default function Grow() {
                 <tbody className="divide-y">
                   {(data.fields || []).map((x) => (
                     <tr key={x.field}>
-                      <td className="py-2 pr-3 align-top"><Link href={x.href} className="hover:underline">{t(x.field)}</Link><Level level={x.level} t={t} /></td>
+                      <td className="py-2 pr-3 align-top"><Link href={x.href} className="hover:underline">{t(x.field)}</Link><Level level={x.level} gate={x.gate} t={t} /></td>
                       <td className="py-2 pr-3 align-top text-muted-foreground">{t(x.where)}</td>
                       <td className="py-2 align-top text-muted-foreground">{t(x.gives)}</td>
                     </tr>
@@ -230,7 +231,8 @@ export default function Grow() {
                 </tbody>
               </table>
             </div>
-            <p className="mt-3 text-xs text-muted-foreground">{t('Never: bought backlinks, keyword stuffing, city names sprinkled in descriptions - Google penalises all three, and at our size they earn nothing.')}</p>
+            <p className="mt-3 text-xs text-muted-foreground">{t('Essential names who refuses without it: Google = the Shopping feed drops the product · Maps = local results skip the shop · Courier = no quote · Policy = the return promise cannot be shown. Optional = nobody refuses, it just sells better.')}</p>
+            <p className="mt-1 text-xs text-muted-foreground">{t('Never: bought backlinks, keyword stuffing, city names sprinkled in descriptions - Google penalises all three, and at our size they earn nothing.')}</p>
           </PanelCard>
 
           {/* Market insights (plan 2.20): Google's own view of our prices and the
