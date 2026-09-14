@@ -33,6 +33,13 @@
  */
 const DEFAULT_MODEL = process.env.GEMINI_MODEL || 'gemini-3.5-flash';
 const LITE_MODEL = process.env.GEMINI_LITE_MODEL || 'gemini-3.5-flash-lite';
+/*
+ * When flash says 429 it stays 429 for a while (a daily quota, not a blip).
+ * Remember it for ten minutes and start on lite - saves a wasted call and a
+ * red line in the gateway log per request (15 Sep 2026: 51 of 83).
+ */
+let flashQuotaUntil = 0;
+const quotaOut = (m) => m === DEFAULT_MODEL && Date.now() < flashQuotaUntil;
 
 const { GEMINI_MODELS: API } = require('./ai/endpoints');
 
@@ -99,7 +106,8 @@ const generate = async (prompt, opts = {}) => {
     return fallbackOr({ ok: false, reason: 'GEMINI_API_KEY is not set' }, prompt, opts);
   }
 
-  const model = opts.model || DEFAULT_MODEL;
+  const wanted = opts.model || DEFAULT_MODEL;
+  const model = quotaOut(wanted) && !opts.noLite ? LITE_MODEL : wanted;
   const attempts = opts.attempts ?? 4;
 
   /*
@@ -198,6 +206,7 @@ const generate = async (prompt, opts = {}) => {
       // Before leaving Google: flash-lite has its own free quota (15 Sep 2026:
       // flash 429 all day at "limit: 20", lite answered in 0.8 s) and takes the
       // same schema, image and system prompt - so it goes first, nano after.
+      if (response.status === 429 && model === DEFAULT_MODEL) flashQuotaUntil = Date.now() + 10 * 60 * 1000;
       if (response.status === 429 && model !== LITE_MODEL && !opts.noLite) {
         const lite = await generate(prompt, { ...opts, model: LITE_MODEL, attempts: 2, noLite: true });
         if (lite.ok) return lite;
@@ -234,7 +243,8 @@ const generate = async (prompt, opts = {}) => {
 const generateWithTools = async (contents, opts = {}) => {
   const key = process.env.GEMINI_API_KEY;
   if (!key) return { ok: false, reason: 'GEMINI_API_KEY is not set' };
-  const model = opts.model || DEFAULT_MODEL;
+  const wanted = opts.model || DEFAULT_MODEL;
+  const model = quotaOut(wanted) ? LITE_MODEL : wanted;
   const maxRounds = opts.maxRounds ?? 6;
   const calls = [];
   const thread = [...contents];
