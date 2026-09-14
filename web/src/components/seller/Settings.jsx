@@ -13,6 +13,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import PanelCard from '@/components/panel/PanelCard';
 import PushToggle from '@/components/seller/PushToggle';
 import NotificationPrefs from '@/components/common/NotificationPrefs';
+import PanelTabs from '@/components/panel/PanelTabs';
 
 /**
  * A seller's own settings.
@@ -123,149 +124,194 @@ export default function SellerSettings() {
   const setAddress = (key) => (e) =>
     setForm({ ...form, pickupAddress: { ...form.pickupAddress, [key]: e.target.value } });
   const a = form.pickupAddress;
+  // Which tab holds an unsaved change - shown as a dot on the tab and named
+  // in the save bar, so a change made on one tab is not forgotten on another.
+  const changedIn = {
+    shop: form.offersFreeShipping !== saved.offersFreeShipping,
+    pickup: !same(form.pickupAddress, saved.pickupAddress),
+    web: form.about !== saved.about || form.showLocation !== saved.showLocation || !same(form.links, saved.links),
+  };
+  const changedNames = [changedIn.shop && 'Shop', changedIn.pickup && 'Pickup address', changedIn.web && 'On the web'].filter(Boolean);
 
   return (
     <form onSubmit={save} className="max-w-3xl space-y-5">
-      <PanelCard title={settings.businessName}>
-        <dl className="grid gap-4 text-sm sm:grid-cols-2">
-          <div>
-            <dt className="text-muted-foreground">Platform commission</dt>
-            <dd className="mt-0.5 font-medium tabular-nums">
-              {settings.commissionRate ?? 0}% of each sale
-              {settings.isPlatformOwned ? ' · the platform’s own shop' : ''}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-muted-foreground">Who can change it</dt>
-            <dd className="mt-0.5 font-medium">Only an admin</dd>
-          </div>
-          {/* The rules this shop agreed to, and when - findable from inside the
-              panel, as Shopify keeps policies under Settings. */}
-          <div className="sm:col-span-2">
-            <dt className="text-muted-foreground">Seller Agreement</dt>
-            <dd className="mt-0.5 font-medium">
-              {settings.agreement?.version ? (
-                <>
-                  Version {settings.agreement.version}
-                  {settings.agreement.acceptedAt
-                    ? `, accepted on ${new Date(settings.agreement.acceptedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}`
-                    : ''}
-                </>
-              ) : (
-                'Not accepted yet'
-              )}
-              {' · '}
-              <Link href="/selling-policy" target="_blank" rel="noopener" className="font-normal text-brand-ink hover:underline">
-                Read it
-              </Link>
-            </dd>
-          </div>
-        </dl>
-      </PanelCard>
-
-      <PushToggle />
-      <NotificationPrefs />
-
-      <PanelCard
-        title="Where the courier collects"
-        lead="This is the address a rider is sent to. If the shop moves and this does not, the pickup is wasted and the parcel misses its dispatch promise."
+      {/*
+       * Four tabs (15 Sep 2026, plan 2.39): the page was 5.6 phone screens
+       * of cards. Shopify's Settings is a list of subjects, Stripe's is tabs;
+       * ours: Shop · Pickup address · On the web · Notifications. One form,
+       * one save bar under every tab, and the bar names the tabs with
+       * unsaved changes so nothing is lost behind a tab you left. Old links
+       * with #web still land on the right tab (anchors).
+       */}
+      <PanelTabs
+        tabs={[
+          { key: 'shop', label: 'Shop', count: changedIn.shop ? '•' : undefined },
+          { key: 'pickup', label: 'Pickup address', count: !a.city ? '!' : changedIn.pickup ? '•' : undefined, anchors: ['pickup'] },
+          { key: 'web', label: 'On the web', count: changedIn.web ? '•' : undefined, anchors: ['web'] },
+          { key: 'notifications', label: 'Notifications' },
+        ]}
       >
-        <div className="grid gap-5">
-          <div className="grid gap-5 sm:grid-cols-2">
-            <Field id="contactName" label="Contact name" hint="Who the rider asks for at the door.">
-              <Input id="contactName" value={a.contactName || ''} onChange={setAddress('contactName')} autoComplete="name" />
-            </Field>
-            <Field id="phone" label="Phone">
-              <Input id="phone" type="tel" inputMode="tel" value={a.phone || ''} onChange={setAddress('phone')} autoComplete="tel" />
-            </Field>
-          </div>
-
-          <Field id="address1" label="Address">
-            <Input id="address1" value={a.address1 || ''} onChange={setAddress('address1')} autoComplete="address-line1" />
-          </Field>
-          <Field id="address2" label="Landmark or second line" hint="Optional.">
-            <Input id="address2" value={a.address2 || ''} onChange={setAddress('address2')} autoComplete="address-line2" />
-          </Field>
-
-          <div className="grid gap-5 sm:grid-cols-3">
-            <Field id="city" label="City">
-              <Input id="city" value={a.city || ''} onChange={setAddress('city')} autoComplete="address-level2" />
-            </Field>
-            <Field id="state" label="State">
-              <Input id="state" value={a.state || ''} onChange={setAddress('state')} autoComplete="address-level1" />
-            </Field>
-            <Field id="pincode" label="PIN code">
-              <Input
-                id="pincode"
-                inputMode="numeric"
-                autoComplete="postal-code"
-                value={a.pincode || ''}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    pickupAddress: { ...a, pincode: e.target.value.replace(/\D/g, '').slice(0, 6) },
-                  })
-                }
-              />
-            </Field>
-          </div>
-        </div>
-      </PanelCard>
-
-      {/* The shop's public face - what the shop page and Google see. Reached
-          from "Get found on Google" as #web. */}
-      <div id="web" className="scroll-mt-20">
-        <PanelCard title="Your shop on the web" lead="Shown on your shop page and read by Google. Two honest sentences and your real profiles do more than any keyword.">
+        {(tab) => (
           <div className="space-y-5">
-            <Field id="about" label="About your shop" hint={`${form.about.length}/600 · who you are, what you make or sell, since when. It becomes your page's description on Google.`}>
-              <Textarea id="about" value={form.about} onChange={(e) => setForm({ ...form, about: e.target.value.slice(0, 600) })} rows={3} placeholder="Family-run jewellery shop in Devi Nagar, Jaipur, since 1998. Kundan, meenakari and pearl pieces made by hand; every piece photographed on the actual item." />
-            </Field>
-            <div className="grid gap-4 sm:grid-cols-2">
-              {[
-                ['instagram', 'Instagram', 'instagram.com/yourshop'],
-                ['googleBusiness', 'Google Business Profile', 'the Share → Copy link from your Google listing'],
-                ['facebook', 'Facebook page', 'facebook.com/yourshop'],
-                ['youtube', 'YouTube channel', 'youtube.com/@yourshop'],
-                ['website', 'Your own website', 'yourshop.in'],
-              ].map(([key, label, ph]) => (
-                <Field key={key} id={`link-${key}`} label={label}>
-                  <Input id={`link-${key}`} value={form.links[key] || ''} onChange={(e) => setForm({ ...form, links: { ...form.links, [key]: e.target.value } })} placeholder={ph} className="h-10" inputMode="url" />
-                </Field>
-              ))}
-            </div>
-            <div className="flex items-start justify-between gap-4 rounded-lg border p-3">
-              <div>
-                <Label htmlFor="showLocation" className="text-sm font-medium">
-                  Show my city on the shop page
-                </Label>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  {form.pickupAddress.city ? `“${form.pickupAddress.city}, ${form.pickupAddress.state}” - the city only, never the address.` : 'Add a pickup address above first; only the city is shown.'}
-                </p>
-              </div>
-              <Switch id="showLocation" checked={form.showLocation} onCheckedChange={(checked) => setForm({ ...form, showLocation: checked })} className="mt-0.5" disabled={!form.pickupAddress.city} />
-            </div>
-          </div>
-        </PanelCard>
-      </div>
+            {tab === 'shop' && (
+              <>
+              <PanelCard title={settings.businessName}>
+                <dl className="grid gap-4 text-sm sm:grid-cols-2">
+                  <div>
+                    <dt className="text-muted-foreground">Platform commission</dt>
+                    <dd className="mt-0.5 font-medium tabular-nums">
+                      {settings.commissionRate ?? 0}% of each sale
+                      {settings.isPlatformOwned ? ' · the platform’s own shop' : ''}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted-foreground">Who can change it</dt>
+                    <dd className="mt-0.5 font-medium">Only an admin</dd>
+                  </div>
+                  {/* The rules this shop agreed to, and when - findable from inside the
+                      panel, as Shopify keeps policies under Settings. */}
+                  <div className="sm:col-span-2">
+                    <dt className="text-muted-foreground">Seller Agreement</dt>
+                    <dd className="mt-0.5 font-medium">
+                      {settings.agreement?.version ? (
+                        <>
+                          Version {settings.agreement.version}
+                          {settings.agreement.acceptedAt
+                            ? `, accepted on ${new Date(settings.agreement.acceptedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}`
+                            : ''}
+                        </>
+                      ) : (
+                        'Not accepted yet'
+                      )}
+                      {' · '}
+                      <Link href="/selling-policy" target="_blank" rel="noopener" className="font-normal text-brand-ink hover:underline">
+                        Read it
+                      </Link>
+                    </dd>
+                  </div>
+                </dl>
+              </PanelCard>
 
-      <PanelCard title="Delivery">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <Label htmlFor="freeShipping" className="text-sm font-medium">
-              I pay the delivery on everything I sell
-            </Label>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Shop-wide. Individual products can already be marked free delivery; this covers the rest.
-            </p>
+              <PanelCard title="Delivery">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <Label htmlFor="freeShipping" className="text-sm font-medium">
+                      I pay the delivery on everything I sell
+                    </Label>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Shop-wide. Individual products can already be marked free delivery; this covers the rest.
+                    </p>
+                  </div>
+                  <Switch
+                    id="freeShipping"
+                    checked={form.offersFreeShipping}
+                    onCheckedChange={(checked) => setForm({ ...form, offersFreeShipping: checked })}
+                    className="mt-0.5"
+                  />
+                </div>
+              </PanelCard>
+
+              </>
+            )}
+            {tab === 'pickup' && (
+              <div id="pickup" className="scroll-mt-20">
+              <PanelCard
+                title="Where the courier collects"
+                lead="This is the address a rider is sent to. If the shop moves and this does not, the pickup is wasted and the parcel misses its dispatch promise."
+              >
+                <div className="grid gap-5">
+                  <div className="grid gap-5 sm:grid-cols-2">
+                    <Field id="contactName" label="Contact name" hint="Who the rider asks for at the door.">
+                      <Input id="contactName" value={a.contactName || ''} onChange={setAddress('contactName')} autoComplete="name" />
+                    </Field>
+                    <Field id="phone" label="Phone">
+                      <Input id="phone" type="tel" inputMode="tel" value={a.phone || ''} onChange={setAddress('phone')} autoComplete="tel" />
+                    </Field>
+                  </div>
+
+                  <Field id="address1" label="Address">
+                    <Input id="address1" value={a.address1 || ''} onChange={setAddress('address1')} autoComplete="address-line1" />
+                  </Field>
+                  <Field id="address2" label="Landmark or second line" hint="Optional.">
+                    <Input id="address2" value={a.address2 || ''} onChange={setAddress('address2')} autoComplete="address-line2" />
+                  </Field>
+
+                  <div className="grid gap-5 sm:grid-cols-3">
+                    <Field id="city" label="City">
+                      <Input id="city" value={a.city || ''} onChange={setAddress('city')} autoComplete="address-level2" />
+                    </Field>
+                    <Field id="state" label="State">
+                      <Input id="state" value={a.state || ''} onChange={setAddress('state')} autoComplete="address-level1" />
+                    </Field>
+                    <Field id="pincode" label="PIN code">
+                      <Input
+                        id="pincode"
+                        inputMode="numeric"
+                        autoComplete="postal-code"
+                        value={a.pincode || ''}
+                        onChange={(e) =>
+                          setForm({
+                            ...form,
+                            pickupAddress: { ...a, pincode: e.target.value.replace(/\D/g, '').slice(0, 6) },
+                          })
+                        }
+                      />
+                    </Field>
+                  </div>
+                </div>
+              </PanelCard>
+
+              </div>
+            )}
+            {tab === 'web' && (
+              <>
+              {/* The shop's public face - what the shop page and Google see. Reached
+                  from "Get found on Google" as #web. */}
+              <div id="web" className="scroll-mt-20">
+                <PanelCard title="Your shop on the web" lead="Shown on your shop page and read by Google. Two honest sentences and your real profiles do more than any keyword.">
+                  <div className="space-y-5">
+                    <Field id="about" label="About your shop" hint={`${form.about.length}/600 · who you are, what you make or sell, since when. It becomes your page's description on Google.`}>
+                      <Textarea id="about" value={form.about} onChange={(e) => setForm({ ...form, about: e.target.value.slice(0, 600) })} rows={3} placeholder="Family-run jewellery shop in Devi Nagar, Jaipur, since 1998. Kundan, meenakari and pearl pieces made by hand; every piece photographed on the actual item." />
+                    </Field>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      {[
+                        ['instagram', 'Instagram', 'instagram.com/yourshop'],
+                        ['googleBusiness', 'Google Business Profile', 'the Share → Copy link from your Google listing'],
+                        ['facebook', 'Facebook page', 'facebook.com/yourshop'],
+                        ['youtube', 'YouTube channel', 'youtube.com/@yourshop'],
+                        ['website', 'Your own website', 'yourshop.in'],
+                      ].map(([key, label, ph]) => (
+                        <Field key={key} id={`link-${key}`} label={label}>
+                          <Input id={`link-${key}`} value={form.links[key] || ''} onChange={(e) => setForm({ ...form, links: { ...form.links, [key]: e.target.value } })} placeholder={ph} className="h-10" inputMode="url" />
+                        </Field>
+                      ))}
+                    </div>
+                    <div className="flex items-start justify-between gap-4 rounded-lg border p-3">
+                      <div>
+                        <Label htmlFor="showLocation" className="text-sm font-medium">
+                          Show my city on the shop page
+                        </Label>
+                        <p className="mt-1 text-sm text-muted-foreground">
+                          {form.pickupAddress.city ? `“${form.pickupAddress.city}, ${form.pickupAddress.state}” - the city only, never the address.` : 'Add a pickup address first (the Pickup address tab); only the city is shown.'}
+                        </p>
+                      </div>
+                      <Switch id="showLocation" checked={form.showLocation} onCheckedChange={(checked) => setForm({ ...form, showLocation: checked })} className="mt-0.5" disabled={!form.pickupAddress.city} />
+                    </div>
+                  </div>
+                </PanelCard>
+              </div>
+
+              </>
+            )}
+            {tab === 'notifications' && (
+              <>
+                <PushToggle />
+                <NotificationPrefs />
+              </>
+            )}
           </div>
-          <Switch
-            id="freeShipping"
-            checked={form.offersFreeShipping}
-            onCheckedChange={(checked) => setForm({ ...form, offersFreeShipping: checked })}
-            className="mt-0.5"
-          />
-        </div>
-      </PanelCard>
+        )}
+      </PanelTabs>
 
       <div className="sticky bottom-0 z-10 -mx-1 flex items-center gap-3 border-t bg-background/95 px-1 py-3 backdrop-blur">
         <Button type="submit" disabled={!dirty || state.status === 'working'}>
@@ -279,6 +325,7 @@ export default function SellerSettings() {
         <p aria-live="polite" className="text-sm">
           {state.status === 'error' && <span className="text-destructive">{state.message}</span>}
           {state.status !== 'error' && !dirty && <span className="text-muted-foreground">Nothing to save.</span>}
+          {state.status !== 'error' && dirty && <span className="text-muted-foreground">Changed: {changedNames.join(', ')}</span>}
         </p>
       </div>
     </form>

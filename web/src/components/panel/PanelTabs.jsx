@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useCallback } from 'react';
+import { Suspense, useCallback, useEffect } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
 /**
@@ -12,7 +12,11 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
  * desktop it is an underline row. Counts sit on the tab, like Seller
  * Central's "Unfulfilled (3)".
  *
- * @param {{tabs: Array<{key:string, label:string, count?:number|string}>, defaultTab?:string, children:(key:string)=>any}} props
+ * A tab may list `anchors` - element ids that live inside it - so an old
+ * link with a hash (`/seller/settings#web`) opens the right tab and then
+ * scrolls to the element. The hash is kept on the URL when a tab changes.
+ *
+ * @param {{tabs: Array<{key:string, label:string, count?:number|string, anchors?:string[]}>, defaultTab?:string, children:(key:string)=>any}} props
  */
 function TabsInner({ tabs, defaultTab, children, param = 'tab' }) {
   const router = useRouter();
@@ -26,10 +30,32 @@ function TabsInner({ tabs, defaultTab, children, param = 'tab' }) {
       if (key === (defaultTab || tabs[0].key)) next.delete(param);
       else next.set(param, key);
       const qs = next.toString();
-      router.replace(`${pathname}${qs ? `?${qs}` : ''}`, { scroll: false });
+      // The hash travels only with the tab that owns it.
+      const raw = typeof window === 'undefined' ? '' : window.location.hash;
+      const hash = tabs.some((t) => t.key === key && (t.anchors || []).includes(raw.slice(1))) ? raw : '';
+      router.replace(`${pathname}${qs ? `?${qs}` : ''}${hash}`, { scroll: false });
     },
     [router, pathname, search, param, defaultTab, tabs]
   );
+
+  // A hash that belongs to another tab: switch, then reveal and scroll once
+  // that tab has rendered. Only when the URL does not already name a tab.
+  useEffect(() => {
+    const id = window.location.hash.slice(1);
+    if (!id) return;
+    const owner = tabs.find((t) => (t.anchors || []).includes(id));
+    if (owner && owner.key !== current && !search.get(param)) {
+      select(owner.key);
+      return;
+    }
+    const timer = setTimeout(() => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      window.dispatchEvent(new CustomEvent('smp:reveal', { detail: id }));
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 120);
+    return () => clearTimeout(timer);
+  }, [current, tabs, search, param, select]);
 
   return (
     <div>

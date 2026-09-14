@@ -2123,5 +2123,12 @@ prioritised by impact, one next fix, never a wall of advice.
   editor on that fold (`#photos`, `#details` … - the form reads the hash and
   fires `smp:reveal`). On a phone the actions wrap under the row.
 
-**Not done.** Seller and admin Settings still scroll (5.6 phone screens) -
-tabs next. The new labels are English only until 2.13 catches up.
+- **Settings, both panels.** Seller: Shop · Pickup address · On the web ·
+  Notifications - one form, one save bar under every tab; a dot marks the tab
+  holding an unsaved change and the bar says "Changed: On the web" so a tab
+  you left cannot lose work. Old `#web` links from Grow still land: a tab
+  lists its `anchors`, PanelTabs switches to the owner and scrolls. Admin:
+  Business · Rulebook vN · Switches · Announcement, the same dot. 5.6 → 1.5
+  phone screens.
+
+**Not done.** The new labels are English only until 2.13 catches up.
