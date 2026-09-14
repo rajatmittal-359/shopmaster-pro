@@ -122,11 +122,11 @@ export default function Grow() {
         </div>
         <div className="min-w-0 flex-1">
           <p className="font-semibold">
-            {data.done} of {data.total} steps done
+            {t('{done} of {total} steps done', { done: data.done, total: data.total })}
           </p>
           {data.next ? (
             <p className="mt-0.5 text-sm text-muted-foreground">
-              Next, about {data.next.minutes} min: <strong className="text-foreground">{data.next.title}</strong>
+              {t('Next, about {n} min:', { n: data.next.minutes })} <strong className="text-foreground">{t(data.next.title)}</strong>
               {' - '}
               {data.next.progress}.
             </p>
@@ -185,10 +185,10 @@ export default function Grow() {
                                     <div className="h-full bg-brand-ink" style={{ width: `${s.value}%` }} />
                                   </div>
                                 )}
-                                <p className="mt-1.5 text-sm text-muted-foreground">{s.why}</p>
+                                <p className="mt-1.5 text-sm text-muted-foreground">{t(s.why)}</p>
                                 <p className="mt-1 text-sm">
                                   <span className="text-muted-foreground">How: </span>
-                                  {s.how}{' '}
+                                  {t(s.how)}{' '}
                                   <Link href={s.href} className="font-medium text-brand-ink hover:underline">
                                     Go →
                                   </Link>
@@ -218,8 +218,8 @@ export default function Grow() {
                           </span>
                           <div className="min-w-0 flex-1">
                             <p className="font-medium">{t(s.title)}<Level level={s.level} gate={s.gate} t={t} /></p>
-                            <p className="mt-1 text-sm text-muted-foreground">{s.why}</p>
-                            {!s.done && <p className="mt-1 text-sm"><span className="text-muted-foreground">{t('How')}: </span>{s.how} <Link href={s.href} className="font-medium text-brand-ink hover:underline">{t('Go')} →</Link></p>}
+                            <p className="mt-1 text-sm text-muted-foreground">{t(s.why)}</p>
+                            {!s.done && <p className="mt-1 text-sm"><span className="text-muted-foreground">{t('How')}: </span>{t(s.how)} <Link href={s.href} className="font-medium text-brand-ink hover:underline">{t('Go')} →</Link></p>}
                           </div>
                         </li>
                       ))}
@@ -235,21 +235,21 @@ export default function Grow() {
                       ))}
                     </ol>
                   </PanelCard>
-                  <PanelCard title="Google Business Profile - the ten-minute guide" lead="Your shop on Google Maps and in the box beside a search. Free. Done once, kept alive with a photo a week.">
+                  <PanelCard title={t('Google Business Profile - the ten-minute guide')} lead={t('Your shop on Google Maps and in the box beside a search. Free. Done once, kept alive with a photo a week.')}>
                     <ol className="space-y-3">
                       {GBP_GUIDE.map(([step, why], i) => (
                         <li key={step} className="flex gap-3 text-sm">
                           <span className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full bg-primary/10 text-[0.65rem] font-semibold text-brand-ink">{i + 1}</span>
                           <div>
-                            <p>{step}</p>
-                            <p className="text-xs text-muted-foreground">{why}</p>
+                            <p>{t(step)}</p>
+                            <p className="text-xs text-muted-foreground">{t(why)}</p>
                           </div>
                         </li>
                       ))}
                     </ol>
                     <div className="mt-4 flex flex-wrap items-center gap-2 text-sm">
                       <a href="https://business.google.com/create" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 font-medium text-brand-ink hover:underline">
-                        Open Google Business Profile <ExternalLink className="size-3.5" />
+                        {t('Open Google Business Profile')} <ExternalLink className="size-3.5" />
                       </a>
                       <span className="text-muted-foreground">·</span>
                       <button type="button" onClick={() => copy(data.shopUrl)} className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground">
@@ -326,32 +326,32 @@ export default function Grow() {
               )}
               {tab === 'guide' && (
                 <>
-                  <PanelCard title="The review message" lead="Send after delivery, on WhatsApp, with the product link. Change the words to yours.">
+                  <PanelCard title={t('The review message')} lead={t('Send after delivery, on WhatsApp, with the product link. Change the words to yours.')}>
                     <p className="rounded-lg bg-muted/50 p-3 text-sm whitespace-pre-line">{REVIEW_MESSAGE(data.businessName || 'our shop', data.shopUrl)}</p>
                     <Button size="sm" variant="outline" className="mt-2" onClick={() => copy(REVIEW_MESSAGE(data.businessName || 'our shop', data.shopUrl))}>
-                      Copy message
+                      {t('Copy message')}
                     </Button>
                   </PanelCard>
-                  <PanelCard title="Once a week, ten minutes">
+                  <PanelCard title={t('Once a week, ten minutes')}>
                     <ul className="space-y-1.5 text-sm text-muted-foreground">
-                      <li>· One new photo or post on your Google listing and Instagram.</li>
-                      <li>· Reply to every review, ours and Google’s - two lines, by name.</li>
-                      <li>· Open the weakest product and fix its three things.</li>
-                      <li>· Check Performance: cancels, dispatch time, failed deliveries.</li>
+                      <li>· {t('One new photo or post on your Google listing and Instagram.')}</li>
+                      <li>· {t('Reply to every review, ours and Google’s - two lines, by name.')}</li>
+                      <li>· {t('Open the weakest product and fix its three things.')}</li>
+                      <li>· {t('Check Performance: cancels, dispatch time, failed deliveries.')}</li>
                     </ul>
                   </PanelCard>
                 </>
               )}
             </div>
             <div className="space-y-6">
-                  <PanelCard title="Already done for you" lead="The platform's side. Nothing to set up.">
+                  <PanelCard title={t('Already done for you')} lead={t("The platform's side. Nothing to set up.")}>
                     <ul className="space-y-3">
-                      {AUTOMATIC.map(([t, d]) => (
-                        <li key={t} className="flex gap-2 text-sm">
+                      {AUTOMATIC.map(([head, d]) => (
+                        <li key={head} className="flex gap-2 text-sm">
                           <Check className="mt-0.5 size-4 shrink-0 text-emerald-600" />
                           <div>
-                            <p className="font-medium">{t}</p>
-                            <p className="text-xs text-muted-foreground">{d}</p>
+                            <p className="font-medium">{t(head)}</p>
+                            <p className="text-xs text-muted-foreground">{t(d)}</p>
                           </div>
                         </li>
                       ))}

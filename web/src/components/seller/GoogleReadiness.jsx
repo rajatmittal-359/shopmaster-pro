@@ -59,7 +59,7 @@ export default function GoogleReadiness() {
                   <li key={p._id} className="py-2 text-sm">
                     <Link href={`/seller/products/${p._id}`} className="font-medium hover:underline">{p.name}</Link>
                     <span className="ml-2 rounded bg-amber-500/15 px-1.5 py-0.5 text-xs font-semibold text-amber-800 dark:text-amber-200">{p.score}</span>
-                    <p className="text-xs text-muted-foreground">{p.topFix}</p>
+                    <p className="text-xs text-muted-foreground">{t(p.topFix)}</p>
                   </li>
                 ))}
               </ul>
