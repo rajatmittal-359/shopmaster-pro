@@ -16,7 +16,7 @@ exports.transcribe = async (req, res) => {
     if (typeof audio !== 'string' || !audio.startsWith('data:audio/')) return res.status(400).json({ message: 'Send the recording as an audio data URL' });
     const language = ['hi', 'hg', 'en', 'auto'].includes(req.body?.language) ? req.body.language : 'auto';
     const r = await transcribe(audio, { language });
-    if (!r.ok) return res.status(/too short|too long|not an audio/i.test(r.reason) ? 400 : 503).json({ message: r.reason });
+    if (!r.ok) return res.status(/too short|too long|not an audio|Nothing clear/i.test(r.reason) ? 400 : 503).json({ message: r.reason });
     res.json({ text: r.text, language: r.language, model: r.model, seconds: r.seconds, fellBack: Boolean(r.fellBack) });
   } catch (error) {
     sendError(res, error);

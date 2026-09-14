@@ -170,6 +170,18 @@ const draftListing = async (input, deps = { generate }) => {
 
   const jewellery = draft.isJewellery || looksLikeJewellery(input.name, input.keywords, input.categoryName, draft.name);
 
+  // Relevance (15 Sep 2026): a weaker model, handed a photo and a word, has
+  // written about a different thing altogether. The draft must share a real
+  // word with what the seller typed - when the seller typed anything.
+  const { expandQuery } = require('../searchSynonyms');
+  const said = expandQuery(`${input.name || ''} ${input.keywords || ''}`).toLowerCase().match(/[\p{L}]{4,}/gu) || [];
+  if (said.length) {
+    const wrote = `${draft.name} ${draft.description} ${draft.tags.join(' ')}`.toLowerCase();
+    if (!said.some((w) => wrote.includes(w))) {
+      return { ok: false, reason: `The draft was not about "${input.name || input.keywords}" - the model wandered. Try again, or add a word or two.` };
+    }
+  }
+
   const html = checkDescriptionHtml(draft.description);
   if (!html.ok) {
     // Strip to text rather than fail: the seller can still edit a paragraph.

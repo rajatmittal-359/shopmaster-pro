@@ -142,3 +142,18 @@ describe('Hinglish mode', () => {
     expect(global.fetch).not.toHaveBeenCalled();
   });
 });
+
+describe('looksLikeNoise - the transcript gate (15 Sep 2026)', () => {
+  const { looksLikeNoise } = require('../utils/ai/transcribe');
+  it('passes real speech in three scripts', () => {
+    for (const t of ['paanch chandi ke jhumke chaar sau rupaye', 'पाँच चाँदी के झुमके, चार सौ रुपये', 'Five silver jhumkas at four hundred rupees', 'Ok']) expect(looksLikeNoise(t), t).toBeNull();
+  });
+  it('catches the classic silence fillers, loops and non-words', () => {
+    expect(looksLikeNoise('Thank you for watching.')).toMatch(/filling silence/);
+    expect(looksLikeNoise('Subscribe to my channel')).toMatch(/filling silence/);
+    expect(looksLikeNoise('धन्यवाद')).toMatch(/filling silence/);
+    expect(looksLikeNoise('jhumka jhumka jhumka jhumka jhumka jhumka jhumka')).toMatch(/looped/);
+    expect(looksLikeNoise('... --- ... 123 456')).toMatch(/not words/);
+    expect(looksLikeNoise('')).toMatch(/nothing/);
+  });
+});

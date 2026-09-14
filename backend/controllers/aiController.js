@@ -183,7 +183,9 @@ const writeListing = async (req, res) => {
     const leaves = cats.filter((c) => !parentIds.has(String(c._id)));
     const chosen = categoryId ? cats.find((c) => String(c._id) === String(categoryId)) : null;
 
-    const result = await draftListing({
+    const { remember } = require('../utils/ai/aiCache');
+    const photoKey = imageUrl || (imageDataUrl ? `${imageDataUrl.length}:${imageDataUrl.slice(-64)}` : '');
+    const result = await remember('listing', req.user._id, { name, keywords, price, cat: chosen?.name, photoKey, textModel }, () => draftListing({
       name,
       keywords,
       price,
@@ -193,7 +195,7 @@ const writeListing = async (req, res) => {
       imageDataUrl,
       brand: req.seller?.businessName,
       textModel,
-    });
+    }));
 
     if (!result.ok) return res.status(502).json({ message: result.reason });
 
@@ -358,14 +360,44 @@ const makeImage = async (req, res) => {
     const tier =
       askedTier === 'standard' || (!exempt && usage.remaining.premiumImages === 0) ? 'standard' : 'premium';
 
-    const made = await runImage({
-      mode,
-      tier,
-      modelId: chosen?.id,
-      imageUrl,
-      productName: String(productName || 'product').slice(0, 80),
-      prompt: req.body?.prompt,
-    });
+    const AiDraft = require('../models/AiDraft');
+    const wish = req.body?.prompt ? String(req.body.prompt).slice(0, 400) : '';
+
+    /*
+     * Same photo, same mode, same words, same day = the same picture. Hand
+     * back the draft already made instead of spending a model on it (15 Sep
+     * 2026 - "bina baat token waste na ho"). A chosen model is a new wish.
+     */
+    if (mode !== 'generate' && !modelId) {
+      const since = new Date(Date.now() - 24 * 3600 * 1000);
+      const again = await AiDraft.findOne({ userId: req.user._id, sourceUrl: imageUrl, mode, prompt: wish, createdAt: { $gte: since }, gate: { $ne: 'changed' } }).sort({ createdAt: -1 }).lean();
+      if (again) {
+        return res.json({ url: again.url, provider: again.provider, model: again.model, mode, reused: true, usage: await usageFor(req.user._id, exempt) });
+      }
+    }
+
+    // The product's own facts, when the photo belongs to one of this person's products.
+    let facts = {};
+    if (mode !== 'generate' && imageUrl) {
+      const Product = require('../models/Product');
+      const own = await Product.findOne({ images: imageUrl, ...(isAdmin ? {} : { sellerId: req.user._id }) }).select('name color material category').populate('category', 'name').lean();
+      if (own) facts = { category: own.category?.name, color: own.color, material: own.material };
+    }
+    const name = String(productName || 'product').slice(0, 80);
+    const { judgeEdit } = require('../utils/ai/imageGate');
+
+    let made;
+    let gate = { checked: false, ok: true, issue: '' };
+    const exclude = [];
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      made = await runImage({ mode, tier, modelId: chosen?.id, imageUrl, productName: name, facts, prompt: req.body?.prompt, exclude });
+      if (mode === 'generate') break;
+      // The image gate: the product in the result must be the product in the photo.
+      gate = await judgeEdit({ beforeUrl: imageUrl, afterDataUrl: `data:${made.mime};base64,${made.buffer.toString('base64')}`, subject: [name, facts.category, facts.material, facts.color].filter(Boolean).join(', ') });
+      if (gate.ok || chosen) break;
+      exclude.push(made.model);
+      console.warn(`image gate: ${made.model} changed the product (${gate.issue}) - trying the next model`);
+    }
 
     // Into a drafts folder, as a data URL - the only shape the upload helper takes.
     const dataUrl = `data:${made.mime};base64,${made.buffer.toString('base64')}`;
@@ -374,16 +406,17 @@ const makeImage = async (req, res) => {
     // Remembered, so the product form can offer "from your AI drafts" later.
     // A failure here must not fail the image.
     try {
-      const AiDraft = require('../models/AiDraft');
       await AiDraft.create({
         userId: req.user._id,
         url: uploaded.url,
         publicId: uploaded.publicId,
         sourceUrl: imageUrl,
         mode,
-        prompt: req.body?.prompt ? String(req.body.prompt).slice(0, 400) : '',
+        prompt: wish,
         model: made.model,
         provider: made.provider,
+        gate: !gate.checked ? 'unchecked' : gate.ok ? 'same' : 'changed',
+        gateIssue: gate.issue || '',
       });
     } catch (err) {
       console.error('AI DRAFT RECORD:', err.message);
@@ -405,6 +438,9 @@ const makeImage = async (req, res) => {
       quality: answered?.quality || 'good',
       tier: premiumUsed ? 'premium' : 'standard',
       attempts: made.attempts,
+      // The gate's word travels with the picture: the interface shows a warning on 'changed'.
+      gate: !gate.checked ? 'unchecked' : gate.ok ? 'same' : 'changed',
+      warning: gate.checked && !gate.ok ? `The AI changed the product itself (${gate.issue || 'see for yourself'}). Compare with your photo before using it.` : null,
       usage: await usageFor(req.user._id, exempt),
     });
   } catch (error) {
@@ -548,6 +584,11 @@ const suggestKeywords = async (req, res) => {
     // Plan 2.32: the words real people typed come first - Google (Search
     // Console), our own search box, the synonym family - each with its count.
     // The model then fills the gaps and is told what is already known.
+    const { remember } = require('../utils/ai/aiCache');
+    const cacheKey = { name, categoryName, color, description: String(description || '').slice(0, 800), tags: req.body?.tags, textModel };
+    const cached = await require('../utils/ai/aiCache').AiCache.findOne({ key: require('../utils/ai/aiCache').keyOf('keywords', String(req.user._id), cacheKey) }).lean().catch(() => null);
+    if (cached) return res.json({ ...cached.value, cached: true, usage: await usageFor(req.user._id, exempt) });
+    void remember;
     const evidence = await require('../utils/googleReadiness').keywordEvidence({ sellerId: req.user._id, name, categoryName, tags: req.body?.tags, description }).catch(() => ({ words: [], google: false }));
     const known = evidence.words.slice(0, 12).map((w) => `${w.word} (${w.source === 'google' ? 'Google' : w.source === 'shop' ? 'our shoppers' : 'same-thing word'}, ${w.count})`).join(', ');
     const prompt = `You help a small Indian marketplace seller be found on Google and in the shop's own search.
@@ -583,11 +624,15 @@ Answer with ONE JSON object: {"keywords": ["..."], "titleTip": "one short senten
       .slice(0, 20)
       .map((k) => ({ ...k, present: hay.includes(k.word) }));
     await AiUsage.record(req.user._id, { kind: 'text', provider: answer.provider || 'gemini' });
-    res.json({
+    const payload = {
       keywords,
       evidence: { google: evidence.google, fromGoogle: keywords.filter((k) => k.source === 'google').length, fromShop: keywords.filter((k) => k.source === 'shop').length },
       titleTip: String(parsed.titleTip || '').slice(0, 200),
-      writtenBy: answer.provider === 'pollinations' ? 'gpt-5.4-nano (Pollinations)' : 'Gemini',
+      writtenBy: answer.provider === 'pollinations' ? 'gpt-5.4-nano (Pollinations)' : answer.provider === 'groq' ? 'Groq' : answer.provider === 'cloudflare' ? 'Cloudflare Llama' : 'Gemini',
+    };
+    require('../utils/ai/aiCache').AiCache.updateOne({ key: require('../utils/ai/aiCache').keyOf('keywords', String(req.user._id), cacheKey) }, { $set: { kind: 'keywords', value: payload, createdAt: new Date() } }, { upsert: true }).catch(() => {});
+    res.json({
+      ...payload,
       usage: await usageFor(req.user._id, exempt),
     });
   } catch (error) {
@@ -610,6 +655,11 @@ const draftFaqs = async (req, res) => {
     const { name, description, categoryName, material, color, returnMode, size } = req.body || {};
     if (!name) return res.status(400).json({ message: 'Give the product a title first.' });
     const rules = require('../config/sellerRules');
+    const { remember: rememberFaqs } = require('../utils/ai/aiCache');
+    const faqKey = { name, categoryName, material, color, size, returnMode, description: String(description || '').slice(0, 900) };
+    const hitFaqs = await require('../utils/ai/aiCache').AiCache.findOne({ key: require('../utils/ai/aiCache').keyOf('faqs', String(req.user._id), faqKey) }).lean().catch(() => null);
+    if (hitFaqs) return res.json({ ...hitFaqs.value, cached: true, usage: await usageFor(req.user._id, exempt) });
+    void rememberFaqs;
     const returnLine = returnMode === 'none' ? 'This item is not returnable (only a wrong or damaged item is).' : returnMode === 'exchange' ? 'Exchange only, within 7 days of delivery; no refund for change of mind.' : 'Return or exchange within 7 days of delivery, unused with the tag on; damaged or wrong items reported within 48 hours with photos.';
     const prompt = `You write the short Q&A under a product on ShopMaster Pro, an Indian marketplace. Buyers and AI assistants read it.
 
@@ -646,7 +696,9 @@ Answer with ONE JSON object: {"faqs":[{"q":"...","a":"..."}]}`;
     const faqs = (parsed.faqs || []).map((x) => ({ q: String(x.q || '').trim().slice(0, 120), a: String(x.a || '').trim().slice(0, 400) })).filter((x) => x.q && x.a && !unbacked(x.a)).slice(0, 4);
     await AiUsage.record(req.user._id, { kind: 'text', provider: answer.provider || 'gemini' });
     void rules;
-    res.json({ faqs, writtenBy: answer.provider === 'pollinations' ? 'gpt-5.4-nano (Pollinations)' : 'Gemini', usage: await usageFor(req.user._id, exempt) });
+    const faqPayload = { faqs, writtenBy: answer.provider === 'pollinations' ? 'gpt-5.4-nano (Pollinations)' : answer.provider === 'groq' ? 'Groq' : answer.provider === 'cloudflare' ? 'Cloudflare Llama' : 'Gemini' };
+    if (faqs.length) require('../utils/ai/aiCache').AiCache.updateOne({ key: require('../utils/ai/aiCache').keyOf('faqs', String(req.user._id), faqKey) }, { $set: { kind: 'faqs', value: faqPayload, createdAt: new Date() } }, { upsert: true }).catch(() => {});
+    res.json({ ...faqPayload, usage: await usageFor(req.user._id, exempt) });
   } catch (error) {
     sendError(res, error);
   }

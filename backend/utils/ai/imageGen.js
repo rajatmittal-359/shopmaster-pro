@@ -65,15 +65,49 @@ const KEEP =
   'Keep the exact product from image 0 completely unchanged - same shape, same colours, ' +
   'same materials, same details, same proportions. Do not add, remove or redesign anything on it. ';
 
+/**
+ * What kind of thing it is decides where "in use" makes sense. A small model
+ * given only "Silver Toe Ring" has put toe rings on fingers and kadas on
+ * necks; a hint from the category stops that. Keys are matched against the
+ * category name and the product name, first hit wins.
+ */
+const SCENES = [
+  [/toe ring|bichiya/i, 'worn on the second toe of a woman’s foot, foot resting on a light surface'],
+  [/anklet|payal|pajeb/i, 'worn on a woman’s ankle'],
+  [/earring|jhumka|jhumki|stud|bali|chandbali/i, 'worn on a woman’s ear, head turned slightly'],
+  [/necklace|haar|mala|choker|set|mangalsutra|pendant/i, 'worn around a woman’s neck over a plain blouse'],
+  [/bangle|kada|kangan|bracelet|chudi/i, 'worn on a woman’s wrist'],
+  [/ring/i, 'worn on a woman’s finger, hand resting on a plain surface'],
+  [/maang ?tikka|matha ?patti/i, 'worn on a woman’s forehead along the hair parting'],
+  [/nose ?pin|nath/i, 'worn on a woman’s nose, close-up'],
+  [/saree|kurti|kurta|dress|lehenga|dupatta|shirt|top|jeans|trouser/i, 'worn by a person standing naturally, full garment visible'],
+  [/shoe|sandal|jutti|footwear|slipper|heel/i, 'worn on feet, standing on a plain floor'],
+  [/bag|purse|clutch|wallet/i, 'held or carried by a person, product fully visible'],
+  [/cushion|bedsheet|curtain|rug|decor|lamp|vase|frame|candle/i, 'placed in a simple, tidy Indian living room'],
+  [/mug|cup|plate|bowl|bottle|kitchen/i, 'on a clean kitchen counter or dining table'],
+  [/phone|earphone|headphone|charger|watch|gadget|speaker/i, 'on a clean desk next to a hand, in use'],
+  [/toy|kids|baby/i, 'on a bright, tidy play mat'],
+];
+const sceneFor = (text) => (SCENES.find(([re]) => re.test(text || '')) || [])[1] || null;
+
+/** "silver toe ring, oxidised silver, silver colour" - facts the seller already typed, so the model need not guess. */
+const subjectOf = ({ productName = 'product', category, color, material } = {}) => {
+  const bits = [productName];
+  if (category && !new RegExp(category.split(/\s+/)[0], 'i').test(productName)) bits.push(`a ${category.toLowerCase().replace(/(?<!s)s$/, '')}`);
+  if (material) bits.push(material);
+  if (color && !new RegExp(color, 'i').test(productName)) bits.push(`${color} colour`);
+  return bits.join(', ');
+};
+
 const EDIT_PROMPTS = {
   clean: (name) =>
     `${KEEP}Replace only the background with a clean, pure white studio background. ` +
     `Soft, even e-commerce product lighting, gentle natural shadow beneath, no clutter, no props, ` +
     `sharp focus on the ${name}. Centered, filling most of the frame. Marketplace listing photograph.`,
-  lifestyle: (name) =>
-    `${KEEP}Show the ${name} in natural use in a tasteful real-life setting appropriate to what it is, ` +
+  lifestyle: (name, _wish, scene) =>
+    `${KEEP}Show the ${name} in natural use${scene ? ` - ${scene}` : ' in a tasteful real-life setting appropriate to what it is'}, ` +
     `photographed like a premium Indian lifestyle brand: soft daylight, shallow depth of field, ` +
-    `warm neutral tones, nothing that competes with the product.`,
+    `warm neutral tones, nothing that competes with the product. No other products, no text, no logos.`,
   /*
    * The seller's own idea. Their words are appended, never substituted: the
    * rule that the product must not change is ours and comes first, and a
@@ -152,7 +186,7 @@ const fetchReference = async (url) => {
  * @returns {Promise<{buffer: Buffer, mime: string, provider: string, model: string, tier: string, attempts: object[]}>}
  */
 async function runImage(
-  { mode, tier = 'standard', modelId, prompt, imageUrl, productName = 'product', seed },
+  { mode, tier = 'standard', modelId, prompt, imageUrl, productName = 'product', facts = {}, exclude = [], seed },
   deps = { cloudflare, pollinations, nvidia, huggingface, fetchReference, book: bookkeeping }
 ) {
   if (!MODES.includes(mode)) throw new ProviderError('imageGen', 'input', `unknown mode ${mode}`);
@@ -165,7 +199,8 @@ async function runImage(
   }
 
   const wish = mode === 'custom' ? prompt.trim().slice(0, MAX_WISH).replace(/\s+/g, ' ') : null;
-  const finalPrompt = isEdit ? EDIT_PROMPTS[mode](productName, wish) : prompt.trim();
+  const subject = subjectOf({ productName, ...facts });
+  const finalPrompt = isEdit ? EDIT_PROMPTS[mode](subject, wish, sceneFor(`${facts.category || ''} ${productName}`)) : prompt.trim();
 
   let chain;
   if (modelId) {
@@ -176,7 +211,9 @@ async function runImage(
     }
     chain = [modelId];
   } else {
-    chain = CHAINS[isEdit ? 'edit' : 'generate'][tier];
+    // The image gate may send a job back with the model that changed the product excluded.
+    chain = CHAINS[isEdit ? 'edit' : 'generate'][tier].filter((id) => !exclude.includes(id));
+    if (!chain.length) throw new ProviderError('imageGen', 'upstream', 'every model in this chain has been tried');
   }
 
   // Fetched once, lazily, only if some entry in the chain wants bytes.

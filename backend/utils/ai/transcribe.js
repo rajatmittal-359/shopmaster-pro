@@ -101,6 +101,30 @@ const viaGemini = async ({ mimeType, buffer }, { language }) => {
  * @param {{language?: 'hi'|'hg'|'en'|'auto'}} [opts]  hg = heard as Hindi, written in roman letters
  * @returns {Promise<{ok:true,text:string,model:string,language:string|null,seconds:number|null}|{ok:false,reason:string}>}
  */
+/*
+ * The transcript gate (15 Sep 2026). Whisper-class models, given silence or
+ * noise, do not say "nothing" - they say what they were trained on most:
+ * "Thank you for watching", "Subscribe", a phrase looped four times, or a
+ * language the shop never speaks. Those used to land in the search box or
+ * the listing form as if the person had said them. Now they count as
+ * "nothing heard": the other provider gets one try, then the person is
+ * asked to speak again - never handed words they did not say.
+ */
+const HALLUCINATIONS = /^(thank(s| you)( for watching| so much)?\.?|thanks for watching\.?|subscribe( to (my|the) channel)?\.?|please subscribe\.?|bye\.?|you\.?|mbc ?뉴스.*|amara\.org.*|www\..*|\[.*\]|\(.*\)|आप देख रहे हैं.*|धन्यवाद\.?|सब्सक्राइब.*)$/i;
+const looksLikeNoise = (text) => {
+  const t = String(text || '').trim();
+  if (t.length < 2) return 'nothing heard';
+  if (HALLUCINATIONS.test(t)) return `only "${t.slice(0, 30)}" - a model filling silence`;
+  const words = t.toLowerCase().split(/\s+/).filter(Boolean);
+  if (words.length >= 6) {
+    const uniq = new Set(words).size;
+    if (uniq / words.length < 0.34) return 'the same words looped';
+  }
+  const letters = (t.match(/[\p{L}]/gu) || []).length;
+  if (letters / t.length < 0.4) return 'mostly not words';
+  return null;
+};
+
 const transcribe = async (dataUrl, { language: wanted = 'auto' } = {}) => {
   const language = wanted === 'hg' ? 'hi' : wanted;
   const clip = parseDataUrl(dataUrl);
@@ -116,10 +140,19 @@ const transcribe = async (dataUrl, { language: wanted = 'auto' } = {}) => {
     if (again.ok) first = { ...again, redetected: first.language };
   }
   const finish = async (r) => (wanted === 'hg' ? { ...r, text: await toHinglish(r.text), script: 'roman' } : r);
-  if (first.ok) return finish(first);
+  // The gate: a transcript that is not words is not a transcript.
+  if (first.ok) {
+    const noise = looksLikeNoise(first.text);
+    if (!noise) return finish(first);
+    console.warn(`transcribe: Groq heard ${noise} - asking Gemini once`);
+    const second = await viaGemini(clip, { language });
+    if (second.ok && !looksLikeNoise(second.text)) return finish({ ...second, fellBack: true });
+    return { ok: false, reason: 'Nothing clear was heard - hold the mic a little longer and speak again', heard: first.text.slice(0, 60) };
+  }
   if (/GROQ_API_KEY|429|quota|rate|reach|5\d\d/i.test(first.reason)) {
     const second = await viaGemini(clip, { language });
     if (second.ok) {
+      if (looksLikeNoise(second.text)) return { ok: false, reason: 'Nothing clear was heard - hold the mic a little longer and speak again', heard: second.text.slice(0, 60) };
       console.warn(`transcribe: Groq unavailable (${first.reason.slice(0, 60)}) - Gemini heard it`);
       return finish({ ...second, fellBack: true });
     }
@@ -128,4 +161,4 @@ const transcribe = async (dataUrl, { language: wanted = 'auto' } = {}) => {
   return first;
 };
 
-module.exports = { transcribe, parseDataUrl, toHinglish, GROQ_MODEL };
+module.exports = { transcribe, parseDataUrl, toHinglish, GROQ_MODEL, looksLikeNoise };

@@ -91,7 +91,7 @@ Answer with ONE JSON object only, matching this JSON schema exactly (no prose, n
 ${JSON.stringify(opts.responseSchema)}`
     : '';
   const full = prompt + schemaNote;
-  const hasImage = Boolean(opts.imageUrl || opts.imageDataUrl);
+  const hasImage = Boolean(opts.imageUrl || opts.imageDataUrl || (opts.images || []).length);
   const reasons = [failure.reason.slice(0, 80)];
   const parses = (text) => !opts.responseSchema || (() => { try { JSON.parse(String(text).replace(/^```(?:json)?\s*|\s*```$/g, '')); return true; } catch { return false; } })();
   const clean = (text) => (opts.responseSchema ? String(text).replace(/^```(?:json)?\s*|\s*```$/g, '').trim() : text);
@@ -153,6 +153,23 @@ const generate = async (prompt, opts = {}) => {
    * fetched - no CDN variant, no redirect, no surprise.
    */
   const parts = [];
+  // Several pictures at once (the image gate compares before/after). Each may
+  // be a data URL or an https URL; order is kept so the prompt can say "image 1".
+  for (const img of opts.images || []) {
+    const m = /^data:(image\/[a-z0-9.+-]+);base64,(.+)$/i.exec(String(img || ''));
+    if (m) {
+      parts.push({ inlineData: { mimeType: m[1], data: m[2] } });
+      continue;
+    }
+    try {
+      const res = await fetch(img);
+      if (!res.ok) return { ok: false, reason: `Could not fetch an image (${res.status})` };
+      const mimeType = (res.headers.get('content-type') || 'image/jpeg').split(';')[0];
+      parts.push({ inlineData: { mimeType, data: Buffer.from(await res.arrayBuffer()).toString('base64') } });
+    } catch (err) {
+      return { ok: false, reason: `Could not fetch an image: ${err.message}` };
+    }
+  }
   if (opts.imageDataUrl) {
     // Already bytes in hand - a photo the seller has picked but not yet saved.
     const m = /^data:(image\/[a-z0-9.+-]+);base64,(.+)$/i.exec(opts.imageDataUrl);

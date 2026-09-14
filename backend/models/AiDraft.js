@@ -18,6 +18,9 @@ const aiDraftSchema = new mongoose.Schema(
     prompt: { type: String, default: '' },
     model: { type: String, default: '' },
     provider: { type: String, default: '' },
+    /** The image gate's verdict (15 Sep 2026): same | changed | unchecked. 'changed' is never reused. */
+    gate: { type: String, enum: ['same', 'changed', 'unchecked'], default: 'unchecked' },
+    gateIssue: { type: String, default: '' },
   },
   { timestamps: true }
 );

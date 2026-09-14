@@ -219,7 +219,9 @@ export default function Studio({ base = '/seller' }) {
       setResult(item);
       setHistory((h) => [item, ...h].slice(0, 12));
       loadCatalog();
-      toast.success(`Made with ${r.modelLabel}`, { description: `${r.providerLabel} · ${r.quality} quality` });
+      if (r.reused) toast.success('Same picture as before - reused, nothing spent', { description: `${r.model}` });
+      else if (r.warning) toast.warning('Check this one before using it', { description: r.warning, duration: 9000 });
+      else toast.success(`Made with ${r.modelLabel}`, { description: `${r.providerLabel} · ${r.quality} quality${r.gate === 'same' ? ' · product checked: unchanged' : ''}` });
     } catch (e) {
       setError(e.message);
     } finally {
