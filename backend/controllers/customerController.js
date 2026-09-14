@@ -831,7 +831,11 @@ exports.cancelOrderItem = async (req, res) => {
         for (const f of eligible) {
           for (const it of order.items.filter((i) => String(i.sellerId) === String(f.sellerId))) {
             const p = prodById.get(String(it.productId));
-            const m = effectiveReturnMode(p, p ? catById.get(String(p.category)) : null);
+            // The promise stamped at checkout wins (15 Sep 2026): a seller
+            // who changes a product to N next week cannot shrink a promise
+            // this customer already paid for. Older lines carry no stamp
+            // and read the product as before.
+            const m = it.returnMode || effectiveReturnMode(p, p ? catById.get(String(p.category)) : null);
             if (rank[m] > rank[mode]) mode = m;
           }
         }
