@@ -91,6 +91,34 @@ jobs:
         working-directory: frontend
         run: node scripts/lint-baseline.mjs
 
+  # The app that replaces frontend/ at the October cutover (15 Sep 2026).
+  # Until now only the OLD app was built here, so a broken import in web/
+  # would have reached the cutover unseen. Lint is clean (0 problems on
+  # 15 Sep) so it runs plain, no baseline. The build needs no secrets: every
+  # NEXT_PUBLIC_* has a default and server pages fall back when the API is
+  # unreachable.
+  web:
+    name: web build and lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: install
+        working-directory: web
+        run: npm ci --no-audit --no-fund
+      - name: lint
+        working-directory: web
+        run: npx eslint src
+      - name: build
+        working-directory: web
+        env:
+          NEXT_TELEMETRY_DISABLED: '1'
+        run: npm run build
+
 # THE GATE LIVES IN RENDER, NOT HERE.
 #
 # There was a deploy job here that called Render's deploy hook after the tests
