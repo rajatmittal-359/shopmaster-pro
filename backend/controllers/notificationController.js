@@ -69,7 +69,7 @@ exports.getPreferences = async (req, res) => {
   try {
     const user = await User.findById(req.user._id).select('notificationPrefs role').lean();
     // The trust category is the admin's alone; nobody else is asked about it.
-    const categories = CATEGORIES.filter((c) => c.key !== 'trust' || req.user.role === 'admin');
+    const categories = CATEGORIES.filter((c) => (c.key !== 'trust' || req.user.role === 'admin') && (c.key !== 'growth' || req.user.role === 'seller'));
     res.json({ categories, prefs: prefsOf(user) });
   } catch (error) {
     sendError(res, error);

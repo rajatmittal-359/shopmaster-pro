@@ -6,6 +6,7 @@ const crypto = require('crypto');
 // as utils/cancelOrder.js and utils/settleReturn.js.
 const lowStock = require('../jobs/lowStock');
 const tracking = require('../jobs/trackingReconcile');
+const growthNote = require('../jobs/growthNote');
 
 /**
  * Scheduled work, triggered from outside.
@@ -41,6 +42,8 @@ const JOBS = {
     requires: 'SHIPROCKET_API_EMAIL',
   },
   'low-stock': { run: () => lowStock.runLowStockAlerts() },
+  // Monday's three things for every seller (plan 2.25). No model, no key needed.
+  'growth-note': { run: () => growthNote.sendGrowthNotes() },
   /*
    * Plan 2.17: product embeddings for "You may also like" and semantic
    * top-up (2.21) go stale as sellers edit; this embeds what changed (hash)
