@@ -72,26 +72,63 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
  * set. The schema Gemini would have enforced is written into the prompt
  * instead; the caller validates the JSON either way.
  */
+/*
+ * The text roads after Google, in order (15 Sep 2026 - Rajat: "jo AI khatam
+ * ho jaaye, dusre uski jagah kaam karein"):
+ *   Groq gpt-oss-120b     fast, 8k tokens/min, JSON mode
+ *   Cloudflare Llama 70B  10k neurons/day, shared with image edits
+ *   Pollinations nano     last - slow, sometimes 502, but no daily cap
+ * Prompts with a photo skip the first two (text-only endpoints here) and go
+ * to Pollinations, which reads images. The caller validates the JSON either
+ * way; the schema Gemini would have enforced is written into the prompt.
+ */
 const fallbackOr = async (failure, prompt, opts) => {
-  if (!process.env.POLLINATIONS_API_KEY || opts.textModel === 'gemini') return failure;
-  const { pollinationsText } = require('./ai/textFallback');
+  if (opts.textModel === 'gemini') return failure;
   const schemaNote = opts.responseSchema
     ? `
 
 Answer with ONE JSON object only, matching this JSON schema exactly (no prose, no markdown):
 ${JSON.stringify(opts.responseSchema)}`
     : '';
+  const full = prompt + schemaNote;
+  const hasImage = Boolean(opts.imageUrl || opts.imageDataUrl);
+  const reasons = [failure.reason.slice(0, 80)];
+  const parses = (text) => !opts.responseSchema || (() => { try { JSON.parse(String(text).replace(/^```(?:json)?\s*|\s*```$/g, '')); return true; } catch { return false; } })();
+  const clean = (text) => (opts.responseSchema ? String(text).replace(/^```(?:json)?\s*|\s*```$/g, '').trim() : text);
+
+  if (!hasImage && process.env.GROQ_API_KEY) {
+    const { groqPlain } = require('./ai/groq');
+    const g = await groqPlain([{ role: 'user', parts: [{ text: full }] }], { system: opts.system, model: process.env.GROQ_MODEL || 'openai/gpt-oss-120b', temperature: opts.temperature });
+    if (g.ok && parses(g.text)) {
+      console.warn(`Gemini unavailable (${reasons[0]}) - answered by Groq ${g.model}`);
+      return { ok: true, text: clean(g.text), provider: 'groq', model: g.model, fellBack: true };
+    }
+    reasons.push(`groq: ${(g.reason || 'unparseable JSON').slice(0, 60)}`);
+  }
+
+  if (!hasImage && process.env.CLOUDFLARE_API_TOKEN && process.env.CLOUDFLARE_ACCOUNT_ID) {
+    const { cloudflareWithTools } = require('./ai/cloudflareText');
+    const c = await cloudflareWithTools([{ role: 'user', parts: [{ text: full }] }], { system: opts.system, declarations: [], temperature: opts.temperature, maxRounds: 0 });
+    if (c.ok && parses(c.text)) {
+      console.warn(`Gemini unavailable (${reasons[0]}) - answered by ${c.model}`);
+      return { ok: true, text: clean(c.text), provider: 'cloudflare', model: c.model, fellBack: true };
+    }
+    reasons.push(`cloudflare: ${(c.reason || 'unparseable JSON').slice(0, 60)}`);
+  }
+
+  if (!process.env.POLLINATIONS_API_KEY) return { ...failure, reason: reasons.join('; ') };
+  const { pollinationsText } = require('./ai/textFallback');
   // The system instruction folds into the prompt for a model without one.
   const second = await pollinationsText((opts.system ? `${opts.system}
 
-` : '') + prompt + schemaNote, {
+` : '') + full, {
     imageUrl: opts.imageUrl,
     imageDataUrl: opts.imageDataUrl,
     json: Boolean(opts.responseSchema),
     temperature: opts.temperature,
   });
-  if (!second.ok) return { ...failure, reason: `${failure.reason}; fallback: ${second.reason}` };
-  console.warn(`Gemini unavailable (${failure.reason.slice(0, 60)}) - answered by Pollinations ${second.model}`);
+  if (!second.ok) return { ...failure, reason: [...reasons, `pollinations: ${second.reason}`].join('; ') };
+  console.warn(`Gemini unavailable (${reasons[0]}) - answered by Pollinations ${second.model}`);
   return { ...second, fellBack: true };
 };
 

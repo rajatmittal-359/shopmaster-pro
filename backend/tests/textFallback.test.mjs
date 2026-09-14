@@ -51,6 +51,28 @@ describe('pollinationsText', () => {
 });
 
 describe('generate falls back', () => {
+  // 15 Sep 2026: "jo AI khatam ho jaaye, dusre uski jagah kaam karein" - Groq sits before Pollinations.
+  it('goes to Groq before Pollinations when Gemini (flash and lite) is out, and unwraps fenced JSON', async () => {
+    const { generate } = require('../utils/gemini');
+    process.env.GROQ_API_KEY = 'g';
+    const urls = [];
+    globalThis.fetch = vi.fn(async (url) => {
+      urls.push(String(url));
+      if (String(url).includes('generativelanguage')) return jsonResponse(429, { error: { message: 'quota' } });
+      if (String(url).includes('groq')) return { ...jsonResponse(200, { choices: [{ message: { content: '```json\n{"name":"from groq"}\n```' } }] }), headers: { get: () => null } };
+      return jsonResponse(200, { choices: [{ message: { content: '{"name":"from nano"}' } }] });
+    });
+    try {
+      const out = await generate('Write it', { responseSchema: { type: 'object' }, attempts: 1 });
+      expect(out.ok).toBe(true);
+      expect(out.provider).toBe('groq');
+      expect(JSON.parse(out.text).name).toBe('from groq');
+      expect(urls.some((u) => u.includes('pollinations'))).toBe(false);
+    } finally {
+      delete process.env.GROQ_API_KEY;
+    }
+  });
+
   it('goes to Pollinations when Gemini says 429 for the day', async () => {
     const { generate } = require('../utils/gemini');
     const calls = [];
