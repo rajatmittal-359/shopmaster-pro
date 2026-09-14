@@ -14,8 +14,14 @@
  *      audio per hour), fast, good Hindi and Hinglish. Whisper writes Hindi
  *      in Devanagari; the assistant answers in whatever script it sees, so
  *      that is fine.
- *   2. Gemini audio understanding: the same free key the rest of the AI
- *      uses; slower, used when Groq is out or the key is missing.
+ *   2. Cloudflare Workers AI, the same Whisper large-v3-turbo (15 Sep 2026,
+ *      plan 2.37): a different company's quota for the same ears. ~46
+ *      neurons a minute of audio out of the 10,000 a day the account gets,
+ *      so a 15-second question costs ~12 - the image editor's pool, barely
+ *      touched. Same token and gateway as the rest; no new signup.
+ *   3. Gemini audio understanding: the same free key the rest of the AI
+ *      uses; slower, and every clip it hears is a product draft it cannot
+ *      write (the flash quota ran out at 20 a day on 14 Sep), so it is last.
  *   Nothing is stored. The clip goes to the provider and is gone; only the
  *   text comes back.
  *
@@ -69,6 +75,43 @@ const viaGroq = async ({ mimeType, buffer }, { language }) => {
   const text = String(data.text || '').trim();
   if (!text) return { ok: false, reason: 'Nothing was heard' };
   return { ok: true, text, language: data.language || language || null, model: GROQ_MODEL, seconds: data.duration ? Math.round(data.duration) : null };
+};
+
+const CF_STT_MODEL = process.env.CF_STT_MODEL || '@cf/openai/whisper-large-v3-turbo';
+const cloudflareUrl = () => {
+  const acct = process.env.CLOUDFLARE_ACCOUNT_ID;
+  const gw = process.env.CLOUDFLARE_AI_GATEWAY;
+  if (!acct) return null;
+  return gw ? `https://gateway.ai.cloudflare.com/v1/${acct}/${gw}/workers-ai/${CF_STT_MODEL}` : `https://api.cloudflare.com/client/v4/accounts/${acct}/ai/run/${CF_STT_MODEL}`;
+};
+
+const viaCloudflare = async ({ buffer }, { language }) => {
+  const token = process.env.CLOUDFLARE_API_TOKEN;
+  const url = cloudflareUrl();
+  if (!token || !url) return { ok: false, reason: 'CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID is not set' };
+  const body = {
+    audio: buffer.toString('base64'),
+    task: 'transcribe',
+    initial_prompt: HINT,
+    // Silence trimmed before decoding, and no conditioning on earlier text -
+    // the two settings Whisper's own docs give against filler and loops.
+    vad_filter: true,
+    condition_on_previous_text: false,
+  };
+  if (language && language !== 'auto') body.language = language;
+  let res;
+  try {
+    res = await fetch(url, { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  } catch (err) {
+    return { ok: false, reason: `Could not reach Cloudflare: ${err.message}` };
+  }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || data.success === false) return { ok: false, status: res.status, reason: data?.errors?.[0]?.message || `Cloudflare said ${res.status}` };
+  const out = data.result || data;
+  const text = String(out.text || '').trim();
+  if (!text) return { ok: false, reason: 'Nothing was heard' };
+  const info = out.transcription_info || {};
+  return { ok: true, text, language: info.language || language || null, model: CF_STT_MODEL, seconds: info.duration ? Math.round(info.duration) : null };
 };
 
 const viaGemini = async ({ mimeType, buffer }, { language }) => {
@@ -125,6 +168,10 @@ const looksLikeNoise = (text) => {
   return null;
 };
 
+/** Errors that mean "try another company", not "the clip is bad". */
+const RETRYABLE = /not set|429|quota|rate|reach|5\d\d/i;
+const NOTHING_CLEAR = 'Nothing clear was heard - hold the mic a little longer and speak again';
+
 const transcribe = async (dataUrl, { language: wanted = 'auto' } = {}) => {
   const language = wanted === 'hg' ? 'hi' : wanted;
   const clip = parseDataUrl(dataUrl);
@@ -132,33 +179,42 @@ const transcribe = async (dataUrl, { language: wanted = 'auto' } = {}) => {
   if (clip.buffer.length < 2000) return { ok: false, reason: 'The clip is too short - hold the mic and speak' };
   if (clip.buffer.length > 8 * 1024 * 1024) return { ok: false, reason: 'The clip is too long - keep it under a minute' };
 
-  let first = await viaGroq(clip, { language });
-  // Auto-detect wandered off (Icelandic, Welsh, Nepali…) - a short clip does
-  // that. Hindi is the shop's default; one more pass with it forced.
-  if (first.ok && language === 'auto' && first.language && !EXPECTED.has(String(first.language).toLowerCase())) {
-    const again = await viaGroq(clip, { language: 'hi' });
-    if (again.ok) first = { ...again, redetected: first.language };
-  }
   const finish = async (r) => (wanted === 'hg' ? { ...r, text: await toHinglish(r.text), script: 'roman' } : r);
-  // The gate: a transcript that is not words is not a transcript.
-  if (first.ok) {
-    const noise = looksLikeNoise(first.text);
-    if (!noise) return finish(first);
-    console.warn(`transcribe: Groq heard ${noise} - asking Gemini once`);
-    const second = await viaGemini(clip, { language });
-    if (second.ok && !looksLikeNoise(second.text)) return finish({ ...second, fellBack: true });
-    return { ok: false, reason: 'Nothing clear was heard - hold the mic a little longer and speak again', heard: first.text.slice(0, 60) };
-  }
-  if (/GROQ_API_KEY|429|quota|rate|reach|5\d\d/i.test(first.reason)) {
-    const second = await viaGemini(clip, { language });
-    if (second.ok) {
-      if (looksLikeNoise(second.text)) return { ok: false, reason: 'Nothing clear was heard - hold the mic a little longer and speak again', heard: second.text.slice(0, 60) };
-      console.warn(`transcribe: Groq unavailable (${first.reason.slice(0, 60)}) - Gemini heard it`);
-      return finish({ ...second, fellBack: true });
+
+  /*
+   * Three roads, in the order that spends the scarcest quota last. Each
+   * road's transcript passes the gate; one that is noise sends the clip to
+   * the next company rather than to the person. A 4xx from the first road
+   * is about the clip (unsupported file, too large) and comes straight
+   * back - no point asking anyone else.
+   */
+  const roads = [['Groq', viaGroq], ['Cloudflare', viaCloudflare], ['Gemini', viaGemini]];
+  const reasons = [];
+  let heard = null;
+  for (let i = 0; i < roads.length; i += 1) {
+    const [name, road] = roads[i];
+    let r = await road(clip, { language });
+    // Auto-detect wandered off (Icelandic, Welsh, Nepali…) - a short clip does
+    // that. Hindi is the shop's default; one more pass with it forced.
+    if (r.ok && language === 'auto' && r.language && !EXPECTED.has(String(r.language).toLowerCase())) {
+      const again = await road(clip, { language: 'hi' });
+      if (again.ok) r = { ...again, redetected: r.language };
     }
-    return { ok: false, reason: `${first.reason}; fallback: ${second.reason}` };
+    if (r.ok) {
+      const noise = looksLikeNoise(r.text);
+      if (!noise) {
+        if (i > 0) console.warn(`transcribe: ${reasons.join('; ').slice(0, 120)} - ${name} heard it`);
+        return finish(i > 0 ? { ...r, fellBack: true } : r);
+      }
+      heard = heard ?? r.text;
+      reasons.push(`${name} heard ${noise}`);
+      continue;
+    }
+    reasons.push(`${name}: ${r.reason}`);
+    if (i === 0 && !RETRYABLE.test(r.reason)) return r;
   }
-  return first;
+  if (heard !== null) return { ok: false, reason: NOTHING_CLEAR, heard: heard.slice(0, 60) };
+  return { ok: false, reason: reasons.join('; ') };
 };
 
-module.exports = { transcribe, parseDataUrl, toHinglish, GROQ_MODEL, looksLikeNoise };
+module.exports = { transcribe, parseDataUrl, toHinglish, GROQ_MODEL, CF_STT_MODEL, looksLikeNoise };

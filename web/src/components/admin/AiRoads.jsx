@@ -51,6 +51,18 @@ export default function AiRoads() {
               </li>
             ))}
           </ol>
+          {d.voice && (
+            <p className="mt-3 border-t pt-3 text-xs text-muted-foreground">
+              <span className="font-medium text-foreground">Voice</span>{' '}
+              {d.voice.map((v, i) => (
+                <span key={v.key}>
+                  {i > 0 && ' → '}
+                  <span className={v.status === 'ok' ? '' : 'line-through'} title={v.note}>{v.name.replace(' large-v3-turbo', '')}</span>
+                </span>
+              ))}
+              {' · '}the same clip walks the roads until one hears words
+            </p>
+          )}
           <p className="mt-3 text-xs text-muted-foreground">
             Answered today ({total}):{' '}
             {Object.entries(d.answeredBy || {}).length === 0 ? 'nothing yet' : Object.entries(d.answeredBy).map(([k, v]) => `${k} ${v}`).join(' · ')}
