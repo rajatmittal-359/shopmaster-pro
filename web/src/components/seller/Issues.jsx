@@ -7,6 +7,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { authedFetch } from '@/lib/client';
 import { Skeleton } from '@/components/ui/skeleton';
 import PanelCard from '@/components/panel/PanelCard';
+import { useT } from '@/lib/i18n';
 
 /**
  * Returns & issues - the three queues that are not "orders".
@@ -57,6 +58,7 @@ function Row({ r, headline, sub, tone = '' }) {
 }
 
 export default function Issues() {
+  const t = useT();
   const router = useRouter();
   const params = useSearchParams();
   const tab = TABS.some((t) => t.key === params.get('tab')) ? params.get('tab') : 'returns';
@@ -93,53 +95,53 @@ export default function Issues() {
   return (
     <div className="space-y-4">
       <div role="tablist" className="flex gap-1 overflow-x-auto rounded-lg bg-muted p-1">
-        {TABS.map((t) => (
+        {TABS.map((tb) => (
           <button
-            key={t.key}
+            key={tb.key}
             role="tab"
-            aria-selected={tab === t.key}
-            onClick={() => router.replace(`/seller/issues?tab=${t.key}`)}
-            className={`flex items-center gap-1.5 whitespace-nowrap rounded-md px-3 py-1.5 text-sm ${tab === t.key ? 'bg-background font-medium shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+            aria-selected={tab === tb.key}
+            onClick={() => router.replace(`/seller/issues?tab=${tb.key}`)}
+            className={`flex items-center gap-1.5 whitespace-nowrap rounded-md px-3 py-1.5 text-sm ${tab === tb.key ? 'bg-background font-medium shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
           >
-            {t.label}
-            {data.counts[t.key] > 0 && (
-              <span className="rounded-full bg-brand-ink px-1.5 text-[0.65rem] leading-4 font-semibold text-white tabular-nums">{data.counts[t.key]}</span>
+            {t(tb.label)}
+            {data.counts[tb.key] > 0 && (
+              <span className="rounded-full bg-brand-ink px-1.5 text-[0.65rem] leading-4 font-semibold text-white tabular-nums">{data.counts[tb.key]}</span>
             )}
           </button>
         ))}
       </div>
 
       <PanelCard
-        title={TABS.find((t) => t.key === tab).label}
-        lead={
+        title={t(TABS.find((x) => x.key === tab).label)}
+        lead={t(
           tab === 'returns'
             ? 'Requests, pickups on the way back, and items received that need settling. The rider brings the label; the customer prints nothing.'
             : tab === 'disputes'
               ? 'A customer says something is wrong. You have 72 hours to add your side - photos, the courier proof - before an admin decides.'
               : 'Parcels the courier could not deliver or never collected. A call to the customer solves most of them.'
-        }
+        )}
       >
         {list.length === 0 ? (
           <p className="py-8 text-center text-sm text-muted-foreground">
-            {tab === 'returns' ? 'No returns or exchanges open.' : tab === 'disputes' ? 'No disputes. Keep it that way with clear photos and honest titles.' : 'Every parcel is moving.'}
+            {t(tab === 'returns' ? 'No returns or exchanges open.' : tab === 'disputes' ? 'No disputes. Keep it that way with clear photos and honest titles.' : 'Every parcel is moving.')}
           </p>
         ) : (
           <ul className="divide-y">
             {list.map((r) => {
               if (tab === 'returns') {
-                const [head, sub] = RETURN_WORDS[r.returnStage] || [r.returnStage, ''];
-                const what = r.returnResolution === 'replacement' ? 'Exchange' : 'Return';
-                const rep = r.replacementStage ? ` · replacement ${r.replacementStage}` : '';
-                return <Row key={r._id} r={r} headline={`${what}: ${head}${rep}`} sub={`${r.returnReason || ''}${r.returnRequestedAt ? ` · asked ${when(r.returnRequestedAt)}` : ''}${sub ? ` · ${sub}` : ''}`} tone={r.returnStage === 'received' ? 'text-amber-700 dark:text-amber-300' : ''} />;
+                const [head, sub] = (RETURN_WORDS[r.returnStage] || [r.returnStage, '']).map((w) => t(w));
+                const what = t(r.returnResolution === 'replacement' ? 'Exchange' : 'Return');
+                const rep = r.replacementStage ? ` · ${t('replacement {stage}', { stage: r.replacementStage })}` : '';
+                return <Row key={r._id} r={r} headline={`${what}: ${head}${rep}`} sub={`${r.returnReason || ''}${r.returnRequestedAt ? ` · ${t('asked {date}', { date: when(r.returnRequestedAt) })}` : ''}${sub ? ` · ${sub}` : ''}`} tone={r.returnStage === 'received' ? 'text-amber-700 dark:text-amber-300' : ''} />;
               }
               if (tab === 'disputes') {
                 const open = r.disputeStatus === 'open';
                 const left = open && r.disputeRaisedAt ? hoursLeft(r.disputeRaisedAt, 72) : null;
-                const head = open ? (left > 0 ? `Open - ${left} h left to answer` : 'Open - answer overdue') : r.disputeStatus === 'resolved_customer' ? 'Decided for the customer' : 'Decided for you';
-                return <Row key={r._id} r={r} headline={head} sub={`“${r.disputeReason || ''}” · raised ${when(r.disputeRaisedAt)}`} tone={open ? 'text-destructive' : ''} />;
+                const head = open ? (left > 0 ? t('Open - {n} h left to answer', { n: left }) : t('Open - answer overdue')) : t(r.disputeStatus === 'resolved_customer' ? 'Decided for the customer' : 'Decided for you');
+                return <Row key={r._id} r={r} headline={head} sub={`“${r.disputeReason || ''}” · ${t('raised {date}', { date: when(r.disputeRaisedAt) })}`} tone={open ? 'text-destructive' : ''} />;
               }
-              const head = r.nprReason ? 'Courier did not collect' : `Delivery failed ${r.ndrAttempts} time${r.ndrAttempts === 1 ? '' : 's'}`;
-              const sub = r.nprReason || `${r.ndrReason || ''}${r.ndrAt ? ` · last try ${when(r.ndrAt)}` : ''} · call the customer, then ask the courier to re-attempt`;
+              const head = r.nprReason ? t('Courier did not collect') : t(r.ndrAttempts === 1 ? 'Delivery failed once' : 'Delivery failed {n} times', { n: r.ndrAttempts });
+              const sub = r.nprReason || `${r.ndrReason || ''}${r.ndrAt ? ` · ${t('last try {date}', { date: when(r.ndrAt) })}` : ''} · ${t('call the customer, then ask the courier to re-attempt')}`;
               return <Row key={r._id} r={r} headline={head} sub={sub} tone="text-amber-700 dark:text-amber-300" />;
             })}
           </ul>

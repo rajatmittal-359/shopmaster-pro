@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
+import { useT } from '@/lib/i18n';
 
 /**
  * A seller's money, and where it has got to.
@@ -32,6 +33,7 @@ const when = (iso) =>
   iso ? new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : '';
 
 export default function Earnings() {
+  const t = useT();
   const [data, setData] = useState(null);
   const [bank, setBank] = useState(null);
   const [form, setForm] = useState({ accountHolderName: '', accountNumber: '', ifscCode: '', gstNumber: '' });
@@ -100,10 +102,10 @@ export default function Earnings() {
 
   const e = data.earnings || {};
   const cards = [
-    ['Paid out', money(e.paidOut), 'Already transferred to you'],
-    ['Ready for the next payout', money(e.readyForPayout), 'Delivered and past the return window'],
-    ['Still clearing', money(e.pendingClearance), `Delivered less than ${data.returnWindowDays} days ago, or not delivered yet`],
-    ['Commission charged', money(e.commissionCharged), `Your rate is ${e.commissionRate ?? '—'}%`],
+    [t('Paid out'), money(e.paidOut), t('Already transferred to you')],
+    [t('Ready for the next payout'), money(e.readyForPayout), t('Delivered and past the return window')],
+    [t('Still clearing'), money(e.pendingClearance), t('Delivered less than {n} days ago, or not delivered yet', { n: data.returnWindowDays })],
+    [t('Commission charged'), money(e.commissionCharged), t('Your rate is {n}%', { n: e.commissionRate ?? '—' })],
   ];
 
   return (
@@ -123,7 +125,7 @@ export default function Earnings() {
       </div>
 
       <section className="rounded-xl border border-border p-4">
-        <h2 className="font-semibold">Where the money goes</h2>
+        <h2 className="font-semibold">{t('Where the money goes')}</h2>
 
         {!editing && bank?.bankDetails?.accountNumber ? (
           <div className="mt-3 text-sm">
@@ -133,7 +135,7 @@ export default function Earnings() {
             </p>
             {bank.gstNumber && <p className="text-muted-foreground">GSTIN {bank.gstNumber}</p>}
             <Button variant="outline" size="sm" className="mt-3" onClick={() => setEditing(true)}>
-              Change these
+              {t('Change these')}
             </Button>
           </div>
         ) : !editing ? (
@@ -239,7 +241,7 @@ export default function Earnings() {
                 <span>
                   {payout.payoutNumber}
                   <span className="block text-xs text-muted-foreground">
-                    {payout.itemCount} item(s) · {payout.status === 'paid' ? `paid ${when(payout.paidAt || payout.createdAt)}` : when(payout.createdAt)}
+                    {t('{n} item(s)', { n: payout.itemCount })} · {payout.status === 'paid' ? t('paid {date}', { date: when(payout.paidAt || payout.createdAt) }) : when(payout.createdAt)}
                     {payout.reference ? ` · ref ${payout.reference}` : ''}
                   </span>
                 </span>
@@ -249,7 +251,7 @@ export default function Earnings() {
                       dispute. Amazon's statement shows the minus on the line. */}
                   {payout.deductions > 0 && (
                     <span className="block text-xs text-muted-foreground">
-                      {money(payout.netPayable + payout.deductions)} − {money(payout.deductions)} cancellation charge
+                      {money(payout.netPayable + payout.deductions)} − {money(payout.deductions)} {t('cancellation charge')}
                     </span>
                   )}
                   <span className="block text-xs capitalize text-muted-foreground">

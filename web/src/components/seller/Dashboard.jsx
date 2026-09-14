@@ -165,13 +165,13 @@ export default function SellerDashboard() {
           shown before it matters. Zero is the normal state and says so. */}
       {analytics?.cancellations && (
         <p className={`text-sm ${analytics.cancellations.ratePct > analytics.cancellations.reviewAbovePct ? 'text-destructive' : 'text-muted-foreground'}`}>
-          Cancelled by you in the last {analytics.cancellations.days} days:{' '}
-          <strong className="tabular-nums">{analytics.cancellations.cancelledBySeller}</strong> of{' '}
-          {analytics.cancellations.orders} orders
+          {t('Cancelled by you in the last {days} days:', { days: analytics.cancellations.days })}{' '}
+          <strong className="tabular-nums">{analytics.cancellations.cancelledBySeller}</strong>{' '}
+          {t('of {n} orders', { n: analytics.cancellations.orders })}
           {analytics.cancellations.orders ? ` (${analytics.cancellations.ratePct}%)` : ''}.{' '}
           {analytics.cancellations.ratePct > analytics.cancellations.reviewAbovePct
-            ? `Above ${analytics.cancellations.reviewAbovePct}% the account is reviewed.`
-            : `${analytics.cancellations.freePer30Days} are free a month; each one after costs ₹${analytics.cancellations.penalty}.`}
+            ? t('Above {n}% the account is reviewed.', { n: analytics.cancellations.reviewAbovePct })
+            : t('{free} are free a month; each one after costs ₹{penalty}.', { free: analytics.cancellations.freePer30Days, penalty: analytics.cancellations.penalty })}
         </p>
       )}
 
@@ -183,7 +183,7 @@ export default function SellerDashboard() {
           aside={
             waiting.length > 0 && (
               <Link href="/seller/orders?tab=pack" className="text-sm text-brand-ink hover:underline">
-                All orders
+                {t('All orders')}
               </Link>
             )
           }
@@ -210,7 +210,7 @@ export default function SellerDashboard() {
                     <div className="shrink-0 text-right">
                       <p className="font-medium tabular-nums">{money(order.sellerEarning)}</p>
                       <p className="text-xs text-muted-foreground">
-                        {order.paymentMethod === 'cod' ? 'Cash at the door' : 'Paid online'}
+                        {t(order.paymentMethod === 'cod' ? 'Cash at the door' : 'Paid online')}
                       </p>
                     </div>
                     <ArrowRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
@@ -285,7 +285,7 @@ function SetupGuide({ agreed, pickupSet, bankSet, productsTotal, shared, onShare
     <div className="rounded-xl border bg-card px-4 py-3">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
         <button type="button" onClick={() => setOpen((o) => !o)} className="flex items-center gap-2 text-sm font-medium" aria-expanded={open}>
-          <span>Set up your shop</span>
+          <span>{t('Set up your shop')}</span>
           <span className="text-muted-foreground">· {t('{n} of {total} left', { n: left.length, total: steps.length })}</span>
           <span className={`text-xs text-muted-foreground transition ${open ? 'rotate-90' : ''}`} aria-hidden>▸</span>
         </button>
@@ -296,11 +296,11 @@ function SetupGuide({ agreed, pickupSet, bankSet, productsTotal, shared, onShare
           {left.map((step) =>
             step.action === 'share' ? (
               <Button key={step.short} size="sm" variant="outline" className="h-7 text-xs" onClick={copyLink}>
-                {step.short}
+                {t(step.short)}
               </Button>
             ) : (
               <Button key={step.short} size="sm" variant="outline" className="h-7 text-xs" nativeButton={false} render={<Link href={step.href} />}>
-                {step.short}
+                {t(step.short)}
               </Button>
             )
           )}
