@@ -63,15 +63,16 @@ const EMPTY = {
 
 /** The seller's own status, said in words, with a colour that agrees with it. */
 function StatusBadge({ order }) {
+  const t = useT();
   const s = order.status;
   if (['requested', 'picked'].includes(order.returnStage)) {
-    return <Badge className="bg-amber-500/10 text-amber-700 dark:text-amber-300">{order.returnResolution === 'replacement' ? 'Exchange open' : 'Return open'}</Badge>;
+    return <Badge className="bg-amber-500/10 text-amber-700 dark:text-amber-300">{t(order.returnResolution === 'replacement' ? 'Exchange open' : 'Return open')}</Badge>;
   }
-  if (s === 'cancelled') return <Badge variant="destructive">Cancelled</Badge>;
-  if (s === 'delivered') return <Badge className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-300">Delivered</Badge>;
-  if (s === 'returned') return <Badge variant="outline">Returned</Badge>;
-  if (order.shippingAwb || s === 'shipped') return <Badge className="bg-sky-500/10 text-sky-700 dark:text-sky-300">Shipped</Badge>;
-  return <Badge className="bg-primary/10 text-brand-ink">To pack</Badge>;
+  if (s === 'cancelled') return <Badge variant="destructive">{t('Cancelled')}</Badge>;
+  if (s === 'delivered') return <Badge className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-300">{t('Delivered')}</Badge>;
+  if (s === 'returned') return <Badge variant="outline">{t('Returned')}</Badge>;
+  if (order.shippingAwb || s === 'shipped') return <Badge className="bg-sky-500/10 text-sky-700 dark:text-sky-300">{t('Shipped')}</Badge>;
+  return <Badge className="bg-primary/10 text-brand-ink">{t('To pack')}</Badge>;
 }
 
 export default function OrderQueue() {
@@ -159,7 +160,7 @@ export default function OrderQueue() {
       <PanelCard>
         <p className="text-sm text-destructive">{state.message}</p>
         <Button className="mt-3" variant="outline" size="sm" onClick={retry}>
-          Try again
+          {t('Try again')}
         </Button>
       </PanelCard>
     );
@@ -169,21 +170,21 @@ export default function OrderQueue() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div role="tablist" aria-label="Order stage" className="flex max-w-full gap-1 overflow-x-auto rounded-lg bg-muted p-1">
-          {TABS.map((t) => {
-            const active = t.id === tab;
+          {TABS.map((tb) => {
+            const active = tb.id === tab;
             return (
               <button
-                key={t.id}
+                key={tb.id}
                 type="button"
                 role="tab"
                 aria-selected={active}
-                onClick={() => setTab(t.id)}
+                onClick={() => setTab(tb.id)}
                 className={`inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md px-3 text-sm transition ${
                   active ? 'bg-background font-medium shadow-xs' : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
-                {t.label}
-                <span className={`tabular-nums ${active ? 'text-brand-ink' : ''}`}>{counts[t.id]}</span>
+                {t(tb.label)}
+                <span className={`tabular-nums ${active ? 'text-brand-ink' : ''}`}>{counts[tb.id]}</span>
               </button>
             );
           })}
@@ -194,7 +195,7 @@ export default function OrderQueue() {
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Order number, customer or item"
+            placeholder={t('Order number, customer or item')}
             aria-label="Search orders"
             className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
           />
@@ -204,7 +205,7 @@ export default function OrderQueue() {
       {shown.length === 0 ? (
         <PanelCard>
           <p className="py-8 text-center text-sm text-muted-foreground">
-            {q.trim() ? `Nothing here matches “${q.trim()}”.` : EMPTY[tab]}
+            {q.trim() ? t('Nothing here matches “{q}”.', { q: q.trim() }) : t(EMPTY[tab])}
           </p>
         </PanelCard>
       ) : (
@@ -226,12 +227,12 @@ export default function OrderQueue() {
                       </Link>
                       <StatusBadge order={order} />
                       {order.isSplitOrder && (
-                        <span className="text-xs text-muted-foreground">shared order · your items only</span>
+                        <span className="text-xs text-muted-foreground">{t('shared order · your items only')}</span>
                       )}
                     </div>
                     <p className="mt-1 text-sm text-muted-foreground">
-                      {order.customerId?.name || 'Customer'} · {when(order.createdAt)} ·{' '}
-                      {order.paymentMethod === 'cod' ? 'Collect cash at the door' : 'Paid online'}
+                      {order.customerId?.name || t('Customer')} · {when(order.createdAt)} ·{' '}
+                      {t(order.paymentMethod === 'cod' ? 'Collect cash at the door' : 'Paid online')}
                     </p>
                   </div>
 
@@ -246,8 +247,8 @@ export default function OrderQueue() {
                     <p className="text-lg font-semibold tabular-nums">{money(order.sellerEarning)}</p>
                     <p className="text-xs text-muted-foreground">
                       {order.sellerCommission > 0
-                        ? `${money(order.sellerSubtotal)} less ${money(order.sellerCommission)} commission`
-                        : 'to you'}
+                        ? t('{subtotal} less {commission} commission', { subtotal: money(order.sellerSubtotal), commission: money(order.sellerCommission) })
+                        : t('to you')}
                     </p>
                   </div>
                 </div>
@@ -271,7 +272,7 @@ export default function OrderQueue() {
 
                 {shipped && (
                   <p className="mt-3 text-sm text-muted-foreground">
-                    {order.shippingCourierName || 'Courier'} · <span className="tabular-nums">{order.shippingAwb}</span>
+                    {order.shippingCourierName || t('Courier')} · <span className="tabular-nums">{order.shippingAwb}</span>
                   </p>
                 )}
 
@@ -281,22 +282,21 @@ export default function OrderQueue() {
                     customer, so the count is on the line. */}
                 {order.ndrReason && !CLOSED.includes(order.status) && (
                   <p className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-sm">
-                    <strong>Delivery attempt failed</strong>
-                    {order.ndrAttempts > 1 ? ` (${order.ndrAttempts} times)` : ''}: {order.ndrReason}
-                    {order.ndrAt ? ` · ${when(order.ndrAt)}` : ''}. The courier tries again; if it fails twice, call the customer.
+                    <strong>{t('Delivery attempt failed')}</strong>
+                    {order.ndrAttempts > 1 ? ` (${t('{n} times', { n: order.ndrAttempts })})` : ''}: {order.ndrReason}
+                    {order.ndrAt ? ` · ${when(order.ndrAt)}` : ''}. {t('The courier tries again; if it fails twice, call the customer.')}
                   </p>
                 )}
                 {/* The rulebook's one charge, said where it happened, with the
                     reason - a deduction discovered in a payout is how trust ends. */}
                 {order.cancelPenalty > 0 && (
                   <p className="mt-3 rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
-                    ₹{order.cancelPenalty} cancellation charge on this order - it was cancelled by you beyond the
-                    monthly free allowance, and comes off your next payout. See the Seller Agreement, section 4.
+                    {t('₹{n} cancellation charge on this order - it was cancelled by you beyond the monthly free allowance, and comes off your next payout. See the Seller Agreement, section 4.', { n: order.cancelPenalty })}
                   </p>
                 )}
                 {order.nprReason && !shipped && (
                   <p className="mt-3 rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
-                    The courier did not collect the parcel: {order.nprReason}. Book the pickup again.
+                    {t('The courier did not collect the parcel: {reason}. Book the pickup again.', { reason: order.nprReason })}
                   </p>
                 )}
 
@@ -304,7 +304,7 @@ export default function OrderQueue() {
                     here - a seller cannot act on "booking failed". */}
                 {order.bookingFailedReason && (
                   <p className="mt-3 rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
-                    Courier booking failed: {order.bookingFailedReason}
+                    {t('Courier booking failed: {reason}', { reason: order.bookingFailedReason })}
                   </p>
                 )}
 
@@ -312,9 +312,9 @@ export default function OrderQueue() {
                   <div className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-sm">
                     <p>
                       <strong>
-                        {order.returnResolution === 'replacement' ? 'Exchange asked for' : 'Return asked for'}
+                        {t(order.returnResolution === 'replacement' ? 'Exchange asked for' : 'Return asked for')}
                       </strong>{' '}
-                      · {order.returnStage}
+                      · {t(order.returnStage)}
                     </p>
                     {order.returnReason && <p className="mt-1 text-muted-foreground">{order.returnReason}</p>}
 
@@ -337,9 +337,9 @@ export default function OrderQueue() {
                             variant="outline"
                             size="sm"
                           >
-                            {order.returnResolution === 'replacement'
+                            {t(order.returnResolution === 'replacement'
                               ? 'Got it back - send the replacement'
-                              : 'Got it back - refund'}
+                              : 'Got it back - refund')}
                           </Button>
                           <Button
                             onClick={() => setAsking({ kind: 'refuse', order })}
@@ -358,7 +358,7 @@ export default function OrderQueue() {
                 <div className="mt-4 flex flex-wrap items-center gap-2">
                   {!shipped && WAITING.includes(order.status) && (
                     <Button onClick={() => setAsking({ kind: 'ship', order })} disabled={working}>
-                      {working ? 'Working…' : 'Book courier and ship'}
+                      {working ? t('Working…') : t('Book courier and ship')}
                     </Button>
                   )}
 
@@ -415,10 +415,10 @@ export default function OrderQueue() {
                 {order.payout && (
                   <p className="mt-3 text-xs text-muted-foreground">
                     {order.payout.releasesAt
-                      ? `Payout released on ${when(order.payout.releasesAt)}`
+                      ? t('Payout released on {date}', { date: when(order.payout.releasesAt) })
                       : order.payout.state === 'awaiting_delivery'
-                        ? `Paid out ${order.payout.returnWindowDays} days after delivery - the return window has to close first`
-                        : `Payout: ${String(order.payout.state).replace(/_/g, ' ')}`}
+                        ? t('Paid out {n} days after delivery - the return window has to close first', { n: order.payout.returnWindowDays })
+                        : t('Payout: {state}', { state: t(String(order.payout.state).replace(/_/g, ' ')) })}
                   </p>
                 )}
               </li>
@@ -437,18 +437,18 @@ export default function OrderQueue() {
         open={Boolean(asking)}
         onOpenChange={(next) => setAsking(next ? asking : null)}
         title={
-          asking?.kind === 'ship'
+          t(asking?.kind === 'ship'
             ? 'Book the courier'
             : asking?.kind === 'refuse'
               ? 'Refuse this return'
-              : 'Cancel your items'
+              : 'Cancel your items')
         }
         description={
-          asking?.kind === 'ship'
+          t(asking?.kind === 'ship'
             ? 'A pickup is booked and the cost comes out of the Shiprocket wallet. Have the parcel packed before you press this.'
             : asking?.kind === 'refuse'
               ? 'The customer is told, and they can dispute it - the platform then decides and its decision is final.'
-              : 'The customer is refunded for your items and told why. Their other sellers are unaffected.'
+              : 'The customer is refunded for your items and told why. Their other sellers are unaffected.')
         }
         reasons={
           asking?.kind === 'ship'
@@ -470,14 +470,14 @@ export default function OrderQueue() {
         requireReason={asking?.kind !== 'ship'}
         destructive={asking?.kind === 'cancel'}
         confirmLabel={
-          asking?.kind === 'ship'
+          t(asking?.kind === 'ship'
             ? 'Book it'
             : asking?.kind === 'refuse'
               ? 'Refuse the return'
-              : 'Cancel my items'
+              : 'Cancel my items')
         }
         busy={busy === asking?.order?._id}
-        note={asking?.kind === 'ship' ? undefined : 'The customer reads this.'}
+        note={asking?.kind === 'ship' ? undefined : t('The customer reads this - pick or write it in English or Hindi, as they would understand.')}
         onConfirm={(reason) => {
           const { kind, order } = asking;
           setAsking(null);

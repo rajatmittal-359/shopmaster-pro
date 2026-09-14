@@ -370,8 +370,8 @@ export default function SellerOrderDetail({ orderId }) {
         {order.payout && (
           <p className="mt-3 text-xs text-muted-foreground">
             {order.payout.releasesAt
-              ? `Payout released on ${when(order.payout.releasesAt)}`
-              : `Paid out ${order.payout.returnWindowDays} days after delivery - the return window has to close first`}
+              ? t('Payout released on {date}', { date: when(order.payout.releasesAt) })
+              : t('Paid out {n} days after delivery - the return window has to close first', { n: order.payout.returnWindowDays })}
           </p>
         )}
 
