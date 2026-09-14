@@ -2131,4 +2131,7 @@ prioritised by impact, one next fix, never a wall of advice.
   Business · Rulebook vN · Switches · Announcement, the same dot. 5.6 → 1.5
   phone screens.
 
-**Not done.** The new labels are English only until 2.13 catches up.
+**Hindi and Hinglish, same day.** Every new label went through `t()` - the
+band words, Next / Fix / All N, the 16 fix texts from `listingScore`, the
+section summaries, the products list (tabs, badges, Edit, the menu), the
+Settings tabs and save bar, the Grow tabs. ~85 rows in each dictionary.

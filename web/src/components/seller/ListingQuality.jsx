@@ -5,6 +5,7 @@ import { Check, ExternalLink, Loader2, Plus, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { authedFetch } from '@/lib/client';
 import { scoreListing } from '@/lib/listingScore';
+import { useT } from '@/lib/i18n';
 import { Button } from '@/components/ui/button';
 
 /**
@@ -41,6 +42,7 @@ export default function ListingQuality({ form, photos, productId, categoryLabel,
   const [kwBusy, setKwBusy] = useState(false);
   const [google, setGoogle] = useState(null);
   const [allOpen, setAllOpen] = useState(false);
+  const t = useT();
 
   useEffect(() => {
     if (!productId) return undefined;
@@ -90,7 +92,7 @@ export default function ListingQuality({ form, photos, productId, categoryLabel,
   const tone = score >= 80 ? 'text-emerald-700 dark:text-emerald-300' : score >= 50 ? 'text-amber-700 dark:text-amber-300' : 'text-destructive';
   const missing = (kw?.keywords || []).filter((k) => !k.present && !(form.tags || []).includes(k.word));
 
-  const band = score >= 80 ? 'Great' : score >= 60 ? 'Good' : score >= 35 ? 'Getting there' : 'Not ready';
+  const band = t(score >= 80 ? 'Great' : score >= 60 ? 'Good' : score >= 35 ? 'Getting there' : 'Not ready');
   const ring = score >= 80 ? '#059669' : score >= 50 ? '#d97706' : '#dc2626';
   const next = fixes[0] || null;
 
@@ -224,7 +226,7 @@ export default function ListingQuality({ form, photos, productId, categoryLabel,
   }
 
   return (
-    <section className="rounded-xl border bg-card px-4 py-3 sm:px-5" aria-label="Listing health">
+    <section className="rounded-xl border bg-card px-4 py-3 sm:px-5" aria-label={t('Listing health')}>
       <div className="flex items-center gap-4">
         <div className="relative size-14 shrink-0" title={`${score} out of 100`}>
           <svg viewBox="0 0 36 36" className="size-14 -rotate-90">
@@ -236,22 +238,22 @@ export default function ListingQuality({ form, photos, productId, categoryLabel,
         <div className="min-w-0 flex-1">
           <p className="text-sm">
             <span className={`font-semibold ${tone}`}>{band}</span>
-            <span className="text-muted-foreground"> · {score >= 80 ? 'Google and shoppers have what they need' : 'above 80 is where listings start to show'}</span>
+            <span className="text-muted-foreground"> · {t(score >= 80 ? 'Google and shoppers have what they need' : 'above 80 is where listings start to show')}</span>
           </p>
           {next ? (
             <button type="button" onClick={() => jump(next.field)} className="group mt-1 flex w-full items-center gap-2 text-left text-sm">
-              <span className="shrink-0 text-xs font-medium uppercase tracking-wide text-muted-foreground">Next</span>
-              <span className="min-w-0 truncate group-hover:underline">{next.text}</span>
+              <span className="shrink-0 text-xs font-medium uppercase tracking-wide text-muted-foreground">{t('Next')}</span>
+              <span className="min-w-0 truncate group-hover:underline">{t(next.text)}</span>
               <span className="shrink-0 rounded bg-primary/10 px-1.5 text-xs font-semibold tabular-nums text-brand-ink">+{next.points}</span>
-              <span className="shrink-0 text-xs font-medium text-brand-ink">Fix →</span>
+              <span className="shrink-0 text-xs font-medium text-brand-ink">{t('Fix →')}</span>
             </button>
           ) : (
-            <p className="mt-1 text-sm text-muted-foreground">Nothing left to fix. Save it.</p>
+            <p className="mt-1 text-sm text-muted-foreground">{t('Nothing left to fix. Save it.')}</p>
           )}
         </div>
         {fixes.length > 1 && (
           <button type="button" onClick={() => setAllOpen((v) => !v)} aria-expanded={allOpen} className="shrink-0 rounded-md border px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground">
-            {allOpen ? 'Hide' : `All ${fixes.length}`}
+            {allOpen ? t('Hide') : t('All {n}', { n: fixes.length })}
           </button>
         )}
       </div>
@@ -261,7 +263,7 @@ export default function ListingQuality({ form, photos, productId, categoryLabel,
             <li key={f.key}>
               <button type="button" onClick={() => jump(f.field)} className="group flex w-full items-start gap-2 rounded-lg px-2 py-1 text-left hover:bg-accent/60">
                 <span className="mt-0.5 shrink-0 rounded bg-primary/10 px-1.5 text-xs font-medium tabular-nums text-brand-ink">+{f.points}</span>
-                <span className="group-hover:text-foreground">{f.text}</span>
+                <span className="group-hover:text-foreground">{t(f.text)}</span>
               </button>
             </li>
           ))}

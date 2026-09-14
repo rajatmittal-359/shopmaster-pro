@@ -14,6 +14,7 @@ import PanelCard from '@/components/panel/PanelCard';
 import PushToggle from '@/components/seller/PushToggle';
 import NotificationPrefs from '@/components/common/NotificationPrefs';
 import PanelTabs from '@/components/panel/PanelTabs';
+import { useT } from '@/lib/i18n';
 
 /**
  * A seller's own settings.
@@ -70,6 +71,7 @@ function Field({ id, label, hint, children, className = '' }) {
 }
 
 export default function SellerSettings() {
+  const t = useT();
   const [settings, setSettings] = useState(null);
   const [saved, setSaved] = useState(null); // the form as last saved - what "dirty" is measured against
   const [form, setForm] = useState(null);
@@ -131,7 +133,7 @@ export default function SellerSettings() {
     pickup: !same(form.pickupAddress, saved.pickupAddress),
     web: form.about !== saved.about || form.showLocation !== saved.showLocation || !same(form.links, saved.links),
   };
-  const changedNames = [changedIn.shop && 'Shop', changedIn.pickup && 'Pickup address', changedIn.web && 'On the web'].filter(Boolean);
+  const changedNames = [changedIn.shop && t('Shop'), changedIn.pickup && t('Pickup address'), changedIn.web && t('On the web')].filter(Boolean);
 
   return (
     <form onSubmit={save} className="max-w-3xl space-y-5">
@@ -145,10 +147,10 @@ export default function SellerSettings() {
        */}
       <PanelTabs
         tabs={[
-          { key: 'shop', label: 'Shop', count: changedIn.shop ? '•' : undefined },
-          { key: 'pickup', label: 'Pickup address', count: !a.city ? '!' : changedIn.pickup ? '•' : undefined, anchors: ['pickup'] },
-          { key: 'web', label: 'On the web', count: changedIn.web ? '•' : undefined, anchors: ['web'] },
-          { key: 'notifications', label: 'Notifications' },
+          { key: 'shop', label: t('Shop'), count: changedIn.shop ? '•' : undefined },
+          { key: 'pickup', label: t('Pickup address'), count: !a.city ? '!' : changedIn.pickup ? '•' : undefined, anchors: ['pickup'] },
+          { key: 'web', label: t('On the web'), count: changedIn.web ? '•' : undefined, anchors: ['web'] },
+          { key: 'notifications', label: t('Notifications') },
         ]}
       >
         {(tab) => (
@@ -315,17 +317,17 @@ export default function SellerSettings() {
 
       <div className="sticky bottom-0 z-10 -mx-1 flex items-center gap-3 border-t bg-background/95 px-1 py-3 backdrop-blur">
         <Button type="submit" disabled={!dirty || state.status === 'working'}>
-          {state.status === 'working' ? 'Saving…' : 'Save changes'}
+          {state.status === 'working' ? t('Saving…') : t('Save changes')}
         </Button>
         {dirty && (
           <Button type="button" variant="ghost" onClick={() => setForm(saved)} disabled={state.status === 'working'}>
-            Discard
+            {t('Discard')}
           </Button>
         )}
         <p aria-live="polite" className="text-sm">
           {state.status === 'error' && <span className="text-destructive">{state.message}</span>}
-          {state.status !== 'error' && !dirty && <span className="text-muted-foreground">Nothing to save.</span>}
-          {state.status !== 'error' && dirty && <span className="text-muted-foreground">Changed: {changedNames.join(', ')}</span>}
+          {state.status !== 'error' && !dirty && <span className="text-muted-foreground">{t('Nothing to save.')}</span>}
+          {state.status !== 'error' && dirty && <span className="text-muted-foreground">{t('Changed: {list}', { list: changedNames.join(', ') })}</span>}
         </p>
       </div>
     </form>

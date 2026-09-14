@@ -370,7 +370,7 @@ export default function ProductForm({ productId, copyFromId }) {
       <Card
         id="photos"
         title="1 · Photos"
-        summary={photos.length ? `${photos.length} photo${photos.length > 1 ? 's' : ''} · first is the main one` : 'No photo yet - the one thing nothing sells without'}
+        summary={photos.length ? t(photos.length > 1 ? '{n} photos · first is the main one' : '1 photo · the main one', { n: photos.length }) : t('No photo yet - the one thing nothing sells without')}
         lead="Up to five. The first is the main one - white background sells best."
         aside={
           usage && (
@@ -398,7 +398,7 @@ export default function ProductForm({ productId, copyFromId }) {
       <Card
         id="words"
         title="2 · Words"
-        summary={form.name ? `${form.name.slice(0, 60)} · ${String(form.description || '').replace(/<[^>]*>/g, ' ').trim().split(/\s+/).filter(Boolean).length} words` : 'Title and description - or say it, or let AI write it from the photo'}
+        summary={form.name ? t('{name} · {n} words', { name: form.name.slice(0, 60), n: String(form.description || '').replace(/<[^>]*>/g, ' ').trim().split(/\s+/).filter(Boolean).length }) : t('Title and description - or say it, or let AI write it from the photo')}
         aside={
           <div className="flex shrink-0 items-center gap-2">
             {/* Say it: the mic writes the numbers and the words at once. */}
@@ -514,7 +514,7 @@ export default function ProductForm({ productId, copyFromId }) {
       </Card>
 
       {/* 3. ORGANISATION */}
-      <Card id="category-card" title="3 · Category" foldOnPhone summary={categories.find((c) => c._id === form.category)?.label || 'Not chosen - decides where it appears'}>
+      <Card id="category-card" title="3 · Category" foldOnPhone summary={categories.find((c) => c._id === form.category)?.label || t('Not chosen - decides where it appears')}>
         <Field id="category" label="Where it sits in the shop" hint="Type to search. Shoppers browse by these, and Google reads them.">
           <CategoryPicker id="category" options={categories} value={form.category} onChange={setValue('category')} />
           <SuggestCategory parents={parents} />
@@ -526,7 +526,7 @@ export default function ProductForm({ productId, copyFromId }) {
         id="price-card"
         title="4 · Price and stock"
         foldOnPhone
-        summary={`${form.price ? `₹${form.price}` : 'No price'} · ${form.stock !== '' && form.stock !== undefined ? `${form.stock} in stock` : 'stock?'}${form.weight ? ` · ${form.weight} g` : ''} · ${{ R: 'return + refund', X: 'exchange only', N: 'no return' }[form.returnMode] || 'category return rule'}`}
+        summary={`${form.price ? `₹${form.price}` : t('No price')} · ${form.stock !== '' && form.stock !== undefined ? t('{n} in stock', { n: form.stock }) : t('stock?')}${form.weight ? ` · ${form.weight} g` : ''} · ${t({ R: 'return + refund', X: 'exchange only', N: 'no return' }[form.returnMode] || 'category return rule')}`}
       >
         <div className="grid gap-5 sm:grid-cols-3">
           <Field id="price" label="Selling price (₹)">
@@ -606,7 +606,7 @@ export default function ProductForm({ productId, copyFromId }) {
         id="details"
         title="5 · Details"
         foldOnPhone
-        summary={[form.color, form.size, form.gender && form.gender !== 'unisex' ? form.gender : null, form.material].filter(Boolean).join(' · ') || 'Colour, size, who it is for - Google Shopping needs these'}
+        summary={[form.color, form.size, form.gender && form.gender !== 'unisex' ? form.gender : null, form.material].filter(Boolean).join(' · ') || t('Colour, size, who it is for - Google Shopping needs these')}
         lead="Colour, who it is for and age group put it on Google Shopping for free."
       >
         <div className="grid gap-5 sm:grid-cols-2">
@@ -682,8 +682,8 @@ export default function ProductForm({ productId, copyFromId }) {
         id="faqs"
         title="6 · Questions shoppers ask"
         defaultOpen={false}
-        badge={<span className="rounded bg-muted px-1.5 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wide text-muted-foreground">Optional</span>}
-        summary={(form.faqs || []).filter((x) => x.q && x.a).length ? `${(form.faqs || []).filter((x) => x.q && x.a).length} answers` : 'None yet - two short answers help AI answers quote you'}
+        badge={<span className="rounded bg-muted px-1.5 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wide text-muted-foreground">{t('Optional')}</span>}
+        summary={(form.faqs || []).filter((x) => x.q && x.a).length ? t('{n} answers', { n: (form.faqs || []).filter((x) => x.q && x.a).length }) : t('None yet - two short answers help AI answers quote you')}
         lead="2-6 short answers: material · care · size · in the box · delivery. Google's AI answers quote these."
       >
         <div className="space-y-3">
@@ -728,8 +728,8 @@ export default function ProductForm({ productId, copyFromId }) {
         id="google"
         title="7 · Google"
         defaultOpen={false}
-        badge={<span className="rounded bg-muted px-1.5 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wide text-muted-foreground">Optional</span>}
-        summary={`${(form.tags || []).length} search words · how it looks in Google${productId ? " · Google's own verdicts" : ''}`}
+        badge={<span className="rounded bg-muted px-1.5 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wide text-muted-foreground">{t('Optional')}</span>}
+        summary={`${t('{n} search words · how it looks in Google', { n: (form.tags || []).length })}${productId ? ` · ${t("Google's own verdicts")}` : ''}`}
       >
         <ListingQuality
           part="google"

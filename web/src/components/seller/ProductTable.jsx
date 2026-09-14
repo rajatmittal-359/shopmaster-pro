@@ -14,6 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import PanelCard from '@/components/panel/PanelCard';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { scoreListing } from '@/lib/listingScore';
+import { useT } from '@/lib/i18n';
 
 /**
  * Everything this seller has listed, and the one number they change daily.
@@ -65,30 +66,33 @@ const EMPTY = {
 const FIELD_ANCHOR = { images: 'photos', name: 'name', description: 'description', category: 'category-card', color: 'details', gender: 'details', size: 'details', brand: 'details', weight: 'price-card', tags: 'tags', faqs: 'faqs' };
 
 function Readiness({ product }) {
+  const t = useT();
   const { score, fixes } = scoreListing({ ...product, category: product.category?._id || product.category });
   if (score >= 80 || !fixes.length) return null;
   const next = fixes[0];
   const tone = score >= 50 ? 'text-amber-700 dark:text-amber-300' : 'text-destructive';
   return (
-    <Link href={`/seller/products/${product._id}#${FIELD_ANCHOR[next.field] || next.field}`} className={`inline-flex max-w-full items-center gap-1.5 text-xs ${tone} hover:underline`} title={`Listing score ${score} of 100 - above 80 is where listings start to show`}>
+    <Link href={`/seller/products/${product._id}#${FIELD_ANCHOR[next.field] || next.field}`} className={`inline-flex max-w-full items-center gap-1.5 text-xs ${tone} hover:underline`} title={t('Listing score {n} of 100 - above 80 is where listings start to show', { n: score })}>
       <span className="font-semibold tabular-nums">{score}/100</span>
-      <span className="truncate text-muted-foreground">{next.text.split(' - ')[0]}</span>
+      <span className="truncate text-muted-foreground">{t(next.text).split(' - ')[0]}</span>
       <span className="shrink-0 rounded bg-primary/10 px-1 font-semibold tabular-nums text-brand-ink">+{next.points}</span>
     </Link>
   );
 }
 
 function StatusBadge({ product }) {
-  if (!product.isActive) return <Badge variant="outline">Hidden</Badge>;
+  const t = useT();
+  if (!product.isActive) return <Badge variant="outline">{t('Hidden')}</Badge>;
   const left = sellable(product);
-  if (left === 0) return <Badge variant="destructive">Out of stock</Badge>;
+  if (left === 0) return <Badge variant="destructive">{t('Out of stock')}</Badge>;
   if (left <= (product.lowStockThreshold || 10)) {
-    return <Badge className="bg-amber-500/10 text-amber-700 dark:text-amber-300">Low · {left} left</Badge>;
+    return <Badge className="bg-amber-500/10 text-amber-700 dark:text-amber-300">{t('Low · {n} left', { n: left })}</Badge>;
   }
-  return <Badge className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-300">Live</Badge>;
+  return <Badge className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-300">{t('Live')}</Badge>;
 }
 
 export default function ProductTable() {
+  const t = useT();
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
@@ -130,10 +134,10 @@ export default function ProductTable() {
     router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
   };
 
-  const counts = useMemo(() => Object.fromEntries(TABS.map((t) => [t.id, products.filter(t.test).length])), [products]);
+  const counts = useMemo(() => Object.fromEntries(TABS.map((x) => [x.id, products.filter(x.test).length])), [products]);
 
   const shown = useMemo(() => {
-    const test = TABS.find((t) => t.id === tab).test;
+    const test = TABS.find((x) => x.id === tab).test;
     const needle = q.trim().toLowerCase();
     return products.filter(test).filter((p) => !needle || [p.name, p.sku, p.size].filter(Boolean).join(' ').toLowerCase().includes(needle));
   }, [products, tab, q]);
@@ -207,21 +211,21 @@ export default function ProductTable() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div role="tablist" aria-label="Product state" className="flex max-w-full gap-1 overflow-x-auto rounded-lg bg-muted p-1">
-          {TABS.map((t) => {
-            const active = t.id === tab;
+          {TABS.map((tb) => {
+            const active = tb.id === tab;
             return (
               <button
-                key={t.id}
+                key={tb.id}
                 type="button"
                 role="tab"
                 aria-selected={active}
-                onClick={() => setTab(t.id)}
+                onClick={() => setTab(tb.id)}
                 className={`inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md px-3 text-sm transition ${
                   active ? 'bg-background font-medium shadow-xs' : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
-                {t.label}
-                <span className={`tabular-nums ${active ? 'text-brand-ink' : ''}`}>{counts[t.id]}</span>
+                {t(tb.label)}
+                <span className={`tabular-nums ${active ? 'text-brand-ink' : ''}`}>{counts[tb.id]}</span>
               </button>
             );
           })}
@@ -231,7 +235,7 @@ export default function ProductTable() {
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Name, SKU or size"
+            placeholder={t('Name, SKU or size')}
             aria-label="Search your products"
             className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
           />
@@ -241,7 +245,7 @@ export default function ProductTable() {
       {shown.length === 0 ? (
         <PanelCard>
           <p className="py-8 text-center text-sm text-muted-foreground">
-            {q.trim() ? `Nothing here matches “${q.trim()}”.` : EMPTY[tab]}
+            {q.trim() ? t('Nothing here matches “{q}”.', { q: q.trim() }) : t(EMPTY[tab])}
           </p>
         </PanelCard>
       ) : (
@@ -256,7 +260,7 @@ export default function ProductTable() {
                     <Image src={product.images[0]} alt="" fill sizes="56px" className="object-cover" />
                   </Link>
                 ) : (
-                  <Link href={`/seller/products/${product._id}#photos`} className="grid size-14 shrink-0 place-items-center rounded-lg border border-dashed border-destructive/50 text-destructive hover:bg-destructive/5" title="No photo - add one">
+                  <Link href={`/seller/products/${product._id}#photos`} className="grid size-14 shrink-0 place-items-center rounded-lg border border-dashed border-destructive/50 text-destructive hover:bg-destructive/5" title={t('No photo - add one')}>
                     <ImagePlus className="size-5" aria-hidden />
                     <span className="sr-only">Add a photo</span>
                   </Link>
@@ -277,7 +281,7 @@ export default function ProductTable() {
                     <span className="tabular-nums">{money(product.price)}</span>
                     {product.size ? ` · size ${product.size}` : ''}
                     {product.sku ? ` · ${product.sku}` : ''}
-                    {product.reserved > 0 ? ` · ${product.reserved} held in checkouts` : ''}
+                    {product.reserved > 0 ? ` · ${t('{n} held in checkouts', { n: product.reserved })}` : ''}
                   </p>
                   <Readiness product={product} />
                 </div>
@@ -295,11 +299,11 @@ export default function ProductTable() {
                     className="w-20 text-right tabular-nums"
                   />
                   <Button onClick={() => saveStock(product)} disabled={!dirty || saving === product._id} variant="outline" size="sm">
-                    {saving === product._id ? 'Saving…' : 'Save'}
+                    {saving === product._id ? t('Saving…') : t('Save')}
                   </Button>
                   <Button render={<Link href={`/seller/products/${product._id}`} />} nativeButton={false} variant="outline" size="sm" className="ml-auto">
                     <Pencil className="size-3.5" />
-                    Edit
+                    {t('Edit')}
                   </Button>
                   <DropdownMenu>
                     <DropdownMenuTrigger aria-label={`More for ${product.name}`} className="inline-flex size-8 items-center justify-center rounded-md border text-muted-foreground hover:bg-accent hover:text-foreground">
@@ -311,16 +315,16 @@ export default function ProductTable() {
                           so only the size and the count are typed. */}
                       <DropdownMenuItem render={<Link href={`/seller/products/new?from=${product._id}`} />}>
                         <Plus className="size-4" />
-                        Add a size
+                        {t('Add a size')}
                       </DropdownMenuItem>
                       <DropdownMenuItem render={<Link href={`/products/${product.slug || product._id}`} target="_blank" rel="noreferrer" />}>
                         <ExternalLink className="size-4" />
-                        View in shop
+                        {t('View in shop')}
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem onClick={() => toggleActive(product)}>
                         {product.isActive ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                        {product.isActive ? 'Hide from shop' : 'Show in shop'}
+                        {t(product.isActive ? 'Hide from shop' : 'Show in shop')}
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
