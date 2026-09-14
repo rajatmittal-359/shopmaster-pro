@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import Link from 'next/link';
-import { ShoppingBag } from 'lucide-react';
+import { ShoppingBag, UserRound } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useSession, clearSession, setCapabilities } from '@/lib/session';
 import { authedFetch } from '@/lib/client';
@@ -86,10 +86,12 @@ export default function HeaderAccount({ showCart = true }) {
 
       {signedIn ? (
         <DropdownMenu>
-          <DropdownMenuTrigger className="font-medium hover:text-brand-ink">
+          <DropdownMenuTrigger className="font-medium hover:text-brand-ink" aria-label={user?.name ? user.name.split(' ')[0] : 'Account'}>
             {/* The first name only: a header is not the place for a full name,
-                and it is what the person calls themselves anyway. */}
-            {user?.name ? user.name.split(' ')[0] : 'Account'}
+                and it is what the person calls themselves anyway. On the
+                narrowest phones (15 Sep 2026: 12 px over at 390) an icon. */}
+            <span className="hidden sm:inline">{user?.name ? user.name.split(' ')[0] : 'Account'}</span>
+            <UserRound className="size-5 sm:hidden" aria-hidden />
           </DropdownMenuTrigger>
 
           <DropdownMenuContent align="end" className="w-52">

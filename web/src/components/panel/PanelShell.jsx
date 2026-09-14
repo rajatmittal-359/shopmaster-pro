@@ -61,6 +61,13 @@ export default function PanelShell({ title, groups, countsUrl = null, identity =
                 <SheetTitle>{title}</SheetTitle>
               </SheetHeader>
               <div className="flex h-[calc(100dvh-3.5rem)] flex-col px-3 py-4">
+                {/* On a phone the header cannot hold the role switch and the language
+                    chips (15 Sep 2026: together they pushed every panel page 300 px
+                    sideways). They live here, at the top of the menu. */}
+                <div className="mb-3 flex flex-wrap items-center gap-2 md:hidden">
+                  <RoleSwitch />
+                  {title === 'Seller' && <LangToggle compact />}
+                </div>
                 {identity}
                 <PanelNav groups={groups} onNavigate={() => setOpen(false)} countsUrl={countsUrl} />
               </div>
@@ -77,8 +84,10 @@ export default function PanelShell({ title, groups, countsUrl = null, identity =
           <div className="ml-auto flex items-center gap-1 text-sm">
             {/* The same switch the storefront header carries: Shopping |
                 Selling | Admin, the current one lit. Replaces "View shop". */}
-            <RoleSwitch />
-            {title === 'Seller' && <LangToggle compact />}
+            <div className="hidden items-center gap-1 md:flex">
+              <RoleSwitch />
+              {title === 'Seller' && <LangToggle compact />}
+            </div>
             {/* Ask ShopMaster as a drawer beside the page (plan 2.33) - the answer stays while the person follows it. */}
             <button
               type="button"

@@ -2072,3 +2072,56 @@ Rajat: "saman bahut tarah ka, nuksaan bahut tarah se; seller bhi jhooth bol sakt
 **E. Amount tiers.** < ₹500 fast-track (goodwill once) · ₹500–5,000 evidence required · > ₹5,000 OTP delivery + unboxing video + admin review · ₹20,000+ (real gold) insured courier - after cutover.
 
 **F. Time and transparency.** Raise inside the window (damage 48 h) · seller replies in 72 h (rulebook) · admin rules in 5 days · refund 5–7 working days · every ruling written on the order for both · appeal within 7 days via /help · 48 h acknowledgement / 30 days resolution (law) · the assistant explains all of it in the person's language; the decision agent (2.19) drafts rulings from exactly this evidence.
+
+### 4.40 Long pages, read at a glance (15 Sep 2026)
+
+**What hurt.** Rajat, on Grow and the product form: "pages bahut neeche jaate
+hain, at a glance samajh nahi aata, gabrahat hoti hai". Measured before
+touching anything: Grow was 5.7 screens on a desktop and 7.7 on a phone
+(1,900 words, seven cards); the product form 5.0 phone screens; the header
+overflowed 304 px at 390 because the role switch and the language toggle
+never left it.
+
+**References.** NN/g on progressive disclosure (summary first, detail on
+demand; an accordion halves a mobile form's perceived length - Baymard).
+Shopify's product page folds "Search engine listing" behind Edit and keeps
+the status in the header. Seller Central tabs its long forms and puts the
+count on the tab ("Unfulfilled (3)"). Linear's collapsible groups carry
+counts. Amazon's Listing Quality Dashboard is the model for the health bar:
+prioritised by impact, one next fix, never a wall of advice.
+
+**Built.** Two primitives and four applications.
+
+- `panel/Fold` - a card with a chevron, a one-line **summary** shown while it
+  is closed ("3 photos · first is the main one", "₹450 · 5 in stock · return
+  + refund"), a badge slot, `defaultOpen`, `foldOnPhone` (sections after the
+  first two start closed under 640 px), the choice remembered per section in
+  localStorage, and a listener for `smp:reveal` so a fix link that targets a
+  field inside a closed fold opens it before the page scrolls.
+- `panel/PanelTabs` - tabs with the key in the URL (`?tab=google`), counts on
+  the tab, a scrolling pill row on phones; Suspense-wrapped so callers need
+  not remember `useSearchParams`.
+- **Product form.** The five-thing quality block that sat before the form
+  ("ye likhawat samajh nahi aati") became a **health bar**: a ring with the
+  score, one word (Not ready / Getting there / Good / Great), ONE next fix
+  with its points and "Fix →", and "All N" for the rest. The words, the
+  Google preview and Google's verdicts moved to a folded **7 · Google**
+  section at the end, for when there is something to check. Sections
+  1–7 are Folds with summaries; Q&A is 6, marked Optional and closed.
+  Phone: 5.0 → 2.9 screens.
+- **Grow.** Five tabs - Do now (count) · On Google (count) · Fields · Market
+  · Guide & routine; done steps fold behind "{n} done - show". 5.7 → 2.5
+  desktop screens, 7.7 → 4.4 on a phone.
+- **Header.** Role switch and language live in the phone sheet; the account
+  is an icon under 640 px. scrollWidth 375 at 390.
+- **Products list.** Rajat: "pata nahi chal raha ki product edit ho sakta
+  hai". The row now says so: pencil beside the name on hover, an **Edit**
+  button and a ⋯ menu (Add a size · View in shop · Hide from shop / Show in
+  shop with an Undo toast - rule 6) at the row's end; a product without a
+  photo shows a dashed "add photo" tile, not a blank square; and any listing
+  under 80 carries "54/100 · Add a photo +10" as a link that opens the
+  editor on that fold (`#photos`, `#details` … - the form reads the hash and
+  fires `smp:reveal`). On a phone the actions wrap under the row.
+
+**Not done.** Seller and admin Settings still scroll (5.6 phone screens) -
+tabs next. The new labels are English only until 2.13 catches up.

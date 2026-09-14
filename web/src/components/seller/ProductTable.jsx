@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { ExternalLink, Search } from 'lucide-react';
+import { ExternalLink, Eye, EyeOff, ImagePlus, MoreHorizontal, Pencil, Plus, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { authedFetch } from '@/lib/client';
 import { Badge } from '@/components/ui/badge';
@@ -12,6 +12,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import PanelCard from '@/components/panel/PanelCard';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { scoreListing } from '@/lib/listingScore';
 
 /**
  * Everything this seller has listed, and the one number they change daily.
@@ -23,6 +25,18 @@ import PanelCard from '@/components/panel/PanelCard';
  *   Manage Inventory adds the thing Shopify makes you open a page for:
  *   editing the quantity in the row. Ours keeps that - stock is the field a
  *   shop touches every day, so it stays inline.
+ *
+ * THE ROW SAYS IT CAN BE EDITED (15 Sep 2026)
+ *   Rajat, on a screenshot: "pata nahi chal raha ki product edit ho sakta
+ *   hai". Shopify's row is a link but also lifts on hover and its title
+ *   underlines; Seller Central puts an explicit Edit button at the row's end
+ *   with a caret for the rest. Ours does both: a pencil appears beside the
+ *   name on hover, "Edit" and a ⋯ menu (Add a size, View in shop, Hide/Show)
+ *   sit at the end, and a product without a photo shows a dashed "Add photo"
+ *   tile instead of a blank square. Amazon's Listing Quality Dashboard adds
+ *   the one more thing a list can do: flag the products that need work. A
+ *   listing under 80 carries its score and its best next fix as a link that
+ *   opens the editor on that field.
  *
  * WHY "SELLABLE" IS SHOWN NEXT TO STOCK
  *   Units held in open checkouts are not sellable yet and not sold yet. A
@@ -46,6 +60,23 @@ const EMPTY = {
   out: 'Nothing is out of stock.',
   hidden: 'Nothing is hidden from the shop.',
 };
+
+// Where a fix lands in the editor: the fold or the field with that id.
+const FIELD_ANCHOR = { images: 'photos', name: 'name', description: 'description', category: 'category-card', color: 'details', gender: 'details', size: 'details', brand: 'details', weight: 'price-card', tags: 'tags', faqs: 'faqs' };
+
+function Readiness({ product }) {
+  const { score, fixes } = scoreListing({ ...product, category: product.category?._id || product.category });
+  if (score >= 80 || !fixes.length) return null;
+  const next = fixes[0];
+  const tone = score >= 50 ? 'text-amber-700 dark:text-amber-300' : 'text-destructive';
+  return (
+    <Link href={`/seller/products/${product._id}#${FIELD_ANCHOR[next.field] || next.field}`} className={`inline-flex max-w-full items-center gap-1.5 text-xs ${tone} hover:underline`} title={`Listing score ${score} of 100 - above 80 is where listings start to show`}>
+      <span className="font-semibold tabular-nums">{score}/100</span>
+      <span className="truncate text-muted-foreground">{next.text.split(' - ')[0]}</span>
+      <span className="shrink-0 rounded bg-primary/10 px-1 font-semibold tabular-nums text-brand-ink">+{next.points}</span>
+    </Link>
+  );
+}
 
 function StatusBadge({ product }) {
   if (!product.isActive) return <Badge variant="outline">Hidden</Badge>;
@@ -106,6 +137,24 @@ export default function ProductTable() {
     const needle = q.trim().toLowerCase();
     return products.filter(test).filter((p) => !needle || [p.name, p.sku, p.size].filter(Boolean).join(' ').toLowerCase().includes(needle));
   }, [products, tab, q]);
+
+  /*
+   * Hide or show without opening the editor. Reversible, so no confirmation -
+   * an Undo on the toast, as the house rule says for anything not costly.
+   */
+  const toggleActive = async (product, next = !product.isActive) => {
+    const before = products;
+    setProducts((list) => list.map((p) => (p._id === product._id ? { ...p, isActive: next } : p)));
+    try {
+      await authedFetch(`/seller/products/${product._id}`, { method: 'PATCH', body: { isActive: next } });
+      toast(next ? `${product.name} is back in the shop` : `${product.name} is hidden from the shop`, {
+        action: { label: 'Undo', onClick: () => toggleActive({ ...product, isActive: next }, !next) },
+      });
+    } catch (err) {
+      setProducts(before);
+      toast.error(err.message || 'Could not change it');
+    }
+  };
 
   const saveStock = async (product) => {
     const value = edits[product._id];
@@ -201,16 +250,26 @@ export default function ProductTable() {
             const edited = edits[product._id];
             const dirty = edited !== undefined && String(edited) !== String(product.stock);
             return (
-              <li key={product._id} className="flex flex-wrap items-center gap-3 p-3 sm:gap-4">
-                <Link href={`/seller/products/${product._id}`} className="relative size-14 shrink-0 overflow-hidden rounded-lg border bg-muted">
-                  {product.images?.[0] && <Image src={product.images[0]} alt="" fill sizes="56px" className="object-cover" />}
-                </Link>
+              <li key={product._id} className="group flex flex-wrap items-center gap-3 p-3 transition-colors hover:bg-accent/40 sm:gap-4">
+                {product.images?.[0] ? (
+                  <Link href={`/seller/products/${product._id}`} aria-label={`Edit ${product.name}`} className="relative size-14 shrink-0 overflow-hidden rounded-lg border bg-muted">
+                    <Image src={product.images[0]} alt="" fill sizes="56px" className="object-cover" />
+                  </Link>
+                ) : (
+                  <Link href={`/seller/products/${product._id}#photos`} className="grid size-14 shrink-0 place-items-center rounded-lg border border-dashed border-destructive/50 text-destructive hover:bg-destructive/5" title="No photo - add one">
+                    <ImagePlus className="size-5" aria-hidden />
+                    <span className="sr-only">Add a photo</span>
+                  </Link>
+                )}
 
-                <div className="min-w-0 flex-1">
+                {/* min-w keeps the words readable on a phone: the actions wrap
+                    under the row instead of squeezing the name to one word a line. */}
+                <div className="min-w-[11rem] flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    {/* The row opens the editor, as Shopify's does. */}
-                    <Link href={`/seller/products/${product._id}`} className="font-medium hover:text-brand-ink">
+                    {/* The row opens the editor, as Shopify's does - and says so. */}
+                    <Link href={`/seller/products/${product._id}`} className="inline-flex items-center gap-1.5 font-medium hover:text-brand-ink hover:underline">
                       {product.name}
+                      <Pencil className="size-3.5 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" aria-hidden />
                     </Link>
                     <StatusBadge product={product} />
                   </div>
@@ -220,21 +279,10 @@ export default function ProductTable() {
                     {product.sku ? ` · ${product.sku}` : ''}
                     {product.reserved > 0 ? ` · ${product.reserved} held in checkouts` : ''}
                   </p>
-                  <p className="mt-0.5 text-xs">
-                    <Link href={`/products/${product.slug || product._id}`} className="inline-flex items-center gap-1 text-muted-foreground hover:text-brand-ink">
-                      View in shop <ExternalLink className="size-3" />
-                    </Link>
-                    <span className="text-muted-foreground"> · </span>
-                    {/* Clothing and shoes need a row per size - Google requires
-                        `size` and disapproves without it. This copies the style
-                        so only the size and the count are typed. */}
-                    <Link href={`/seller/products/new?from=${product._id}`} className="text-brand-ink hover:underline">
-                      Add a size
-                    </Link>
-                  </p>
+                  <Readiness product={product} />
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex w-full items-center gap-2 sm:w-auto">
                   <label className="sr-only" htmlFor={`stock-${product._id}`}>
                     Stock for {product.name}
                   </label>
@@ -249,6 +297,33 @@ export default function ProductTable() {
                   <Button onClick={() => saveStock(product)} disabled={!dirty || saving === product._id} variant="outline" size="sm">
                     {saving === product._id ? 'Saving…' : 'Save'}
                   </Button>
+                  <Button render={<Link href={`/seller/products/${product._id}`} />} nativeButton={false} variant="outline" size="sm" className="ml-auto">
+                    <Pencil className="size-3.5" />
+                    Edit
+                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger aria-label={`More for ${product.name}`} className="inline-flex size-8 items-center justify-center rounded-md border text-muted-foreground hover:bg-accent hover:text-foreground">
+                      <MoreHorizontal className="size-4" />
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-52">
+                      {/* Clothing and shoes need a row per size - Google requires
+                          `size` and disapproves without it. This copies the style
+                          so only the size and the count are typed. */}
+                      <DropdownMenuItem render={<Link href={`/seller/products/new?from=${product._id}`} />}>
+                        <Plus className="size-4" />
+                        Add a size
+                      </DropdownMenuItem>
+                      <DropdownMenuItem render={<Link href={`/products/${product.slug || product._id}`} target="_blank" rel="noreferrer" />}>
+                        <ExternalLink className="size-4" />
+                        View in shop
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => toggleActive(product)}>
+                        {product.isActive ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                        {product.isActive ? 'Hide from shop' : 'Show in shop'}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </li>
             );

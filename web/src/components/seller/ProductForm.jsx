@@ -16,6 +16,7 @@ import VideoSlot from '@/components/seller/VideoSlot';
 import RichTextEditor from '@/components/seller/RichTextEditor';
 import CategoryPicker from '@/components/seller/CategoryPicker';
 import FieldAssist from '@/components/seller/FieldAssist';
+import Fold from '@/components/panel/Fold';
 import MicButton from '@/components/voice/MicButton';
 import { useLang } from '@/lib/i18n';
 import ListingQuality from '@/components/seller/ListingQuality';
@@ -117,21 +118,19 @@ function Field({ id, label, hint, aside, children, className = '' }) {
   );
 }
 
-function Card({ id, title, lead, aside, children }) {
+/*
+ * Every section folds (15 Sep 2026 - plan 2.39): the header keeps a one-line
+ * SUMMARY of what is filled, so a folded form still reads at a glance and a
+ * phone does not scroll five screens. Essential sections open; optional ones
+ * (Q&A) start folded with their summary. The choice is remembered per section.
+ */
+function Card({ id, title, lead, aside, summary, defaultOpen = true, foldOnPhone = false, badge, children }) {
   const t = useT();
+  const key = id || String(title).toLowerCase().replace(/[^a-z0-9]+/g, '-');
   return (
-    <section id={id} className="space-y-5 rounded-xl border bg-card p-5 scroll-mt-20">
-      {(title || aside) && (
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            {title && <h2 className="font-semibold">{t(title)}</h2>}
-            {lead && <p className="mt-1 text-sm text-muted-foreground">{lead}</p>}
-          </div>
-          {aside}
-        </div>
-      )}
+    <Fold id={key} title={t(title)} lead={lead} summary={summary} aside={aside} badge={badge} defaultOpen={defaultOpen} foldOnPhone={foldOnPhone}>
       {children}
-    </section>
+    </Fold>
   );
 }
 
@@ -199,6 +198,19 @@ export default function ProductForm({ productId, copyFromId }) {
           setPhotos((source.images || []).map((src) => ({ src, kind: 'existing' })));
         }
         setState({ status: 'idle' });
+
+        // A link from the products list ("54/100 · Add a photo +10") carries
+        // the section or field as the hash. Open its fold and scroll to it
+        // once the product is on screen - the same door the health bar uses.
+        const hash = window.location.hash.slice(1);
+        if (hash) {
+          setTimeout(() => {
+            const el = document.getElementById(hash);
+            if (!el) return;
+            window.dispatchEvent(new CustomEvent('smp:reveal', { detail: el.id }));
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }, 150);
+        }
       } catch (err) {
         if (!cancelled) setState({ status: 'error', message: err.message });
       }
@@ -341,7 +353,10 @@ export default function ProductForm({ productId, copyFromId }) {
       {/* THE SCORE. Live, from the form; the three biggest fixes on top, each a
           jump to its field; AI search words; a Google preview; and for a saved
           product Google's own verdicts. Amazon's Listing Quality, at our size. */}
+      {/* The health bar: a ring, one word, the next fix. The rest of Google
+          (search words, preview, verdicts) is section 7, folded, at the end. */}
       <ListingQuality
+        part="bar"
         form={form}
         photos={photos}
         productId={productId}
@@ -355,6 +370,7 @@ export default function ProductForm({ productId, copyFromId }) {
       <Card
         id="photos"
         title="1 · Photos"
+        summary={photos.length ? `${photos.length} photo${photos.length > 1 ? 's' : ''} · first is the main one` : 'No photo yet - the one thing nothing sells without'}
         lead="Up to five. The first is the main one - white background sells best."
         aside={
           usage && (
@@ -380,7 +396,9 @@ export default function ProductForm({ productId, copyFromId }) {
 
       {/* 2. WORDS */}
       <Card
+        id="words"
         title="2 · Words"
+        summary={form.name ? `${form.name.slice(0, 60)} · ${String(form.description || '').replace(/<[^>]*>/g, ' ').trim().split(/\s+/).filter(Boolean).length} words` : 'Title and description - or say it, or let AI write it from the photo'}
         aside={
           <div className="flex shrink-0 items-center gap-2">
             {/* Say it: the mic writes the numbers and the words at once. */}
@@ -496,7 +514,7 @@ export default function ProductForm({ productId, copyFromId }) {
       </Card>
 
       {/* 3. ORGANISATION */}
-      <Card title="3 · Category">
+      <Card id="category-card" title="3 · Category" foldOnPhone summary={categories.find((c) => c._id === form.category)?.label || 'Not chosen - decides where it appears'}>
         <Field id="category" label="Where it sits in the shop" hint="Type to search. Shoppers browse by these, and Google reads them.">
           <CategoryPicker id="category" options={categories} value={form.category} onChange={setValue('category')} />
           <SuggestCategory parents={parents} />
@@ -504,7 +522,12 @@ export default function ProductForm({ productId, copyFromId }) {
       </Card>
 
       {/* 4. PRICING & INVENTORY */}
-      <Card title="4 · Price and stock">
+      <Card
+        id="price-card"
+        title="4 · Price and stock"
+        foldOnPhone
+        summary={`${form.price ? `₹${form.price}` : 'No price'} · ${form.stock !== '' && form.stock !== undefined ? `${form.stock} in stock` : 'stock?'}${form.weight ? ` · ${form.weight} g` : ''} · ${{ R: 'return + refund', X: 'exchange only', N: 'no return' }[form.returnMode] || 'category return rule'}`}
+      >
         <div className="grid gap-5 sm:grid-cols-3">
           <Field id="price" label="Selling price (₹)">
             <Input id="price" required inputMode="numeric" value={form.price} onChange={set('price')} className="h-10" />
@@ -576,55 +599,14 @@ export default function ProductForm({ productId, copyFromId }) {
         })()}
       </Card>
 
-      {/* Q&A under the product (plan 2.32). AI overviews and shopping assistants
-          quote pages that answer plainly; Amazon's Q&A and Etsy's FAQ do the same
-          job. Drafted from the facts and the rulebook, kept by the seller. */}
-      <Card
-        id="faqs"
-        title="Questions shoppers ask"
-        lead="2-6 short answers: material · care · size · in the box · delivery. Google's AI answers quote these."
-      >
-        <div className="space-y-3">
-          {(form.faqs || []).map((x, idx) => (
-            <div key={idx} className="rounded-lg border p-3">
-              <Input value={x.q} maxLength={120} placeholder="Question, e.g. Is this real silver?" onChange={(e) => setForm((f) => ({ ...f, faqs: f.faqs.map((y, k) => (k === idx ? { ...y, q: e.target.value } : y)) }))} />
-              <Textarea value={x.a} maxLength={400} rows={2} className="mt-2" placeholder="Answer in one or two plain sentences" onChange={(e) => setForm((f) => ({ ...f, faqs: f.faqs.map((y, k) => (k === idx ? { ...y, a: e.target.value } : y)) }))} />
-              <button type="button" className="mt-1 text-xs text-muted-foreground hover:text-destructive" onClick={() => setForm((f) => ({ ...f, faqs: f.faqs.filter((_, k) => k !== idx) }))}>Remove</button>
-            </div>
-          ))}
-          <div className="flex flex-wrap gap-2">
-            {(form.faqs || []).length < 6 && (
-              <Button type="button" size="sm" variant="outline" onClick={() => setForm((f) => ({ ...f, faqs: [...(f.faqs || []), { q: '', a: '' }] }))}>Add a question</Button>
-            )}
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              disabled={!form.name || faqBusy}
-              onClick={async () => {
-                setFaqBusy(true);
-                try {
-                  const r = await authedFetch('/seller/ai/faqs', { method: 'POST', body: { name: form.name, description: form.description, categoryName: categories.find((c) => c._id === form.category)?.label, material: form.material, color: form.color, size: form.size, returnMode: form.returnMode || categories.find((c) => c._id === form.category)?.returnMode || 'R', textModel } });
-                  const have = new Set((form.faqs || []).map((x) => x.q.trim().toLowerCase()));
-                  const fresh = (r.faqs || []).filter((x) => !have.has(x.q.trim().toLowerCase()));
-                  setForm((f) => ({ ...f, faqs: [...(f.faqs || []).filter((x) => x.q || x.a), ...fresh].slice(0, 6) }));
-                  toast.success(`${fresh.length} drafted by ${r.writtenBy} - read them, they are yours now`);
-                } catch (e) {
-                  toast.error(e.message);
-                } finally {
-                  setFaqBusy(false);
-                }
-              }}
-            >
-              {faqBusy ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />} Draft 3 with AI
-            </Button>
-          </div>
-        </div>
-      </Card>
+
 
       {/* 5. DETAILS THE CHANNELS NEED */}
       <Card
+        id="details"
         title="5 · Details"
+        foldOnPhone
+        summary={[form.color, form.size, form.gender && form.gender !== 'unisex' ? form.gender : null, form.material].filter(Boolean).join(' · ') || 'Colour, size, who it is for - Google Shopping needs these'}
         lead="Colour, who it is for and age group put it on Google Shopping for free."
       >
         <div className="grid gap-5 sm:grid-cols-2">
@@ -691,6 +673,74 @@ export default function ProductForm({ productId, copyFromId }) {
             />
           </Field>
         </div>
+      </Card>
+
+      {/* Q&A under the product (plan 2.32). AI overviews and shopping assistants
+          quote pages that answer plainly; Amazon's Q&A and Etsy's FAQ do the same
+          job. Drafted from the facts and the rulebook, kept by the seller. */}
+      <Card
+        id="faqs"
+        title="6 · Questions shoppers ask"
+        defaultOpen={false}
+        badge={<span className="rounded bg-muted px-1.5 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wide text-muted-foreground">Optional</span>}
+        summary={(form.faqs || []).filter((x) => x.q && x.a).length ? `${(form.faqs || []).filter((x) => x.q && x.a).length} answers` : 'None yet - two short answers help AI answers quote you'}
+        lead="2-6 short answers: material · care · size · in the box · delivery. Google's AI answers quote these."
+      >
+        <div className="space-y-3">
+          {(form.faqs || []).map((x, idx) => (
+            <div key={idx} className="rounded-lg border p-3">
+              <Input value={x.q} maxLength={120} placeholder="Question, e.g. Is this real silver?" onChange={(e) => setForm((f) => ({ ...f, faqs: f.faqs.map((y, k) => (k === idx ? { ...y, q: e.target.value } : y)) }))} />
+              <Textarea value={x.a} maxLength={400} rows={2} className="mt-2" placeholder="Answer in one or two plain sentences" onChange={(e) => setForm((f) => ({ ...f, faqs: f.faqs.map((y, k) => (k === idx ? { ...y, a: e.target.value } : y)) }))} />
+              <button type="button" className="mt-1 text-xs text-muted-foreground hover:text-destructive" onClick={() => setForm((f) => ({ ...f, faqs: f.faqs.filter((_, k) => k !== idx) }))}>Remove</button>
+            </div>
+          ))}
+          <div className="flex flex-wrap gap-2">
+            {(form.faqs || []).length < 6 && (
+              <Button type="button" size="sm" variant="outline" onClick={() => setForm((f) => ({ ...f, faqs: [...(f.faqs || []), { q: '', a: '' }] }))}>Add a question</Button>
+            )}
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={!form.name || faqBusy}
+              onClick={async () => {
+                setFaqBusy(true);
+                try {
+                  const r = await authedFetch('/seller/ai/faqs', { method: 'POST', body: { name: form.name, description: form.description, categoryName: categories.find((c) => c._id === form.category)?.label, material: form.material, color: form.color, size: form.size, returnMode: form.returnMode || categories.find((c) => c._id === form.category)?.returnMode || 'R', textModel } });
+                  const have = new Set((form.faqs || []).map((x) => x.q.trim().toLowerCase()));
+                  const fresh = (r.faqs || []).filter((x) => !have.has(x.q.trim().toLowerCase()));
+                  setForm((f) => ({ ...f, faqs: [...(f.faqs || []).filter((x) => x.q || x.a), ...fresh].slice(0, 6) }));
+                  toast.success(`${fresh.length} drafted by ${r.writtenBy} - read them, they are yours now`);
+                } catch (e) {
+                  toast.error(e.message);
+                } finally {
+                  setFaqBusy(false);
+                }
+              }}
+            >
+              {faqBusy ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />} Draft 3 with AI
+            </Button>
+          </div>
+        </div>
+      </Card>
+
+      <Card
+        id="google"
+        title="7 · Google"
+        defaultOpen={false}
+        badge={<span className="rounded bg-muted px-1.5 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wide text-muted-foreground">Optional</span>}
+        summary={`${(form.tags || []).length} search words · how it looks in Google${productId ? " · Google's own verdicts" : ''}`}
+      >
+        <ListingQuality
+          part="google"
+          form={form}
+          photos={photos}
+          productId={productId}
+          categoryLabel={categories.find((c) => c._id === form.category)?.label}
+          needsSize={/cloth|fashion|footwear|shoe|kurt|saree|dress|apparel|wear|trouser|shirt|jeans/i.test(categories.find((c) => c._id === form.category)?.label || '')}
+          textModel={textModel}
+          onAddTags={(words) => setForm((f) => ({ ...f, tags: [...new Set([...(f.tags || []), ...words])] }))}
+        />
       </Card>
 
       <div className="sticky bottom-0 z-10 -mx-1 flex items-center gap-3 border-t bg-background/95 px-1 py-3 backdrop-blur">

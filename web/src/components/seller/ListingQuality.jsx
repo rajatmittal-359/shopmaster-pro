@@ -31,7 +31,7 @@ const FIELD_IDS = { name: 'name', description: 'description', images: 'photos', 
 
 const plain = (html) => String(html || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
 
-export default function ListingQuality({ form, photos, productId, categoryLabel, needsSize, textModel, onAddTags }) {
+export default function ListingQuality({ form, photos, productId, categoryLabel, needsSize, textModel, onAddTags, part = 'bar' }) {
   const listing = useMemo(
     () => ({ ...form, images: photos.map((p) => p.src), category: form.category, needsSize }),
     [form, photos, needsSize]
@@ -40,6 +40,7 @@ export default function ListingQuality({ form, photos, productId, categoryLabel,
   const [kw, setKw] = useState(null); // { keywords, titleTip, writtenBy }
   const [kwBusy, setKwBusy] = useState(false);
   const [google, setGoogle] = useState(null);
+  const [allOpen, setAllOpen] = useState(false);
 
   useEffect(() => {
     if (!productId) return undefined;
@@ -57,6 +58,7 @@ export default function ListingQuality({ form, photos, productId, categoryLabel,
   const jump = (field) => {
     const el = document.getElementById(FIELD_IDS[field] || field);
     if (!el) return;
+    window.dispatchEvent(new CustomEvent('smp:reveal', { detail: el.id }));
     el.scrollIntoView({ behavior: 'smooth', block: 'center' });
     if (typeof el.focus === 'function') setTimeout(() => el.focus({ preventScroll: true }), 300);
   };
@@ -86,46 +88,28 @@ export default function ListingQuality({ form, photos, productId, categoryLabel,
   };
 
   const tone = score >= 80 ? 'text-emerald-700 dark:text-emerald-300' : score >= 50 ? 'text-amber-700 dark:text-amber-300' : 'text-destructive';
-  const bar = score >= 80 ? 'bg-emerald-500' : score >= 50 ? 'bg-amber-500' : 'bg-destructive';
   const missing = (kw?.keywords || []).filter((k) => !k.present && !(form.tags || []).includes(k.word));
 
-  return (
-    <section className="rounded-xl border bg-card p-5">
-      {/* 1 · score + fixes */}
-      <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
-        <div>
-          <p className="text-xs uppercase tracking-wider text-muted-foreground">Listing quality</p>
-          <p className={`text-3xl font-semibold tabular-nums ${tone}`}>
-            {score}
-            <span className="text-base font-normal text-muted-foreground">/100</span>
-          </p>
-        </div>
-        <div className="min-w-40 flex-1">
-          <div className="h-2 overflow-hidden rounded bg-muted">
-            <div className={`h-full transition-all ${bar}`} style={{ width: `${score}%` }} />
-          </div>
-          <p className="mt-1 text-xs text-muted-foreground">
-            {score >= 80 ? 'Google and shoppers have what they need. Higher still ranks higher.' : 'Each fix says how many points it is worth. Above 80 is where listings start to show up.'}
-          </p>
-        </div>
-      </div>
+  const band = score >= 80 ? 'Great' : score >= 60 ? 'Good' : score >= 35 ? 'Getting there' : 'Not ready';
+  const ring = score >= 80 ? '#059669' : score >= 50 ? '#d97706' : '#dc2626';
+  const next = fixes[0] || null;
 
-      {fixes.length > 0 && (
-        <ul className="mt-4 space-y-1.5 text-sm">
-          {fixes.slice(0, 3).map((f) => (
-            <li key={f.key}>
-              <button type="button" onClick={() => jump(f.field)} className="group flex w-full items-start gap-2 rounded-lg px-2 py-1 text-left hover:bg-accent/60">
-                <span className="mt-0.5 shrink-0 rounded bg-primary/10 px-1.5 text-xs font-medium tabular-nums text-brand-ink">+{f.points}</span>
-                <span className="group-hover:text-foreground">{f.text}</span>
-              </button>
-            </li>
-          ))}
-          {fixes.length > 3 && <li className="px-2 text-xs text-muted-foreground">and {fixes.length - 3} smaller things.</li>}
-        </ul>
-      )}
-
-      {/* 2 · search words */}
-      <div className="mt-4 border-t pt-4">
+  /*
+   * TWO PLACES, ONE COMPONENT (15 Sep 2026, plan 2.39)
+   *   part="bar"     the slim health bar at the top of the form: a ring, one
+   *                  word, ONE next fix with its points, and "All N" that opens
+   *                  the full list. Reference: Amazon's Listing Quality
+   *                  Dashboard (prioritised by impact) drawn the way Untitled
+   *                  UI draws a progress ring. Rajat, 15 Sep: the old block
+   *                  put five things before the form and read as noise.
+   *   part="google"  the search words, the Google preview and Google's own
+   *                  verdicts - at the END of the form, folded, for when the
+   *                  words are written.
+   */
+  if (part === 'google') {
+    return (
+      <div>
+      <div>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-sm font-medium">What people type to find this</p>
           <Button type="button" size="sm" variant="outline" onClick={suggest} disabled={kwBusy || !form.name}>
@@ -175,7 +159,7 @@ export default function ListingQuality({ form, photos, productId, categoryLabel,
         )}
       </div>
 
-      {/* 3 · how Google shows it */}
+
       {form.name && (
         <div className="mt-4 border-t pt-4">
           <p className="text-sm font-medium">How it looks in Google</p>
@@ -233,6 +217,55 @@ export default function ListingQuality({ form, photos, productId, categoryLabel,
             {google.queries.length === 0 && <li className="text-xs text-muted-foreground">Not shown in any Google search in the last 28 days. The score above is how that changes.</li>}
           </ul>
         </div>
+      )}
+
+      </div>
+    );
+  }
+
+  return (
+    <section className="rounded-xl border bg-card px-4 py-3 sm:px-5" aria-label="Listing health">
+      <div className="flex items-center gap-4">
+        <div className="relative size-14 shrink-0" title={`${score} out of 100`}>
+          <svg viewBox="0 0 36 36" className="size-14 -rotate-90">
+            <circle cx="18" cy="18" r="15.5" fill="none" stroke="currentColor" strokeWidth="3" className="text-muted" />
+            <circle cx="18" cy="18" r="15.5" fill="none" stroke={ring} strokeWidth="3" strokeLinecap="round" strokeDasharray={`${(score / 100) * 97.4} 97.4`} className="transition-all duration-500" />
+          </svg>
+          <span className={`absolute inset-0 grid place-items-center text-sm font-semibold tabular-nums ${tone}`}>{score}</span>
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm">
+            <span className={`font-semibold ${tone}`}>{band}</span>
+            <span className="text-muted-foreground"> · {score >= 80 ? 'Google and shoppers have what they need' : 'above 80 is where listings start to show'}</span>
+          </p>
+          {next ? (
+            <button type="button" onClick={() => jump(next.field)} className="group mt-1 flex w-full items-center gap-2 text-left text-sm">
+              <span className="shrink-0 text-xs font-medium uppercase tracking-wide text-muted-foreground">Next</span>
+              <span className="min-w-0 truncate group-hover:underline">{next.text}</span>
+              <span className="shrink-0 rounded bg-primary/10 px-1.5 text-xs font-semibold tabular-nums text-brand-ink">+{next.points}</span>
+              <span className="shrink-0 text-xs font-medium text-brand-ink">Fix →</span>
+            </button>
+          ) : (
+            <p className="mt-1 text-sm text-muted-foreground">Nothing left to fix. Save it.</p>
+          )}
+        </div>
+        {fixes.length > 1 && (
+          <button type="button" onClick={() => setAllOpen((v) => !v)} aria-expanded={allOpen} className="shrink-0 rounded-md border px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground">
+            {allOpen ? 'Hide' : `All ${fixes.length}`}
+          </button>
+        )}
+      </div>
+      {allOpen && fixes.length > 0 && (
+        <ul className="mt-3 grid gap-1 border-t pt-3 text-sm sm:grid-cols-2">
+          {fixes.map((f) => (
+            <li key={f.key}>
+              <button type="button" onClick={() => jump(f.field)} className="group flex w-full items-start gap-2 rounded-lg px-2 py-1 text-left hover:bg-accent/60">
+                <span className="mt-0.5 shrink-0 rounded bg-primary/10 px-1.5 text-xs font-medium tabular-nums text-brand-ink">+{f.points}</span>
+                <span className="group-hover:text-foreground">{f.text}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
       )}
     </section>
   );

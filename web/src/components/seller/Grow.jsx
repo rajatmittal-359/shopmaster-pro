@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import PanelCard from '@/components/panel/PanelCard';
 import GoogleReadiness from '@/components/seller/GoogleReadiness';
+import PanelTabs from '@/components/panel/PanelTabs';
 import { useT } from '@/lib/i18n';
 
 /**
@@ -76,6 +77,7 @@ export default function Grow() {
   const t = useT();
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
+  const [showDone, setShowDone] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -139,199 +141,226 @@ export default function Grow() {
         )}
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
-        <div className="space-y-6">
-          {/* Plan 2.32: the products Google reads worst, and the near-me facts. */}
-          <GoogleReadiness />
-          {/* Two worlds (15 Sep 2026): what a seller does HERE and what only they can do ON GOOGLE.
-              Each step carries essential/optional; the ticks come from data, never from a checkbox. */}
-          <PanelCard title={t('On ShopMaster - you do it here')} lead={t('Ticks come from your own products and settings. Essential first.')}>
-            <ol className="divide-y">
-              {data.steps.filter((x) => x.world !== 'google').map((s, i) => (
-                <li key={s.key} className="flex gap-3 py-3">
-                  <span className={`mt-0.5 grid size-6 shrink-0 place-items-center rounded-full text-xs font-semibold ${s.done ? 'bg-emerald-600 text-white' : 'bg-muted text-muted-foreground'}`}>
-                    {s.done ? <Check className="size-3.5" strokeWidth={3} /> : i + 1}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-baseline justify-between gap-x-3">
-                      <p className={`font-medium ${s.done ? 'text-muted-foreground line-through decoration-muted-foreground/40' : ''}`}>
-                        {t(s.title)}
-                        <Level level={s.level} gate={s.gate} t={t} />
-                      </p>
-                      <span className="text-xs tabular-nums text-muted-foreground">{s.progress}</span>
-                    </div>
-                    {!s.done && (
-                      <>
-                        {s.value > 0 && s.value < 100 && (
-                          <div className="mt-1.5 h-1 w-full max-w-xs overflow-hidden rounded-full bg-muted">
-                            <div className="h-full bg-brand-ink" style={{ width: `${s.value}%` }} />
-                          </div>
-                        )}
-                        <p className="mt-1.5 text-sm text-muted-foreground">{s.why}</p>
-                        <p className="mt-1 text-sm">
-                          <span className="text-muted-foreground">How: </span>
-                          {s.how}{' '}
-                          <Link href={s.href} className="font-medium text-brand-ink hover:underline">
-                            Go →
-                          </Link>
-                        </p>
-                      </>
-                    )}
-                  </div>
-                </li>
-              ))}
-            </ol>
-          </PanelCard>
-
-          <PanelCard title={t('On Google - only you can do this')} lead={t('Outside ShopMaster, from your own Google account. This is where "near me" and Maps are won.')}>
-            <ol className="divide-y">
-              {data.steps.filter((x) => x.world === 'google').map((s) => (
-                <li key={s.key} className="flex gap-3 py-3">
-                  <span className={`mt-0.5 grid size-6 shrink-0 place-items-center rounded-full text-xs font-semibold ${s.done ? 'bg-emerald-600 text-white' : 'bg-muted text-muted-foreground'}`}>
-                    {s.done ? <Check className="size-3.5" strokeWidth={3} /> : '1'}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="font-medium">{t(s.title)}<Level level={s.level} gate={s.gate} t={t} /></p>
-                    <p className="mt-1 text-sm text-muted-foreground">{s.why}</p>
-                    {!s.done && <p className="mt-1 text-sm"><span className="text-muted-foreground">{t('How')}: </span>{s.how} <Link href={s.href} className="font-medium text-brand-ink hover:underline">{t('Go')} →</Link></p>}
-                  </div>
-                </li>
-              ))}
-              {(data.outside || []).map((o, i) => (
-                <li key={o.task} className="flex gap-3 py-3">
-                  <span className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-full bg-muted text-xs font-semibold text-muted-foreground">{i + 2}</span>
-                  <div className="min-w-0 flex-1">
-                    <p className="font-medium">{t(o.task)}<Level level={o.level} gate={o.gate} t={t} /></p>
-                    <p className="mt-1 text-sm text-muted-foreground">{t(o.gives)}</p>
-                    {o.href && <a href={o.href} target="_blank" rel="noreferrer" className="text-sm font-medium text-brand-ink hover:underline">{t('Open')} →</a>}
-                  </div>
-                </li>
-              ))}
-            </ol>
-          </PanelCard>
-
-          <PanelCard title={t('Every field that matters, and what it earns')} lead={t('Essential = Google or the courier needs it. Optional = earns more clicks. Where to fill it, and why.')}>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-left text-xs uppercase tracking-wide text-muted-foreground">
-                    <th className="pb-2 pr-3 font-medium">{t('Field')}</th>
-                    <th className="pb-2 pr-3 font-medium">{t('Where')}</th>
-                    <th className="pb-2 font-medium">{t('Earns')}</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {(data.fields || []).map((x) => (
-                    <tr key={x.field}>
-                      <td className="py-2 pr-3 align-top"><Link href={x.href} className="hover:underline">{t(x.field)}</Link><Level level={x.level} gate={x.gate} t={t} /></td>
-                      <td className="py-2 pr-3 align-top text-muted-foreground">{t(x.where)}</td>
-                      <td className="py-2 align-top text-muted-foreground">{t(x.gives)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <p className="mt-3 text-xs text-muted-foreground">{t('Essential names who refuses without it: Google = the Shopping feed drops the product · Maps = local results skip the shop · Courier = no quote · Policy = the return promise cannot be shown. Optional = nobody refuses, it just sells better.')}</p>
-            <p className="mt-1 text-xs text-muted-foreground">{t('Never: bought backlinks, keyword stuffing, city names sprinkled in descriptions - Google penalises all three, and at our size they earn nothing.')}</p>
-          </PanelCard>
-
-          {/* Market insights (plan 2.20): Google's own view of our prices and the
-              week's sellers. Amazon's Product Opportunity Explorer, free, once
-              Google has traffic to learn from. Until then the card says so. */}
-          <PanelCard title={t('What the market is doing')} lead={t("Google's benchmark price for your products and what sells in your categories this week - free, from Merchant Center.")}>
-            {!data.market?.enabled ? (
-              <p className="text-sm text-muted-foreground">{t('Google switches this on by itself once the shop has enough clicks - usually a few weeks after launch. Nothing to set up.')}</p>
-            ) : (
-              <div className="grid gap-4 md:grid-cols-2">
-                <div>
-                  <p className="text-sm font-medium">{t('Your prices vs the market')}</p>
-                  {data.market.prices.length === 0 ? (
-                    <p className="mt-1 text-sm text-muted-foreground">{t('No benchmark yet for your products.')}</p>
-                  ) : (
-                    <ul className="mt-2 divide-y text-sm">
-                      {data.market.prices.slice(0, 8).map((p) => (
-                        <li key={p.productId} className="flex items-center justify-between gap-3 py-1.5">
-                          <span className="truncate">{p.name}</span>
-                          <span className={`shrink-0 tabular-nums ${p.verdict === 'above' ? 'text-destructive' : p.verdict === 'below' ? 'text-emerald-700' : 'text-muted-foreground'}`}>
-                            ₹{p.price.toLocaleString('en-IN')} · {p.pct > 0 ? '+' : ''}{p.pct}% {t('vs')} ₹{p.benchmark.toLocaleString('en-IN')}
+      {/*
+       * Tabs (15 Sep 2026, plan 2.39): the page had grown to seven cards and
+       * 1,900 words - 5.7 screens on a desktop, 7.7 on a phone. The strip
+       * above stays as the glance; each tab is one job. Reference: Seller
+       * Central's tabbed forms, Shopify's folded sections; NN/g progressive
+       * disclosure. The URL carries the tab, so a link lands on the right one.
+       */}
+      <PanelTabs
+        tabs={[
+          { key: 'do', label: t('Do now'), count: data.steps.filter((x) => x.world !== 'google' && !x.done).length },
+          { key: 'google', label: t('On Google'), count: data.steps.filter((x) => x.world === 'google' && !x.done).length },
+          { key: 'fields', label: t('Fields') },
+          { key: 'market', label: t('Market') },
+          { key: 'guide', label: t('Guide & routine') },
+        ]}
+      >
+        {(tab) => (
+          <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
+            <div className="space-y-6">
+              {tab === 'do' && (
+                <>
+                  <GoogleReadiness />
+                  <PanelCard title={t('On ShopMaster - you do it here')} lead={t('Ticks come from your own products and settings. Essential first.')}>
+                    <ol className="divide-y">
+                      {data.steps.filter((x) => x.world !== 'google' && (!x.done || showDone)).map((s, i) => (
+                        <li key={s.key} className="flex gap-3 py-3">
+                          <span className={`mt-0.5 grid size-6 shrink-0 place-items-center rounded-full text-xs font-semibold ${s.done ? 'bg-emerald-600 text-white' : 'bg-muted text-muted-foreground'}`}>
+                            {s.done ? <Check className="size-3.5" strokeWidth={3} /> : i + 1}
                           </span>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-baseline justify-between gap-x-3">
+                              <p className={`font-medium ${s.done ? 'text-muted-foreground line-through decoration-muted-foreground/40' : ''}`}>
+                                {t(s.title)}
+                                <Level level={s.level} gate={s.gate} t={t} />
+                              </p>
+                              <span className="text-xs tabular-nums text-muted-foreground">{s.progress}</span>
+                            </div>
+                            {!s.done && (
+                              <>
+                                {s.value > 0 && s.value < 100 && (
+                                  <div className="mt-1.5 h-1 w-full max-w-xs overflow-hidden rounded-full bg-muted">
+                                    <div className="h-full bg-brand-ink" style={{ width: `${s.value}%` }} />
+                                  </div>
+                                )}
+                                <p className="mt-1.5 text-sm text-muted-foreground">{s.why}</p>
+                                <p className="mt-1 text-sm">
+                                  <span className="text-muted-foreground">How: </span>
+                                  {s.how}{' '}
+                                  <Link href={s.href} className="font-medium text-brand-ink hover:underline">
+                                    Go →
+                                  </Link>
+                                </p>
+                              </>
+                            )}
+                          </div>
+                        </li>
+                      ))}
+                    </ol>
+                    {data.steps.some((x) => x.world !== 'google' && x.done) && (
+                      <button type="button" onClick={() => setShowDone((v) => !v)} className="mt-3 text-sm text-brand-ink hover:underline">
+                        {showDone ? t('Hide the done ones') : t('{n} done - show', { n: data.steps.filter((x) => x.world !== 'google' && x.done).length })}
+                      </button>
+                    )}
+                  </PanelCard>
+                </>
+              )}
+              {tab === 'google' && (
+                <>
+                  <PanelCard title={t('On Google - only you can do this')} lead={t('Outside ShopMaster, from your own Google account. This is where "near me" and Maps are won.')}>
+                    <ol className="divide-y">
+                      {data.steps.filter((x) => x.world === 'google').map((s) => (
+                        <li key={s.key} className="flex gap-3 py-3">
+                          <span className={`mt-0.5 grid size-6 shrink-0 place-items-center rounded-full text-xs font-semibold ${s.done ? 'bg-emerald-600 text-white' : 'bg-muted text-muted-foreground'}`}>
+                            {s.done ? <Check className="size-3.5" strokeWidth={3} /> : '1'}
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <p className="font-medium">{t(s.title)}<Level level={s.level} gate={s.gate} t={t} /></p>
+                            <p className="mt-1 text-sm text-muted-foreground">{s.why}</p>
+                            {!s.done && <p className="mt-1 text-sm"><span className="text-muted-foreground">{t('How')}: </span>{s.how} <Link href={s.href} className="font-medium text-brand-ink hover:underline">{t('Go')} →</Link></p>}
+                          </div>
+                        </li>
+                      ))}
+                      {(data.outside || []).map((o, i) => (
+                        <li key={o.task} className="flex gap-3 py-3">
+                          <span className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-full bg-muted text-xs font-semibold text-muted-foreground">{i + 2}</span>
+                          <div className="min-w-0 flex-1">
+                            <p className="font-medium">{t(o.task)}<Level level={o.level} gate={o.gate} t={t} /></p>
+                            <p className="mt-1 text-sm text-muted-foreground">{t(o.gives)}</p>
+                            {o.href && <a href={o.href} target="_blank" rel="noreferrer" className="text-sm font-medium text-brand-ink hover:underline">{t('Open')} →</a>}
+                          </div>
+                        </li>
+                      ))}
+                    </ol>
+                  </PanelCard>
+                  <PanelCard title="Google Business Profile - the ten-minute guide" lead="Your shop on Google Maps and in the box beside a search. Free. Done once, kept alive with a photo a week.">
+                    <ol className="space-y-3">
+                      {GBP_GUIDE.map(([step, why], i) => (
+                        <li key={step} className="flex gap-3 text-sm">
+                          <span className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full bg-primary/10 text-[0.65rem] font-semibold text-brand-ink">{i + 1}</span>
+                          <div>
+                            <p>{step}</p>
+                            <p className="text-xs text-muted-foreground">{why}</p>
+                          </div>
+                        </li>
+                      ))}
+                    </ol>
+                    <div className="mt-4 flex flex-wrap items-center gap-2 text-sm">
+                      <a href="https://business.google.com/create" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 font-medium text-brand-ink hover:underline">
+                        Open Google Business Profile <ExternalLink className="size-3.5" />
+                      </a>
+                      <span className="text-muted-foreground">·</span>
+                      <button type="button" onClick={() => copy(data.shopUrl)} className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground">
+                        <Copy className="size-3.5" /> copy your shop page link for the “website” field
+                      </button>
+                    </div>
+                  </PanelCard>
+                </>
+              )}
+              {tab === 'fields' && (
+                  <PanelCard title={t('Every field that matters, and what it earns')} lead={t('Essential = Google or the courier needs it. Optional = earns more clicks. Where to fill it, and why.')}>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="text-left text-xs uppercase tracking-wide text-muted-foreground">
+                            <th className="pb-2 pr-3 font-medium">{t('Field')}</th>
+                            <th className="pb-2 pr-3 font-medium">{t('Where')}</th>
+                            <th className="pb-2 font-medium">{t('Earns')}</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y">
+                          {(data.fields || []).map((x) => (
+                            <tr key={x.field}>
+                              <td className="py-2 pr-3 align-top"><Link href={x.href} className="hover:underline">{t(x.field)}</Link><Level level={x.level} gate={x.gate} t={t} /></td>
+                              <td className="py-2 pr-3 align-top text-muted-foreground">{t(x.where)}</td>
+                              <td className="py-2 align-top text-muted-foreground">{t(x.gives)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    <p className="mt-3 text-xs text-muted-foreground">{t('Essential names who refuses without it: Google = the Shopping feed drops the product · Maps = local results skip the shop · Courier = no quote · Policy = the return promise cannot be shown. Optional = nobody refuses, it just sells better.')}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">{t('Never: bought backlinks, keyword stuffing, city names sprinkled in descriptions - Google penalises all three, and at our size they earn nothing.')}</p>
+                  </PanelCard>
+              )}
+              {tab === 'market' && (
+                  <PanelCard title={t('What the market is doing')} lead={t("Google's benchmark price for your products and what sells in your categories this week - free, from Merchant Center.")}>
+                    {!data.market?.enabled ? (
+                      <p className="text-sm text-muted-foreground">{t('Google switches this on by itself once the shop has enough clicks - usually a few weeks after launch. Nothing to set up.')}</p>
+                    ) : (
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <div>
+                          <p className="text-sm font-medium">{t('Your prices vs the market')}</p>
+                          {data.market.prices.length === 0 ? (
+                            <p className="mt-1 text-sm text-muted-foreground">{t('No benchmark yet for your products.')}</p>
+                          ) : (
+                            <ul className="mt-2 divide-y text-sm">
+                              {data.market.prices.slice(0, 8).map((p) => (
+                                <li key={p.productId} className="flex items-center justify-between gap-3 py-1.5">
+                                  <span className="truncate">{p.name}</span>
+                                  <span className={`shrink-0 tabular-nums ${p.verdict === 'above' ? 'text-destructive' : p.verdict === 'below' ? 'text-emerald-700' : 'text-muted-foreground'}`}>
+                                    ₹{p.price.toLocaleString('en-IN')} · {p.pct > 0 ? '+' : ''}{p.pct}% {t('vs')} ₹{p.benchmark.toLocaleString('en-IN')}
+                                  </span>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium">{t('Selling this week in your categories')}</p>
+                          {data.market.bestSellers.length === 0 ? (
+                            <p className="mt-1 text-sm text-muted-foreground">{t('No best-seller list for your categories yet.')}</p>
+                          ) : (
+                            <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm">
+                              {data.market.bestSellers.map((b) => (
+                                <li key={`${b.rank}-${b.title}`}><span className="font-medium">{b.title}</span>{b.brand ? ` · ${b.brand}` : ''}{b.priceRange ? ` · ${b.priceRange}` : ''}<span className="block text-xs text-muted-foreground">{b.category}</span></li>
+                              ))}
+                            </ol>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </PanelCard>
+              )}
+              {tab === 'guide' && (
+                <>
+                  <PanelCard title="The review message" lead="Send after delivery, on WhatsApp, with the product link. Change the words to yours.">
+                    <p className="rounded-lg bg-muted/50 p-3 text-sm whitespace-pre-line">{REVIEW_MESSAGE(data.businessName || 'our shop', data.shopUrl)}</p>
+                    <Button size="sm" variant="outline" className="mt-2" onClick={() => copy(REVIEW_MESSAGE(data.businessName || 'our shop', data.shopUrl))}>
+                      Copy message
+                    </Button>
+                  </PanelCard>
+                  <PanelCard title="Once a week, ten minutes">
+                    <ul className="space-y-1.5 text-sm text-muted-foreground">
+                      <li>· One new photo or post on your Google listing and Instagram.</li>
+                      <li>· Reply to every review, ours and Google’s - two lines, by name.</li>
+                      <li>· Open the weakest product and fix its three things.</li>
+                      <li>· Check Performance: cancels, dispatch time, failed deliveries.</li>
+                    </ul>
+                  </PanelCard>
+                </>
+              )}
+            </div>
+            <div className="space-y-6">
+                  <PanelCard title="Already done for you" lead="The platform's side. Nothing to set up.">
+                    <ul className="space-y-3">
+                      {AUTOMATIC.map(([t, d]) => (
+                        <li key={t} className="flex gap-2 text-sm">
+                          <Check className="mt-0.5 size-4 shrink-0 text-emerald-600" />
+                          <div>
+                            <p className="font-medium">{t}</p>
+                            <p className="text-xs text-muted-foreground">{d}</p>
+                          </div>
                         </li>
                       ))}
                     </ul>
-                  )}
-                </div>
-                <div>
-                  <p className="text-sm font-medium">{t('Selling this week in your categories')}</p>
-                  {data.market.bestSellers.length === 0 ? (
-                    <p className="mt-1 text-sm text-muted-foreground">{t('No best-seller list for your categories yet.')}</p>
-                  ) : (
-                    <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm">
-                      {data.market.bestSellers.map((b) => (
-                        <li key={`${b.rank}-${b.title}`}><span className="font-medium">{b.title}</span>{b.brand ? ` · ${b.brand}` : ''}{b.priceRange ? ` · ${b.priceRange}` : ''}<span className="block text-xs text-muted-foreground">{b.category}</span></li>
-                      ))}
-                    </ol>
-                  )}
-                </div>
-              </div>
-            )}
-          </PanelCard>
-
-          <PanelCard title="Google Business Profile - the ten-minute guide" lead="Your shop on Google Maps and in the box beside a search. Free. Done once, kept alive with a photo a week.">
-            <ol className="space-y-3">
-              {GBP_GUIDE.map(([step, why], i) => (
-                <li key={step} className="flex gap-3 text-sm">
-                  <span className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full bg-primary/10 text-[0.65rem] font-semibold text-brand-ink">{i + 1}</span>
-                  <div>
-                    <p>{step}</p>
-                    <p className="text-xs text-muted-foreground">{why}</p>
-                  </div>
-                </li>
-              ))}
-            </ol>
-            <div className="mt-4 flex flex-wrap items-center gap-2 text-sm">
-              <a href="https://business.google.com/create" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 font-medium text-brand-ink hover:underline">
-                Open Google Business Profile <ExternalLink className="size-3.5" />
-              </a>
-              <span className="text-muted-foreground">·</span>
-              <button type="button" onClick={() => copy(data.shopUrl)} className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground">
-                <Copy className="size-3.5" /> copy your shop page link for the “website” field
-              </button>
+                  </PanelCard>
             </div>
-          </PanelCard>
-        </div>
-
-        <div className="space-y-6">
-          <PanelCard title="Already done for you" lead="The platform's side. Nothing to set up.">
-            <ul className="space-y-3">
-              {AUTOMATIC.map(([t, d]) => (
-                <li key={t} className="flex gap-2 text-sm">
-                  <Check className="mt-0.5 size-4 shrink-0 text-emerald-600" />
-                  <div>
-                    <p className="font-medium">{t}</p>
-                    <p className="text-xs text-muted-foreground">{d}</p>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </PanelCard>
-
-          <PanelCard title="The review message" lead="Send after delivery, on WhatsApp, with the product link. Change the words to yours.">
-            <p className="rounded-lg bg-muted/50 p-3 text-sm whitespace-pre-line">{REVIEW_MESSAGE(data.businessName || 'our shop', data.shopUrl)}</p>
-            <Button size="sm" variant="outline" className="mt-2" onClick={() => copy(REVIEW_MESSAGE(data.businessName || 'our shop', data.shopUrl))}>
-              Copy message
-            </Button>
-          </PanelCard>
-
-          <PanelCard title="Once a week, ten minutes">
-            <ul className="space-y-1.5 text-sm text-muted-foreground">
-              <li>· One new photo or post on your Google listing and Instagram.</li>
-              <li>· Reply to every review, ours and Google’s - two lines, by name.</li>
-              <li>· Open the weakest product and fix its three things.</li>
-              <li>· Check Performance: cancels, dispatch time, failed deliveries.</li>
-            </ul>
-          </PanelCard>
-        </div>
-      </div>
+          </div>
+        )}
+      </PanelTabs>
     </div>
   );
 }
