@@ -345,4 +345,4 @@ const generateWithTools = async (contents, opts = {}) => {
   return { ok: false, reason: 'Gemini did not answer' };
 };
 
-module.exports = { generate, generateWithTools, DEFAULT_MODEL };
+module.exports = { generate, generateWithTools, DEFAULT_MODEL, LITE_MODEL, flashQuotaUntil: () => flashQuotaUntil };

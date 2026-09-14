@@ -41,7 +41,7 @@ export default function GoogleReadiness() {
   }, []);
 
   return (
-    <PanelCard title={t('How Google reads your shop')} lead={t('Each product has a readiness score out of 100 - the same one the product form shows. Under 80 means Google is missing facts it ranks on.')}>
+    <PanelCard title={t('How Google reads your shop')} lead={t('Score out of 100 per product. Under 80 = Google is missing a fact. Fix the lowest first.')}>
       {err && <p className="text-sm text-destructive">{err}</p>}
       {!d && !err && <p className="text-sm text-muted-foreground">{t('Reading…')}</p>}
       {d && (
@@ -73,7 +73,7 @@ export default function GoogleReadiness() {
               <Fact ok={d.nearMe.pickupSet} label={t('Pickup address saved')} href="/seller/settings" fixLabel={t('Fix')} />
               <Fact ok={d.nearMe.gbpLinked} label={t('Google Business Profile linked')} href="/seller/settings" fixLabel={t('Fix')} />
             </ul>
-            <p className="mt-2 text-xs text-muted-foreground">{t('Reviews and weekly posts on the Business Profile do the rest - see the guide below.')}</p>
+            <p className="mt-2 text-xs text-muted-foreground">{t('Then: reviews + one post a week on the Business Profile (guide below).')}</p>
           </div>
         </div>
       )}

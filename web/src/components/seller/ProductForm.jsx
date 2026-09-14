@@ -432,9 +432,9 @@ export default function ProductForm({ productId, copyFromId }) {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="auto">Automatic - Gemini, nano as backup</SelectItem>
-                <SelectItem value="gemini">Gemini 3.5 Flash - best copy, daily quota</SelectItem>
-                <SelectItem value="nano">gpt-5.4-nano (Pollinations) - always on, plainer</SelectItem>
+                <SelectItem value="auto">Automatic - best available (Gemini → Groq → Cloudflare → nano)</SelectItem>
+                <SelectItem value="gemini">Gemini only - best copy, small daily quota</SelectItem>
+                <SelectItem value="nano">nano only - always on, plainer</SelectItem>
               </SelectContent>
             </Select>
             {usage && (
@@ -582,7 +582,7 @@ export default function ProductForm({ productId, copyFromId }) {
       <Card
         id="faqs"
         title="Questions shoppers ask"
-        lead="Two to six short answers - material, care, size, what is in the box, delivery. Google's AI answers and the assistants people ask quote pages like this."
+        lead="2-6 short answers: material · care · size · in the box · delivery. Google's AI answers quote these."
       >
         <div className="space-y-3">
           {(form.faqs || []).map((x, idx) => (

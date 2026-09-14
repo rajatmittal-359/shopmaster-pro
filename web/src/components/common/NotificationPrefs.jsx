@@ -49,7 +49,7 @@ export default function NotificationPrefs({ title, lead }) {
   const hintOf = (c) => t(c.hint);
 
   return (
-    <PanelCard title={title || t('What reaches you where')} lead={lead || t('Everything is listed under the bell. Choose which kinds also come to your phone or your email.')}>
+    <PanelCard title={title || t('What reaches you where')} lead={lead || t('The bell gets everything. Choose what also comes to your phone or email.')}>
       {!data ? (
         <p className="text-sm text-muted-foreground">{t('Reading…')}</p>
       ) : (

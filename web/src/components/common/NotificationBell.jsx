@@ -153,7 +153,7 @@ export default function NotificationBell() {
             <div className="px-3 py-8 text-center">
               <Bell className="mx-auto mb-2 size-6 text-muted-foreground/60" />
               <p className="text-sm font-medium">{t('Nothing yet')}</p>
-              <p className="mt-1 text-xs text-muted-foreground">{t('Orders, returns, disputes and payouts show up here as they happen.')}</p>
+              <p className="mt-1 text-xs text-muted-foreground">{t('Orders · returns · disputes · payouts - as they happen.')}</p>
             </div>
           )}
           {groups.map((g) => (

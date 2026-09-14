@@ -129,7 +129,7 @@ export default function AccountView() {
       </Section>
 
       {/* Order updates: confirmed, shipped, delivered, refunds - where they also go (plan 2.30). */}
-      <NotificationPrefs title="Order updates" lead="Every update is under the bell at the top. Choose which kinds also come to your phone or your email." />
+      <NotificationPrefs title="Order updates" lead="The bell has every update. Choose what also comes to your phone or email." />
 
       <Section title="Delete my account" lead="Your name, email and sign-in are removed. Orders and reviews stay as records, no longer tied to you by name. This cannot be undone.">
         <Button variant="outline" className="text-destructive" onClick={() => setAsking(true)} disabled={busy === 'delete'}>

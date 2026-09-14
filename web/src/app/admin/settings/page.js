@@ -12,7 +12,7 @@ export default function AdminSettingsPage() {
       <div className="mb-6 grid gap-6 lg:grid-cols-2">
         {/* The admin's own phone and mailbox: disputes, held reviews, new sellers (plan 2.30). */}
         <PushToggle />
-        <NotificationPrefs title="What reaches you where" lead="Disputes, returns waiting, held reviews, new sellers - the bell lists all of it; choose what also buzzes or mails." />
+        <NotificationPrefs title="What reaches you where" lead="The bell lists everything. Choose what also buzzes or mails." />
       </div>
       <PlatformSettings />
     </>

@@ -1,4 +1,5 @@
 import Studio from "@/components/ai/Studio";
+import AiRoads from "@/components/admin/AiRoads";
 
 export const metadata = { title: "AI Studio" };
 
@@ -10,6 +11,7 @@ export default function AdminAiStudioPage() {
         Drop a product photo, say what you want, pick a model - the limits are
         written on the chip.
       </p>
+      <div className="mb-6"><AiRoads /></div>
       <Studio base="/admin" />
     </>
   );

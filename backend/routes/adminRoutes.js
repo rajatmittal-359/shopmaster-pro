@@ -85,6 +85,7 @@ router.patch('/payouts/:payoutId/failed', failPayout);
 // Today's AI spend across the platform, and who used it. Read-only.
 const ai = require('../controllers/aiController');
 router.get('/ai/usage', ai.adminUsage);
+router.get('/ai/roads', ai.adminRoads);
 router.get('/ai/catalog', ai.getCatalog);
 router.patch('/ai/limits', ai.setLimits);
 router.get('/search/queries', require('../controllers/searchInsightsController').adminQueries);

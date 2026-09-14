@@ -647,4 +647,32 @@ Answer with ONE JSON object: {"faqs":[{"q":"...","a":"..."}]}`;
   }
 };
 
-module.exports = { draftFaqs, getUsage, getCatalog, setLimits, writeListing, listingFromSpeech, refineText, suggestKeywords, makeImage, attachToProduct, listDrafts, adminUsage, CAPS, ownImage };
+/**
+ * GET /api/admin/ai/roads - the admin's "AI today": which road answered how
+ * often (from AiUsage.byProvider) and which roads are out right now (plan 2.34).
+ * Read-only, nothing here calls a model.
+ */
+const adminRoads = async (req, res) => {
+  try {
+    const gemini = require('../utils/gemini');
+    const { budget } = require('../utils/ai/groq');
+    const platform = await AiUsage.read('global', 'all');
+    const by = platform.byProvider instanceof Map ? Object.fromEntries(platform.byProvider) : platform.byProvider || {};
+    const now = Date.now();
+    const groqRows = [...budget.entries()].map(([model, b]) => ({ model, tokensLeft: b.tokens, requestsLeft: b.requests, resetsInSec: Math.max(0, Math.round(((b.tokensResetAt || now) - now) / 1000)) }));
+    const flashBlocked = gemini.flashQuotaUntil() > now;
+    const roads = [
+      { key: 'gemini', name: `Gemini ${gemini.DEFAULT_MODEL}`, has: Boolean(process.env.GEMINI_API_KEY), status: !process.env.GEMINI_API_KEY ? 'off' : flashBlocked ? 'quota' : 'ok', note: flashBlocked ? `Free quota out - back in ${Math.ceil((gemini.flashQuotaUntil() - now) / 60000)} min, ${gemini.LITE_MODEL} answering meanwhile` : 'Best copy. Free tier is small (about 20 requests/day).' },
+      { key: 'gemini-lite', name: `Gemini ${gemini.LITE_MODEL}`, has: Boolean(process.env.GEMINI_API_KEY), status: process.env.GEMINI_API_KEY ? 'ok' : 'off', note: 'Same schema and tools, larger free quota, a little plainer.' },
+      { key: 'groq', name: 'Groq gpt-oss-120b / compound', has: Boolean(process.env.GROQ_API_KEY), status: !process.env.GROQ_API_KEY ? 'off' : groqRows.some((r) => r.tokensLeft != null && r.tokensLeft < 2500) ? 'quota' : 'ok', note: groqRows.length ? groqRows.map((r) => `${r.model.replace('openai/', '')}: ${r.tokensLeft ?? '?'} tokens left this minute`).join(' · ') : '8,000 tokens per minute per model; resets every minute.' },
+      { key: 'cloudflare', name: 'Cloudflare Workers AI (Llama 3.3 70B)', has: Boolean(process.env.CLOUDFLARE_API_TOKEN && process.env.CLOUDFLARE_ACCOUNT_ID), status: process.env.CLOUDFLARE_API_TOKEN ? 'ok' : 'off', note: '10,000 neurons/day, shared with image edits. Balance: Cloudflare → AI → Workers AI.' },
+      { key: 'pollinations', name: 'Pollinations gpt-5.4-nano', has: Boolean(process.env.POLLINATIONS_API_KEY), status: process.env.POLLINATIONS_API_KEY ? 'ok' : 'off', note: 'Last road. No daily cap, slower, plainer; reads photos.' },
+    ];
+    res.set('Cache-Control', 'private, max-age=15');
+    res.json({ today: AiUsage.today(), answeredBy: by, roads });
+  } catch (error) {
+    sendError(res, error);
+  }
+};
+
+module.exports = { adminRoads, draftFaqs, getUsage, getCatalog, setLimits, writeListing, listingFromSpeech, refineText, suggestKeywords, makeImage, attachToProduct, listDrafts, adminUsage, CAPS, ownImage };

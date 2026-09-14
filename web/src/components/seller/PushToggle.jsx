@@ -65,10 +65,10 @@ export default function PushToggle({ compact = false }) {
   if (compact && (dismissed || state === 'on' || state === 'unsupported')) return null;
 
   const copy = {
-    off: { icon: Bell, title: t('Get a buzz when an order comes in'), lead: t('New order, return, dispute - on this phone the same second, like WhatsApp. No app to install.') },
-    on: { icon: BellRing, title: t('Notifications are on for this device'), lead: t('New orders, returns and disputes reach this phone. Email still comes as the copy.') },
-    denied: { icon: BellOff, title: t('Notifications are blocked in this browser'), lead: t('Tap the lock icon next to the address, open Site settings → Notifications → Allow, then reload.') },
-    'ios-install': { icon: Bell, title: t('On iPhone, first add ShopMaster to the Home Screen'), lead: t('Safari → Share button → Add to Home Screen. Open it from there, then come back here and turn notifications on.') },
+    off: { icon: Bell, title: t('Get a buzz when an order comes in'), lead: t('New order · return · dispute - on this phone the same second. No app.') },
+    on: { icon: BellRing, title: t('Notifications are on for this device'), lead: t('Orders, returns and disputes reach this phone. Email stays as the copy.') },
+    denied: { icon: BellOff, title: t('Notifications are blocked in this browser'), lead: t('Lock icon next to the address → Site settings → Notifications → Allow → reload.') },
+    'ios-install': { icon: Bell, title: t('On iPhone, first add ShopMaster to the Home Screen'), lead: t('Safari → Share → Add to Home Screen → open from there → come back here.') },
     unsupported: { icon: BellOff, title: t('This browser cannot show notifications'), lead: t('Open the panel in Chrome on your phone to get them.') },
   }[state] || {};
   const Icon = copy.icon || Bell;

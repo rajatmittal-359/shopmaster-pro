@@ -133,7 +133,7 @@ export default function ListingQuality({ form, photos, productId, categoryLabel,
             {kw ? 'Suggest again' : 'Suggest search words'}
           </Button>
         </div>
-        {!kw && <p className="mt-1 text-xs text-muted-foreground">First the words real people typed - on Google for your pages, in ShopMaster&apos;s own search box - each with its count; then the AI fills the gaps. Missing ones can be added to your search words in one tap.</p>}
+        {!kw && <p className="mt-1 text-xs text-muted-foreground">Real searches first (Google, ShopMaster), AI fills the gaps. Tap a word to add it.</p>}
         {kw && (
           <>
             <div className="mt-2 flex flex-wrap gap-1.5">
@@ -169,7 +169,7 @@ export default function ListingQuality({ form, photos, productId, categoryLabel,
             )}
             {kw.titleTip && <p className="mt-2 text-xs text-muted-foreground">Title: {kw.titleTip}</p>}
             <p className="mt-1 text-[11px] text-muted-foreground">
-              Green = already in your title or description. <b>G</b> = typed on Google{kw.evidence?.google ? '' : ' (Search Console not read yet)'}, <b>S</b> = typed in ShopMaster&apos;s search, ≈ = a same-thing word, AI = suggested by {kw.writtenBy}. Numbers are how many times.
+              <b>Green</b> = already in your listing · <b>G</b> = typed on Google{kw.evidence?.google ? '' : ' (not read yet)'} · <b>S</b> = typed on ShopMaster · <b>≈</b> = same-thing word · <b>AI</b> = {kw.writtenBy} · number = how many times
             </p>
           </>
         )}
