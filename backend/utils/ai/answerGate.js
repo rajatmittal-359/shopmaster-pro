@@ -14,13 +14,14 @@ const Order = require('../../models/Order');
  *   the question to the next road; on the last road the answer is repaired
  *   mechanically (no extra model call) rather than returned as is.
  *
- * WHAT FAILS
- *   invented order    SMP-xxxxxx-xxxxxx that is not this person's order
- *   filler            "hope this helps", "feel free", emoji, "as an AI"
- *   markdown          headings / code fences - the panel shows plain text
- *   too long          over 260 words (the rulebook answer is under 120)
- *   empty             under two words
- *   refusal-ish       "I don't have access" / "cannot help" when tools exist
+ * TWO KINDS OF PROBLEM (15 Sep 2026, Rajat: "scope kam na ho jaaye")
+ *   substance  - the answer cannot be trusted: an order number that is not
+ *                this person's, a refusal while tools were available, an
+ *                empty answer. These send the question to the NEXT ROAD.
+ *   cosmetic   - the answer is right but dressed wrong: filler sentences,
+ *                markdown, over 400 words. These are cleaned IN PLACE and
+ *                the model's thinking is kept - a good long answer from the
+ *                best model is never thrown away for a weaker model's short one.
  */
 const ORDER_RE = /\bSMP-\d{6}-[A-Z0-9]{6}\b/gi;
 const FILLER = /happy selling|let me know if|feel free|i hope this helps|hope that helps|as an ai|as a language model|great question|certainly!|sure!|😊|🙂|👍|🎉/i;
@@ -33,13 +34,14 @@ const orderScope = (role, user) => (role === 'seller' ? { 'items.sellerId': user
  * @returns {Promise<{problems:string[], invented:string[]}>}
  */
 const judge = async (answer, { role, user, hadTools = true } = {}) => {
-  const problems = [];
+  const problems = []; // substance - re-route
+  const cosmetic = []; // dressing - clean in place
   const text = String(answer || '');
   const n = words(text);
   if (n < 2) problems.push('empty');
-  if (n > 260) problems.push(`too long (${n} words)`);
-  if (FILLER.test(text)) problems.push(`filler "${text.match(FILLER)[0]}"`);
-  if (/^#{1,6}\s/m.test(text) || /```/.test(text)) problems.push('markdown');
+  if (n > 400) cosmetic.push(`too long (${n} words)`);
+  if (FILLER.test(text)) cosmetic.push(`filler "${text.match(FILLER)[0]}"`);
+  if (/^#{1,6}\s/m.test(text) || /```/.test(text)) cosmetic.push('markdown');
   if (hadTools && REFUSAL.test(text)) problems.push('refusal while tools exist');
 
   let invented = [];
@@ -54,7 +56,7 @@ const judge = async (answer, { role, user, hadTools = true } = {}) => {
       /* the database being away is not the model's fault */
     }
   }
-  return { problems, invented };
+  return { problems, cosmetic, invented };
 };
 
 /** Mechanical repair for the last road: strip what can be stripped, name what cannot be trusted. */
@@ -68,7 +70,7 @@ const repair = (answer, { invented = [] } = {}) => {
     .join(' ');
   for (const code of invented) text = text.split(new RegExp(code, 'ig')).join('(order number not on record - see /orders)');
   text = text.replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
-  if (words(text) > 260) text = `${text.split(/\s+/).slice(0, 240).join(' ')}…`;
+  if (words(text) > 400) text = `${text.split(/\s+/).slice(0, 380).join(' ')}…`;
   return text;
 };
 

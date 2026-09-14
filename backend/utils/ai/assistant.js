@@ -196,13 +196,15 @@ Before you answer, check three things: (1) the first line is the answer itself -
   const accept = async (r, extra = {}, { last = false } = {}) => {
     const out = await done(r, extra);
     const verdict = await judge(out.answer, { role, user, hadTools: (r.calls || []).length > 0 || !last });
-    if (!verdict.problems.length) return out;
+    // Cosmetic faults are cleaned in place, on any road - the model's thinking stays.
+    const cleaned = verdict.cosmetic.length ? repair(out.answer, { invented: [] }) : out.answer;
+    if (!verdict.problems.length) return verdict.cosmetic.length ? { ...out, answer: cleaned, quality: verdict.cosmetic } : out;
     if (!last) {
       failures.push(`${r.model}: gate - ${verdict.problems.join(', ')}`);
       return null;
     }
     console.warn(`assistant: gate repaired ${r.model}: ${verdict.problems.join(', ')}`);
-    return { ...out, answer: repair(out.answer, verdict), quality: verdict.problems };
+    return { ...out, answer: repair(cleaned, verdict), quality: [...verdict.problems, ...verdict.cosmetic] };
   };
   // A missing key is a reason to take the next road, not to stop (Render had Groq before Gemini, 13 Sep).
   const retryable = (reason) => /429|quota|rate|reach|503|502|nothing|never answered|not set/i.test(reason || '');

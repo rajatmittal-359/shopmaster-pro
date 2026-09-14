@@ -24,8 +24,11 @@ describe('judge', () => {
   });
 
   it('catches filler, markdown, length and a refusal while tools exist', async () => {
-    const long = 'word '.repeat(270);
-    expect((await judge(`## Answer\n${long} Hope this helps! 😊`, { role: 'admin', user: { _id: 'a' } })).problems).toEqual(expect.arrayContaining([expect.stringMatching(/markdown/), expect.stringMatching(/too long/), expect.stringMatching(/filler/)]));
+    const long = 'word '.repeat(420);
+    const v = await judge(`## Answer\n${long} Hope this helps! 😊`, { role: 'admin', user: { _id: 'a' } });
+    // dressing, not substance: cleaned in place, never a reason to leave the best model's answer
+    expect(v.problems).toEqual([]);
+    expect(v.cosmetic).toEqual(expect.arrayContaining([expect.stringMatching(/markdown/), expect.stringMatching(/too long/), expect.stringMatching(/filler/)]));
     expect((await judge("I don't have access to your order details.", { role: 'customer', user: { _id: 'c' }, hadTools: true })).problems).toContain('refusal while tools exist');
     expect((await judge("I don't have access to your order details.", { role: 'customer', user: { _id: 'c' }, hadTools: false })).problems).toEqual([]);
   });
@@ -37,6 +40,7 @@ describe('repair', () => {
     expect(out).not.toMatch(/###|Feel free/);
     expect(out).toContain('(order number not on record - see /orders)');
     expect(out).toContain('reaches you by Friday');
-    expect(repair('w '.repeat(300)).split(/\s+/).length).toBeLessThanOrEqual(241);
+    expect(repair('w '.repeat(450)).split(/\s+/).length).toBeLessThanOrEqual(381);
+    expect(repair('w '.repeat(300)).split(/\s+/).length).toBe(300);
   });
 });
