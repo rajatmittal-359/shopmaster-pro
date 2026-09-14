@@ -638,7 +638,12 @@ Answer with ONE JSON object: {"faqs":[{"q":"...","a":"..."}]}`;
     } catch {
       return res.status(502).json({ message: 'The model did not return usable questions. Try again.' });
     }
-    const faqs = (parsed.faqs || []).map((x) => ({ q: String(x.q || '').trim().slice(0, 120), a: String(x.a || '').trim().slice(0, 400) })).filter((x) => x.q && x.a).slice(0, 4);
+    // The gate for facts (15 Sep): a claim the listing never made - purity, hallmark,
+    // real stones, origin, warranty - is dropped whole, whichever model wrote it.
+    const facts = `${name} ${categoryName || ''} ${material || ''} ${color || ''} ${String(description || '')}`.toLowerCase();
+    const CLAIM = /(925|sterling|hallmark|bis|pure (silver|gold)|real (silver|gold|diamond|pearl|stone)|solid gold|22k|18k|14k|certified|lifetime warranty|handmade in [a-z]+|imported)/i;
+    const unbacked = (a) => { const m = String(a).match(CLAIM); return m && !facts.includes(m[0].toLowerCase()); };
+    const faqs = (parsed.faqs || []).map((x) => ({ q: String(x.q || '').trim().slice(0, 120), a: String(x.a || '').trim().slice(0, 400) })).filter((x) => x.q && x.a && !unbacked(x.a)).slice(0, 4);
     await AiUsage.record(req.user._id, { kind: 'text', provider: answer.provider || 'gemini' });
     void rules;
     res.json({ faqs, writtenBy: answer.provider === 'pollinations' ? 'gpt-5.4-nano (Pollinations)' : 'Gemini', usage: await usageFor(req.user._id, exempt) });

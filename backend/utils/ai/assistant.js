@@ -179,31 +179,50 @@ ${own}
 ${chunks.length ? `BACKGROUND PASSAGES - how the platform works and why (documentation and code notes nearest to the question; NOT the current state, NOT a to-do list)\n${asContext(chunks)}\n\n` : ''}THEIR QUESTION
 ${q}
 
-Answer now, as Ask ShopMaster.`;
+Before you answer, check three things: (1) the first line is the answer itself - the number, the date, the yes/no; (2) every rule you cite carries its number exactly as given (hours, days, rupees); (3) if there is something for them to do, the last line is the page path that does it - otherwise no path. Answer now, as Ask ShopMaster.`;
   };
 
   const turns = (limit) => history.slice(-6).map((m) => ({ role: m.role === 'user' ? 'user' : 'model', parts: [{ text: String(m.text || '').slice(0, limit) }] }));
   const meta = { retrieved: found.chunks.map((c) => c.source), via: found.via };
+  const failures = [];
   const done = async (r, extra = {}) => ({ ok: true, answer: await inScript(r.text.trim()), language, model: r.model, searchedWeb: Boolean(r.calls?.includes('webSearch')) || Boolean(extra.searchedWeb), calls: r.calls || [], ...meta, ms: Date.now() - started });
+  /*
+   * The answer gate (utils/ai/answerGate): a road's answer is judged before
+   * it is returned - invented order numbers, filler, markdown, length,
+   * refusals. A failing answer on a road that has a next road returns null
+   * and the loop moves on; on the last road it is repaired mechanically.
+   */
+  const { judge, repair } = require('./answerGate');
+  const accept = async (r, extra = {}, { last = false } = {}) => {
+    const out = await done(r, extra);
+    const verdict = await judge(out.answer, { role, user, hadTools: (r.calls || []).length > 0 || !last });
+    if (!verdict.problems.length) return out;
+    if (!last) {
+      failures.push(`${r.model}: gate - ${verdict.problems.join(', ')}`);
+      return null;
+    }
+    console.warn(`assistant: gate repaired ${r.model}: ${verdict.problems.join(', ')}`);
+    return { ...out, answer: repair(out.answer, verdict), quality: verdict.problems };
+  };
   // A missing key is a reason to take the next road, not to stop (Render had Groq before Gemini, 13 Sep).
   const retryable = (reason) => /429|quota|rate|reach|503|502|nothing|never answered|not set/i.test(reason || '');
-  const failures = [];
 
   if (textModel !== 'nano') {
     // Road 1 - Gemini with tools, full prompt.
     const withTools = { system: SYSTEM(role, true, language, user), declarations: declarationsFor(role, user), run: (name, args) => runTool(name, args, { role, user }) };
     let r = await generateWithTools([...turns(1200), { role: 'user', parts: [{ text: buildPrompt({ compact: false }) }] }], withTools);
-    if (r.ok) return done(r);
-    if (textModel === 'gemini' || !retryable(r.reason)) return { ok: false, reason: r.reason };
-    failures.push(`gemini: ${r.reason.slice(0, 60)}`);
+    // 'gemini' mode never leaves Google: a gate failure there is repaired, not re-routed.
+    if (r.ok) { const a = await accept(r, {}, { last: textModel === 'gemini' }); if (a) return a; }
+    if (!r.ok && (textModel === 'gemini' || !retryable(r.reason))) return { ok: false, reason: r.reason };
+    if (!r.ok) failures.push(`gemini: ${r.reason.slice(0, 60)}`);
 
     // Road 1b - Gemini flash-lite, same tools. Its free quota is separate from
     // flash's (14 Sep 2026: flash said "free_tier_requests, limit: 20" while
     // lite answered at once) - a second Gemini before we leave Google's tools.
-    if (/429|quota/i.test(r.reason)) {
+    // Lite is tried when flash is out of quota - or when flash answered and the gate refused it.
+    if (r.ok || /429|quota/i.test(r.reason)) {
       r = await generateWithTools([...turns(1200), { role: 'user', parts: [{ text: buildPrompt({ compact: false }) }] }], { ...withTools, model: process.env.GEMINI_LITE_MODEL || 'gemini-3.5-flash-lite' });
-      if (r.ok) return done(r);
-      failures.push(`gemini-lite: ${r.reason.slice(0, 60)}`);
+      if (r.ok) { const a = await accept(r); if (a) return a; } else failures.push(`gemini-lite: ${r.reason.slice(0, 60)}`);
     }
 
     // Road 2 - Groq gpt-oss-120b with tools, compact prompt, two rounds at most
@@ -212,7 +231,7 @@ Answer now, as Ask ShopMaster.`;
     const g = await groqWithTools([...turns(600), { role: 'user', parts: [{ text: buildPrompt({ compact: true }) }] }], { ...withTools, maxRounds: 2 });
     if (g.ok) {
       console.warn(`assistant: ${failures.join('; ')} - answered by Groq ${g.model}`);
-      return done(g);
+      const a = await accept(g); if (a) return a;
     }
     failures.push(`groq: ${g.reason.slice(0, 60)}`);
 
@@ -221,7 +240,7 @@ Answer now, as Ask ShopMaster.`;
     const c = await groqPlain([...turns(1200), { role: 'user', parts: [{ text: buildPrompt({ compact: false }) }] }], { system: SYSTEM(role, false, language, user), model: 'groq/compound-mini' });
     if (c.ok) {
       console.warn(`assistant: ${failures.join('; ')} - answered by ${c.model}`);
-      return done(c, { searchedWeb: c.searchedWeb });
+      const a = await accept(c, { searchedWeb: c.searchedWeb }); if (a) return a;
     }
     failures.push(`compound: ${c.reason.slice(0, 60)}`);
 
@@ -232,7 +251,7 @@ Answer now, as Ask ShopMaster.`;
     const cf = await cloudflareWithTools([...turns(600), { role: 'user', parts: [{ text: buildPrompt({ compact: true }) }] }], { ...withTools, maxRounds: 2 });
     if (cf.ok) {
       console.warn(`assistant: ${failures.join('; ')} - answered by ${cf.model}`);
-      return done(cf);
+      const a = await accept(cf); if (a) return a;
     }
     failures.push(`cloudflare: ${cf.reason.slice(0, 60)}`);
   }
@@ -243,7 +262,7 @@ Answer now, as Ask ShopMaster.`;
   const r = await generate(`${flat ? `EARLIER IN THIS CONVERSATION\n${flat}\n\n` : ''}${buildPrompt({ compact: true })}`, { system: SYSTEM(role, false, language, user), textModel: 'nano', attempts: 1 });
   if (!r.ok) return { ok: false, reason: [...failures, `nano: ${r.reason.slice(0, 60)}`].join('; ') };
   if (failures.length) console.warn(`assistant: ${failures.join('; ')} - answered by ${r.model || 'nano'}`);
-  return done({ ...r, model: r.model || 'nano', calls: [] });
+  return accept({ ...r, model: r.model || 'nano', calls: [] }, {}, { last: true });
 };
 
 module.exports = { ask, contextFor, SYSTEM };
