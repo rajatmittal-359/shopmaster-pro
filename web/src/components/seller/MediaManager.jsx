@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useT } from '@/lib/i18n';
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -147,6 +148,7 @@ export default function MediaManager({
   onError,
   base = "/seller",
 }) {
+  const t = useT();
   const inputRef = useRef(null);
   const [catalog, setCatalog] = useState(null); // { models } from /ai/catalog
   const [drafts, setDrafts] = useState([]);
@@ -321,7 +323,7 @@ export default function MediaManager({
             <ImagePlus className="size-6 text-brand-ink" />
           )}
           <span className="text-sm font-medium">
-            {adding ? "Preparing…" : "Drop photos here, or click to choose"}
+            {adding ? t('Preparing…') : t('Drop photos here, or click to choose')}
           </span>
           <span className="text-xs text-muted-foreground">
             JPEG, PNG or WebP · any size, large ones are shrunk here · {room}{" "}
@@ -341,7 +343,7 @@ export default function MediaManager({
             className="inline-flex items-center gap-1.5 text-sm text-brand-ink hover:underline"
           >
             <Sparkles className="size-4" />
-            {draftsOpen ? "Hide" : "Add from your AI pictures"} ({drafts.length}
+            {draftsOpen ? t('Hide') : t('Add from your AI pictures')} ({drafts.length}
             )
           </button>
           {draftsOpen && (
@@ -544,7 +546,7 @@ export default function MediaManager({
           klein-4b today - the chip says what is left and why. */}
       <details className="mt-3 text-sm">
         <summary className="cursor-pointer select-none text-xs text-muted-foreground hover:text-foreground">
-          More: which AI model edits your photos
+          {t('More: which AI model edits your photos')}
         </summary>
         <div className="mt-2">
           {/* WHICH MODEL. Automatic by default; every editing model by name,
@@ -552,10 +554,10 @@ export default function MediaManager({
           {editModels.length > 0 && (
             <div className="flex flex-wrap items-center gap-2 text-sm">
               <Cpu className="size-4 text-muted-foreground" />
-              <span className="text-muted-foreground">AI model for edits:</span>
+              <span className="text-muted-foreground">{t('AI model for edits:')}</span>
               <Select
                 items={{
-                  auto: "Automatic (best available)",
+                  auto: t('Automatic (best available)'),
                   ...Object.fromEntries(editModels.map((m) => [m.id, m.label])),
                 }}
                 value={modelId}

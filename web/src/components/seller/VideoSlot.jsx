@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useT } from '@/lib/i18n';
 import Image from 'next/image';
 import { Film, Trash2, Upload } from 'lucide-react';
 import { toast } from 'sonner';
@@ -29,6 +30,7 @@ import { youtubeId } from '@/lib/youtube';
 const MAX_BYTES = 7 * 1024 * 1024;
 
 export default function VideoSlot({ value, onChange }) {
+  const t = useT();
   const inputRef = useRef(null);
   // A local preview of a newly chosen file, released when the file changes.
   const preview = useMemo(() => (value.nextFile ? URL.createObjectURL(value.nextFile) : null), [value.nextFile]);
@@ -100,8 +102,8 @@ export default function VideoSlot({ value, onChange }) {
             <Film className="size-4" />
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block font-medium">Add a short video <span className="font-normal text-muted-foreground">(optional)</span></span>
-            <span className="block text-xs text-muted-foreground">Under 7 MB, about 20 seconds. Shown beside the photos with a play button.</span>
+            <span className="block font-medium">{t('Add a short video')} <span className="font-normal text-muted-foreground">({t('optional')})</span></span>
+            <span className="block text-xs text-muted-foreground">{t('Under 7 MB, about 20 seconds. Shown beside the photos with a play button.')}</span>
           </span>
           <Upload className="size-4 text-muted-foreground" />
         </button>

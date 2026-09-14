@@ -113,13 +113,13 @@ export default function ListingQuality({ form, photos, productId, categoryLabel,
       <div>
       <div>
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="text-sm font-medium">What people type to find this</p>
+          <p className="text-sm font-medium">{t('What people type to find this')}</p>
           <Button type="button" size="sm" variant="outline" onClick={suggest} disabled={kwBusy || !form.name}>
             {kwBusy ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
-            {kw ? 'Suggest again' : 'Suggest search words'}
+            {t(kw ? 'Suggest again' : 'Suggest search words')}
           </Button>
         </div>
-        {!kw && <p className="mt-1 text-xs text-muted-foreground">Real searches first (Google, ShopMaster), AI fills the gaps. Tap a word to add it.</p>}
+        {!kw && <p className="mt-1 text-xs text-muted-foreground">{t('Real searches first (Google, ShopMaster), AI fills the gaps. Tap a word to add it.')}</p>}
         {kw && (
           <>
             <div className="mt-2 flex flex-wrap gap-1.5">
@@ -164,7 +164,7 @@ export default function ListingQuality({ form, photos, productId, categoryLabel,
 
       {form.name && (
         <div className="mt-4 border-t pt-4">
-          <p className="text-sm font-medium">How it looks in Google</p>
+          <p className="text-sm font-medium">{t('How it looks in Google')}</p>
           <div className="mt-2 rounded-lg border bg-background p-3">
             <p className="truncate text-[15px] text-[#1a0dab] dark:text-[#8ab4f8]">{form.name}{categoryLabel ? ` | ${categoryLabel.split(' → ').pop()}` : ''} | ShopMaster Pro</p>
             <p className="text-xs text-emerald-700 dark:text-emerald-400">www.shopmasterpro.in › products › {String(form.name).toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 40)}</p>

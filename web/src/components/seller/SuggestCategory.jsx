@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useT } from '@/lib/i18n';
 import { toast } from 'sonner';
 import { authedFetch } from '@/lib/client';
 import { Button } from '@/components/ui/button';
@@ -14,6 +15,7 @@ import { Input } from '@/components/ui/input';
  * purpose: a name, the main category it belongs under, one line of why.
  */
 export default function SuggestCategory({ parents }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ name: '', parentCategory: '', note: '' });
   const [mine, setMine] = useState([]);
@@ -53,7 +55,7 @@ export default function SuggestCategory({ parents }) {
     <div className="mt-2 text-xs">
       {!open && (
         <button type="button" onClick={() => setOpen(true)} className="text-brand-ink hover:underline">
-          Can&apos;t find the right one? Suggest a category
+          {t("Can't find the right one? Suggest a category")}
         </button>
       )}
       {open && (
@@ -84,7 +86,7 @@ export default function SuggestCategory({ parents }) {
             <li key={r._id}>
               <span className="font-medium text-foreground">{r.name}</span>
               {' · '}
-              {r.status === 'open' ? 'with the admin' : r.status === 'created' ? <span className="text-emerald-700 dark:text-emerald-300">added - type it above</span> : <span>not added{r.reply ? ` - ${r.reply}` : ''}</span>}
+              {r.status === 'open' ? t('with the admin') : r.status === 'created' ? <span className="text-emerald-700 dark:text-emerald-300">{t('added - type it above')}</span> : <span>{t('not added')}{r.reply ? ` - ${r.reply}` : ''}</span>}
             </li>
           ))}
         </ul>

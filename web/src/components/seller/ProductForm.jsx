@@ -113,7 +113,7 @@ function Field({ id, label, hint, aside, children, className = '' }) {
         {aside}
       </div>
       <div className="mt-1.5">{children}</div>
-      {hint && <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">{hint}</p>}
+      {hint && <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">{typeof hint === 'string' ? t(hint) : hint}</p>}
     </div>
   );
 }
@@ -128,7 +128,7 @@ function Card({ id, title, lead, aside, summary, defaultOpen = true, foldOnPhone
   const t = useT();
   const key = id || String(title).toLowerCase().replace(/[^a-z0-9]+/g, '-');
   return (
-    <Fold id={key} title={t(title)} lead={lead} summary={summary} aside={aside} badge={badge} defaultOpen={defaultOpen} foldOnPhone={foldOnPhone}>
+    <Fold id={key} title={t(title)} lead={typeof lead === 'string' ? t(lead) : lead} summary={summary} aside={aside} badge={badge} defaultOpen={defaultOpen} foldOnPhone={foldOnPhone}>
       {children}
     </Fold>
   );
@@ -439,7 +439,7 @@ export default function ProductForm({ productId, copyFromId }) {
             <span className="text-muted-foreground">Writer:</span>
             <Select
               items={{
-                auto: 'Automatic - Gemini, nano as backup',
+                auto: t('Automatic - Gemini, nano as backup'),
                 gemini: 'Gemini 3.5 Flash',
                 nano: 'gpt-5.4-nano (Pollinations)',
               }}
@@ -457,7 +457,7 @@ export default function ProductForm({ productId, copyFromId }) {
             </Select>
             {usage && (
               <span className="text-muted-foreground">
-                {usage.remaining.texts === null || usage.remaining.texts === undefined ? '∞' : usage.remaining.texts} drafts left today
+                {t('{n} drafts left today', { n: usage.remaining.texts === null || usage.remaining.texts === undefined ? '∞' : usage.remaining.texts })}
               </span>
             )}
           </div>
@@ -565,7 +565,7 @@ export default function ProductForm({ productId, copyFromId }) {
                 onChange={set('freeShipping')}
                 className="size-4 accent-primary"
               />
-              I pay the delivery
+              {t('I pay the delivery')}
             </label>
           </div>
         </div>
@@ -696,7 +696,7 @@ export default function ProductForm({ productId, copyFromId }) {
           ))}
           <div className="flex flex-wrap gap-2">
             {(form.faqs || []).length < 6 && (
-              <Button type="button" size="sm" variant="outline" onClick={() => setForm((f) => ({ ...f, faqs: [...(f.faqs || []), { q: '', a: '' }] }))}>Add a question</Button>
+              <Button type="button" size="sm" variant="outline" onClick={() => setForm((f) => ({ ...f, faqs: [...(f.faqs || []), { q: '', a: '' }] }))}>{t('Add a question')}</Button>
             )}
             <Button
               type="button"
@@ -718,7 +718,7 @@ export default function ProductForm({ productId, copyFromId }) {
                 }
               }}
             >
-              {faqBusy ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />} Draft 3 with AI
+              {faqBusy ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />} {t('Draft 3 with AI')}
             </Button>
           </div>
         </div>
@@ -745,7 +745,7 @@ export default function ProductForm({ productId, copyFromId }) {
 
       <div className="sticky bottom-0 z-10 -mx-1 flex items-center gap-3 border-t bg-background/95 px-1 py-3 backdrop-blur">
         <Button type="submit" disabled={state.status === 'saving'} size="lg">
-          {state.status === 'saving' ? 'Saving…' : productId ? 'Save changes' : 'List it'}
+          {state.status === 'saving' ? t('Saving…') : productId ? t('Save changes') : t('List it')}
         </Button>
         <Button type="button" onClick={() => router.push('/seller/products')} variant="ghost">
           Cancel
