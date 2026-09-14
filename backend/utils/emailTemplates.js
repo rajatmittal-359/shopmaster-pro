@@ -80,9 +80,25 @@ const paymentLine = (order) => {
  *   for a message instead of giving them the page that already exists and
  *   shows where the parcel is.
  */
+/*
+ * The return promise, per order (Fair Returns, plan §4.39). One line when
+ * every item carries the same mode; the exceptions named when they do not;
+ * nothing invented for orders whose lines were not stamped.
+ */
+const returnLine = (order) => {
+  const { MODE_LABEL } = require('./returnPolicy');
+  const lines = (order.items || []).filter((i) => i.returnMode);
+  if (!lines.length) return '';
+  const modes = new Set(lines.map((i) => i.returnMode));
+  if (modes.size === 1) return `Returns: ${MODE_LABEL[[...modes][0]].en}, counted from delivery.`;
+  const odd = lines.filter((i) => i.returnMode !== 'R').map((i) => `${i.name} - ${MODE_LABEL[i.returnMode].en.toLowerCase()}`);
+  return `Returns: 7-day return or exchange, counted from delivery, except ${odd.join('; ')}.`;
+};
+
 exports.orderConfirmedEmail = (order, customer) => {
   const ref = order.orderNumber || `#${order._id.toString().slice(-6)}`;
   const link = orderUrl(order._id);
+  const returns = returnLine(order);
 
   return {
     subject: `Order confirmed · ${ref} · ShopMaster Pro`,
@@ -99,7 +115,10 @@ exports.orderConfirmedEmail = (order, customer) => {
 
 ` +
       `Shipped in 1-3 working days, delivered in about 3-7 after that.
-`,
+` +
+      (returns ? `
+${returns}
+` : ''),
     html: `
     <div style="font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;
                 max-width:600px;margin:0 auto;padding:8px 4px;
@@ -151,7 +170,7 @@ exports.orderConfirmedEmail = (order, customer) => {
           Returns and refunds
         </p>
         <p style="margin:0 0 16px 0">
-          Once delivered, returns follow the seller&rsquo;s policy. Any refund on a
+          ${returns ? `${returns} ` : 'Once delivered, returns follow the seller&rsquo;s policy. '}Wrong, damaged or faulty is always covered. Any refund on a
           prepaid order goes back to the way you paid.
         </p>
       </div>

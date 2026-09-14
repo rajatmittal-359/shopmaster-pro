@@ -30,6 +30,15 @@ const orderItemSchema = new mongoose.Schema({
     default: 'active',
   },
 
+  /*
+   * Fair Returns: the promise the customer saw at checkout - R return /
+   * refund, X exchange only, N no change-of-mind return - stamped at the
+   * order like the commission rate is, so a seller editing the product
+   * next week cannot change what this customer was told. null on orders
+   * from before 15 Sep 2026 (the product's current mode is read instead).
+   */
+  returnMode: { type: String, enum: ['R', 'X', 'N', null], default: null },
+
   // ---- Commission snapshot -------------------------------------------------
   // Copied from the seller's profile at the moment the order is placed and then
   // never recalculated. A seller's rate can change tomorrow; what they are owed

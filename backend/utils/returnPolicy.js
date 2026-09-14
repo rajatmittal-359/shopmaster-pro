@@ -49,6 +49,38 @@ const effectiveReturnMode = (product, category) => {
   return allowed.includes('R') ? 'R' : allowed[0];
 };
 
+/**
+ * The mode for each of several products, categories fetched once (plan
+ * §4.39 left-overs, 15 Sep 2026). Used at checkout to stamp every order
+ * line with the promise the customer saw, so the email, the order page and
+ * a return request months later all read the same word. A product whose
+ * category cannot be read gets `null`, never a guess - a wrong "7-day
+ * return" on a hygiene item is a promise the shop did not make.
+ *
+ * @param {Array<{_id:any, category?:any, returnMode?:string}>} products  populated product docs
+ * @returns {Promise<Map<string,'R'|'X'|'N'|null>>} by product id
+ */
+const modesForProducts = async (products, { session } = {}) => {
+  const out = new Map();
+  if (!products.length) return out;
+  const Category = require('../models/Category');
+  const catIds = [...new Set(products.map((p) => String(p?.category?._id || p?.category || '')).filter(Boolean))];
+  let cats = [];
+  try {
+    cats = catIds.length ? await Category.find({ _id: { $in: catIds } }).select('returnMode returnModesAllowed').session(session || null).lean() : [];
+  } catch (err) {
+    console.warn(`returnPolicy: categories unreadable (${err.message}) - modes left blank`);
+    for (const p of products) out.set(String(p._id), null);
+    return out;
+  }
+  const byId = new Map(cats.map((c) => [String(c._id), c]));
+  for (const p of products) {
+    const cat = byId.get(String(p?.category?._id || p?.category || ''));
+    out.set(String(p._id), cat || !catIds.length ? effectiveReturnMode(p, cat) : null);
+  }
+  return out;
+};
+
 /** Category defaults from the taxonomy name - what a new category gets before the admin touches it. */
 const defaultModeForCategoryName = (name = '') => {
   const n = String(name).toLowerCase();
@@ -126,4 +158,4 @@ const receiptVerdict = ({ sellerOk, sellerPhotos = 0, customerEvidence = 0, pack
   return { outcome: 'dispute', reason: 'Evidence on both sides is thin; the admin decides for the side that has shown more.' };
 };
 
-module.exports = { MODES, KINDS, FAULT_KINDS, FRESH_KINDS, MODE_LABEL, KIND_LABEL, effectiveReturnMode, defaultModeForCategoryName, evaluateReturnRequest, receiptVerdict };
+module.exports = { MODES, KINDS, FAULT_KINDS, FRESH_KINDS, MODE_LABEL, KIND_LABEL, effectiveReturnMode, modesForProducts, defaultModeForCategoryName, evaluateReturnRequest, receiptVerdict };

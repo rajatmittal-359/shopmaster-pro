@@ -353,6 +353,21 @@ export default function CheckoutView() {
             Choose an address to see delivery and the total.
           </p>
         )}
+        {/* Fair Returns (plan §4.39): each line's promise before the pay
+            button, the way Amazon prints "Returnable until…" per item. One
+            line when they all agree; the exceptions named when they do not. */}
+        {totals?.items?.some((i) => i.returnMode) && (
+          <p className="mt-2 text-xs text-muted-foreground">
+            <Link href="/refund-policy" className="text-brand-ink hover:underline">Returns</Link>
+            {': '}
+            {new Set(totals.items.filter((i) => i.returnMode).map((i) => i.returnMode)).size === 1
+              ? `${totals.items.find((i) => i.returnMode).returnLabel}, counted from delivery.`
+              : `7-day return or exchange from delivery, except ${totals.items
+                  .filter((i) => i.returnMode && i.returnMode !== 'R')
+                  .map((i) => `${i.name} - ${String(i.returnLabel || '').toLowerCase()}`)
+                  .join('; ')}.`}
+          </p>
+        )}
 
         <form onSubmit={applyCoupon} className="mt-4 flex gap-2">
           <Input

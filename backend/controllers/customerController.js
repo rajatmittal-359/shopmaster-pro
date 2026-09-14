@@ -1036,16 +1036,26 @@ exports.previewTotals = async (req, res) => {
 
     const grandTotal = itemsTotal + priced.shippingCharges;
 
+    // Fair Returns: each line's promise, said before the pay button - Amazon
+    // prints "Returnable until…" / "Non-returnable" per item at this step.
+    const { modesForProducts, MODE_LABEL } = require('../utils/returnPolicy');
+    const modes = await modesForProducts(cart.items.map((i) => i.productId).filter(Boolean));
+
     return res.json({
       success: true,
       itemsTotal,
       // The lines, for the storefront's analytics events (GA4 items[]).
-      items: cart.items.map((i) => ({
-        productId: i.productId?._id || i.productId,
-        name: i.productId?.name,
-        price: i.price,
-        quantity: i.quantity,
-      })),
+      items: cart.items.map((i) => {
+        const mode = modes.get(String(i.productId?._id || i.productId)) ?? null;
+        return {
+          productId: i.productId?._id || i.productId,
+          name: i.productId?.name,
+          price: i.price,
+          quantity: i.quantity,
+          returnMode: mode,
+          returnLabel: mode ? MODE_LABEL[mode].en : null,
+        };
+      }),
       shippingCharges: priced.shippingCharges,
       grandTotal,
       shippingCourier: priced.shippingCourier,

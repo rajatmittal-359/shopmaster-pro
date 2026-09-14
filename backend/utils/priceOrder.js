@@ -2,6 +2,7 @@ const Coupon = require('../models/Coupon');
 const { getRatesBySeller } = require('./commission');
 const { splitDiscountedLine, round2, effectivePrice } = require('./discount');
 const { evaluateCoupon } = require('./applyCoupon');
+const { modesForProducts } = require('./returnPolicy');
 
 /**
  * What an order costs, and who ends up with what.
@@ -56,6 +57,9 @@ const priceOrder = async ({ items, couponCode, customerId, session }) => {
     session
   );
 
+  // The return promise per line, read once for the basket (utils/returnPolicy).
+  const modes = await modesForProducts(items.map((item) => item.productId), { session });
+
   let perLine = lines.map(() => 0);
   let coupon = null;
   let couponError = null;
@@ -100,6 +104,7 @@ const priceOrder = async ({ items, couponCode, customerId, session }) => {
 
     return {
       ...line,
+      returnMode: modes.get(String(line.productId)) ?? null,
       commissionRate: split.commissionRate,
       commissionAmount: split.commissionAmount,
       sellerEarning: split.sellerEarning,
