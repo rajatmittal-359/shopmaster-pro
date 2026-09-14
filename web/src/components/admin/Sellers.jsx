@@ -21,6 +21,43 @@ import ActionDialog from '@/components/common/ActionDialog';
  *   Orders already placed still have to be delivered, returned and paid out;
  *   deleting the seller would orphan all of it.
  */
+function Fact({ ok, warn, children }) {
+  const tone = ok ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-800 dark:text-emerald-200' : warn ? 'border-amber-500/30 bg-amber-500/10 text-amber-800 dark:text-amber-200' : 'border-border text-muted-foreground';
+  return (
+    <span className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs ${tone}`}>
+      <span aria-hidden>{ok ? '✓' : warn ? '!' : '–'}</span>
+      {children}
+    </span>
+  );
+}
+
+/** What to know before Approve - the seller-application brief (plan 2.19). */
+function ApplicationFacts({ a }) {
+  const age = a.accountAgeDays;
+  return (
+    <div className="mt-3 rounded-lg border bg-muted/40 p-3">
+      <p className="mb-2 text-xs font-medium text-muted-foreground">Before you approve</p>
+      <div className="flex flex-wrap gap-1.5">
+        <Fact ok={a.emailVerified} warn={!a.emailVerified}>{a.emailVerified ? 'Email verified' : 'Email not verified'}</Fact>
+        <Fact ok={age !== null && age >= 7} warn={age !== null && age < 1}>
+          {age === null ? 'Account age unknown' : age < 1 ? 'Account made today' : `Account ${age} day${age === 1 ? '' : 's'} old`}
+        </Fact>
+        <Fact ok={Boolean(a.pickup)} warn={!a.pickup}>{a.pickup ? `Pickup: ${a.pickup}${a.inJaipur ? ' · Jaipur' : ''}` : 'No pickup address yet'}</Fact>
+        <Fact ok={a.bank}>{a.bank ? 'Bank account added' : 'No bank account yet'}</Fact>
+        <Fact ok={a.gst}>{a.gst ? 'GST number given' : 'No GST (fine under the threshold)'}</Fact>
+        <Fact ok={a.aboutWords >= 15}>{a.aboutWords ? `About: ${a.aboutWords} words` : 'No shop story yet'}</Fact>
+        <Fact ok={a.links > 0}>{a.links ? `${a.links} profile link${a.links === 1 ? '' : 's'}` : 'No Instagram / Google profile'}</Fact>
+        {a.buyer && (
+          <Fact ok={a.buyer.orders > 0 && a.buyer.level === 'clean'} warn={a.buyer.level !== 'clean'}>
+            {a.buyer.orders ? `Bought here ${a.buyer.orders}× · ${a.buyer.level === 'clean' ? 'clean record' : a.buyer.signals.join(', ')}` : 'Never bought here'}
+          </Fact>
+        )}
+      </div>
+      <p className="mt-2 text-xs text-muted-foreground">Address, bank and story can be filled after approval - they are on the seller&rsquo;s first-day list. A dash is not a reason to refuse; an unverified email or a risk flag is a reason to ask first.</p>
+    </div>
+  );
+}
+
 const STATUS_NOTE = {
   pending: 'Waiting for you to decide',
   approved: 'Selling',
@@ -92,7 +129,11 @@ export default function Sellers() {
       ) : (
         <ul className="mt-2 divide-y divide-border rounded-xl border border-border">
           {sellers.map((seller) => {
-            const status = seller.status || (seller.isApproved ? 'approved' : 'pending');
+            // Seller.status only knows active/suspended (its default is
+            // 'active' before anyone approved anything), so the row's state
+            // is derived from the three flags together. Reading status alone
+            // showed "active" and an Approve button on every shop.
+            const status = seller.status === 'suspended' ? 'suspended' : seller.kycStatus === 'rejected' ? 'rejected' : seller.isApproved ? 'approved' : 'pending';
 
             return (
               <li key={seller._id} className="p-4">
@@ -124,6 +165,11 @@ export default function Sellers() {
                     )}
                   </div>
                 </div>
+
+                {/* Before you approve (plan 2.19): the facts an application
+                    does not say about itself, as ticks and dashes. No model -
+                    there is nothing to weigh, only things to know. */}
+                {status === 'pending' && seller.application && <ApplicationFacts a={seller.application} />}
 
                 <div className="mt-3 flex flex-wrap items-center gap-2">
                   {status !== 'approved' && (

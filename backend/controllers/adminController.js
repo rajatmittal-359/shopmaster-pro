@@ -18,7 +18,7 @@ const { cancelOrderFor } = require('../utils/cancelOrder');
 exports.getAllSellers = async (req, res) => {
   try {
     const allSellers = await Seller.find({})
-      .populate("userId", "name email")
+      .populate("userId", "name email isVerified createdAt")
       .sort({ createdAt: -1 })
       .lean();
 
@@ -27,11 +27,14 @@ exports.getAllSellers = async (req, res) => {
     // dashboard uses, so admin and seller see one figure.
     const { cancelStatsFor } = require('./sellerController');
     const sellerRules = require('../config/sellerRules');
+    const { applicationFacts } = require('../utils/applicationFacts');
     const sellers = await Promise.all(
       allSellers.map(async (s) => ({
         ...s,
         cancellations: await cancelStatsFor(s.userId?._id || s.userId),
         agreementUpToDate: s.agreement?.version === sellerRules.version,
+        // What the admin should know before approving (plan 2.19 - facts, no model).
+        application: await applicationFacts(s),
       }))
     );
 
