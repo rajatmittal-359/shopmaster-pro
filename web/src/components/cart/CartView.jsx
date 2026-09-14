@@ -23,7 +23,7 @@ import NotForThisAccount from '@/components/common/NotForThisAccount';
  *   have capped a quantity at the stock left, or re-priced a line in the same
  *   breath - and the honest thing to show is what it actually did.
  */
-export default function CartView() {
+export default function CartView({ freeAbove = 0 }) {
   const { signedIn } = useSession();
   const [cart, setCart] = useState(null);
   const [state, setState] = useState({ status: 'loading' });
@@ -203,6 +203,17 @@ export default function CartView() {
           Delivery is worked out at checkout, from your PIN code. Nothing else is
           added.
         </p>
+        {freeAbove > 0 && (
+          <p className="mt-1 text-xs" aria-live="polite">
+            {Number(cart.totalAmount || 0) >= freeAbove ? (
+              <span className="font-medium text-emerald-700 dark:text-emerald-300">Free delivery - this order is over ₹{freeAbove.toLocaleString('en-IN')}.</span>
+            ) : (
+              <span className="text-muted-foreground">
+                Add ₹{(freeAbove - Number(cart.totalAmount || 0)).toLocaleString('en-IN')} more for free delivery.
+              </span>
+            )}
+          </p>
+        )}
 
         <Link
           href="/checkout"

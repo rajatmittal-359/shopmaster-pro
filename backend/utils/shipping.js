@@ -17,6 +17,9 @@
 const Seller = require('../models/Seller');
 const shiprocketService = require('./shiprocketService');
 const borzo = require('./borzo');
+// Called through the module object so tests can stand in for the admin's document.
+const settings = require('./liveSettings');
+const { effectivePrice } = require('./discount');
 
 /**
  * Charged when the courier API cannot be reached.
@@ -181,6 +184,24 @@ const freeShippingSellers = async (cartItems) => {
  * @param {boolean} isCOD     true adds the courier's cash-handling fee
  * @returns {{shippingCharges: number, shippingCourier: string, freeShipping: boolean}}
  */
+/**
+ * The admin's "free delivery on orders above ₹X" (Settings → Switches, plan
+ * 2.16). Stored since 13 Sep, enforced from 15 Sep: a threshold the API did
+ * not read was a promise on a settings page and nothing at checkout. The
+ * basket is valued at the price the customer pays (sale price while a sale
+ * runs), before coupons - Amazon and Flipkart count the same way, so a
+ * coupon never pushes a basket back under the line after it was shown free.
+ *
+ * @returns {Promise<number>} the threshold, 0 when there is none
+ */
+const freeAboveThreshold = async () => {
+  const live = await settings.liveSettings();
+  return Number(live?.shop?.freeShippingAbove) || 0;
+};
+
+const basketValue = (cartItems) =>
+  cartItems.reduce((sum, item) => sum + effectivePrice(productOf(item)).price * (item.quantity || 1), 0);
+
 const calculateShipping = async (cartItems, address, isCOD) => {
   const freeSellers = await freeShippingSellers(cartItems);
   const billable = cartItems.filter((item) => !isFreeShipping(item, freeSellers));
@@ -191,6 +212,16 @@ const calculateShipping = async (cartItems, address, isCOD) => {
       shippingCharges: 0,
       shippingCourier: 'Free delivery',
       freeShipping: true,
+    };
+  }
+
+  const freeAbove = await freeAboveThreshold();
+  if (freeAbove > 0 && basketValue(cartItems) >= freeAbove) {
+    return {
+      shippingCharges: 0,
+      shippingCourier: 'Free delivery',
+      freeShipping: true,
+      freeAbove,
     };
   }
 
@@ -296,6 +327,12 @@ const getDeliveryOptions = async (cartItems, address, isCOD) => {
   // Skip the network call entirely for out-of-town addresses.
   if (!isLocalDelivery(address.zipCode)) return options;
 
+  // The admin's switch (Settings → Switches): off means the option is not
+  // offered and not quoted - the same rule as COD, enforced here and not
+  // only hidden on the page.
+  const live = await settings.liveSettings();
+  if (live?.shop?.sameDayEnabled === false) return options;
+
   const billableWeight = cartItems.reduce((sum, item) => sum + weightOf(item), 0);
   const sameDay = await borzo.quoteSameDay(address, billableWeight);
 
@@ -365,6 +402,8 @@ const priceDeliveryOption = async (cartItems, address, isCOD, optionId) => {
 
 module.exports = {
   getDeliveryOptions,
+  freeAboveThreshold,
+  basketValue,
   describeArrival,
   priceDeliveryOption,
   calculateShipping,

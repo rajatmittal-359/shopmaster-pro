@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import PolicyHeading from '@/components/policy/PolicyHeading';
 import Section from '@/components/policy/Section';
-import { POLICY, BUSINESS } from '@/config/policy';
+import { POLICY, businessFrom } from '@/config/policy';
+import { getSettings } from '@/lib/api';
 
 export const metadata = {
   title: 'Terms and conditions',
@@ -9,7 +10,9 @@ export const metadata = {
   alternates: { canonical: '/terms' },
 };
 
-export default function TermsPage() {
+export default async function TermsPage() {
+  // Live identity from Settings (admin), the code's default underneath.
+  const BUSINESS = businessFrom(await getSettings());
   return (
     <>
       <PolicyHeading title="Terms and conditions" updated="6 September 2026" />

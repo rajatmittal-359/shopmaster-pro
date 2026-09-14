@@ -1,6 +1,7 @@
 import PolicyHeading from '@/components/policy/PolicyHeading';
 import Section from '@/components/policy/Section';
-import { BUSINESS } from '@/config/policy';
+import { businessFrom } from '@/config/policy';
+import { getSettings } from '@/lib/api';
 
 /**
  * Written from what the application ACTUALLY does.
@@ -18,7 +19,9 @@ export const metadata = {
   alternates: { canonical: '/privacy' },
 };
 
-export default function PrivacyPage() {
+export default async function PrivacyPage() {
+  // Live identity from Settings (admin), the code's default underneath.
+  const BUSINESS = businessFrom(await getSettings());
   return (
     <>
       <PolicyHeading title="Privacy policy" updated="6 September 2026" />

@@ -247,7 +247,7 @@ export default function PlatformSettings() {
                   </div>
                 ))}
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <Field id="freeShippingAbove" label="Free delivery on orders above (₹)" hint="0 = never. Product-level and seller-level free delivery still apply.">
+                  <Field id="freeShippingAbove" label="Free delivery on orders above (₹)" hint="0 = never. Enforced at checkout (basket at the price paid, before coupons) and the cart says how far the basket is from it. Product-level and seller-level free delivery still apply.">
                     <Input id="freeShippingAbove" type="number" min={0} value={s.freeShippingAbove} onChange={setNum('shop', 'freeShippingAbove')} />
                   </Field>
                   <Field id="shippingRate" label="Representative delivery charge (₹)" hint="What Google's feed and the product schema quote as the shipping cost.">

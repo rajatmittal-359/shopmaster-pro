@@ -6,7 +6,7 @@ import { authedFetch } from '@/lib/client';
 import { useSession } from '@/lib/session';
 import { money } from '@/lib/money';
 import { orderRef } from '@/lib/orderRef';
-import { BUSINESS } from '@/config/policy';
+import { BUSINESS as DEFAULT_BUSINESS } from '@/config/policy';
 import { Button } from '@/components/ui/button';
 
 /**
@@ -26,7 +26,8 @@ import { Button } from '@/components/ui/button';
  *   The browser makes better PDFs than a bundled generator, on every platform,
  *   for nothing. This is a page styled for paper - Print gives them a PDF.
  */
-export default function Bill({ orderId }) {
+export default function Bill({ orderId, business }) {
+  const BUSINESS = business || DEFAULT_BUSINESS;
   const { signedIn, user } = useSession();
   const [order, setOrder] = useState(null);
   const [state, setState] = useState({ status: 'loading' });

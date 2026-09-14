@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import PolicyHeading from '@/components/policy/PolicyHeading';
 import Section from '@/components/policy/Section';
-import { BUSINESS, POLICY } from '@/config/policy';
+import { businessFrom, POLICY } from '@/config/policy';
+import { getSettings } from '@/lib/api';
 import { getSellerRules } from '@/lib/api';
 
 /**
@@ -28,6 +29,8 @@ export const metadata = {
 };
 
 export default async function SellingPolicyPage() {
+  // Live identity from Settings (admin), the code's default underneath.
+  const BUSINESS = businessFrom(await getSettings());
   const rules = await getSellerRules();
   const r = rules || {};
 

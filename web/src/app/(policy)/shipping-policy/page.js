@@ -1,6 +1,7 @@
 import PolicyHeading from '@/components/policy/PolicyHeading';
 import Section from '@/components/policy/Section';
-import { POLICY, BUSINESS } from '@/config/policy';
+import { POLICY, businessFrom } from '@/config/policy';
+import { getSettings } from '@/lib/api';
 
 /**
  * Every number here comes from src/config/policy.js, which is the same source
@@ -13,7 +14,9 @@ export const metadata = {
   alternates: { canonical: '/shipping-policy' },
 };
 
-export default function ShippingPolicyPage() {
+export default async function ShippingPolicyPage() {
+  // Live identity from Settings (admin), the code's default underneath.
+  const BUSINESS = businessFrom(await getSettings());
   const [handleMin, handleMax] = POLICY.handlingDays;
   const [transitMin, transitMax] = POLICY.transitDays;
 

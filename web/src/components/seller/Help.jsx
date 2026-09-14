@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { authedFetch } from '@/lib/client';
 import { getSellerRules } from '@/lib/api';
-import { BUSINESS } from '@/config/policy';
+import { BUSINESS as DEFAULT_BUSINESS } from '@/config/policy';
 import PanelCard from '@/components/panel/PanelCard';
 
 /**
@@ -26,7 +26,8 @@ const QA = (r) => [
   ['Do I need a GST number?', 'No. Sellers below the threshold sell without one; add it in Payments if you have one and want it on invoices.'],
 ];
 
-export default function Help() {
+export default function Help({ business }) {
+  const BUSINESS = business || DEFAULT_BUSINESS;
   const [rules, setRules] = useState(null);
   const [settings, setSettings] = useState(null);
 

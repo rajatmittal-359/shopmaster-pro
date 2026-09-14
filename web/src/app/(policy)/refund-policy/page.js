@@ -1,6 +1,7 @@
 import PolicyHeading from '@/components/policy/PolicyHeading';
 import Section from '@/components/policy/Section';
-import { POLICY, BUSINESS } from '@/config/policy';
+import { POLICY, businessFrom } from '@/config/policy';
+import { getSettings } from '@/lib/api';
 
 /**
  * The return window here is POLICY.returnDays, which must equal
@@ -16,7 +17,9 @@ export const metadata = {
   alternates: { canonical: '/refund-policy' },
 };
 
-export default function RefundPolicyPage() {
+export default async function RefundPolicyPage() {
+  // Live identity from Settings (admin), the code's default underneath.
+  const BUSINESS = businessFrom(await getSettings());
   const [refundMin, refundMax] = POLICY.refundDays;
 
   return (
