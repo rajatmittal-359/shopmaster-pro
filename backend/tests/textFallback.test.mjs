@@ -88,11 +88,30 @@ describe('the chip names the road', () => {
     expect(calls.every((u) => u.includes('pollinations'))).toBe(true);
   });
 
-  it("'gemini' never falls back, even on quota", async () => {
+  it("'gemini' never leaves Google, even on quota (flash, then lite, never Pollinations)", async () => {
     const { generate } = require('../utils/gemini');
-    globalThis.fetch = vi.fn(async () => jsonResponse(429, { error: { message: 'quota' } }));
+    const urls = [];
+    globalThis.fetch = vi.fn(async (url) => { urls.push(String(url)); return jsonResponse(429, { error: { message: 'quota' } }); });
     const out = await generate('Write it', { textModel: 'gemini', attempts: 1 });
     expect(out.ok).toBe(false);
-    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+    expect(urls.every((u) => u.includes('generativelanguage'))).toBe(true);
+    expect(urls.some((u) => u.includes('flash-lite'))).toBe(true);
+  });
+
+  // 15 Sep 2026: flash said 429 all day ("limit: 20"); lite answered in under a second.
+  it('tries flash-lite on a 429 before any other provider, and keeps its answer', async () => {
+    const { generate } = require('../utils/gemini');
+    const urls = [];
+    globalThis.fetch = vi.fn(async (url) => {
+      urls.push(String(url));
+      if (String(url).includes('flash-lite')) return jsonResponse(200, { candidates: [{ content: { parts: [{ text: '{"name":"from lite"}' }] } }] });
+      if (String(url).includes('generativelanguage')) return jsonResponse(429, { error: { message: 'quota' } });
+      return jsonResponse(200, { choices: [{ message: { content: '{"name":"from nano"}' } }] });
+    });
+    const out = await generate('Write it', { responseSchema: { type: 'object' }, attempts: 1 });
+    expect(out.ok).toBe(true);
+    expect(out.text).toContain('from lite');
+    expect(out.model).toMatch(/flash-lite/);
+    expect(urls.some((u) => u.includes('pollinations'))).toBe(false);
   });
 });

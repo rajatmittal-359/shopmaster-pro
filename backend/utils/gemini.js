@@ -32,6 +32,7 @@
  * Override with GEMINI_MODEL when one of those facts changes, which it will.
  */
 const DEFAULT_MODEL = process.env.GEMINI_MODEL || 'gemini-3.5-flash';
+const LITE_MODEL = process.env.GEMINI_LITE_MODEL || 'gemini-3.5-flash-lite';
 
 const { GEMINI_MODELS: API } = require('./ai/endpoints');
 
@@ -184,7 +185,9 @@ const generate = async (prompt, opts = {}) => {
 
     const body = await response.text().catch(() => '');
 
-    if (!RETRYABLE.has(response.status) || attempt === attempts) {
+    // A 429 is quota, not a blip: retrying the same model in 1.5 s only burns
+    // the wait. Go straight to lite / the next provider.
+    if (!RETRYABLE.has(response.status) || attempt === attempts || response.status === 429) {
       const failure = {
         ok: false,
         status: response.status,
@@ -192,6 +195,13 @@ const generate = async (prompt, opts = {}) => {
       };
       // Out of quota for the day is the one failure a second provider can
       // answer; a 400 is our prompt's fault and would fail there too.
+      // Before leaving Google: flash-lite has its own free quota (15 Sep 2026:
+      // flash 429 all day at "limit: 20", lite answered in 0.8 s) and takes the
+      // same schema, image and system prompt - so it goes first, nano after.
+      if (response.status === 429 && model !== LITE_MODEL && !opts.noLite) {
+        const lite = await generate(prompt, { ...opts, model: LITE_MODEL, attempts: 2, noLite: true });
+        if (lite.ok) return lite;
+      }
       return response.status === 429 ? fallbackOr(failure, prompt, opts) : failure;
     }
 
