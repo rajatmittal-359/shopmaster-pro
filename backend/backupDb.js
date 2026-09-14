@@ -7,7 +7,15 @@
  * writes to many documents (seed --reset, a backfill, a migration).
  *
  *   node backupDb.js                       -> ../private/backups/2026-09-12T10-05/<collection>.json
+ *   node backupDb.js --out ./backup        -> ./backup/<collection>.json (the GitHub Action, plan 2.37b)
+ *   node backupDb.js --all                 -> also the rebuildable collections (see DERIVED)
  *   node backupDb.js --restore <dir> --into shopmaster_restore_test
+ *
+ * WEEKLY, FROM GITHUB (15 Sep 2026)
+ *   .github/workflows/backup.yml runs this every Sunday and keeps the result
+ *   as an encrypted 90-day artifact - the repository is public, and an
+ *   artifact on a public repository can be downloaded by anyone with a
+ *   GitHub account, so it is never uploaded in the clear.
  *
  * Export is Extended JSON (ObjectIds, Dates and Decimals survive). Restore
  * writes into a DIFFERENT database name by default and refuses the live one
@@ -26,6 +34,13 @@ const flag = (name) => {
 };
 
 const ROOT = path.join(__dirname, '..', 'private', 'backups');
+
+/*
+ * Rebuilt by a job, not typed by a person - not worth 12 of the 14 MB:
+ * knowledgechunks (the RAG index, re-embedded every Sunday), aicaches (24-hour
+ * TTL), aiproviderstates (quota memory). --all includes them.
+ */
+const DERIVED = new Set(['knowledgechunks', 'aicaches', 'aiproviderstates']);
 
 const run = async () => {
   const uri = process.env.MONGO_URI;
@@ -54,9 +69,11 @@ const run = async () => {
   }
 
   const stamp = new Date().toISOString().slice(0, 16).replace(/:/g, '-');
-  const dir = path.join(ROOT, stamp);
+  const out = flag('--out');
+  const dir = out && out !== true ? path.resolve(out) : path.join(ROOT, stamp);
   fs.mkdirSync(dir, { recursive: true });
-  const names = (await live.listCollections({}, { nameOnly: true }).toArray()).map((c) => c.name);
+  const all = (await live.listCollections({}, { nameOnly: true }).toArray()).map((c) => c.name);
+  const names = flag('--all') ? all : all.filter((n) => !DERIVED.has(n));
   let total = 0;
   for (const name of names.sort()) {
     const docs = await live.collection(name).find({}).toArray();
@@ -66,6 +83,8 @@ const run = async () => {
   }
   console.log(`\n${total} documents from ${live.databaseName} -> ${dir}`);
   await client.close();
+  // An empty export is a wrong URI or a wrong database, never a backup.
+  if (total === 0) throw new Error('0 documents exported - check MONGO_URI (database name included)');
 };
 
 run().catch((err) => {

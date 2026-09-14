@@ -1,0 +1,111 @@
+# The weekly copy of the database (plan 2.37b, 15 Sep 2026).
+#
+# WHY
+#   Atlas M0 keeps no backups - that starts at M10. Until cutover upgrades the
+#   cluster, `backend/backupDb.js` is the only copy of orders, payouts, sellers
+#   and reviews outside Atlas, and "Rajat remembers to run it" is not a
+#   schedule. This runs it every Sunday and keeps the export for 90 days.
+#
+# WHY IT IS ENCRYPTED
+#   This repository is public. An artifact on a public repository can be
+#   downloaded by anyone with a GitHub account, and the export holds
+#   addresses, phone numbers and password hashes. So the export is
+#   AES-256 encrypted with a passphrase that lives only in the repository
+#   secrets and Rajat's password manager. Without the secret the job skips
+#   itself with a notice - it never uploads in the clear.
+#
+# SET-UP (one manual step - the MONGO_URI secret already exists)
+#   Settings -> Secrets and variables -> Actions -> New repository secret
+#     Name:  BACKUP_PASSPHRASE
+#     Value: a long random passphrase (e.g. 6+ words). Keep a copy in the
+#            password manager: a backup nobody can open is not a backup.
+#
+# RESTORE (on the laptop)
+#   1. Actions -> "weekly backup" -> the run -> download `db-backup-<date>`
+#   2. unzip it; then, with the passphrase:
+#        openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 \
+#          -in backup.tar.gz.enc -out backup.tar.gz -pass pass:'<passphrase>'
+#        tar xzf backup.tar.gz
+#   3. cd backend && node backupDb.js --restore ./backup --into shopmaster_restore_test
+#      (it refuses the live database name without --force, on purpose)
+#
+# COST
+#   Nothing: Actions minutes and artifact storage are free on public repos.
+name: weekly backup
+
+on:
+  schedule:
+    # Sunday 21:00 UTC = 02:30 IST Monday, an hour before the re-index job.
+    - cron: '0 21 * * 0'
+  workflow_dispatch:
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: skip until the secrets exist
+        id: gate
+        env:
+          HAVE_MONGO: ${{ secrets.MONGO_URI != '' }}
+          HAVE_PASS: ${{ secrets.BACKUP_PASSPHRASE != '' }}
+        run: |
+          if [ "$HAVE_MONGO" != "true" ]; then
+            echo "::error::MONGO_URI is not set as a repository secret"
+            exit 1
+          fi
+          if [ "$HAVE_PASS" != "true" ]; then
+            echo "::warning::backup skipped - add BACKUP_PASSPHRASE as a repository secret (see the comment at the top of backup.yml). The repository is public, so an unencrypted export is never uploaded."
+            echo "go=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "go=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.gate.outputs.go == 'true'
+      - uses: actions/setup-node@v4
+        if: steps.gate.outputs.go == 'true'
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - name: install
+        if: steps.gate.outputs.go == 'true'
+        working-directory: backend
+        run: npm ci --no-audit --no-fund
+
+      - name: export every collection
+        if: steps.gate.outputs.go == 'true'
+        working-directory: backend
+        env:
+          MONGO_URI: ${{ secrets.MONGO_URI }}
+        # The script itself fails on 0 documents, so a wrong URI is a red run,
+        # not an empty artifact nobody looks at.
+        run: node backupDb.js --out ./backup
+
+      - name: encrypt
+        if: steps.gate.outputs.go == 'true'
+        working-directory: backend
+        env:
+          PASS: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          tar czf backup.tar.gz backup
+          openssl enc -aes-256-cbc -pbkdf2 -iter 200000 -salt \
+            -in backup.tar.gz -out backup.tar.gz.enc -pass env:PASS
+          rm -rf backup backup.tar.gz
+          ls -l backup.tar.gz.enc
+          # Prove it opens with the same passphrase before it is kept.
+          openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 \
+            -in backup.tar.gz.enc -pass env:PASS | tar tzf - | head -3
+
+      - name: stamp
+        if: steps.gate.outputs.go == 'true'
+        id: stamp
+        run: echo "date=$(date -u +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@v4
+        if: steps.gate.outputs.go == 'true'
+        with:
+          name: db-backup-${{ steps.stamp.outputs.date }}
+          path: backend/backup.tar.gz.enc
+          retention-days: 90
+          if-no-files-found: error
