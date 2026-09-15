@@ -162,6 +162,9 @@ export default function ProductForm({ productId, copyFromId }) {
   const [usage, setUsage] = useState(null);
   // Whether this shop is registered under GST - decides if the tax fields show at all.
   const [gstRegistered, setGstRegistered] = useState(false);
+  // If that lookup fails the fields stay hidden - and the form says so, rather than
+  // letting a registered shop save a product with no tax facts without knowing why.
+  const [gstCheckFailed, setGstCheckFailed] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -180,7 +183,10 @@ export default function ProductForm({ productId, copyFromId }) {
         // an unregistered one never sees the fields (nothing here asks anyone to register).
         authedFetch('/seller/application')
           .then((a) => !cancelled && setGstRegistered(a?.application?.gstMode === 'gstin' || Boolean(a?.application?.gstin)))
-          .catch(() => {});
+          .catch((err) => {
+            console.error('GST status check failed:', err.message);
+            if (!cancelled) setGstCheckFailed(true);
+          });
 
         const load = async (id) => {
           const data = await authedFetch(`/seller/products/${id}`);
@@ -688,6 +694,9 @@ export default function ProductForm({ productId, copyFromId }) {
           </Field>
           {/* Tax facts, for a GST-registered shop only: the invoice ShopMaster prints
               on their behalf is a tax invoice and needs the HSN and the slab per line. */}
+          {gstCheckFailed && !gstRegistered && (
+            <p className="text-xs text-destructive sm:col-span-2">Could not check whether your shop is GST-registered, so the HSN / GST rate fields are hidden. Reload the page before saving if you are registered.</p>
+          )}
           {(gstRegistered || Boolean(form.hsn) || typeof form.gstRate === 'number') && (
             <>
               <Field id="hsn" label="HSN code" hint="From your GST invoices - 4, 6 or 8 digits (jewellery 7113, 7117).">

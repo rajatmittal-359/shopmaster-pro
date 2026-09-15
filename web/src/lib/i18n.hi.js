@@ -730,6 +730,7 @@ const HI = {
   'Line': 'लाइन',
   'Print, cut along the dotted line, tie one on each piece with the seal - then take the pack proof photo with the tag showing. A piece that comes back without it is not a change-of-mind return.': 'प्रिंट करें, बिंदुओं वाली लाइन पर काटें, हर पीस पर सील से एक टैग बाँधें - फिर टैग दिखाते हुए पैकिंग का सबूत वाली फोटो लें। बिना टैग लौटा पीस मन बदलने वाली वापसी नहीं है।',
   Invoice: 'बिल',
+  'Invoice number pending - reload in a moment': 'बिल नंबर अभी बन रहा है - थोड़ी देर में पेज फिर खोलें',
 };
 
 export default HI;

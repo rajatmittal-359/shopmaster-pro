@@ -10,18 +10,12 @@ import { BUSINESS as DEFAULT_BUSINESS } from '@/config/policy';
 import { Button } from '@/components/ui/button';
 
 /*
- * The GST split on a tax-inclusive line - the same arithmetic as
- * backend/utils/invoice.js taxSplit: taxable = amount ÷ (1 + rate), tax is
- * the remainder, CGST/SGST halves at home, IGST away, rounding paisa to SGST.
+ * The tax split is NOT computed here. backend/utils/invoice.js taxFor works
+ * it out once per seller (scheme by place of supply, per-line split, totals)
+ * and getOrderDetails sends it as `sellers[id].tax`; this page prints what
+ * it is sent, so the customer's copy and the seller's figures are one.
  */
 const r2 = (n) => Math.round(n * 100) / 100;
-const taxSplit = (amount, rate, scheme) => {
-  const taxable = r2(amount / (1 + (Number(rate) || 0) / 100));
-  const tax = r2(amount - taxable);
-  if (scheme === 'igst') return { taxable, cgst: 0, sgst: 0, igst: tax, tax };
-  const half = r2(tax / 2);
-  return { taxable, cgst: half, sgst: r2(tax - half), igst: 0, tax };
-};
 
 /**
  * The customer's copy of what they bought.
@@ -126,15 +120,19 @@ export default function Bill({ orderId, business }) {
         const s = g.seller;
         const taxed = Boolean(s?.gstin);
         const title = taxed ? 'Tax Invoice' : 'Invoice';
-        const number = (order.invoices || []).find((x) => String(x.sellerId) === g.key)?.number || '';
+        const invoice = (order.invoices || []).find((x) => String(x.sellerId) === g.key) || null;
+        const number = invoice?.number || '';
         // Each line net of its own discount - what the customer actually paid for it.
         const net = (i) => r2(i.price * i.quantity - (i.discountAmount || 0));
         const gross = g.items.reduce((sum, i) => sum + i.price * i.quantity, 0);
         const discount = r2(g.items.reduce((sum, i) => sum + (i.discountAmount || 0), 0));
         const subtotal = r2(gross - discount);
-        const scheme = s?.taxScheme || 'cgst_sgst';
-        const splits = taxed ? g.items.map((i) => taxSplit(net(i), i.gstRate, scheme)) : [];
-        const totals = splits.reduce((a, x) => ({ taxable: r2(a.taxable + x.taxable), cgst: r2(a.cgst + x.cgst), sgst: r2(a.sgst + x.sgst), igst: r2(a.igst + x.igst) }), { taxable: 0, cgst: 0, sgst: 0, igst: 0 });
+        // The server's tax picture for this seller (null for the unregistered).
+        const tax = taxed ? s.tax || null : null;
+        const scheme = tax?.scheme || null;
+        const totals = tax?.totals || null;
+        // A tax invoice is only whole when every line split and the place of supply is known.
+        const whole = Boolean(tax && scheme && tax.unsplit === 0);
         const last = gi === groups.length - 1;
         return (
           <div key={g.key || gi} className={`mx-auto mb-10 max-w-3xl rounded-xl border border-border bg-background p-8 print:mb-0 print:rounded-none print:border-0 print:p-0 ${last ? '' : 'print:break-after-page'}`}>
@@ -155,10 +153,11 @@ export default function Bill({ orderId, business }) {
               </div>
               <div className="text-right">
                 <h1 className="text-base font-semibold">{title}</h1>
-                {number && <p className="mt-1 font-mono text-sm">{number}</p>}
+                {number ? <p className="mt-1 font-mono text-sm">{number}</p> : <p className="mt-1 text-xs text-destructive">Invoice number not issued yet - reload in a moment</p>}
                 <p className="mt-1 text-xs text-muted-foreground">Order {orderRef(order)}{multi ? ` · ${gi + 1} of ${groups.length}` : ''}</p>
-                <p className="text-xs text-muted-foreground">{on(order.createdAt)}</p>
-                {taxed && address?.state && <p className="text-xs text-muted-foreground">Place of supply: {address.state}</p>}
+                {/* The invoice is dated when it was ISSUED (the number's financial year follows that date); the order date is the second line. */}
+                <p className="text-xs text-muted-foreground">{invoice?.issuedAt ? `Issued ${on(invoice.issuedAt)} · ordered ${on(order.createdAt)}` : `Ordered ${on(order.createdAt)}`}</p>
+                {taxed && <p className="text-xs text-muted-foreground">Place of supply: {scheme ? `${address?.state || ''}${scheme === 'igst' ? ' (inter-state)' : ' (intra-state)'}` : 'could not be determined from the address'}</p>}
               </div>
             </header>
 
@@ -207,17 +206,17 @@ export default function Bill({ orderId, business }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {g.items.map((item, ii) => (
+                  {g.items.map((item) => (
                     <tr key={item._id} className="border-b border-border/60">
                       <td className="py-2.5">
                         {item.name}
                         {item.discountAmount > 0 && <span className="block text-xs text-muted-foreground">less {money(item.discountAmount)} discount</span>}
                       </td>
-                      {taxed && <td className="py-2.5 font-mono text-xs">{item.hsn || '—'}</td>}
+                      {taxed && <td className="py-2.5 font-mono text-xs">{item.hsn || <span className="font-sans text-destructive">not set</span>}</td>}
                       <td className="py-2.5 text-right tabular-nums">{item.quantity}</td>
                       <td className="py-2.5 text-right tabular-nums">{money(item.price)}</td>
-                      {taxed && <td className="py-2.5 text-right tabular-nums">{money(splits[ii].taxable)}</td>}
-                      {taxed && <td className="py-2.5 text-right tabular-nums">{item.gstRate === null || item.gstRate === undefined ? '—' : `${item.gstRate}%`}</td>}
+                      {taxed && <td className="py-2.5 text-right tabular-nums">{tax?.lines?.[String(item._id)] ? money(tax.lines[String(item._id)].taxable) : '—'}</td>}
+                      {taxed && <td className="py-2.5 text-right tabular-nums">{item.gstRate === null || item.gstRate === undefined ? <span className="text-destructive">rate not set</span> : `${item.gstRate}%`}</td>}
                       <td className="py-2.5 text-right tabular-nums">{money(net(item))}</td>
                     </tr>
                   ))}
@@ -226,7 +225,12 @@ export default function Bill({ orderId, business }) {
             </div>
 
             <dl className="ml-auto mt-4 w-full space-y-1.5 text-sm sm:w-64">
-              {taxed && (
+              {taxed && !whole && (
+                <p className="text-xs text-destructive">
+                  {!scheme ? 'The tax split is not shown: the place of supply could not be determined from the delivery address.' : `The tax split is not shown: ${tax?.unsplit || g.items.length} line(s) have no GST rate set by the seller.`}
+                </p>
+              )}
+              {taxed && whole && (
                 <>
                   <div className="flex justify-between">
                     <dt className="text-muted-foreground">Taxable value</dt>
@@ -252,7 +256,7 @@ export default function Bill({ orderId, business }) {
                 </>
               )}
               <div className="flex justify-between">
-                <dt className="text-muted-foreground">Item total{taxed ? ' (incl. GST)' : ''}</dt>
+                <dt className="text-muted-foreground">Item total{taxed && whole ? ' (incl. GST)' : ''}</dt>
                 <dd className="tabular-nums">{money(subtotal)}</dd>
               </div>
               {last && (
@@ -272,7 +276,7 @@ export default function Bill({ orderId, business }) {
             <footer className="mt-8 border-t border-border pt-4 text-xs leading-5 text-muted-foreground">
               <p>
                 {taxed
-                  ? `Tax invoice of ${s?.legalName || 'the seller'}, GSTIN ${s.gstin}. Prices are inclusive of GST; the split above is by place of supply. Tax payable on reverse charge: No.`
+                  ? `Tax invoice of ${s?.legalName || 'the seller'}, GSTIN ${s.gstin}. Prices are inclusive of GST${whole ? '; the split above is by place of supply' : ''}. Tax payable on reverse charge: No.`
                   : `${s?.legalName || 'The seller'} is not registered under GST. This is not a tax invoice; no GST has been charged on this sale.`}
               </p>
               <p className="mt-2">

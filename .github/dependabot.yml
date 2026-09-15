@@ -3,6 +3,9 @@
 # PR per set so the inbox is one PR a week, not fifteen; majors come alone.
 # Rajat merges after CI (tests.yml) is green - nothing installs on the laptop.
 # Security updates are separate and on by default for a public repo.
+# npm MAJORS are ignored on purpose: a major (eslint 10, vitest 5, Next 17)
+# needs a person reading the breaking-changes list, and the first run showed
+# it - eslint 10 opened red. Majors get taken deliberately, at a milestone.
 version: 2
 updates:
   - package-ecosystem: npm
@@ -17,6 +20,9 @@ updates:
       backend-minor-patch:
         update-types: [minor, patch]
     labels: [dependencies, backend]
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: npm
     directory: /web
     schedule:
@@ -29,6 +35,9 @@ updates:
       web-minor-patch:
         update-types: [minor, patch]
     labels: [dependencies, web]
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: github-actions
     directory: /
     schedule:

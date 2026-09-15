@@ -13,7 +13,7 @@ const { releaseReservation } = require("../utils/reservation");
 const { RETURN_WINDOW_DAYS, returnWindowFor } = require("../utils/payout");
 const Product = require("../models/Product");
 const Seller = require('../models/Seller');
-const { assignInvoiceNumbers, taxScheme } = require('../utils/invoice');
+const { assignInvoiceNumbers, taxFor } = require('../utils/invoice');
 const mongoose = require('mongoose'); 
 const Address = require('../models/Address'); 
 const { applyInventoryChange } = require("./inventoryController");
@@ -377,11 +377,6 @@ exports.checkout = async (req, res) => {
       await markCouponUsed(coupon.code, req.user._id, session);
     }
 
-    // The sellers' invoice numbers - COD is confirmed here (utils/invoice).
-    // A number that cannot be issued must not lose the sale: it is logged,
-    // and the Invoice page issues it on first open instead.
-    await assignInvoiceNumbers(order[0], { session }).catch((err) => console.error('invoice numbers not issued for', order[0]._id, err.message));
-
     // ✅ Clear cart
     cart.items = [];
     cart.totalAmount = 0;
@@ -389,6 +384,12 @@ exports.checkout = async (req, res) => {
 
     // ✅ Commit DB transaction
     await session.commitTransaction();
+
+    // The sellers' invoice numbers - AFTER the commit, never inside it: the
+    // Seller counter is shared by every checkout for that shop, and a write
+    // conflict there must not abort a sale. A failed issue is logged and the
+    // Invoice page issues on first open (utils/invoice).
+    await assignInvoiceNumbers(order[0]).catch((err) => console.error('invoice numbers not issued for', order[0]._id, err.message));
 
     // 🔥 Immediate response
     res.status(201).json({
@@ -522,9 +523,10 @@ exports.getOrderDetails = async (req, res) => {
       await assignInvoiceNumbers(order).catch((err) => console.error('invoice numbers not issued for', order._id, err.message));
     }
 
-    // Home or away for a registered seller: CGST+SGST or IGST on their invoice (utils/invoice).
-    const deliveryState = order.shippingAddressId?.state || '';
-    const withTax = Object.fromEntries(Object.entries({ ...sellers, ...stamped }).map(([k, v]) => [k, { ...v, taxScheme: v.gstin ? taxScheme(v.gstin, deliveryState) : null }]));
+    // A registered seller's tax picture - scheme by place of supply, the split
+    // per line, totals - computed here once and printed as sent (utils/invoice).
+    const delivery = { state: order.shippingAddressId?.state || '', pincode: order.shippingAddressId?.zipCode || '' };
+    const withTax = Object.fromEntries(Object.entries({ ...sellers, ...stamped }).map(([k, v]) => [k, { ...v, tax: taxFor(v.gstin, delivery, (order.items || []).filter((i) => String(i.sellerId) === k && i.status !== 'cancelled')) }]));
 
     res.json({
       success: true,

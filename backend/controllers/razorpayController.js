@@ -103,10 +103,6 @@ const commitStockForOrder = async (order, session) => {
     order.reservationStatus = 'consumed';
   }
 
-  // The sellers' invoice numbers - a prepaid order is confirmed here, once
-  // (utils/invoice; guarded, so a replayed webhook issues no second set).
-  await require('../utils/invoice').assignInvoiceNumbers(order, { session }).catch((err) => console.error('invoice numbers not issued for', order._id, err.message));
-
   return { ok: true };
 };
 
@@ -508,6 +504,9 @@ exports.verifyRazorpayPayment = async (req, res) => {
 
     await session.commitTransaction();
 
+    // The sellers' invoice numbers - after the commit, never inside it (utils/invoice).
+    await require('../utils/invoice').assignInvoiceNumbers(order).catch((err) => console.error('invoice numbers not issued for', order._id, err.message));
+
     // Reflect the committed state in the response payload.
     order.paymentMethod = "razorpay";
     order.paymentStatus = "paid";
@@ -675,7 +674,10 @@ exports.handleRazorpayWebhook = async (req, res) => {
         );
         
         await session.commitTransaction();
-        
+
+        // The sellers' invoice numbers - after the commit, never inside it (utils/invoice).
+        await require('../utils/invoice').assignInvoiceNumbers(order).catch((err) => console.error('invoice numbers not issued for', order._id, err.message));
+
         /*
          * The confirmation email.
          *

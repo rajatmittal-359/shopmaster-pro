@@ -107,11 +107,14 @@ export default function SellerOrderDetail({ orderId }) {
             <p className="text-sm text-muted-foreground">
               {order.customerId?.name} · {order.customerId?.email} · {when(order.createdAt)}
             </p>
-            {order.invoiceNumber && (
+            {/* The seller files this number; a missing one is said, not hidden. */}
+            {order.invoiceNumber ? (
               <p className="text-sm text-muted-foreground">
                 {t('Invoice')} <span className="font-mono">{order.invoiceNumber}</span>
               </p>
-            )}
+            ) : order.status !== 'cancelled' ? (
+              <p className="text-sm text-muted-foreground">{t('Invoice number pending - reload in a moment')}</p>
+            ) : null}
           </div>
           <div className="text-right">
             <p className="font-medium capitalize">{order.status}</p>

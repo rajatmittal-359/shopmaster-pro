@@ -38,6 +38,8 @@ const RULE = {
   R: ['Return or exchange within the window only with this tag on and unbroken.', 'वापसी या बदली तभी जब यह टैग लगा हो और टूटा न हो।'],
   X: ['Exchange only, with this tag on and unbroken. No refund for change of mind.', 'सिर्फ़ बदली - यह टैग लगा और सही हो। मन बदलने पर पैसा वापस नहीं।'],
   N: ['Not returnable for change of mind (hygiene item). Damaged or wrong item: always.', 'मन बदलने पर वापसी नहीं (स्वच्छता की चीज़)। टूटा या गलत आए तो हमेशा।'],
+  // A line from before modes were stamped: promise nothing the order page does not.
+  '': ['Return rule: see this item on your order page. Keep the tag on until you decide.', 'वापसी का नियम: अपने ऑर्डर पेज पर इस आइटम पर देखें। तय होने तक टैग लगा रहने दें।'],
 };
 
 export default function ReturnTag({ orderId }) {
@@ -94,7 +96,7 @@ export default function ReturnTag({ orderId }) {
 
       <div className="grid gap-4 sm:grid-cols-2 print:grid-cols-2 print:gap-3">
         {cards.map(({ key, item, unit, line }) => {
-          const [en, hi] = RULE[item.returnMode] || RULE.R;
+          const [en, hi] = RULE[item.returnMode] || RULE[''];
           return (
             <article key={key} className="break-inside-avoid rounded-lg border-2 border-dashed border-foreground/40 bg-white p-4 text-black print:rounded-none" style={{ minHeight: '5.2cm' }}>
               <div className="flex items-start justify-between gap-3">

@@ -2,7 +2,13 @@
 const { sendError } = require('../utils/apiError');
 const sellerRules = require('../config/sellerRules');
 const Product = require('../models/Product');
-const { cleanHsn, cleanGstRate } = require('../utils/invoice');
+const { cleanHsn, cleanGstRate, taxFactsError, assignInvoiceNumbers } = require('../utils/invoice');
+
+/** Whether this shop holds a GSTIN - then every product must carry HSN + rate (utils/invoice). */
+const isGstRegistered = async (userId) => {
+  const s = await Seller.findOne({ userId }).select('application.gstMode application.gstin gstNumber').lean();
+  return Boolean(s && (s.application?.gstMode === 'gstin' || s.application?.gstin || s.gstNumber));
+};
 const Order = require('../models/Order');
 const Seller = require('../models/Seller');
 /** Plan 2.32: up to six short Q&As, text only. */
@@ -254,6 +260,9 @@ exports.addProduct = async (req, res) => {
     }
     const modeError = await returnModeError(returnMode, category);
     if (modeError) return res.status(400).json({ message: modeError });
+    // A typo in the HSN is refused, not silently blanked; a registered shop must give both.
+    const taxError = taxFactsError({ hsn, gstRate }, await isGstRegistered(req.user.id));
+    if (taxError) return res.status(400).json({ message: taxError });
 
     const product = new Product({
       name,
@@ -394,6 +403,10 @@ exports.updateProduct = async (req, res) => {
         message: "Product not found or you do not have permission",
       });
     }
+
+    // Tax facts as they will stand after this edit - the untouched half read from the product.
+    const taxError = taxFactsError({ hsn: hsn === undefined ? product.hsn : hsn, gstRate: gstRate === undefined ? product.gstRate : gstRate }, await isGstRegistered(req.user.id));
+    if (taxError) return res.status(400).json({ message: taxError });
 
     if (category) {
       const categoryError = await validateLeafCategory(category);
@@ -769,11 +782,19 @@ exports.getOrderDetails = async (req, res) => {
 
     const fulfilment = fulfilmentOf(order, sellerId);
 
+    // A confirmed order still without its numbers (issue failed at checkout,
+    // or it predates numbering) gets them here too - the seller is the one
+    // who files the invoice and must not wait for the customer to open theirs.
+    if (!(order.invoices || []).length && (order.paymentMethod === 'cod' || order.paymentStatus === 'paid') && order.status !== 'cancelled') {
+      await assignInvoiceNumbers(order).catch((err) => console.error('invoice numbers not issued for', order._id, err.message));
+    }
+    const invoiceNumber = (order.invoices || []).find((x) => String(x.sellerId) === String(sellerId))?.number || null;
+
     const orderData = {
       _id: order._id,
       orderNumber: order.orderNumber,
       // This seller's own invoice serial for the order (utils/invoice) - what they file.
-      invoiceNumber: (order.invoices || []).find((x) => String(x.sellerId) === String(sellerId))?.number || null,
+      invoiceNumber: invoiceNumber,
       customerId: order.customerId,
       items: sellerItems,
 
