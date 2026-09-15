@@ -99,6 +99,18 @@ export default async function TermsPage() {
         </p>
       </Section>
 
+      <Section title="Complaints">
+        <p>
+          Something wrong with an order? Start from the order page (Something&rsquo;s
+          wrong) so the seller and we see it together. For anything unresolved, our
+          grievance officer{' '}
+          {BUSINESS.grievance ? <>is {BUSINESS.grievance.name}, {BUSINESS.grievance.designation} ({BUSINESS.grievance.email})</> : <>can be reached at {BUSINESS.email}</>}.
+          We acknowledge every complaint within 48 hours and resolve it within one month,
+          as the Consumer Protection (E-Commerce) Rules 2020 require. The National
+          Consumer Helpline is 1915.
+        </p>
+      </Section>
+
       <Section title="Governing law">
         <p>
           These terms are governed by the laws of India, and the courts at Jaipur,
