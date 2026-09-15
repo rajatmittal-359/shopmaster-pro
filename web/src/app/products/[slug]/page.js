@@ -46,6 +46,9 @@ export async function generateMetadata({ params }) {
 export default async function ProductPage({ params }) {
   const { slug } = await params;
   const product = await getProduct(slug);
+  // An old /products/<mongo id> URL is sent to the slug by src/proxy.js before
+  // anything renders (a redirect from here would arrive after the loading
+  // shell has already streamed a 200). The canonical below covers the rest.
 
   /*
    * BEFORE any JSX is returned. Once the response starts streaming it is
