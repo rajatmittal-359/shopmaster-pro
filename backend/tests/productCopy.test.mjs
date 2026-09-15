@@ -5,7 +5,7 @@
  *   The prompt forbids all of this. Two of these rules exist BECAUSE a real run
  *   broke them anyway: the model announced that a pair of stud earrings weighs
  *   20 grams (that was the parcel weight, fed to it by mistake) and opened
- *   another description with "from Charming Jewels" while the rules said not to.
+ *   another description with "from Meera Jewels" while the rules said not to.
  *
  *   Between asking and getting there is a model. A prompt is a request; these
  *   are the guarantee.
@@ -41,7 +41,7 @@ describe('what the model is told', () => {
     category: 'Necklaces & Pendants',
     price: 6800,
     weight: 0.16,
-    brand: 'Charming Jewels',
+    brand: 'Meera Jewels',
   };
 
   it('never hands over the parcel weight', () => {
@@ -58,7 +58,7 @@ describe('what the model is told', () => {
 
     // Given it, the model advertised with it however plainly it was told not
     // to. Withholding a fact beats forbidding its use.
-    expect(prompt).not.toContain('Charming Jewels');
+    expect(prompt).not.toContain('Meera Jewels');
   });
 
   it('does hand over the price, which is how it knows bridal from everyday', () => {
@@ -123,17 +123,17 @@ describe('stating a weight we do not know', () => {
 describe('advertising the shop inside its own product copy', () => {
   it('catches the opening a real run produced', () => {
     expect(
-      mentionsBrand('<p>These studs from Charming Jewels are lovely.</p>', 'Charming Jewels')
+      mentionsBrand('<p>These studs from Meera Jewels are lovely.</p>', 'Meera Jewels')
     ).toBe(true);
   });
 
   it('is not fooled by capitals', () => {
-    expect(mentionsBrand('<p>By CHARMING JEWELS.</p>', 'Charming Jewels')).toBe(true);
+    expect(mentionsBrand('<p>By MEERA JEWELS.</p>', 'Meera Jewels')).toBe(true);
   });
 
   it('leaves an ordinary description alone', () => {
     expect(
-      mentionsBrand('<p>A charming floral ring with pearl detailing.</p>', 'Charming Jewels')
+      mentionsBrand('<p>A charming floral ring with pearl detailing.</p>', 'Meera Jewels')
     ).toBe(false);
   });
 
@@ -150,7 +150,7 @@ describe('length', () => {
 
   it('treats the old boilerplate as too thin to be worth indexing', () => {
     const boilerplate =
-      'Antique Gold Temple Necklace - carefully selected and finished to a high standard, dispatched by Charming Jewels.';
+      'Antique Gold Temple Necklace - carefully selected and finished to a high standard, dispatched by Meera Jewels.';
     expect(wordCount(boilerplate)).toBeLessThan(MIN_WORDS);
   });
 });

@@ -64,9 +64,9 @@ describe('PIN ↔ state and names', () => {
     expect(kyc.pinMatchesState('30201', '08')).toBeNull();
   });
   it('reads names the way a person does', () => {
-    expect(kyc.namesAgree('Charming Jewels', 'ABHA MITTAL (CHARMING JEWELS)')).toBe(true);
-    expect(kyc.namesAgree('Charming Jewels Pvt Ltd', 'charming jewels')).toBe(true);
-    expect(kyc.namesAgree('Rajat Mittal', 'Charming Jewels')).toBe(false);
+    expect(kyc.namesAgree('Meera Jewels', 'ABHA MITTAL (MEERA JEWELS)')).toBe(true);
+    expect(kyc.namesAgree('Meera Jewels Pvt Ltd', 'meera jewels')).toBe(true);
+    expect(kyc.namesAgree('Rajat Mittal', 'Meera Jewels')).toBe(false);
     expect(kyc.namesAgree('', 'x')).toBeNull();
   });
 });
@@ -74,16 +74,16 @@ describe('PIN ↔ state and names', () => {
 describe('applicationChecks - the admin\'s list', () => {
   it('ticks a consistent Jaipur GST seller and flags a mismatch', () => {
     const good = kyc.applicationChecks({
-      businessName: 'Charming Jewels',
+      businessName: 'Meera Jewels',
       application: { pan: 'AAGFF2194N', gstMode: 'gstin', gstin: '07AAGFF2194N1Z1', shopPhoto: 'https://x/y.jpg' },
       pickupAddress: { pincode: '110001' },
-      bankDetails: { accountNumber: '1', ifscCode: 'HDFC0003550', accountHolderName: 'Charming Jewels', bankName: 'HDFC Bank', branch: 'Jaipur' },
+      bankDetails: { accountNumber: '1', ifscCode: 'HDFC0003550', accountHolderName: 'Meera Jewels', bankName: 'HDFC Bank', branch: 'Jaipur' },
     });
     const byKey = Object.fromEntries(good.map((c) => [c.key, c.ok]));
     expect(byKey).toMatchObject({ pan: true, gstin: true, 'gst-pan': true, 'gst-state': true, ifsc: true, 'bank-name': true, photo: true });
 
     const bad = kyc.applicationChecks({
-      businessName: 'Charming Jewels',
+      businessName: 'Meera Jewels',
       application: { pan: 'ABCPD1234E', gstMode: 'gstin', gstin: '07AAGFF2194N1Z1' },
       pickupAddress: { pincode: '302019' },
       bankDetails: { accountNumber: '1', ifscCode: 'HDFC0003550', accountHolderName: 'Rajat Mittal' },

@@ -273,7 +273,7 @@ export default function SellerSettings() {
                 <PanelCard title="Your shop on the web" lead="Shown on your shop page and read by Google. Two honest sentences and your real profiles do more than any keyword.">
                   <div className="space-y-5">
                     <Field id="about" label="About your shop" hint={`${form.about.length}/600 · who you are, what you make or sell, since when. It becomes your page's description on Google.`}>
-                      <Textarea id="about" value={form.about} onChange={(e) => setForm({ ...form, about: e.target.value.slice(0, 600) })} rows={3} placeholder="Family-run jewellery shop in Devi Nagar, Jaipur, since 1998. Kundan, meenakari and pearl pieces made by hand; every piece photographed on the actual item." />
+                      <Textarea id="about" value={form.about} onChange={(e) => setForm({ ...form, about: e.target.value.slice(0, 600) })} rows={3} placeholder="Family-run handloom shop in Bapu Bazaar, Jaipur, since 1998. Block-printed bedsheets and dupattas made by hand; every piece photographed on the actual item." />
                     </Field>
                     <div className="grid gap-4 sm:grid-cols-2">
                       {[

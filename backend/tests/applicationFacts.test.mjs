@@ -28,7 +28,7 @@ describe('applicationFacts', () => {
       pickupAddress: { city: 'Jaipur', state: 'Rajasthan', pincode: '302019' },
       bankDetails: { accountNumber: '1234' },
       gstNumber: '',
-      about: 'Family-run jewellery shop in Devi Nagar since 1998, kundan and meenakari made by hand, every piece photographed on the item.',
+      about: 'Family-run handloom shop in Jaipur since 1998, kundan and meenakari made by hand, every piece photographed on the item.',
       links: { instagram: 'https://instagram.com/x', googleBusiness: '', website: '' },
     });
     expect(a).toMatchObject({ emailVerified: true, accountAgeDays: 30, pickup: 'Jaipur, Rajasthan 302019', inJaipur: true, bank: true, gst: false, links: 1 });

@@ -139,14 +139,14 @@ export default async function Home() {
         Two reasons beyond telling the story: Razorpay's website check and
         Merchant Center both want a verifiable business, and a Jaipur address in
         readable text is what ties this site to the Google Business Profile that
-        already ranks for the family shop.
+        already ranks for the operator.
       */}
       <section className="border-t border-border bg-muted/30">
         <div className="mx-auto grid max-w-5xl gap-6 px-4 py-12 sm:grid-cols-2">
           <div>
             <h2 className="text-lg font-semibold">The shop behind it</h2>
             <p className="mt-3 text-[15px] leading-7 text-muted-foreground">
-              ShopMaster Pro is run from Devi Nagar, Jaipur by{' '}
+              ShopMaster Pro is run from Jaipur by{' '}
               {business.legalName}. Independent sellers list here across every
               category, and every product page names the seller it comes from.
             </p>

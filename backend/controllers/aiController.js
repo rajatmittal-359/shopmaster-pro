@@ -59,7 +59,7 @@ const isImageDataUrl = (s) =>
 
 /**
  * WHO IS EXEMPT FROM THE CAPS
- *   The admin, and the platform's own shop (Charming Jewels - the same person).
+ *   The admin, and the platform's own shop (the same person, two hats).
  *   Rajat's rule: while there are no other sellers, that account uses the AI
  *   freely, even if it leaves nothing for anyone else that day; the caps are
  *   for the sellers who come later. The exempt account can put the caps back

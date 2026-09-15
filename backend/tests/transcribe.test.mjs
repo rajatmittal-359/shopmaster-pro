@@ -182,7 +182,7 @@ describe('Cloudflare Whisper - road 2 (15 Sep 2026, plan 2.37)', () => {
         const body = JSON.parse(init.body);
         expect(body.audio).toBeTypeOf('string');
         expect(body.vad_filter).toBe(true);
-        expect(body.initial_prompt).toContain('Charming Jewels');
+        expect(body.initial_prompt).toContain('Jaipur');
         expect(init.headers.Authorization).toBe('Bearer cf');
         return { ok: true, json: async () => ({ success: true, result: { text: 'payment kab aayega', transcription_info: { language: 'hi', duration: 3.4 } } }) };
       }

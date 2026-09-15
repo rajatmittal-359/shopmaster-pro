@@ -121,8 +121,8 @@ describe('what it refuses or corrects', () => {
 
   it('warns when the draft states a weight or names the shop', async () => {
     const r = await draftListing(
-      { name: 'x', brand: 'Charming Jewels', categoryOptions: CATS },
-      answering({ ...good, description: '<p>Weighs 20 grams, from Charming Jewels.</p>' })
+      { name: 'x', brand: 'Meera Jewels', categoryOptions: CATS },
+      answering({ ...good, description: '<p>Weighs 20 grams, from Meera Jewels.</p>' })
     );
     expect(r.warnings.join(' ')).toMatch(/weight/);
     expect(r.warnings.join(' ')).toMatch(/named your shop/);

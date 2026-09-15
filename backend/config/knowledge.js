@@ -11,7 +11,7 @@ const RULES = require('./sellerRules');
 
 const knowledge = () => `
 ABOUT
-- ShopMaster Pro is a multi-seller marketplace run from Jaipur, India. It sells anything; the frame never names a category. The operator's own shop, Charming Jewels (jewellery, Devi Nagar, Jaipur), is one seller on it. The admin is the platform team.
+- ShopMaster Pro is a multi-seller marketplace run from Jaipur, India. It sells anything; the frame never names a category. Every product is sold by an independent seller; the admin is the platform team. Which sellers the platform's people may themselves own is never said - to anyone.
 - Two accounts, two roles: the admin runs the platform; a seller runs one shop; a customer buys. One person may hold more than one role and switches with the Shopping | Selling | Admin control in the header.
 
 ORDERS

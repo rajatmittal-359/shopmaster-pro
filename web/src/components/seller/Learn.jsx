@@ -61,7 +61,7 @@ const LESSONS = {
       steps: [
         ['ग्राहक को सामान मिला → 7 दिन रुकता है (वापसी का समय) → फिर आपके बैंक में।', 'सीधे उसी खाते में जो Payments में डाला है।'],
         ['Payments पेज पर हर रुपये का हिसाब है - कौन सा ऑर्डर, कितना, कब।', ''],
-        ['हमारी दुकान (Charming Jewels) पर कमीशन 0 है। बाकी दुकानों पर 8%।', ''],
+        ['कमीशन आम तौर पर 8% है; एडमिन किसी दुकान के लिए अलग दर रख सकता है - आपकी दर Settings में लिखी है।', ''],
         ['अगर कोई कटौती हो (जैसे ऑर्डर रद्द करने का ₹50), तो उसी लाइन में लिखा होगा।', 'महीने में 2 रद्द मुफ़्त हैं।'],
       ],
       href: '/seller/payments',
@@ -139,7 +139,7 @@ const LESSONS = {
       steps: [
         ['Customer receives it → 7 days pass (the return window) → your bank.', 'Straight to the account in Payments.'],
         ['Payments lists every rupee - which order, how much, when.', ''],
-        ['Our own shop (Charming Jewels) pays 0% commission; others 8%.', ''],
+        ['Commission is 8% by default; the admin can set a different rate for a shop - yours is under Settings.', ''],
         ['Any deduction (a ₹50 cancel charge) is on the same line.', 'Two cancels a month are free.'],
       ],
       href: '/seller/payments',

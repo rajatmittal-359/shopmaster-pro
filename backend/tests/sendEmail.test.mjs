@@ -129,12 +129,12 @@ describe('sending a transactional email', () => {
   });
 
   it('uses a configured sender name when one is set', async () => {
-    process.env.BREVO_FROM_NAME = 'Charming Jewels';
+    process.env.BREVO_FROM_NAME = 'Meera Jewels';
     global.fetch = vi.fn(async () => okResponse());
 
     await sendEmail({ to: 'buyer@example.com', subject: 'Hi', html: '<p>Hi</p>' });
 
     const body = JSON.parse(global.fetch.mock.calls[0][1].body);
-    expect(body.sender.name).toBe('Charming Jewels');
+    expect(body.sender.name).toBe('Meera Jewels');
   });
 });

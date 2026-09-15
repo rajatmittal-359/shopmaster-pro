@@ -5,7 +5,7 @@ const Seller = require('../models/Seller');
  *
  * `Product.sellerId` points at the seller's User, and the public routes used
  * to populate its `name` - so every product page said "Sold by Rajat Mittal",
- * a person, while that seller's own page says "Charming Jewels". Etsy and
+ * a person, while that seller's own page says the shop's name. Etsy and
  * Amazon name the shop, never the owner; and naming the owner on every
  * product also tells the world which shop the platform's operator runs, which
  * the plan says never to reveal.

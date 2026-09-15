@@ -28,7 +28,7 @@ const settingsSchema = new mongoose.Schema(
 
     business: {
       tradeName: { type: String, trim: true, default: 'ShopMaster Pro' },
-      legalName: { type: String, trim: true, default: 'Charming Jewels' },
+      legalName: { type: String, trim: true, default: 'ShopMaster Pro' },
       tagline: { type: String, trim: true, default: 'A marketplace from Jaipur' },
       email: { type: String, trim: true, default: '' },
       phone: { type: String, trim: true, default: '' },

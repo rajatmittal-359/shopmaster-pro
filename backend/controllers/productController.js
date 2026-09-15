@@ -191,7 +191,7 @@ exports.listProducts = async (req, res) => {
     if (search) require('../models/SearchLog').record(search, total);
 
     res.json({
-      // Each with its shop's name - the page says "Sold by Charming Jewels",
+      // Each with its shop's name - the page says "Sold by <shop name>",
       // never the owner's name. One extra query for the whole page.
       products: await withShop(products),
       totalPages: Math.ceil(total / numericLimit),

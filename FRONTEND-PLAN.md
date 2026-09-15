@@ -155,7 +155,7 @@ maintain it. **Revisit at 16.4.**
 
 Decided 7 Sep 2026, from Rajat: a friend is joining as a seller, and sellers of
 any category may follow - the sample already includes markers, backpacks,
-earbuds, whey protein, LED lights, cables and kurtas. Charming Jewels is one
+earbuds, whey protein, LED lights, cables and kurtas. the house shop is one
 seller on this marketplace, not what the marketplace is.
 
 **What follows from that, in the code:**
@@ -343,7 +343,7 @@ one per line.
 ### 4.3 `/` — a real home page
 
 Currently a redirect. It becomes a page: what the shop is, the categories, a
-few products, and the Charming Jewels story with the real Jaipur address. The
+few products, and the the house shop story with the real Jaipur address. The
 `Organization` structured data lives here — and since 2026 that is also where
 `hasMerchantReturnPolicy` and `hasShippingService` belong.
 
@@ -880,7 +880,7 @@ top-ups only if premium demand actually appears.
 12 Sep 2026. Rajat: *"jo bhi use kare - admin, seller, customer, Claude Code -
 sabko ek interface milna chahiye: kitne AI hain, kya-kya model, select karne
 ka option; limit reached ho to dikhe par disabled, kab chalu hoga bhi dikhe,
-limit kya hai bhi dikhe."* And: the admin and Charming Jewels (the same
+limit kya hai bhi dikhe."* And: the admin and the house shop (the same
 person) are uncapped; other sellers get a limited share; a toggle lets the
 admin put the seller caps on himself whenever he wants.
 
@@ -983,7 +983,7 @@ What was built, each from a reference:
 
 - **Dashboard** (Shopify Home, Seller Central home): a *setup guide* for a
   shop that cannot ship yet - pickup address, first product - that removes
-  itself when both are done (Charming Jewels itself had no pickup address; the
+  itself when both are done (the house shop itself had no pickup address; the
   guide found it). Three metrics with icons, then **Waiting on you**: the
   orders themselves, not a count, each row a link. Low stock with a dot that
   agrees with the words. A skeleton that mirrors the layout, a retry on error.
@@ -1088,12 +1088,12 @@ With this, `WHAT-IS-LEFT.md` §1 — what the React app could do that `web/`
 could not — is **empty**, pending Rajat's own browser check of the review form
 (as a customer with a delivered order) and one video upload.
 
-### 4.23 "Sold by Charming Jewels", not "Sold by Rajat Mittal"
+### 4.23 "Sold by <shop name>", not "Sold by <owner name>"
 
 12 Sep 2026, found while verifying the video with the test accounts. The
 public product routes populated `sellerId` with the **User's** name, so every
 product page said *Sold by Rajat Mittal*, the seller's own page said
-*Charming Jewels*, and the Google feed sent `<g:brand>Rajat Mittal</g:brand>`
+*the house shop*, and the Google feed sent `<g:brand>Rajat Mittal</g:brand>`
 on all 17 items. Etsy and Amazon name the shop, never the owner — and naming
 the owner on every product tells the world which shop the platform's
 operator runs, which §7c says never to reveal.
@@ -1102,11 +1102,11 @@ operator runs, which §7c says never to reveal.
 business names; `withShop()` stamps `shop: { id, name }` on each product
 without touching the document the old app still reads. Used by the product
 list, the single product and the feed; the page and the JSON-LD brand read
-`product.shop`. Feed now: 17 × `Charming Jewels`. 919 tests.
+`product.shop`. Feed now: 17 × `the house shop`. 919 tests.
 
 Verified in the local browser with the test accounts (12 Sep): customer
 Abha — review form shows her existing review, Edit → 4 stars → Save updates
-the list and the bars at once (restored to 5); seller Charming Jewels — a
+the list and the bars at once (restored to 5); seller the house shop — a
 3-second generated clip uploaded through the new slot, Cloudinary returned
 URL + poster + duration, the gallery showed the play tile second and played
 it with the poster; the clip was then removed through the same contract
@@ -1573,8 +1573,8 @@ answer is **split**, and two of the names he listed are not marketplaces at all:
 | **Meesho** | **No.** The supplier panel is its own registration at supplier.meesho.com |
 | **GIVA, Tanishq, V-Mart** | **Not applicable** - single-brand shops. They have no sellers, so they cannot be evidence either way |
 
-So it was not settled by copying. What settled it were our own facts: Charming
-Jewels **sells here and buys here**, and its account was answered 403 by every
+So it was not settled by copying. What settled it were our own facts: the house
+shop **sells here and buys here**, and its account was answered 403 by every
 customer route. And a shopper who wanted to sell had to register again with a
 second email, ending up with two order histories and two passwords for one
 person. Amazon and Etsy show the model works at scale; Flipkart and Meesho show
@@ -1613,7 +1613,7 @@ and its cart still answers 200. 15 new tests, 821 in total.
 ### 9.1 The change
 
 Today `User.role` is a single enum, so an identity *is* a role and one email
-cannot both buy and sell. Rajat's own family shop is a seller on this platform
+cannot both buy and sell. the house shop is a seller on this platform
 and also a customer of it — the model contradicts the business it runs.
 
 **Role becomes a capability, not an identity.** The `Seller` document already is
@@ -2013,17 +2013,17 @@ Rajat: the filter rail was a text list - "bakwaas tarika, mazaa nahi aa raha". *
 
 ### 4.35 Get found on Google - the seller's workspace for the outside world (13 Sep 2026)
 
-**Why:** everything set up for Charming Jewels in September took the admin two evenings in twelve tabs. Rajat: a second seller cannot do that, and without it Google gives them nothing - so make it a guided workspace, short and sweet, benefits first, in order. **References:** Shopify's "Online store → Preferences" and its Google & YouTube channel checklist, Amazon's Account Health and Listing Quality dashboards, Etsy's Shop Manager "Marketing → SEO" tips, Google's own GBP setup flow.
+**Why:** everything set up for the house shop in September took the admin two evenings in twelve tabs. Rajat: a second seller cannot do that, and without it Google gives them nothing - so make it a guided workspace, short and sweet, benefits first, in order. **References:** Shopify's "Online store → Preferences" and its Google & YouTube channel checklist, Amazon's Account Health and Listing Quality dashboards, Etsy's Shop Manager "Marketing → SEO" tips, Google's own GBP setup flow.
 
 **The split (the honest part):** the PLATFORM owns the plumbing for every shop - server-rendered pages with Product schema, sitemap, Search Console/URL Inspection, the Merchant feed with Google product categories, the promotions feed, Customer Reviews, Analytics. The SELLER owns the ten things only they can do. The page (`/seller/grow`, CATALOGUE group) shows both: a score ring and the one next step (`Do it`), the ten steps with **ticks measured from their data** (`controllers/growController.js`: listings ≥ 80, 3+ photos, search words, an About ≥ 80 chars, profile links, city shown, 10 reviews, a video, a live promotion, a GBP link), each with the benefit, the two-minute how, and a link into the panel; the **ten-step Google Business Profile guide** with a copy button for the shop URL; a copyable WhatsApp review message; the weekly habits; and "Already done for you".
 
-**What it needed underneath:** `Seller.about / links / showLocation` (Settings → *Your shop on the web*, `#web`; links validated by host - a "facebook" link must be facebook.com), the public shop page shows the About, the city (never the address) and the profile chips, and emits an **OnlineStore JSON-LD with `sameAs`** - the one line of structured data that is about the seller, not the platform. Charming Jewels' page now carries its Instagram and GBP links and "Jaipur, Rajasthan". Verified live: score 24 → 64 after About, links and city were set.
+**What it needed underneath:** `Seller.about / links / showLocation` (Settings → *Your shop on the web*, `#web`; links validated by host - a "facebook" link must be facebook.com), the public shop page shows the About, the city (never the address) and the profile chips, and emits an **OnlineStore JSON-LD with `sameAs`** - the one line of structured data that is about the seller, not the platform. the house shop's page now carries its Instagram and GBP links and "Jaipur, Rajasthan". Verified live: score 24 → 64 after About, links and city were set.
 
 **Admin's side:** unchanged and platform-level - `/admin/google` (index, Shopping, traffic, speed), Merchant Center, Search Console, GA4, the feeds. The admin never fills a seller's About; the admin watches the numbers.
 
 ### 4.36 Built for who actually runs it (13 Sep 2026)
 
-Rajat: he works Monday–Friday and manages on weekends; his mother - a 1970s-generation shopkeeper, at home, on a phone, new to this - runs Charming Jewels day to day. Both are "the seller"; he is also the admin. Four things followed:
+Rajat: he works Monday–Friday and manages on weekends; a family member - a 1970s-generation shopkeeper, at home, on a phone, new to this - runs the house shop day to day. Both are "the seller"; he is also the admin. Four things followed:
 
 - **The seller's phone buzzes** (`utils/notifySeller.js`): new order, return requested, dispute opened → an email in Hindi then English with one button to the order. The template had existed since the React days and nothing sent it.
 - **Saturday 8 AM digest to the admin** (`jobs/weeklyDigest.js`, cron Asia/Kolkata; `GET /admin/digest` to preview): the week in numbers, then "needs you this weekend" with links. Read over tea; open the panel only when something does.
@@ -2177,7 +2177,7 @@ marketplace show every seller's legal name, address, contact and GSTIN.
   `legalName` / `taxID` in the OnlineStore schema. The PAN is never public.
 
 **AI, exactly once.** The board photo is read by Gemini lite: "board reads
-'Charming Jewels'" / "not a shop". That is the video-KYC question answered
+'the house shop's" / "not a shop". That is the video-KYC question answered
 without a call. No OCR (we type the number and verify it - stronger than
 reading a photo), no face match, no "risk score" (six sellers; a number
 would be theatre). Duplicates are a query.

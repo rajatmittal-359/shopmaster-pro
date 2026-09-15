@@ -110,7 +110,7 @@ beforeEach(() => {
         accountHolderName: 'Meera Iyer',
       },
     },
-    { _id: new mongoose.Types.ObjectId(), userId: HOUSE, businessName: 'Charming Jewels', isPlatformOwned: true },
+    { _id: new mongoose.Types.ObjectId(), userId: HOUSE, businessName: 'Meera Jewels', isPlatformOwned: true },
   ]);
   payouts = new InMemoryCollection([]);
 

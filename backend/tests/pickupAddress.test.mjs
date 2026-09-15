@@ -25,11 +25,11 @@ const { pickupAddressFor } = require('../utils/deliveryTruth');
 
 const FULL = {
   contactName: 'Rajat Mittal',
-  address1: 'C-13, Hari Marg, Devi Nagar',
+  address1: '12, Test Lane, Malviya Nagar',
   city: 'Jaipur',
   state: 'Rajasthan',
   pincode: '302019',
-  phone: '8769766908',
+  phone: '9876500001',
 };
 
 describe('the platform shop', () => {

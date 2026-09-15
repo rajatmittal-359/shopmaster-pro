@@ -37,7 +37,7 @@ const USER_ID = '6a93cf88fbb4f39f4a6d5618';
 /** Everything the Seller document actually holds, private parts included. */
 const FULL_SELLER = {
   userId: USER_ID,
-  businessName: 'Charming Jewels',
+  businessName: 'Meera Jewels',
   isApproved: true,
   status: 'active',
   createdAt: new Date('2025-12-21'),
@@ -45,7 +45,7 @@ const FULL_SELLER = {
   isPlatformOwned: true,
   gstNumber: 'GSTIN1234567',
   bankDetails: { accountNumber: '000123456789', ifscCode: 'HDFC0000001' },
-  pickupAddress: { phone: '8769766908', address1: 'C-13, Hari Marg' },
+  pickupAddress: { phone: '9876500001', address1: '12, Test Lane' },
 };
 
 const originals = {};
@@ -86,7 +86,7 @@ describe('what a shopper is told', () => {
     const res = await request(app).get(`/api/public/sellers/${USER_ID}`);
 
     expect(res.status).toBe(200);
-    expect(res.body.seller.businessName).toBe('Charming Jewels');
+    expect(res.body.seller.businessName).toBe('Meera Jewels');
     expect(res.body.seller.sellingSince).toBeTruthy();
     expect(res.body.seller.productCount).toBe(1);
   });
@@ -122,8 +122,8 @@ describe('what never leaves the server', () => {
       '000123456789',
       'HDFC0000001',
       '"pan"',
-      '8769766908',
-      'Hari Marg',
+      '9876500001',
+      'Test Lane',
       'isPlatformOwned',
     ]) {
       expect(body).not.toContain(secret);
@@ -139,7 +139,7 @@ describe('what never leaves the server', () => {
    */
   it('shows the seller-of-record line: legal name and GSTIN, nothing more', async () => {
     const res = await request(app).get(`/api/public/sellers/${USER_ID}`);
-    expect(res.body.seller.legal).toEqual({ name: 'Charming Jewels', gstin: 'GSTIN1234567', enrolled: '' });
+    expect(res.body.seller.legal).toEqual({ name: 'Meera Jewels', gstin: 'GSTIN1234567', enrolled: '' });
   });
 });
 

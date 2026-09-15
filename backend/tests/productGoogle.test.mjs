@@ -82,7 +82,7 @@ describe('productPerformance', () => {
 describe('catalogueGoogleStatus', () => {
   const { catalogueGoogleStatus } = require('../utils/google/productStatus');
   const products = [
-    { _id: 'p1', slug: 'a', name: 'A', sellerId: { name: 'Charming Jewels' } },
+    { _id: 'p1', slug: 'a', name: 'A', sellerId: { name: 'Meera Jewels' } },
     { _id: 'p2', slug: 'b', name: 'B' },
     { _id: 'p3', slug: 'c', name: 'C' },
   ];
@@ -100,7 +100,7 @@ describe('catalogueGoogleStatus', () => {
       }),
     });
     expect(out.rows.map((r) => r.index.indexed)).toEqual([true, false, false]);
-    expect(out.rows[0].sellerName).toBe('Charming Jewels');
+    expect(out.rows[0].sellerName).toBe('Meera Jewels');
     expect(out.rows[1].merchant.issues[0].code).toBe('image_link_broken');
     expect(out.rows[2].merchant.status).toBe('not in feed');
     expect(out.rows[0].shopping).toEqual({ impressions: 340, clicks: 4 });
@@ -133,7 +133,7 @@ describe('the score', () => {
       color: 'Green',
       gender: 'female',
       ageGroup: 'adult',
-      brand: 'Charming Jewels',
+      brand: 'Meera Jewels',
       weight: 60,
       tags: ['kundan', 'choker', 'bridal'],
       faqs: [{ q: 'Is it real kundan?', a: 'Glass kundan set in brass, as described.' }, { q: 'Will it tarnish?', a: 'Keep it dry and in its pouch; it keeps its shine for years.' }],
@@ -142,7 +142,7 @@ describe('the score', () => {
     expect(full.score).toBe(100);
     expect(full.fixes).toEqual([]);
     // plan 2.32: without the Q&A the same listing is 95 - always out of 100, whatever the factors weigh
-    expect(scoreListing({ name: 'Green Kundan Choker Set for Weddings', images: ['a', 'b', 'c'], description: '<p>' + 'word '.repeat(95) + '</p><ul><li>one</li></ul>', category: 'x', color: 'Green', gender: 'female', ageGroup: 'adult', brand: 'Charming Jewels', weight: 60, tags: ['kundan', 'choker', 'bridal'], needsSize: false }).score).toBe(95);
+    expect(scoreListing({ name: 'Green Kundan Choker Set for Weddings', images: ['a', 'b', 'c'], description: '<p>' + 'word '.repeat(95) + '</p><ul><li>one</li></ul>', category: 'x', color: 'Green', gender: 'female', ageGroup: 'adult', brand: 'Meera Jewels', weight: 60, tags: ['kundan', 'choker', 'bridal'], needsSize: false }).score).toBe(95);
     const partial = scoreListing({ name: 'Choker', images: ['a'], color: 'Green' });
     expect(partial.score).toBeGreaterThan(0);
     expect(partial.fixes[0]).toHaveProperty('points');

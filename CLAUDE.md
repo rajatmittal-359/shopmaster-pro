@@ -1,10 +1,12 @@
 # ShopMaster Pro — read this first
 
-Marketplace from Jaipur, run by Rajat Mittal. His family's shop, **Charming Jewels**,
-is one seller on it. Two accounts, kept apart: `rajatmittal6908@gmail.com` is the
-Charming Jewels **seller** (his mother's daily login, also the shop's Google Business
-Profile); `rajatmittal359@gmail.com` is the **admin** (and every Google/Atlas/Render
-console). The site is **ShopMaster Pro**;
+Marketplace from Jaipur, run by Rajat Mittal. One of its sellers is run by his
+family; these documents call it **the house shop** and never name it - the world
+must not be able to tell which seller the operator owns (Amazon does not sign as
+Cloudtail). Two accounts, kept apart: the **house-shop seller** login (a family
+member's daily login, also that shop's Google Business Profile) and the **admin**
+login (every Google/Atlas/Render console). The addresses are in `private/` and
+`OPS-AND-MANUAL-ACTIONS.md`, never in tracked files. The site is **ShopMaster Pro**;
 it sells anything, and nothing in the frame may name a category.
 
 ## Which app is which

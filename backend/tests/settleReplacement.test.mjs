@@ -48,11 +48,11 @@ let stockSpy;
 let bookSpy;
 
 const ADDRESS = {
-  street: 'C-13, Hari Marg, Devi Nagar',
+  street: '12, Test Lane, Malviya Nagar',
   city: 'Jaipur',
   state: 'Rajasthan',
   zipCode: '302019',
-  phoneNumber: '8769766908',
+  phoneNumber: '9876500001',
 };
 
 const orderWith = (over = {}) => ({

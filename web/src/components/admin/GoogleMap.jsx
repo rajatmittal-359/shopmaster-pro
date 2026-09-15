@@ -25,12 +25,12 @@ const INSIDE = [
 
 const OUTSIDE = [
   { task: 'Search Console - property verified, service account added', done: true, when: '12 Sep', href: 'https://search.google.com/search-console', next: 'Submit the new domain\'s sitemap at cutover' },
-  { task: 'Merchant Center - products approved, Merchant API live, promotions feed', done: true, when: '13 Sep', href: 'https://merchants.google.com', next: 'Link the Business Profile once Charming Jewels\' is live' },
+  { task: 'Merchant Center - products approved, Merchant API live, promotions feed', done: true, when: '13 Sep', href: 'https://merchants.google.com', next: 'Link the house shop’s Business Profile once it is live' },
   { task: 'GA4 property + tag, linked to Search Console and Merchant Center', done: true, when: '13 Sep', href: 'https://analytics.google.com', next: null },
   { task: 'Google Cloud - APIs enabled, service-account key, OAuth consent screen', done: true, when: '13 Sep', href: 'https://console.cloud.google.com', next: 'Publish the consent screen at launch' },
   { task: 'Postmaster Tools, Google Alerts', done: true, when: '13 Sep', href: 'https://postmaster.google.com', next: null },
   { task: 'Bing Webmaster Tools (import from Search Console)', done: false, when: null, href: 'https://www.bing.com/webmasters', next: 'ChatGPT, Copilot and Perplexity read Bing - the free door into AI answers' },
-  { task: 'Google Business Profile - Charming Jewels, with Mummy, from the seller account', done: false, when: null, href: 'https://business.google.com', next: 'Then Merchant Center → Linked accounts → Business Profile' },
+  { task: 'Google Business Profile - the house shop, from its own seller account', done: false, when: null, href: 'https://business.google.com', next: 'Then Merchant Center → Linked accounts → Business Profile' },
 ];
 
 export default function GoogleMap() {

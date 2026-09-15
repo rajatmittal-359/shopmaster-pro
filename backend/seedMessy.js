@@ -17,7 +17,7 @@
  *   are the seeded ones; if the catalogue was changed, it says which name it
  *   could not find and stops before writing.
  *
- *   Most parcels are Charming Jewels' so the seller test account sees them;
+ *   Most parcels are the house shop's so the seller test account sees them;
  *   the partner sellers get the suspension and one line of the split order.
  *
  *   node seedMessy.js          add the cases
@@ -327,7 +327,7 @@ const run = async () => {
     await Coupon.create([
       { code: 'WELCOME10', description: `${MESSY} first-order 10% - expired`, type: 'percent', value: 10, maxDiscount: 200, minOrderValue: 499, fundedBy: 'platform', validFrom: daysAgo(40), validUntil: daysAgo(7), usedCount: 3 },
       { code: 'JAIPUR15', description: `${MESSY} 15% off, max ₹300, live`, type: 'percent', value: 15, maxDiscount: 300, minOrderValue: 999, fundedBy: 'platform', validFrom: daysAgo(3), validUntil: daysAgo(-27), usageLimit: 100 },
-      { code: 'CJ100', description: `${MESSY} ₹100 off Charming Jewels above ₹1499`, type: 'flat', value: 100, minOrderValue: 1499, fundedBy: 'seller', sellerId: jhumka.sellerId, validFrom: daysAgo(10), validUntil: daysAgo(-20) },
+      { code: 'CJ100', description: `${MESSY} ₹100 off ${house?.businessName || 'the house shop'} above ₹1499`, type: 'flat', value: 100, minOrderValue: 1499, fundedBy: 'seller', sellerId: jhumka.sellerId, validFrom: daysAgo(10), validUntil: daysAgo(-20) },
     ]);
   }
 
@@ -340,7 +340,7 @@ const run = async () => {
     const house = await Seller.findOne({ userId: jhumka.sellerId }).lean();
     const p = await Payout.create({
       sellerId: jhumka.sellerId,
-      businessName: house?.businessName || 'Charming Jewels',
+      businessName: house?.businessName || 'Meera Jewels',
       periodFrom: daysAgo(37),
       periodTo: daysAgo(30),
       itemCount: 3,

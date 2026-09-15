@@ -47,11 +47,11 @@ describe('pickThree', () => {
 
 describe('render', () => {
   it('names the shop, numbers the three, links each to its page, and says how to switch it off', () => {
-    const { title, body, mail } = render({ businessName: 'Charming Jewels' }, [
+    const { title, body, mail } = render({ businessName: 'Meera Jewels' }, [
       { title: 'Three or more photos on each product', progress: '4 of 19', minutes: 3, href: '/seller/products/studio', why: 'Photos sell.', how: 'Use the studio.' },
       { title: 'Claim the Google Business Profile', minutes: 10, href: '/seller/grow?tab=google' },
     ]);
-    expect(title).toContain('Charming Jewels');
+    expect(title).toContain('Meera Jewels');
     expect(body).toBe('1. Three or more photos on each product (4 of 19) · 3 min · 2. Claim the Google Business Profile · 10 min');
     expect(mail.html).toContain('/seller/products/studio');
     expect(mail.html).toContain('Settings → Notifications → Growth');

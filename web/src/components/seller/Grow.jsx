@@ -16,7 +16,7 @@ import { useT } from '@/lib/i18n';
  * Get found on Google - the seller's workspace for the outside world.
  *
  * WHY THIS PAGE EXISTS
- *   Everything done for Charming Jewels in September 2026 - Search Console,
+ *   Everything done for the first seller in September 2026 - Search Console,
  *   Merchant Center, the feed, GA4, structured data, GBP, reviews - took the
  *   admin two evenings in twelve browser tabs. A second seller cannot repeat
  *   that and should not have to. So the page splits the work honestly:

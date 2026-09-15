@@ -6,4 +6,4 @@
  */
 const { generateVAPIDKeys } = require('web-push');
 const k = generateVAPIDKeys();
-console.log(`VAPID_PUBLIC_KEY=${k.publicKey}\nVAPID_PRIVATE_KEY=${k.privateKey}\nVAPID_SUBJECT=mailto:rajatmittal359@gmail.com`);
+console.log(`VAPID_PUBLIC_KEY=${k.publicKey}\nVAPID_PRIVATE_KEY=${k.privateKey}\nVAPID_SUBJECT=mailto:${process.env.BUSINESS_EMAIL || 'admin@example.com'}`);

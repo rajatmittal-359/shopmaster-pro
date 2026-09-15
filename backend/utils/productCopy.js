@@ -7,7 +7,7 @@ const { checkDescriptionHtml } = require('./safeHtml');
  * THE PROBLEM IT EXISTS FOR
  *   Every product in the catalogue carried the same sentence with only the name
  *   swapped - "carefully selected and finished to a high standard, dispatched by
- *   Charming Jewels." Measured on the live feed, 7 September 2026: 17 products,
+ *   <shop>." Measured on the live feed, 7 September 2026: 17 products,
  *   one description. Google does not index duplicate pages, which is most of why
  *   ninety-three live URLs had produced two indexed ones. It also leaves an AI
  *   assistant nothing to answer with when somebody asks what the difference is
@@ -70,7 +70,7 @@ const promptFor = (product) => {
    * quite different from what arrives.
    *
    * THE BRAND IS NOT HERE either. Given it, the model opened with "from
-   * Charming Jewels" however plainly the rules said not to - and the shop's
+   * <shop>" however plainly the rules said not to - and the shop's
    * name is already on the page. Withholding a fact turns out to be a better
    * instruction than forbidding its use.
    *

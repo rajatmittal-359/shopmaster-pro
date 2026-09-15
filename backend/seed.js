@@ -6,7 +6,7 @@
  * history. It replaces the pile of one-off scripts that grew during development.
  *
  * THE BUSINESS MODEL, IN DATA
- *   Charming Jewels is the platform's OWN jewellery shop, so its commission is
+ *   The house shop (SEED_HOUSE_SHOP) is the platform's OWN shop, so its commission is
  *   0%. Every other seller is a marketplace tenant paying the platform rate
  *   (utils/commission.js). Seeded orders carry a real commission snapshot, so
  *   the admin dashboard shows genuine platform revenue rather than zeroes.
@@ -61,13 +61,13 @@ const PLACEHOLDER_IMAGE =
 const ACCOUNTS = {
   admin: {
     name: 'Rajat Mittal',
-    email: 'rajatmittal359@gmail.com',
+    email: process.env.SEED_ADMIN_EMAIL || 'admin@example.com',
     role: 'admin',
     envKey: 'SEED_ADMIN_PASSWORD',
   },
   seller: {
     name: 'Rajat Mittal',
-    email: 'rajatmittal6908@gmail.com',
+    email: process.env.SEED_SELLER_EMAIL || 'seller@example.com',
     role: 'seller',
     envKey: 'SEED_SELLER_PASSWORD',
   },
@@ -82,7 +82,7 @@ const ACCOUNTS = {
 /** The platform's own jewellery business - the reason the site exists. */
 const HOUSE_SELLER = {
   key: 'CJ',
-  businessName: 'Charming Jewels',
+  businessName: process.env.SEED_HOUSE_SHOP || 'Meera Jewels',
   commissionRate: 0, // own store: the platform does not charge itself
   // Its takings are already in the platform's gateway account, so it is never
   // paid out to. Marked explicitly, not inferred from the 0% rate - a
@@ -239,7 +239,7 @@ const CATEGORY_TREE = [
  * the old schema forced, which is what made courier quotes too high.
  */
 const CATALOGUE = [
-  // ---- Charming Jewels: the platform's own stock, 0% commission ----
+  // ---- The house shop: the platform's own stock, 0% commission ----
   ['CJ', 'Rose Gold Pearl Floral Ring', 'Rings', 1600, 2500, 40, 0.006, ['ring', 'rose gold', 'pearl']],
   ['CJ', 'Emerald Solitaire Cocktail Ring', 'Rings', 2450, 3200, 12, 0.008, ['ring', 'emerald', 'party wear']],
   ['CJ', 'Oxidised Silver Statement Ring', 'Rings', 680, 950, 25, 0.007, ['ring', 'oxidised', 'silver']],

@@ -6,7 +6,7 @@ const { notify } = require('./notify');
  * The seller's phone buzzes when something needs them.
  *
  * WHY (13 Sep 2026)
- *   The day-to-day operator of Charming Jewels is Rajat's mother, at home,
+ *   The day-to-day operator of a typical shop here is a family member, at home,
  *   on a phone; Rajat sees the panel on weekends. Until today a new order
  *   sat silently in the seller queue - the template existed and nothing
  *   sent it. An email to the seller's Gmail is the one notification that

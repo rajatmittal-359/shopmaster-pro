@@ -3,7 +3,7 @@
  *
  * THE BUG THIS DEFENDS AGAINST
  *   `User.role` was a single enum, so an account was a customer OR a seller.
- *   Charming Jewels sells here and buys here, and its own account was answered
+ *   Meera Jewels sells here and buys here, and its own account was answered
  *   403 by every /customer route. A shopper who wanted to sell had to register
  *   again with a second email.
  *

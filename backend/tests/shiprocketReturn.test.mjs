@@ -36,7 +36,7 @@ const CUSTOMER_ADDRESS = {
   state: 'Rajasthan',
   zipCode: '302021',
   country: 'India',
-  phoneNumber: '8769766908',
+  phoneNumber: '9876500001',
 };
 
 const ORDER = { orderNumber: 'SMP-260906-858D34', paymentMethod: 'razorpay' };
@@ -93,7 +93,7 @@ describe('which end is which', () => {
     expect(posted.payload.pickup_pincode).toBe(302021);
     expect(posted.payload.pickup_customer_name).toBe('Abha');
     expect(posted.payload.pickup_last_name).toBe('Mittal');
-    expect(posted.payload.pickup_phone).toBe('8769766908');
+    expect(posted.payload.pickup_phone).toBe('9876500001');
   });
 
   it('delivers back TO the shop', async () => {

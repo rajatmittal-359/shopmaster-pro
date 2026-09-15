@@ -36,7 +36,7 @@ const IMG = (n) => `https://res.cloudinary.com/demo/image/upload/w_800/${['sampl
   const customers = await User.find({ role: 'customer' }).sort({ createdAt: 1 }).limit(5).lean();
   if (customers.length < 3) throw new Error('need customers - run seed.js first');
   const [c1, c2, c3] = customers;
-  const seller = await User.findOne({ email: 'rajatmittal6908@gmail.com' }).lean();
+  const seller = await User.findOne({ email: process.env.SEED_SELLER_EMAIL || 'seller@example.com' }).lean();
   if (!seller) throw new Error('seller 6908 not found');
   const addressOf = async (u) => {
     const a = await Address.findOne({ userId: u._id }).lean();

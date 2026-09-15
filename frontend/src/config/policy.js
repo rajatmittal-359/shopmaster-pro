@@ -31,13 +31,13 @@ export const POLICY = {
  * courier collects from.
  */
 export const BUSINESS = {
-  legalName: 'Charming Jewels',
+  legalName: 'ShopMaster Pro',
   tradeName: 'ShopMaster Pro',
-  addressLines: ['C-13, Hari Marg, Devi Nagar', 'Jaipur, Rajasthan 302019', 'India'],
-  landmark: 'Near Meera Medical, Doorbin Hospital',
-  phone: '+91 87697 66908',
-  phoneHref: 'tel:+918769766908',
-  email: 'rajatmittal359@gmail.com',
+  addressLines: ['Jaipur, Rajasthan', 'India'],
+  landmark: '',
+  phone: process.env.NEXT_PUBLIC_BUSINESS_PHONE || '',
+  phoneHref: process.env.NEXT_PUBLIC_BUSINESS_PHONE ? `tel:${process.env.NEXT_PUBLIC_BUSINESS_PHONE.replace(/[^\d+]/g, '')}` : '',
+  email: process.env.NEXT_PUBLIC_BUSINESS_EMAIL || 'hello@example.com',
   hours: 'Monday to Saturday, 10am - 7pm IST',
 };
 

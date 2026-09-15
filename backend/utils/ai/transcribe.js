@@ -3,7 +3,7 @@
  * "bol ke listing".
  *
  * WHY
- *   The person running Charming Jewels day to day is a 1970s-generation
+ *   The person running a typical shop here day to day is a 1970s-generation
  *   shopkeeper on a phone, Hindi first. Typing a question in Hinglish is the
  *   barrier; saying it is not. Flipkart and Meesho put a mic in the search
  *   bar for the same reason - most of their orders come from people who
@@ -41,7 +41,7 @@ const { toHinglish } = require('./hinglish');
  * language as a clue to the clip's, and a short "hi, hello" from a phone once
  * came back as Icelandic ("Hæ, halló") with an English-only hint.
  */
-const HINT = 'नमस्ते, मेरा ऑर्डर कहाँ है, पेमेंट कब आएगा, कूरियर बुक करो. ShopMaster Pro, Charming Jewels, Jaipur, jhumka, kada, mangalsutra, kundan, meenakari, oxidised, payout, courier, Shiprocket, Borzo, Razorpay, COD, order, return, dispute, refund.';
+const HINT = 'नमस्ते, मेरा ऑर्डर कहाँ है, पेमेंट कब आएगा, कूरियर बुक करो. ShopMaster Pro, Jaipur, jhumka, kada, mangalsutra, kundan, meenakari, oxidised, payout, courier, Shiprocket, Borzo, Razorpay, COD, order, return, dispute, refund.';
 
 /** The languages this shop is actually spoken to in. Anything else is a misdetection. */
 const EXPECTED = new Set(['hi', 'hindi', 'en', 'english', 'ur', 'urdu']);

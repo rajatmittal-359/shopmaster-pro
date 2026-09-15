@@ -11,7 +11,7 @@ import { useT } from '@/lib/i18n';
  *
  * Shopify's admin opens its sidebar with the store's name; Seller Central
  * with the merchant token. It answers "am I in the right place" before the
- * first click - a person with two hats (Charming Jewels' owner is also the
+ * first click - a person with two hats (a shop owner who is also the
  * admin) needs that more than anyone.
  */
 export default function PanelIdentity({ kind }) {

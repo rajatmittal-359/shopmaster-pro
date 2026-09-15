@@ -70,7 +70,7 @@ exports.googleProductFeed = async (req, res) => {
      *   The Merchant Center account is named after the shop that owns it, and
      *   Google expects the account, the website and the products to tell the
      *   same story. Feeding another seller's goods under an account called
-     *   "Charming Jewels" is the kind of mismatch that gets an account
+     *   a shop name is the kind of mismatch that gets an account
      *   suspended for misrepresentation - and right now the other sellers in
      *   this database are seeded test data, which must not reach Google's
      *   review queue at all.
@@ -220,7 +220,7 @@ exports.googleProductFeed = async (req, res) => {
     const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:g="http://base.google.com/ns/1.0">
   <channel>
-    <title>${esc(process.env.BUSINESS_NAME || 'Charming Jewels')}</title>
+    <title>${esc(process.env.BUSINESS_NAME || 'ShopMaster Pro')}</title>
     <link>${esc(SITE)}</link>
     <description>Artificial jewellery from Jaipur.</description>
 ${items.join('\n')}

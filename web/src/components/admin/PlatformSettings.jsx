@@ -151,7 +151,7 @@ export default function PlatformSettings() {
                   <Field id="phone" label="Phone">
                     <Input id="phone" value={b.phone} onChange={set('business', 'phone')} inputMode="tel" />
                   </Field>
-                  <Field id="whatsapp" label="WhatsApp number" hint="Digits with country code, e.g. 918769766908.">
+                  <Field id="whatsapp" label="WhatsApp number" hint="Digits with country code, e.g. 919876543210.">
                     <Input id="whatsapp" value={b.whatsapp} onChange={set('business', 'whatsapp')} inputMode="tel" />
                   </Field>
                   <Field id="address1" label="Address line 1">

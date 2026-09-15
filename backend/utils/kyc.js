@@ -150,8 +150,8 @@ const pinMatchesState = (pin, stateCode) => {
 /**
  * Loose name agreement, the way a person reads it: case, punctuation and
  * business suffixes ignored; agree when one contains the other or they
- * share most words. "Charming Jewels" ~ "CHARMING JEWELS PVT LTD" ~
- * "Abha Mittal (Charming Jewels)". Never a hard stop - a warning.
+ * share most words. "Meera Jewels" ~ "MEERA JEWELS PVT LTD" ~
+ * "Asha Sharma (Meera Jewels)". Never a hard stop - a warning.
  */
 const NOISE = new Set(['pvt', 'private', 'ltd', 'limited', 'llp', 'and', '&', 'the', 'co', 'company', 'enterprises', 'enterprise', 'traders', 'trading', 'store', 'stores', 'shop', 'm/s', 'ms', 'mr', 'mrs', 'smt', 'shri', 'sri']);
 const words = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter((w) => w && !NOISE.has(w));

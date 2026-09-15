@@ -34,7 +34,7 @@ const CASES = [
   ['customer', 'en', 'Where is my last order?', { script: 'en', must: [/SMP-\d{6}-[A-Z0-9]{6}/], nextStep: true, maxWords: 140 }],
   ['customer', 'hg', 'Mera refund kab tak aayega?', { script: 'hg', must: [/5|7|paanch|saat/], maxWords: 120 }],
   ['admin', 'en', 'What needs my decision this weekend?', { script: 'en', must: [/dispute/i], nextStep: true, maxWords: 180 }],
-  ['admin', 'hg', 'Charming Jewels ka performance kaisa hai?', { script: 'hg', must: [/cancel/i], maxWords: 180 }],
+  ['admin', 'hg', 'Sabse zyada bikne wali dukaan ka performance kaisa hai?', { script: 'hg', must: [/cancel/i], maxWords: 180 }],
   ['seller', 'hg', 'Ek kavita likho baarish pe', { script: 'hg', maxWords: 40, nextStep: false, mustNot: [/baarish.*\n.*\n.*\n/] }],
   ['customer', 'en', 'What does Indian law say a marketplace must do when I complain?', { script: 'en', must: [/48|one month|30 days|grievance/i], maxWords: 160 }],
 ];
@@ -59,8 +59,8 @@ const grade = (answer, exp) => {
   await mongoose.connect(process.env.MONGO_URI);
   const only = process.argv[2];
   const users = {
-    seller: await User.findOne({ email: 'rajatmittal6908@gmail.com' }).lean(),
-    admin: await User.findOne({ email: 'rajatmittal359@gmail.com' }).lean(),
+    seller: await User.findOne({ email: process.env.SEED_SELLER_EMAIL || process.env.EVAL_SELLER_EMAIL }).lean(),
+    admin: await User.findOne({ email: process.env.SEED_ADMIN_EMAIL || process.env.EVAL_ADMIN_EMAIL }).lean(),
     customer: await User.findOne({ email: 'mittalabha70@gmail.com' }).lean(),
   };
   let pass = 0;

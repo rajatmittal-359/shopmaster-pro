@@ -128,7 +128,7 @@ const sellerSchema = new mongoose.Schema(
      *     and freight is quoted from the platform's pincode, so a seller in
      *     Mumbai has their customer charged Jaipur rates.
      *
-     *   Harmless while Charming Jewels is the only seller. The first real
+     *   Harmless while there is one seller. The first real
      *   third-party seller is when it starts costing.
      *
      * `shiprocketNickname` is the name the address is saved under in the

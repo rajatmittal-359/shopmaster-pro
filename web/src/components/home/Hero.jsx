@@ -33,7 +33,7 @@ export default function Hero({ products = [] }) {
 
       <div className="mx-auto grid max-w-5xl items-center gap-10 px-4 py-10 sm:py-14 md:grid-cols-[1.1fr_1fr]">
         <div>
-          <p className="text-sm font-medium text-brand-ink">Jaipur, since the family shop</p>
+          <p className="text-sm font-medium text-brand-ink">Made in Jaipur, sold across India</p>
 
           <h1 className="mt-2 text-3xl leading-tight font-semibold tracking-tight text-balance sm:text-4xl lg:text-5xl">
             A marketplace from Jaipur, delivered across India.

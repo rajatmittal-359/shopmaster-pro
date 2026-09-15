@@ -6,7 +6,7 @@
  *
  *   "Platform Revenue Rs18,496"  was gross sales. Almost all of that money
  *                                belongs to the sellers. The platform earns the
- *                                commission, and Rs0 of it on the family shop's
+ *                                commission, and Rs0 of it on the house shop's
  *                                own sales, which are set to 0%.
  *   "Orders Today: 10"           was every order ever placed. The newest was a
  *                                week old.

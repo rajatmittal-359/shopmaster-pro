@@ -32,9 +32,9 @@ const id = () => new mongoose.Types.ObjectId();
 
 describe('fieldsFrom - what a request may carry', () => {
   it('accepts a full GST application and fills the PAN from the GSTIN', () => {
-    const r = fieldsFrom({ legalName: 'Charming Jewels', gstMode: 'gstin', gstin: '07aagff2194n1z1', phone: '+91 98765 43210', pincode: '302 019', city: 'Jaipur', sells: 'Kundan and meenakari jewellery' });
+    const r = fieldsFrom({ legalName: 'Meera Jewels', gstMode: 'gstin', gstin: '07aagff2194n1z1', phone: '+91 98765 43210', pincode: '302 019', city: 'Jaipur', sells: 'Kundan and meenakari jewellery' });
     expect(r.error).toBeUndefined();
-    expect(r.fields).toMatchObject({ legalName: 'Charming Jewels', gstMode: 'gstin', gstin: '07AAGFF2194N1Z1', pan: 'AAGFF2194N', phone: '9876543210', pincode: '302019', city: 'Jaipur' });
+    expect(r.fields).toMatchObject({ legalName: 'Meera Jewels', gstMode: 'gstin', gstin: '07AAGFF2194N1Z1', pan: 'AAGFF2194N', phone: '9876543210', pincode: '302019', city: 'Jaipur' });
   });
   it('refuses a GSTIN that belongs to a different PAN, and a mistyped GSTIN, in one sentence each', () => {
     expect(fieldsFrom({ pan: 'ABCPD1234E', gstMode: 'gstin', gstin: '07AAGFF2194N1Z1' }).error).toMatch(/registered to PAN AAGFF2194N/);

@@ -5,7 +5,7 @@
  *   `User.role` was a single enum, so an account was either a customer or a
  *   seller and never both. Two consequences, both real:
  *
- *     - Charming Jewels sells on this platform AND buys from it. With one role
+ *     - A shopkeeper sells on this platform AND buys from it. With one role
  *       the shop's own account could not put anything in a cart: every
  *       /customer route answered 403.
  *     - A customer who wanted to start selling had to register again with a

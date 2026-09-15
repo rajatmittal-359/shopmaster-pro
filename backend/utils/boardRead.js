@@ -7,7 +7,7 @@ const gemini = require('./gemini');
  * The one place a model earns its keep in seller verification at our size:
  * Amazon's video KYC asks to see the board; ours asks for a photo of it and
  * has the model read the name off it, so the admin's list can say "board
- * reads 'Charming Jewels'" or "no shop board in this photo" without anyone
+ * reads 'Meera Jewels'" or "no shop board in this photo" without anyone
  * zooming into a JPEG. One call per application, the cheap model, and a
  * failure is a dash in the list - never a block. The admin still decides.
  *

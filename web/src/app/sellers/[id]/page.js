@@ -23,7 +23,7 @@ const LINK_LABEL = { instagram: 'Instagram', facebook: 'Facebook', youtube: 'You
  *   starts from zero.
  *
  * IT IS INDEXABLE ON PURPOSE
- *   "Charming Jewels Jaipur" is a real search, and so is a seller's own brand
+ *   "<shop name> Jaipur" is a real search, and so is a seller's own brand
  *   name once they have one. A page that answers it belongs to us rather than
  *   to a directory site.
  */

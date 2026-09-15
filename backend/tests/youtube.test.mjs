@@ -18,7 +18,7 @@ describe('youtubeId', () => {
     ]) expect(youtubeId(u)).toBe('dQw4w9WgXcQ');
   });
   it('refuses playlists, channels, other hosts and junk', () => {
-    for (const u of ['https://www.youtube.com/playlist?list=PL123', 'https://www.youtube.com/@charmingjewels', 'https://vimeo.com/123', 'not a link', '', null]) expect(youtubeId(u)).toBe(null);
+    for (const u of ['https://www.youtube.com/playlist?list=PL123', 'https://www.youtube.com/@meerajewels', 'https://vimeo.com/123', 'not a link', '', null]) expect(youtubeId(u)).toBe(null);
   });
   it('stores the same shape as an upload, plus the id and a real thumbnail', () => {
     expect(youtubeVideo('dQw4w9WgXcQ')).toEqual({

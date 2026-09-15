@@ -23,8 +23,8 @@ const BUSINESS = {
   // The operator, never a seller (see web/src/config/policy.js).
   legalName: process.env.BUSINESS_NAME || 'ShopMaster Pro',
   contactName: process.env.BUSINESS_CONTACT_NAME || 'Rajat Mittal',
-  address1: process.env.BUSINESS_ADDRESS_1 || 'C-13, Hari Marg, Devi Nagar',
-  address2: process.env.BUSINESS_ADDRESS_2 || 'Near Meera Medical, Doorbin Hospital',
+  address1: process.env.BUSINESS_ADDRESS_1 || '',
+  address2: process.env.BUSINESS_ADDRESS_2 || '',
   city: process.env.BUSINESS_CITY || 'Jaipur',
   state: process.env.BUSINESS_STATE || 'Rajasthan',
   country: process.env.BUSINESS_COUNTRY || 'India',
@@ -33,8 +33,8 @@ const BUSINESS = {
   // never disagree about where the shop is.
   pincode: process.env.BUSINESS_PINCODE || process.env.SHIPROCKET_PICKUP_PINCODE || '302019',
 
-  phone: process.env.BUSINESS_PHONE || '8769766908',
-  email: process.env.BUSINESS_EMAIL || process.env.BREVO_FROM_EMAIL || 'rajatmittal359@gmail.com',
+  phone: process.env.BUSINESS_PHONE || '',
+  email: process.env.BUSINESS_EMAIL || process.env.BREVO_FROM_EMAIL || 'hello@example.com',
 };
 
 module.exports = { BUSINESS };
