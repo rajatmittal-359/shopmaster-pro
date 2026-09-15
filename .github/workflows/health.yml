@@ -1,0 +1,38 @@
+# Is the shop up? Asked every half hour, from outside (15 Sep 2026).
+#
+# WHY
+#   The API can be running with the database gone, and nothing on any screen
+#   says so until a customer's checkout fails. /api/health answers 200 only
+#   when Mongo pings back inside two seconds. This asks it every 30 minutes
+#   and turns RED - GitHub emails the owner - on anything else. It is not a
+#   keep-alive: a free Render service still sleeps between checks, and the
+#   first request after a sleep is allowed its 60 seconds to wake.
+#
+#   UptimeRobot (on the manual list) does the same from more places and more
+#   often; this is the free floor under it that needs nobody to sign up.
+#
+# COST
+#   Nothing on a public repository.
+name: health
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: ask the API whether the database answers
+        run: |
+          url="https://shopmaster-api-sg.onrender.com/api/health"
+          # --max-time 90: a sleeping free-tier service takes ~40 s to wake before it can answer at all.
+          code=$(curl -sS -o body.json -w '%{http_code}' --max-time 90 --retry 2 --retry-delay 20 --retry-all-errors "$url" || echo 000)
+          echo "HTTP $code"
+          cat body.json 2>/dev/null || true
+          echo
+          if [ "$code" != "200" ]; then
+            echo "::error::/api/health answered $code - the database is not answering or the service is down"
+            exit 1
+          fi

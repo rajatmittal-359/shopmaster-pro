@@ -92,6 +92,27 @@ app.get('/', (req, res) => {
   res.json({ message: ' ShopMaster Pro API is running!' });
 });
 
+/*
+ * Health, for a monitor (15 Sep 2026): the process answering is not the site
+ * working - the database is. 200 only when Mongo is connected and answers a
+ * ping inside two seconds; 503 otherwise, so UptimeRobot / the Actions check
+ * turn red for the failure that actually loses orders. No secrets, no
+ * counts - the body is safe to be public.
+ */
+app.get('/api/health', async (req, res) => {
+  const mongoose = require('mongoose');
+  const started = Date.now();
+  try {
+    if (mongoose.connection.readyState !== 1) throw new Error(`mongo readyState ${mongoose.connection.readyState}`);
+    await Promise.race([mongoose.connection.db.admin().ping(), new Promise((_, rej) => setTimeout(() => rej(new Error('mongo ping timed out')), 2000))]);
+    res.set('Cache-Control', 'no-store');
+    res.json({ ok: true, db: 'up', ms: Date.now() - started, uptime: Math.round(process.uptime()) });
+  } catch (err) {
+    res.set('Cache-Control', 'no-store');
+    res.status(503).json({ ok: false, db: 'down', reason: err.message, uptime: Math.round(process.uptime()) });
+  }
+});
+
 // Mount routes
 const { authLimiter, checkoutLimiter, aiLimiter } = require('./middlewares/rateLimits');
 app.use('/api/auth', authLimiter, authRoutes);
