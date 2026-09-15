@@ -61,11 +61,12 @@ const formFrom = (settings) => ({
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 
 function Field({ id, label, hint, children, className = '' }) {
+  const t = useT();
   return (
     <div className={className}>
-      <Label htmlFor={id}>{label}</Label>
+      <Label htmlFor={id}>{typeof label === 'string' ? t(label) : label}</Label>
       <div className="mt-1.5">{children}</div>
-      {hint && <p className="mt-1.5 text-xs text-muted-foreground">{hint}</p>}
+      {hint && <p className="mt-1.5 text-xs text-muted-foreground">{typeof hint === 'string' ? t(hint) : hint}</p>}
     </div>
   );
 }
@@ -160,20 +161,20 @@ export default function SellerSettings() {
               <PanelCard title={settings.businessName}>
                 <dl className="grid gap-4 text-sm sm:grid-cols-2">
                   <div>
-                    <dt className="text-muted-foreground">Platform commission</dt>
+                    <dt className="text-muted-foreground">{t('Platform commission')}</dt>
                     <dd className="mt-0.5 font-medium tabular-nums">
-                      {settings.commissionRate ?? 0}% of each sale
+                      {t('{n}% of each sale', { n: settings.commissionRate ?? 0 })}
                       {settings.isPlatformOwned ? ' · the platform’s own shop' : ''}
                     </dd>
                   </div>
                   <div>
-                    <dt className="text-muted-foreground">Who can change it</dt>
-                    <dd className="mt-0.5 font-medium">Only an admin</dd>
+                    <dt className="text-muted-foreground">{t('Who can change it')}</dt>
+                    <dd className="mt-0.5 font-medium">{t('Only an admin')}</dd>
                   </div>
                   {/* The rules this shop agreed to, and when - findable from inside the
                       panel, as Shopify keeps policies under Settings. */}
                   <div className="sm:col-span-2">
-                    <dt className="text-muted-foreground">Seller Agreement</dt>
+                    <dt className="text-muted-foreground">{t('Seller Agreement')}</dt>
                     <dd className="mt-0.5 font-medium">
                       {settings.agreement?.version ? (
                         <>
@@ -183,25 +184,25 @@ export default function SellerSettings() {
                             : ''}
                         </>
                       ) : (
-                        'Not accepted yet'
+                        t('Not accepted yet')
                       )}
                       {' · '}
                       <Link href="/selling-policy" target="_blank" rel="noopener" className="font-normal text-brand-ink hover:underline">
-                        Read it
+                        {t('Read it')}
                       </Link>
                     </dd>
                   </div>
                 </dl>
               </PanelCard>
 
-              <PanelCard title="Delivery">
+              <PanelCard title={t('Delivery')}>
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <Label htmlFor="freeShipping" className="text-sm font-medium">
-                      I pay the delivery on everything I sell
+                      {t('I pay the delivery on everything I sell')}
                     </Label>
                     <p className="mt-1 text-sm text-muted-foreground">
-                      Shop-wide. Individual products can already be marked free delivery; this covers the rest.
+                      {t('Shop-wide. Individual products can already be marked free delivery; this covers the rest.')}
                     </p>
                   </div>
                   <Switch
@@ -218,8 +219,8 @@ export default function SellerSettings() {
             {tab === 'pickup' && (
               <div id="pickup" className="scroll-mt-20">
               <PanelCard
-                title="Where the courier collects"
-                lead="This is the address a rider is sent to, and your business address of record - shown in the “Sold by” line on your shop page and on invoices, as the Consumer Protection (E-Commerce) Rules require. If the shop moves and this does not, the pickup is wasted."
+                title={t('Where the courier collects')}
+                lead={t('This is the address a rider is sent to, and your business address of record - shown in the “Sold by” line on your shop page and on invoices, as the Consumer Protection (E-Commerce) Rules require. If the shop moves and this does not, the pickup is wasted.')}
               >
                 <div className="grid gap-5">
                   <div className="grid gap-5 sm:grid-cols-2">
@@ -270,18 +271,18 @@ export default function SellerSettings() {
               {/* The shop's public face - what the shop page and Google see. Reached
                   from "Get found on Google" as #web. */}
               <div id="web" className="scroll-mt-20">
-                <PanelCard title="Your shop on the web" lead="Shown on your shop page and read by Google. Two honest sentences and your real profiles do more than any keyword.">
+                <PanelCard title={t('Your shop on the web')} lead={t('Shown on your shop page and read by Google. Two honest sentences and your real profiles do more than any keyword.')}>
                   <div className="space-y-5">
-                    <Field id="about" label="About your shop" hint={`${form.about.length}/600 · who you are, what you make or sell, since when. It becomes your page's description on Google.`}>
+                    <Field id="about" label="About your shop" hint={`${form.about.length}/600 · ${t("who you are, what you make or sell, since when. It becomes your page's description on Google.")}`}>
                       <Textarea id="about" value={form.about} onChange={(e) => setForm({ ...form, about: e.target.value.slice(0, 600) })} rows={3} placeholder="Family-run handloom shop in Bapu Bazaar, Jaipur, since 1998. Block-printed bedsheets and dupattas made by hand; every piece photographed on the actual item." />
                     </Field>
                     <div className="grid gap-4 sm:grid-cols-2">
                       {[
                         ['instagram', 'Instagram', 'instagram.com/yourshop'],
-                        ['googleBusiness', 'Google Business Profile', 'the Share → Copy link from your Google listing'],
-                        ['facebook', 'Facebook page', 'facebook.com/yourshop'],
-                        ['youtube', 'YouTube channel', 'youtube.com/@yourshop'],
-                        ['website', 'Your own website', 'yourshop.in'],
+                        ['googleBusiness', t('Google Business Profile'), t('the Share → Copy link from your Google listing')],
+                        ['facebook', t('Facebook page'), 'facebook.com/yourshop'],
+                        ['youtube', t('YouTube channel'), 'youtube.com/@yourshop'],
+                        ['website', t('Your own website'), 'yourshop.in'],
                       ].map(([key, label, ph]) => (
                         <Field key={key} id={`link-${key}`} label={label}>
                           <Input id={`link-${key}`} value={form.links[key] || ''} onChange={(e) => setForm({ ...form, links: { ...form.links, [key]: e.target.value } })} placeholder={ph} className="h-10" inputMode="url" />
@@ -291,7 +292,7 @@ export default function SellerSettings() {
                     <div className="flex items-start justify-between gap-4 rounded-lg border p-3">
                       <div>
                         <Label htmlFor="showLocation" className="text-sm font-medium">
-                          Show my city on the shop page
+                          {t('Show my city on the shop page')}
                         </Label>
                         <p className="mt-1 text-sm text-muted-foreground">
                           {form.pickupAddress.city ? `“${form.pickupAddress.city}, ${form.pickupAddress.state}” in the header, beside your rating. (Your business address is also printed in the small “Sold by” line on your shop page - the E-Commerce Rules require it.)` : 'Add a pickup address first (the Pickup address tab).'}

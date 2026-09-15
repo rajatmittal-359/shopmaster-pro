@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useT } from '@/lib/i18n';
 import { toast } from 'sonner';
 import { authedFetch } from '@/lib/client';
 import { Button } from '@/components/ui/button';
@@ -37,6 +38,7 @@ const describe = (c) =>
   `${c.type === 'percent' ? `${c.value}% off` : `${money(c.value)} off`}${c.minOrderValue > 0 ? ` on orders over ${money(c.minOrderValue)}` : ''}${c.type === 'percent' && c.maxDiscount ? `, up to ${money(c.maxDiscount)}` : ''}`;
 
 export default function Promotions() {
+  const t = useT();
   const [coupons, setCoupons] = useState(null);
   const [form, setForm] = useState(EMPTY);
   const [open, setOpen] = useState(false);
@@ -102,7 +104,7 @@ export default function Promotions() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">
           {live.length ? `${live.length} live code${live.length === 1 ? '' : 's'}. ` : 'No live codes yet. '}
-          A coupon comes off your own items only - the platform never pays for your sale, and you never pay for theirs.
+          {t('A coupon comes off your own items only - the platform never pays for your sale, and you never pay for theirs.')}
         </p>
         <Button onClick={() => setOpen((o) => !o)}>{open ? 'Close' : 'New coupon'}</Button>
       </div>
@@ -160,7 +162,7 @@ export default function Promotions() {
         </PanelCard>
       )}
 
-      <PanelCard title="Live" lead={live.length ? 'Working at checkout right now.' : undefined}>
+      <PanelCard title="Live" lead={live.length ? t('Working at checkout right now.') : undefined}>
         {live.length === 0 ? (
           <p className="py-6 text-sm text-muted-foreground">Nothing live. Sellers who run one code a month sell more in that month - Diwali, a wedding season, a slow week.</p>
         ) : (
