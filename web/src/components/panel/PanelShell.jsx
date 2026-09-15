@@ -69,7 +69,7 @@ export default function PanelShell({ title, groups, countsUrl = null, identity =
                   {title === 'Seller' && <LangToggle compact />}
                 </div>
                 {identity}
-                <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain [scrollbar-width:thin]">
+                <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain [scrollbar-width:thin] [scrollbar-color:var(--color-border)_transparent]">
                   <PanelNav groups={groups} onNavigate={() => setOpen(false)} countsUrl={countsUrl} />
                 </div>
               </div>
@@ -114,7 +114,7 @@ export default function PanelShell({ title, groups, countsUrl = null, identity =
             {/* The list scrolls on a short screen; the identity card stays. Without
                 this the pinned Settings group was simply clipped below the fold
                 (Rajat, 15 Sep: "sidebar me Settings kahan hai, neeche nahi ja pa raha"). */}
-            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1 [scrollbar-width:thin]">
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1 [scrollbar-width:thin] [scrollbar-color:transparent_transparent] hover:[scrollbar-color:var(--color-border)_transparent]">
               <PanelNav groups={groups} countsUrl={countsUrl} />
             </div>
           </div>

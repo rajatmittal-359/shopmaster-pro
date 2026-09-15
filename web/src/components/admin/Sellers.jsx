@@ -172,12 +172,12 @@ export default function Sellers() {
                 {status === 'pending' && seller.application && <ApplicationFacts a={seller.application} />}
 
                 <div className="mt-3 flex flex-wrap items-center gap-2">
-                  {status !== 'approved' && (
+                  {(status === 'pending' || status === 'rejected') && (
                     <Button
                       disabled={state.status === 'working'}
                       onClick={() => patch(seller._id, '/approve')}
                     >
-                      Approve
+                      {status === 'rejected' ? 'Approve after all' : 'Approve'}
                     </Button>
                   )}
 
