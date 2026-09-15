@@ -36,6 +36,9 @@ router.get('/sellers/pending', getAllSellers);
 router.patch('/sellers/:sellerId/approve', approveSeller);
 router.patch('/sellers/:sellerId/reject', rejectSeller);
 router.patch('/sellers/:sellerId/ask', require('../controllers/adminController').askSeller);
+// Edit a shop's public details on its behalf (plan 2.42) - never the bank.
+router.get('/sellers/:sellerId/shop', require('../controllers/adminController').getSellerShop);
+router.patch('/sellers/:sellerId/shop', require('../controllers/adminController').editSellerShop);
 router.patch('/sellers/:sellerId/suspend', suspendSeller);
 router.patch('/sellers/:sellerId/activate', activateSeller);
 

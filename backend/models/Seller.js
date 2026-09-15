@@ -60,6 +60,16 @@ const sellerSchema = new mongoose.Schema(
     },
 
     /*
+     * Edits an admin made on the shop's behalf (plan 2.42): who, when, which
+     * fields. The seller is told each time; the last twenty are kept here so
+     * "who changed my address" has an answer.
+     */
+    adminEdits: {
+      type: [{ at: { type: Date, default: Date.now }, by: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, fields: { type: [String], default: [] }, note: { type: String, trim: true, maxlength: 200, default: '' } }],
+      default: [],
+    },
+
+    /*
      * The application (plan 2.40, 15 Sep 2026) - what Amazon, Flipkart and
      * Meesho ask before a shop goes live, sized for us: PAN always; a GSTIN,
      * or the GST portal's enrolment number for a shop without one (intra-

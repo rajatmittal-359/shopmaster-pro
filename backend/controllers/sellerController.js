@@ -1739,24 +1739,34 @@ exports.getSettings = async (req, res) => {
   }
 };
 
-exports.updateSettings = async (req, res) => {
-  try {
-    const { offersFreeShipping, pickupAddress, about, links, showLocation } = req.body || {};
-    let aboutHeld = null;
+/*
+ * Applies a shop-settings body to a Seller document - the one set of rules
+ * for the seller's own Settings page AND for an admin editing on the shop's
+ * behalf (plan 2.42, 15 Sep 2026; Sharetribe's Console, VTEX's seller
+ * management and Webkul's "login as vendor" all give the operator this door,
+ * because "mera address galat chala gaya, theek kar do" is the commonest
+ * support call a marketplace gets). Returns the fields that changed, so the
+ * admin's edit can be logged and said to the seller field by field.
+ *
+ * @returns {Promise<{error?:string, changed:string[], aboutHeld:string|null}>}
+ */
+const applyShopSettings = async (seller, body = {}) => {
+  const { offersFreeShipping, pickupAddress, about, links, showLocation } = body;
+  const changed = [];
+  let aboutHeld = null;
 
-    const seller = await Seller.findOne({ userId: req.user._id });
-    if (!seller) {
-      return res.status(404).json({ success: false, message: 'Seller profile not found' });
-    }
+  if (offersFreeShipping !== undefined && Boolean(offersFreeShipping) !== Boolean(seller.offersFreeShipping)) {
+    seller.offersFreeShipping = Boolean(offersFreeShipping);
+    changed.push('free delivery');
+  }
 
-    if (offersFreeShipping !== undefined) {
-      seller.offersFreeShipping = Boolean(offersFreeShipping);
-    }
-
-    // Plain text only: no tags, no control characters - it is printed on the
-    // shop page and inside its structured data.
-    if (about !== undefined) {
-      seller.about = String(about).replace(/<[^>]*>/g, '').replace(/[ -\u2028\u2029]/g, ' ').slice(0, 600).trim();
+  // Plain text only: no tags, no control characters - it is printed on the
+  // shop page and inside its structured data.
+  if (about !== undefined) {
+    const next = String(about).replace(/<[^>]*>/g, '').replace(/[\u0000-\u001f\u007f\u2028\u2029]/g, ' ').slice(0, 600).trim();
+    if (next !== (seller.about || '')) {
+      seller.about = next;
+      changed.push('about');
       // Trust queue: an About with a phone number or a link waits for the admin.
       const { moderateText } = require('../utils/ai/moderate');
       const v = await moderateText(seller.about, { context: 'seller about' });
@@ -1764,77 +1774,81 @@ exports.updateSettings = async (req, res) => {
       if (v.flagged) aboutHeld = v.reason;
       if (v.flagged) setImmediate(() => require('../utils/notify').notifyAdmins({ category: 'trust', title: `Shop About held · ${seller.businessName}`, body: String(v.reason || '').slice(0, 140), url: '/admin/trust', tag: `about-held-${seller.userId}` }).catch(() => {}));
     }
-    if (showLocation !== undefined) seller.showLocation = Boolean(showLocation);
-    if (links && typeof links === 'object') {
-      // Only http(s) links, only to the hosts each field is for - a link that
-      // goes somewhere else is not a mistake worth publishing on the shop page.
-      const HOSTS = { instagram: /(^|\.)instagram\.com$/, facebook: /(^|\.)facebook\.com$/, youtube: /(^|\.)(youtube\.com|youtu\.be)$/, googleBusiness: /(^|\.)(google\.com|goo\.gl|g\.page|share\.google|maps\.app\.goo\.gl)$/, website: /./ };
-      for (const key of Object.keys(HOSTS)) {
-        if (links[key] === undefined) continue;
-        const raw = String(links[key] || '').trim();
-        if (!raw) {
-          seller.links[key] = '';
-          continue;
-        }
-        let url;
-        try {
-          url = new URL(raw.startsWith('http') ? raw : `https://${raw}`);
-        } catch {
-          return res.status(400).json({ success: false, message: `That ${key} link does not look like a web address` });
-        }
-        if (!HOSTS[key].test(url.hostname.replace(/^www\./, ''))) {
-          return res.status(400).json({ success: false, message: `That does not look like a ${key === 'googleBusiness' ? 'Google' : key} link` });
-        }
-        seller.links[key] = url.toString();
+  }
+  if (showLocation !== undefined && Boolean(showLocation) !== Boolean(seller.showLocation)) {
+    seller.showLocation = Boolean(showLocation);
+    changed.push('city on the shop page');
+  }
+  if (links && typeof links === 'object') {
+    // Only http(s) links, only to the hosts each field is for - a link that
+    // goes somewhere else is not a mistake worth publishing on the shop page.
+    const HOSTS = { instagram: /(^|\.)instagram\.com$/, facebook: /(^|\.)facebook\.com$/, youtube: /(^|\.)(youtube\.com|youtu\.be)$/, googleBusiness: /(^|\.)(google\.com|goo\.gl|g\.page|share\.google|maps\.app\.goo\.gl)$/, website: /./ };
+    for (const key of Object.keys(HOSTS)) {
+      if (links[key] === undefined) continue;
+      const raw = String(links[key] || '').trim();
+      if (!raw) {
+        if (seller.links[key]) changed.push(`${key} link`);
+        seller.links[key] = '';
+        continue;
       }
+      let url;
+      try {
+        url = new URL(raw.startsWith('http') ? raw : `https://${raw}`);
+      } catch {
+        return { error: `That ${key} link does not look like a web address`, changed, aboutHeld };
+      }
+      if (!HOSTS[key].test(url.hostname.replace(/^www\./, ''))) {
+        return { error: `That does not look like a ${key === 'googleBusiness' ? 'Google' : key} link`, changed, aboutHeld };
+      }
+      if (seller.links[key] !== url.toString()) changed.push(`${key} link`);
+      seller.links[key] = url.toString();
     }
+  }
 
-    if (pickupAddress) {
-      const p = pickupAddress;
+  if (pickupAddress) {
+    const p = pickupAddress;
+    /*
+     * All or nothing. A half-saved pickup address is worse than none: the
+     * guard that stops a booking would pass, and a courier would be sent
+     * somewhere that does not resolve.
+     */
+    const required = ['contactName', 'address1', 'city', 'state', 'pincode', 'phone'];
+    const missing = required.filter((f) => !String(p[f] || '').trim());
+    if (missing.length) return { error: `Your pickup address needs ${missing.join(', ')} — a courier is sent to it.`, changed, aboutHeld };
+    if (!/^[1-9]\d{5}$/.test(String(p.pincode).trim())) return { error: 'Enter a valid 6-digit PIN code', changed, aboutHeld };
+    if (!/^\d{10}$/.test(String(p.phone).replace(/\D/g, '').slice(-10))) return { error: 'Enter a 10-digit phone number the courier can call', changed, aboutHeld };
+    seller.pickupAddress = {
+      contactName: String(p.contactName).trim(),
+      address1: String(p.address1).trim(),
+      address2: String(p.address2 || '').trim(),
+      city: String(p.city).trim(),
+      state: String(p.state).trim(),
+      pincode: String(p.pincode).trim(),
+      phone: String(p.phone).replace(/\D/g, '').slice(-10),
+      shiprocketNickname: seller.pickupAddress?.shiprocketNickname || null,
+    };
+    changed.push('pickup address');
+  }
+  return { changed, aboutHeld };
+};
+exports.applyShopSettings = applyShopSettings;
 
-      /*
-       * All or nothing. A half-saved pickup address is worse than none: the
-       * guard that stops a booking would pass, and a courier would be sent
-       * somewhere that does not resolve.
-       */
-      const required = ['contactName', 'address1', 'city', 'state', 'pincode', 'phone'];
-      const missing = required.filter((f) => !String(p[f] || '').trim());
-      if (missing.length) {
-        return res.status(400).json({
-          success: false,
-          message: `Your pickup address needs ${missing.join(', ')} — a courier is sent to it.`,
-        });
-      }
-      if (!/^[1-9]\d{5}$/.test(String(p.pincode).trim())) {
-        return res.status(400).json({ success: false, message: 'Enter a valid 6-digit PIN code' });
-      }
-      if (!/^\d{10}$/.test(String(p.phone).replace(/\D/g, '').slice(-10))) {
-        return res.status(400).json({
-          success: false,
-          message: 'Enter a 10-digit phone number the courier can call',
-        });
-      }
-
-      seller.pickupAddress = {
-        contactName: String(p.contactName).trim(),
-        address1: String(p.address1).trim(),
-        address2: String(p.address2 || '').trim(),
-        city: String(p.city).trim(),
-        state: String(p.state).trim(),
-        pincode: String(p.pincode).trim(),
-        phone: String(p.phone).replace(/\D/g, '').slice(-10),
-        shiprocketNickname: seller.pickupAddress?.shiprocketNickname || null,
-      };
+exports.updateSettings = async (req, res) => {
+  try {
+    const seller = await Seller.findOne({ userId: req.user._id });
+    if (!seller) {
+      return res.status(404).json({ success: false, message: 'Seller profile not found' });
     }
-
+    const r = await applyShopSettings(seller, req.body || {});
+    if (r.error) return res.status(400).json({ success: false, message: r.error });
     await seller.save();
 
     return res.json({
       success: true,
-      message: aboutHeld
+      message: r.aboutHeld
         ? 'Saved. Your About is being checked before it goes on your page - it looks like it has contact details or a link. Shoppers reach you through ShopMaster; the admin will approve it or write to you.'
         : 'Saved',
-      aboutHeld: Boolean(aboutHeld),
+      aboutHeld: Boolean(r.aboutHeld),
       settings: {
         offersFreeShipping: Boolean(seller.offersFreeShipping),
         pickupAddress: seller.pickupAddress || {},

@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import ActionDialog from '@/components/common/ActionDialog';
 import PanelTabs from '@/components/panel/PanelTabs';
+import EditShopDialog from '@/components/admin/EditShopDialog';
 
 /**
  * Who may sell here, and on what terms.
@@ -136,6 +137,7 @@ export default function Sellers() {
   const [open, setOpen] = useState({}); // expanded rows
   // { kind: 'reject' | 'suspend' | 'ask', seller }
   const [asking, setAsking] = useState(null);
+  const [editing, setEditing] = useState(null); // seller whose shop details are being edited on their behalf
 
   const load = async () => {
     const data = await authedFetch('/admin/sellers/pending');
@@ -272,6 +274,7 @@ export default function Sellers() {
                               {waiting && <DropdownMenuItem onClick={() => setAsking({ kind: 'ask', seller })}>Ask for…</DropdownMenuItem>}
                               {waiting && <DropdownMenuItem onClick={() => setAsking({ kind: 'reject', seller })}>Turn down</DropdownMenuItem>}
                               {st === 'rejected' && <DropdownMenuItem onClick={() => patch(seller._id, '/approve')}>Approve after all</DropdownMenuItem>}
+                              {(st === 'approved' || waiting) && <DropdownMenuItem onClick={() => setEditing(seller)}>Edit shop details for them</DropdownMenuItem>}
                               {st === 'approved' && <><DropdownMenuSeparator /><DropdownMenuItem onClick={() => setAsking({ kind: 'suspend', seller })}>Suspend</DropdownMenuItem></>}
                               {st === 'suspended' && <DropdownMenuItem onClick={() => patch(seller._id, '/activate')}>Let them sell again</DropdownMenuItem>}
                             </DropdownMenuContent>
@@ -303,6 +306,8 @@ export default function Sellers() {
           );
         }}
       </PanelTabs>
+
+      <EditShopDialog seller={editing} open={Boolean(editing)} onOpenChange={(o) => !o && setEditing(null)} onSaved={load} />
 
       {/*
         Three decisions, one dialog. Asking is the everyday one - Amazon's

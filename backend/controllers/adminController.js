@@ -129,6 +129,48 @@ exports.askSeller = async (req, res) => {
   }
 };
 
+/*
+ * Edit a shop's public details on its behalf (plan 2.42) - the same rules as
+ * the seller's own Settings, plus a record and a bell to the seller naming
+ * every field that changed. Not the bank account: money details are the
+ * seller's alone to type.
+ */
+exports.getSellerShop = async (req, res) => {
+  try {
+    const s = await Seller.findById(req.params.sellerId).select('businessName about links showLocation offersFreeShipping pickupAddress adminEdits').lean();
+    if (!s) return res.status(404).json({ message: 'Seller not found' });
+    res.json({ shop: { businessName: s.businessName, about: s.about || '', links: s.links || {}, showLocation: Boolean(s.showLocation), offersFreeShipping: Boolean(s.offersFreeShipping), pickupAddress: s.pickupAddress || {} }, adminEdits: (s.adminEdits || []).slice(-5).reverse() });
+  } catch (error) {
+    sendError(res, error);
+  }
+};
+
+exports.editSellerShop = async (req, res) => {
+  try {
+    const seller = await Seller.findById(req.params.sellerId);
+    if (!seller) return res.status(404).json({ message: 'Seller not found' });
+    const { applyShopSettings } = require('./sellerController');
+    const r = await applyShopSettings(seller, req.body || {});
+    if (r.error) return res.status(400).json({ message: r.error });
+    if (!r.changed.length) return res.json({ message: 'Nothing changed', changed: [] });
+    const note = String(req.body?.note || '').trim().slice(0, 200);
+    seller.adminEdits = [...(seller.adminEdits || []).slice(-19), { at: new Date(), by: req.user._id, fields: r.changed, note }];
+    await seller.save();
+    setImmediate(() => require('../utils/notify').notify({
+      userId: seller.userId,
+      role: 'seller',
+      category: 'account',
+      title: `Admin updated your ${r.changed.join(', ')} · एडमिन ने बदला`,
+      body: `${note ? `${note} - ` : ''}Check it under Settings. If this was not asked for, write to us.`,
+      url: '/seller/settings',
+      tag: `admin-edit-${seller._id}-${Date.now()}`,
+    }).catch(() => {}));
+    res.json({ message: `Saved - ${r.changed.join(', ')}. The seller has been told.`, changed: r.changed, aboutHeld: Boolean(r.aboutHeld) });
+  } catch (error) {
+    sendError(res, error);
+  }
+};
+
 // Suspend seller
 exports.suspendSeller = async (req, res) => {
   try {
