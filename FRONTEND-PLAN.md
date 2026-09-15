@@ -2135,3 +2135,52 @@ prioritised by impact, one next fix, never a wall of advice.
 band words, Next / Fix / All N, the 16 fix texts from `listingScore`, the
 section summaries, the products list (tabs, badges, Edit, the menu), the
 Settings tabs and save bar, the Grow tabs. ~85 rows in each dictionary.
+
+### 4.41 Applying to sell, and approving - the big marketplaces' way, sized for us (15 Sep 2026)
+
+**What the references ask.** Amazon.in: PAN, GSTIN (or an exempt category),
+bank proof, an address proof under 60 days, then a video KYC showing the
+original PAN and Aadhaar; 2-5 days. Flipkart: GSTIN, PAN, bank, pickup
+address, a signature scan, in an 8-step hub finished in one sitting; most
+failures are the GST name not matching the PAN or the bank holder. Meesho:
+PAN, Aadhaar, bank, and a GSTIN *or* the GST portal's Enrolment Number for
+shops without one (notification 34/2023: sell within the state, under
+₹40 lakh). The Consumer Protection (E-Commerce) Rules 2020 make the
+marketplace show every seller's legal name, address, contact and GSTIN.
+
+**What we built.** "Amazon's strictness, Meesho's ease":
+
+- **/sell is three steps** (`ApplyToSell`): the shop (name as on the board,
+  what it sells, city + PIN, phone, a photo of the board); identity (legal
+  name, PAN, then GSTIN / enrolment number / neither, each with the one
+  line on what it allows); the agreement. Every field says *why* it is
+  asked - the law, the courier, the payout. A GSTIN is checked as it is
+  typed (mod-36 check digit, state, the PAN inside it - `lib/kyc.js`, a
+  mirror of `backend/utils/kyc.js`) so the Flipkart failure happens in the
+  field, not a day later. Bank details are not here: they gate the first
+  payout, not approval.
+- **`ApplicationStatus`**: submitted / asked-for (the admin's exact
+  sentence, and the fields to fix it) / turned down (reason, resend) - on
+  /sell and at the top of a waiting seller's dashboard. Amazon's
+  "verification pending → additional information required", without the week.
+- **/admin/sellers** is a Shopify-shaped index: tabs with counts (Waiting ·
+  Selling · Suspended · Turned down · All), one row per shop, a status pill,
+  agreement, commission edited in place (the "future orders only" hint said
+  once, there), the 30-day cancel figure grey until ten orders (Amazon's
+  Account Health withholds judgment on small samples), ⋯ for the rest. A
+  waiting row opens on **Before you approve**: the kyc checks as ticks /
+  warnings / dashes, duplicates on other shops, what the model read on the
+  board, the buyer record, the photo - and Approve · Ask for… · Turn down.
+  Ask sends the typed sentence to the shop's bell and mail; the shop fixes
+  it and is back in the list.
+- **Public seller page**: "Sold by <legal name> · GSTIN …" and
+  `legalName` / `taxID` in the OnlineStore schema. The PAN is never public.
+
+**AI, exactly once.** The board photo is read by Gemini lite: "board reads
+'Charming Jewels'" / "not a shop". That is the video-KYC question answered
+without a call. No OCR (we type the number and verify it - stronger than
+reading a photo), no face match, no "risk score" (six sellers; a number
+would be theatre). Duplicates are a query.
+
+**Fixed on the way.** The row state read `Seller.status` (default "active"),
+so every shop showed Approve; the sidebar clipped Settings on short screens.

@@ -9,6 +9,8 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import PanelCard from '@/components/panel/PanelCard';
 import PushToggle from '@/components/seller/PushToggle';
+import { useSession } from '@/lib/session';
+import ApplicationStatus from '@/components/seller/ApplicationStatus';
 
 /**
  * What a seller needs to know before they do anything else.
@@ -35,6 +37,7 @@ const when = (iso) => new Date(iso).toLocaleDateString('en-IN', { day: 'numeric'
 const WAITING = ['pending', 'processing'];
 
 export default function SellerDashboard() {
+  const { capabilities } = useSession();
   const t = useT();
   const [data, setData] = useState(null);
   const [state, setState] = useState({ status: 'loading' });
@@ -126,6 +129,10 @@ export default function SellerDashboard() {
 
   return (
     <div className="space-y-6">
+      {/* A shop still under review sees where it stands first - and what was
+          asked, with the fields to fix it (plan 2.40). Gone once approved. */}
+      {capabilities && capabilities.sellerApproved === false && <ApplicationStatus approved={false} onDashboard />}
+
       {!setupDone && productsTotal === 0 && (
         <SetupGuide agreed={agreed} pickupSet={pickupSet} bankSet={bankSet} productsTotal={productsTotal} shared={shared} onShared={markShared} />
       )}

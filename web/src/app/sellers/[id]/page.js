@@ -62,6 +62,8 @@ export default async function SellerPage({ params }) {
     name: seller.businessName,
     url: `${SITE}/sellers/${seller.id}`,
     ...(seller.about ? { description: seller.about } : {}),
+    ...(seller.legal?.name && seller.legal.name !== seller.businessName ? { legalName: seller.legal.name } : {}),
+    ...(seller.legal?.gstin ? { taxID: seller.legal.gstin } : {}),
     ...(Object.keys(seller.links || {}).length ? { sameAs: Object.values(seller.links) } : {}),
     ...(seller.city ? { address: { '@type': 'PostalAddress', addressLocality: seller.city.city, addressRegion: seller.city.state || undefined, addressCountry: 'IN' } } : {}),
     ...(seller.rating ? { aggregateRating: { '@type': 'AggregateRating', ratingValue: seller.rating.average, reviewCount: seller.rating.reviews } } : {}),
@@ -129,6 +131,17 @@ export default async function SellerPage({ params }) {
               );
             })}
           </ul>
+        )}
+
+        {/* Seller of record - the line the Consumer Protection (E-Commerce)
+            Rules 2020 ask a marketplace to show (plan 2.40): legal name and
+            GST standing. Amazon and Flipkart print the same on a seller's
+            profile; a buyer who wants to know who is behind a shop finds it. */}
+        {seller.legal && (seller.legal.gstin || seller.legal.enrolled || seller.legal.name !== seller.businessName) && (
+          <p className="mt-3 text-xs text-muted-foreground">
+            Sold by {seller.legal.name}
+            {seller.legal.gstin ? <> · GSTIN <span className="font-mono">{seller.legal.gstin}</span></> : seller.legal.enrolled ? ` · GST-enrolled seller, ships within ${seller.legal.enrolled}` : ''}
+          </p>
         )}
 
         <p className="mt-4 text-sm text-muted-foreground">
