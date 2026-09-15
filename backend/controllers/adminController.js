@@ -371,7 +371,7 @@ exports.getCategories = async (req, res) => {
 exports.updateCategory = async (req, res) => {
   try {
     const { categoryId } = req.params;
-    const { name, description, isActive, parentCategory, googleProductCategory } = req.body;
+    const { name, description, isActive, parentCategory, googleProductCategory, returnMode, returnModesAllowed } = req.body;
 
     // ✅ Validate parent if changing
     if (parentCategory) {
@@ -404,6 +404,28 @@ exports.updateCategory = async (req, res) => {
     // path and slug are computed explicitly here to stay consistent.
     const update = { name, description, isActive };
     if (googleProductCategory !== undefined) update.googleProductCategory = googleProductCategory || null;
+
+    /*
+     * Fair Returns (§4.39): the admin decides, per category, which return
+     * modes a seller may promise and which is the default - earrings and
+     * innerwear are N by law of hygiene, sarees are R. The set can never be
+     * empty and must contain the default; a product whose mode falls outside
+     * the new set is read as the category default from then on
+     * (utils/returnPolicy.effectiveReturnMode) - nothing is rewritten.
+     */
+    if (returnMode !== undefined || returnModesAllowed !== undefined) {
+      const MODES = ['R', 'X', 'N'];
+      const current = await Category.findById(categoryId).select('returnMode returnModesAllowed').lean();
+      if (!current) return res.status(404).json({ message: 'Category not found' });
+      const allowed = returnModesAllowed !== undefined ? [...new Set((Array.isArray(returnModesAllowed) ? returnModesAllowed : []).filter((m) => MODES.includes(m)))] : current.returnModesAllowed?.length ? current.returnModesAllowed : MODES;
+      const mode = returnMode !== undefined ? returnMode : current.returnMode || 'R';
+      if (!allowed.length) return res.status(400).json({ message: 'At least one return mode must be allowed' });
+      if (!MODES.includes(mode)) return res.status(400).json({ message: 'returnMode must be R, X or N' });
+      if (!allowed.includes(mode)) return res.status(400).json({ message: `The default (${mode}) must be one of the allowed modes` });
+      update.returnMode = mode;
+      update.returnModesAllowed = allowed;
+      update.returnModeSetByAdmin = true;
+    }
     if (parentCategory !== undefined) {
       update.parentCategory = parentCategory || null;
       update.ancestors = await Category.buildAncestors(parentCategory || null);

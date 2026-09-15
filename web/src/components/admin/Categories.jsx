@@ -23,6 +23,49 @@ import CategoryRequests from "@/components/admin/CategoryRequests";
  *   keep their category so nothing is orphaned. Deleting one that still has
  *   products would leave rows pointing at nothing.
  */
+const MODE_WORD = { R: 'Return', X: 'Exchange only', N: 'No return' };
+
+/** Default mode as a select; allowed modes as toggles. Saves on change; the API refuses an empty set or a default outside it. */
+function ReturnModes({ cat, busy, onChange }) {
+  const allowed = cat.returnModesAllowed?.length ? cat.returnModesAllowed : ['R', 'X', 'N'];
+  const mode = cat.returnMode || 'R';
+  const toggle = (m) => {
+    const next = allowed.includes(m) ? allowed.filter((x) => x !== m) : [...allowed, m];
+    if (!next.length) return;
+    onChange({ returnModesAllowed: next, returnMode: next.includes(mode) ? mode : next[0] });
+  };
+  return (
+    <span className="flex flex-wrap items-center gap-1.5 text-xs" title="Return promise for products in this category">
+      <span className="text-muted-foreground">Returns:</span>
+      <select
+        value={mode}
+        disabled={busy}
+        onChange={(e) => onChange({ returnMode: e.target.value, returnModesAllowed: allowed.includes(e.target.value) ? allowed : [...allowed, e.target.value] })}
+        className="h-7 rounded-md border bg-background px-1.5 text-xs"
+        aria-label={`Default return mode for ${cat.name}`}
+      >
+        {['R', 'X', 'N'].map((m) => (
+          <option key={m} value={m}>{MODE_WORD[m]}{m === mode ? ' (default)' : ''}</option>
+        ))}
+      </select>
+      {['R', 'X', 'N'].map((m) => (
+        <button
+          key={m}
+          type="button"
+          disabled={busy || (allowed.length === 1 && allowed.includes(m))}
+          onClick={() => toggle(m)}
+          aria-pressed={allowed.includes(m)}
+          title={`${MODE_WORD[m]} ${allowed.includes(m) ? 'allowed - click to forbid' : 'not allowed - click to allow'}`}
+          className={`rounded-md border px-1.5 py-0.5 ${allowed.includes(m) ? 'border-brand-ink/40 bg-primary/10 text-brand-ink' : 'text-muted-foreground line-through'}`}
+        >
+          {m}
+        </button>
+      ))}
+      {cat.returnModeSetByAdmin && <span className="text-muted-foreground">· set by you</span>}
+    </span>
+  );
+}
+
 export default function Categories() {
   const [categories, setCategories] = useState([]);
   const [state, setState] = useState({ status: "loading" });
@@ -233,6 +276,23 @@ export default function Categories() {
                 </span>
               )}
             </span>
+
+            {/* Fair Returns (§4.39): per category, which return promises a seller
+                may make and which one a new product gets. Earrings, innerwear,
+                cosmetics: N (hygiene). Sarees, kurtas: R. Wrong or damaged is
+                always returnable whatever is set here - that is the law. Only
+                leaf categories carry products, so only they show the control. */}
+            {cat.parentCategory && (
+              <ReturnModes
+                cat={cat}
+                busy={state.status === "working"}
+                onChange={(body) =>
+                  run(() =>
+                    authedFetch(`/admin/categories/${cat._id}`, { method: "PATCH", body }),
+                  )
+                }
+              />
+            )}
 
             <Button
               variant="outline"
