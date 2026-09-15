@@ -254,6 +254,9 @@ exports.getMyPayoutDetails = async (req, res) => {
             accountNumber: `XXXXXX${String(bank.accountNumber).slice(-4)}`,
             ifscCode: bank.ifscCode,
             accountHolderName: bank.accountHolderName,
+            bankName: bank.bankName || '',
+            branch: bank.branch || '',
+            ifscWarning: bank.ifscLookupFailed || '',
           }
         : null,
       canReceivePayouts: complete,
@@ -279,6 +282,12 @@ exports.updateMyPayoutDetails = async (req, res) => {
     // "Before you approve" list reads it; a lookup failure is recorded, not fatal.
     const ifsc = String(ifscCode).trim().toUpperCase();
     const looked = await require('../utils/kyc').lookupIfsc(ifsc);
+    // A definite "no such branch" is a wrong IFSC, and a wrong IFSC is money
+    // bouncing at the first payout - refused now, in words. Only a lookup
+    // that could not be made (network, timeout) is saved and shown as a warning.
+    if (!looked.ok && /No bank branch/.test(looked.reason || '')) {
+      return res.status(400).json({ success: false, message: `IFSC ${ifsc} is not a bank branch - check it on your passbook or cheque book.` });
+    }
     const update = {
       bankDetails: {
         accountNumber: String(accountNumber).trim(),

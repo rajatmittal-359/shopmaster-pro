@@ -21,11 +21,12 @@ const products = [
   { _id: 3, sellerId: 's', name: 'Hidden one', isActive: false },
   { _id: 4, sellerId: 'x', name: 'Partner thing', isActive: true },
 ];
+const categories = [{ _id: 'c1', name: 'Rings' }];
 const opts = { adminEmail: 'admin@example.com', sellerEmail: 'seller@example.com' };
 
 describe('plan', () => {
   it('moves the admin, the house shop and settings with the announcement off - nothing else', () => {
-    const p = plan({ users, sellers, settings, products }, { ...opts, withProducts: false });
+    const p = plan({ users, sellers, settings, products, categories }, { ...opts, withProducts: false });
     expect(p.admin.email).toBe('admin@example.com');
     expect(p.seller.businessName).toBe('House Shop');
     expect(p.settings.announcement.enabled).toBe(false);
@@ -34,13 +35,19 @@ describe('plan', () => {
     expect(p.problems).toEqual([]);
   });
   it('--with-products takes the house shop\'s live products and skips TEST/MESSY, hidden and other sellers', () => {
-    const p = plan({ users, sellers, settings, products }, { ...opts, withProducts: true });
+    const p = plan({ users, sellers, settings, products: products.map((p) => ({ ...p, category: 'c1' })), categories }, { ...opts, withProducts: true });
     expect(p.products.map((x) => x._id)).toEqual([1]);
     expect(p.skippedTest).toBe(1);
   });
   it('names what is missing instead of guessing', () => {
     const p = plan({ users: users.filter((u) => u.role !== 'admin'), sellers: [], settings: null, products: [] }, opts);
-    expect(p.problems).toEqual(expect.arrayContaining([expect.stringMatching(/no admin user/), expect.stringMatching(/no Seller document/), expect.stringMatching(/no platform settings/)]));
+    expect(p.problems).toEqual(expect.arrayContaining([expect.stringMatching(/no admin user/), expect.stringMatching(/no Seller document/), expect.stringMatching(/no platform settings/), expect.stringMatching(/no categories/)]));
+  });
+  it('categories travel with the same ids, and a product pointing at a category the tree lacks is a named problem', () => {
+    const p = plan({ users, sellers, settings, products: [{ _id: 9, sellerId: 's', name: 'Loose', isActive: true, category: 'gone' }], categories }, { ...opts, withProducts: true });
+    expect(p.categories).toEqual(categories);
+    expect(p.orphans).toBe(1);
+    expect(p.problems.some((x) => /reference a category/.test(x))).toBe(true);
   });
 });
 

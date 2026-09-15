@@ -8,7 +8,9 @@
  *     pickup address, bank, application) exactly as they are
  *   - the platform settings document (identity, rulebook numbers, switches;
  *     the announcement bar switched OFF)
- *   - the category tree (seedCategories.js, idempotent - run after)
+ *   - the category tree, as it is (same ObjectIds - products and the admin's
+ *     per-category return modes key into them; seedCategories.js afterwards
+ *     only ADDS what the taxonomy has grown since)
  *   - with --with-products: the house shop's live products, minus anything
  *     whose name starts with TEST or MESSY (their images stay on Cloudinary)
  *
@@ -61,8 +63,9 @@ const dbNameOf = (uri) => {
  * The plan, from what the source holds - pure, so it can be tested.
  * @returns {{admin:object|null, sellerUser:object|null, seller:object|null, settings:object|null, products:object[], problems:string[]}}
  */
-const plan = ({ users, sellers, settings, products }, { adminEmail, sellerEmail, withProducts }) => {
+const plan = ({ users, sellers, settings, products, categories = [] }, { adminEmail, sellerEmail, withProducts }) => {
   const problems = [];
+  if (!categories.length) problems.push('no categories in the source - products would point at nothing');
   const admin = users.find((u) => u.email === adminEmail && u.role === 'admin') || null;
   if (!admin) problems.push(`no admin user with email ${adminEmail}`);
   const sellerUser = users.find((u) => u.email === sellerEmail) || null;
@@ -75,7 +78,10 @@ const plan = ({ users, sellers, settings, products }, { adminEmail, sellerEmail,
   const isTest = (p) => /^(TEST|MESSY)\b/i.test(p.name || '');
   const live = withProducts && seller ? products.filter((p) => String(p.sellerId) === String(seller.userId) && p.isActive && !p.isDeleted && !isTest(p)) : [];
   const skippedTest = withProducts && seller ? products.filter((p) => String(p.sellerId) === String(seller.userId) && isTest(p)).length : 0;
-  return { admin, sellerUser, seller, settings: settingsDoc, products: live, skippedTest, problems };
+  const catIds = new Set(categories.map((c) => String(c._id)));
+  const orphans = live.filter((p) => !catIds.has(String(p.category))).length;
+  if (orphans) problems.push(`${orphans} product(s) reference a category that is not in the source tree - fix them in the panel first`);
+  return { admin, sellerUser, seller, settings: settingsDoc, products: live, categories, skippedTest, orphans, problems };
 };
 
 /** Strip what must not travel: vectors, counters that belong to the dev history. */
@@ -114,23 +120,25 @@ const run = async () => {
   const targetUsers = await D.collection('users').countDocuments();
   if (targetUsers > 0 && !OK_NONEMPTY) throw new Error(`target already has ${targetUsers} users - is this really production, freshly created? Re-run with --target-has-data-i-know if so.`);
 
-  const [users, sellers, settings, products] = await Promise.all([
+  const [users, sellers, settings, products, categories] = await Promise.all([
     S.collection('users').find({}).toArray(),
     S.collection('sellers').find({}).toArray(),
     S.collection('platformsettings').findOne({ _id: 'platform' }),
     WITH_PRODUCTS ? S.collection('products').find({}).toArray() : [],
+    S.collection('categories').find({}).toArray(),
   ]);
-  const p = plan({ users, sellers, settings, products }, { adminEmail, sellerEmail, withProducts: WITH_PRODUCTS });
+  const p = plan({ users, sellers, settings, products, categories }, { adminEmail, sellerEmail, withProducts: WITH_PRODUCTS });
 
   console.log('\nPLAN');
   console.log(`  admin user      ${p.admin ? p.admin.email : 'MISSING'}`);
   console.log(`  seller user     ${p.sellerUser ? p.sellerUser.email : 'MISSING'}`);
   console.log(`  seller doc      ${p.seller ? `${p.seller.businessName} (approved ${p.seller.isApproved}, bank ${p.seller.bankDetails?.accountNumber ? 'yes' : 'no'}, pickup ${p.seller.pickupAddress?.pincode || 'no'})` : 'MISSING'}`);
   console.log(`  settings        ${p.settings ? `rules v${p.settings.rules?.version}, announcement off` : 'none (defaults)'}`);
+  console.log(`  categories      ${p.categories.length}, same ids (products and return-mode rules key into them)`);
   console.log(`  products        ${WITH_PRODUCTS ? `${p.products.length} live (${p.skippedTest} TEST/MESSY skipped)` : 'not moving (list them through the panel)'}`);
   console.log(`  not moving      orders, payouts, reviews, customers, partner sellers, logs, caches, vectors`);
   for (const x of p.problems) console.log(`  ! ${x}`);
-  if (p.problems.some((x) => x.startsWith('no admin') || x.startsWith('no seller') || x.startsWith('no Seller'))) throw new Error('the plan is incomplete - fix the source or the emails first');
+  if (p.problems.some((x) => x.startsWith('no admin') || x.startsWith('no seller') || x.startsWith('no Seller') || x.startsWith('no categories') || /reference a category/.test(x))) throw new Error('the plan is incomplete - fix the source or the emails first');
 
   if (!WRITE) {
     console.log('\nDry run - nothing written. Add --write to do it.');
@@ -139,11 +147,12 @@ const run = async () => {
     return;
   }
 
+  await D.collection('categories').insertMany(p.categories);
   await D.collection('users').insertMany([cleanUser(p.admin), cleanUser(p.sellerUser)]);
   await D.collection('sellers').insertOne(cleanSeller(p.seller));
   if (p.settings) await D.collection('platformsettings').replaceOne({ _id: 'platform' }, p.settings, { upsert: true });
   if (p.products.length) await D.collection('products').insertMany(p.products.map(cleanProduct));
-  console.log(`\nDONE - ${2} users, 1 seller, ${p.settings ? 1 : 0} settings, ${p.products.length} products written to ${D.databaseName}.`);
+  console.log(`\nDONE - ${p.categories.length} categories, 2 users, 1 seller, ${p.settings ? 1 : 0} settings, ${p.products.length} products written to ${D.databaseName}.`);
   console.log('Next: MONGO_URI=<prod> node seedCategories.js && npm run search-index && npm run knowledge');
   await src.close();
   await dst.close();

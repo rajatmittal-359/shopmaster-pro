@@ -131,7 +131,7 @@ export default function Earnings() {
           <div className="mt-3 text-sm">
             <p>{bank.bankDetails.accountHolderName}</p>
             <p className="text-muted-foreground">
-              {bank.bankDetails.accountNumber} · {bank.bankDetails.ifscCode}
+              {bank.bankDetails.accountNumber} · {bank.bankDetails.ifscCode}{bank.bankDetails.bankName ? ` · ${bank.bankDetails.bankName}${bank.bankDetails.branch ? `, ${bank.bankDetails.branch}` : ''}` : ''}
             </p>
             {bank.gstNumber && <p className="text-muted-foreground">GSTIN {bank.gstNumber}</p>}
             <Button variant="outline" size="sm" className="mt-3" onClick={() => setEditing(true)}>

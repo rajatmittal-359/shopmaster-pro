@@ -16,8 +16,11 @@ const liveSettings = async () => {
     if (PlatformSettings.db.readyState !== 1) return cache.doc;
     const doc = await PlatformSettings.findById('platform').lean();
     cache = { at: Date.now(), doc };
-  } catch {
-    cache.at = Date.now();
+  } catch (err) {
+    // Since 15 Sep 2026 this document decides money (free delivery above,
+    // same-day, COD): a failed read is said, and not cached, so the next
+    // request tries again instead of running a minute on the code's defaults.
+    console.error('liveSettings read failed - defaults in force for this request:', err.message);
   }
   return cache.doc;
 };

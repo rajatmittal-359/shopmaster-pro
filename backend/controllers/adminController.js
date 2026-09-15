@@ -1,5 +1,7 @@
 // backend/controllers/adminController.js
 const { sendError } = require('../utils/apiError');
+// Mail bodies are plain sentences typed by the admin - escaped once, here.
+const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const mongoose = require('mongoose');
 const User = require('../models/User');
 const sendSafeEmail = require('../utils/sendSafeEmail');
@@ -36,7 +38,7 @@ exports.getAllSellers = async (req, res) => {
         // What the admin should know before approving (plan 2.19 / 2.40 - facts, no verdict).
         application: await applicationFacts(s),
         checks: require('../utils/kyc').applicationChecks(s),
-        duplicates: s.isApproved ? [] : await require('../utils/application').duplicates(s).catch(() => []),
+        duplicates: s.isApproved ? [] : await require('../utils/application').duplicates(s).catch((err) => { console.error('duplicates check failed for', s._id, err.message); return null; }),
         applicationState: s.application?.status || '',
         infoRequested: s.application?.status === 'needs_info' ? s.application.infoRequested : null,
         board: s.application?.boardRead?.at ? s.application.boardRead : null,
@@ -68,7 +70,7 @@ exports.approveSeller = async (req, res) => {
     }
 
     // The moment a shop waits for (plan 2.40): bell, push and mail, with the next step.
-    setImmediate(() => require('../utils/notify').notify({ userId: seller.userId?._id || seller.userId, role: 'seller', category: 'account', title: `${seller.businessName} is approved · दुकान मंज़ूर 🎉`, body: 'Your products can go live now. First: pickup address, then the first product.', url: '/seller', tag: `seller-approved-${seller._id}` }).catch(() => {}));
+    setImmediate(() => require('../utils/notify').notify({ userId: seller.userId?._id || seller.userId, role: 'seller', category: 'account', title: `${seller.businessName} is approved · दुकान मंज़ूर 🎉`, body: 'Your products can go live now. First: pickup address, then the first product.', url: '/seller', tag: `seller-approved-${seller._id}`, mail: { subject: `${seller.businessName} is approved on ShopMaster Pro`, text: 'Your shop is approved. Your products can go live now - first the pickup address, then the first product, at /seller.', html: `<p style="font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;font-size:16px;line-height:1.6;color:#1f2937">${esc('Your shop is approved. Your products can go live now - first the pickup address, then the first product, at /seller.')}</p><p style="font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;font-size:14px;color:#6b7280">ShopMaster Pro</p>` } }).catch((err) => console.error('approve notify failed:', err.message)));
 
     res.json({
       message: 'Seller approved successfully',
@@ -96,7 +98,8 @@ exports.rejectSeller = async (req, res) => {
     }
 
     // Said to the shop, with the reason, and the door left open: they may fix and resubmit.
-    setImmediate(() => require('../utils/notify').notify({ userId: seller.userId?._id || seller.userId, role: 'seller', category: 'account', title: `Application not approved · ${seller.businessName}`, body: reason ? `${reason} - you can update the application and send it again.` : 'You can update the application and send it again.', url: '/sell', tag: `seller-rejected-${seller._id}` }).catch(() => {}));
+    const rejectBody = reason ? `${reason} - you can update the application and send it again.` : 'You can update the application and send it again.';
+    setImmediate(() => require('../utils/notify').notify({ userId: seller.userId?._id || seller.userId, role: 'seller', category: 'account', title: `Application not approved · ${seller.businessName}`, body: rejectBody, url: '/sell', tag: `seller-rejected-${seller._id}`, mail: { subject: `Your ShopMaster Pro application - not approved this time`, text: `${rejectBody} Update it at /sell.`, html: `<p style="font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;font-size:16px;line-height:1.6;color:#1f2937">${esc(`${rejectBody} Update it at /sell.`)}</p><p style="font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;font-size:14px;color:#6b7280">ShopMaster Pro</p>` } }).catch((err) => console.error('reject notify failed:', err.message)));
 
     res.json({
       message: 'Seller rejected',
@@ -122,7 +125,7 @@ exports.askSeller = async (req, res) => {
       { new: true }
     ).populate('userId', 'name email');
     if (!seller) return res.status(404).json({ message: 'No pending application with that id' });
-    setImmediate(() => require('../utils/notify').notify({ userId: seller.userId?._id || seller.userId, role: 'seller', category: 'account', title: `One thing before approval · ${seller.businessName}`, body: reason, url: '/sell', tag: `seller-ask-${seller._id}` }).catch(() => {}));
+    setImmediate(() => require('../utils/notify').notify({ userId: seller.userId?._id || seller.userId, role: 'seller', category: 'account', title: `One thing before approval · ${seller.businessName}`, body: reason, url: '/sell', tag: `seller-ask-${seller._id}`, mail: { subject: `One thing before your shop is approved - ${seller.businessName}`, text: `${reason} - update the application at /sell and it comes straight back to us.`, html: `<p style="font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;font-size:16px;line-height:1.6;color:#1f2937">${esc(`${reason} - update the application at /sell and it comes straight back to us.`)}</p><p style="font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;font-size:14px;color:#6b7280">ShopMaster Pro</p>` } }).catch((err) => console.error('ask notify failed:', err.message)));
     res.json({ message: 'Asked', seller });
   } catch (error) {
     sendError(res, error);
@@ -156,16 +159,19 @@ exports.editSellerShop = async (req, res) => {
     const note = String(req.body?.note || '').trim().slice(0, 200);
     seller.adminEdits = [...(seller.adminEdits || []).slice(-19), { at: new Date(), by: req.user._id, fields: r.changed, note }];
     await seller.save();
-    setImmediate(() => require('../utils/notify').notify({
+    const editBody = `${note ? `${note} - ` : ''}Check it under Settings. If this was not asked for, write to us.`;
+    // Awaited, so the admin is told what actually reached the seller.
+    const sent = await require('../utils/notify').notify({
       userId: seller.userId,
       role: 'seller',
       category: 'account',
       title: `Admin updated your ${r.changed.join(', ')} · एडमिन ने बदला`,
-      body: `${note ? `${note} - ` : ''}Check it under Settings. If this was not asked for, write to us.`,
+      body: editBody,
       url: '/seller/settings',
       tag: `admin-edit-${seller._id}-${Date.now()}`,
-    }).catch(() => {}));
-    res.json({ message: `Saved - ${r.changed.join(', ')}. The seller has been told.`, changed: r.changed, aboutHeld: Boolean(r.aboutHeld) });
+      mail: { subject: `ShopMaster Pro updated your ${r.changed.join(", ")}`, text: `${editBody} Settings: /seller/settings.`, html: `<p style="font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;font-size:16px;line-height:1.6;color:#1f2937">${esc(`${editBody} Settings: /seller/settings.`)}</p><p style="font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;font-size:14px;color:#6b7280">ShopMaster Pro</p>` },
+    }).catch((err) => ({ inApp: false, mailed: false, error: err.message }));
+    res.json({ message: `Saved - ${r.changed.join(', ')}. ${sent.inApp ? 'Bell sent' : 'Bell failed'}${sent.mailed ? ', mail sent' : sent.inApp ? ', mail per their preferences' : ''}.`, changed: r.changed, aboutHeld: Boolean(r.aboutHeld), notified: sent });
   } catch (error) {
     sendError(res, error);
   }

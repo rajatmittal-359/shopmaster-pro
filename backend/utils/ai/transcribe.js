@@ -169,7 +169,7 @@ const looksLikeNoise = (text) => {
 };
 
 /** Errors that mean "try another company", not "the clip is bad". */
-const RETRYABLE = /not set|429|quota|rate|reach|5\d\d/i;
+const RETRYABLE = /not set|429|quota|rate[ _-]?limit|too many|reach|5\d\d/i;
 const NOTHING_CLEAR = 'Nothing clear was heard - hold the mic a little longer and speak again';
 
 const transcribe = async (dataUrl, { language: wanted = 'auto' } = {}) => {
@@ -213,7 +213,12 @@ const transcribe = async (dataUrl, { language: wanted = 'auto' } = {}) => {
     reasons.push(`${name}: ${r.reason}`);
     if (i === 0 && !RETRYABLE.test(r.reason)) return r;
   }
-  if (heard !== null) return { ok: false, reason: NOTHING_CLEAR, heard: heard.slice(0, 60) };
+  console.warn(`transcribe: no road produced words - ${reasons.join('; ').slice(0, 300)}`);
+  // Noise from one road and a dead backend on the others is not "speak
+  // again" - the person would re-record against nothing. Say so.
+  const backendDown = reasons.filter((r) => !/ heard /.test(r)).length;
+  if (heard !== null && !backendDown) return { ok: false, reason: NOTHING_CLEAR, heard: heard.slice(0, 60) };
+  if (heard !== null) return { ok: false, reason: `${NOTHING_CLEAR} (a transcription service was also unavailable)`, heard: heard.slice(0, 60) };
   return { ok: false, reason: reasons.join('; ') };
 };
 

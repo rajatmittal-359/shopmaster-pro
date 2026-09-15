@@ -35,6 +35,27 @@ const { modesForProducts } = require('./returnPolicy');
  *   coupon: {code, fundedBy, description}|null, couponError: string|null
  * }>}
  */
+/** Legal name, business address and GST standing per seller, as they stand now - stamped on the line. */
+const sellersOfRecord = async (sellerIds, session) => {
+  const Seller = require('../models/Seller');
+  const unique = [...new Set(sellerIds.map(String))];
+  let q = Seller.find({ userId: { $in: unique } }).select('userId businessName application.legalName application.gstin application.gstMode application.enrolmentNumber gstNumber pickupAddress');
+  if (session) q = q.session(session);
+  let docs = [];
+  try {
+    docs = await q.lean();
+  } catch (err) {
+    console.error('sellersOfRecord failed - lines will read the seller live:', err.message);
+    return new Map();
+  }
+  return new Map(docs.map((sd) => {
+    const a = sd.application || {};
+    const gstin = a.gstin || sd.gstNumber || '';
+    const pa = sd.pickupAddress || {};
+    return [String(sd.userId), { legalName: a.legalName || sd.businessName || '', address: [pa.address1, pa.address2, [pa.city, pa.state, pa.pincode].filter(Boolean).join(' ')].filter(Boolean), gstin, enrolled: !gstin && a.gstMode === 'enrolment' ? a.enrolmentNumber || '' : '' }];
+  }));
+};
+
 const priceOrder = async ({ items, couponCode, customerId, session }) => {
   const lines = items.map((item) => ({
     productId: item.productId._id,
@@ -59,6 +80,8 @@ const priceOrder = async ({ items, couponCode, customerId, session }) => {
 
   // The return promise per line, read once for the basket (utils/returnPolicy).
   const modes = await modesForProducts(items.map((item) => item.productId), { session });
+  // The seller of record per line, frozen for the invoice (models/Order soldBy).
+  const soldBy = await sellersOfRecord(lines.map((l) => l.sellerId), session);
 
   let perLine = lines.map(() => 0);
   let coupon = null;
@@ -105,6 +128,7 @@ const priceOrder = async ({ items, couponCode, customerId, session }) => {
     return {
       ...line,
       returnMode: modes.get(String(line.productId)) ?? null,
+      soldBy: soldBy.get(String(line.sellerId)) || undefined,
       commissionRate: split.commissionRate,
       commissionAmount: split.commissionAmount,
       sellerEarning: split.sellerEarning,

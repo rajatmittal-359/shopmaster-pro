@@ -1916,8 +1916,8 @@ exports.updateMyApplication = async (req, res) => {
       require('../utils/notify').notifyAdmins({ category: 'account', title: `Application updated · ${s.businessName}`, body: 'Back in the queue on Sellers.', url: '/admin/sellers', tag: `seller-apply-${req.user._id}` }).catch(() => {});
       if (req.body?.shopPhotoDataUrl && photo) {
         require('../utils/boardRead').readBoard(photo, s.businessName)
-          .then((b) => (b.ok ? Seller.updateOne({ _id: s._id }, { $set: { 'application.boardRead': { text: b.text, isShop: b.isShop, at: new Date() } } }) : null))
-          .catch(() => {});
+          .then((b) => (b.ok ? Seller.updateOne({ _id: s._id, 'application.shopPhoto': photo }, { $set: { 'application.boardRead': { text: b.text, isShop: b.isShop, at: new Date() } } }) : null))
+          .catch((err) => console.warn('board read failed:', err.message));
       }
     });
     res.json({ message: 'Updated - it is back with the admin.', state: 'submitted' });

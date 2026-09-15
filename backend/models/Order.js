@@ -38,6 +38,18 @@ const orderItemSchema = new mongoose.Schema({
    * from before 15 Sep 2026 (the product's current mode is read instead).
    */
   returnMode: { type: String, enum: ['R', 'X', 'N', null], default: null },
+  /*
+   * The seller of record as it was at checkout (15 Sep 2026) - legal name,
+   * business address, GST standing - so the invoice for this order reads the
+   * same next year, whatever the shop changes later. Lines from before this
+   * date carry none and are read live.
+   */
+  soldBy: {
+    legalName: { type: String, default: '' },
+    address: { type: [String], default: undefined },
+    gstin: { type: String, default: '' },
+    enrolled: { type: String, default: '' },
+  },
 
   // ---- Commission snapshot -------------------------------------------------
   // Copied from the seller's profile at the moment the order is placed and then

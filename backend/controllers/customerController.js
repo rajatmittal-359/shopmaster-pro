@@ -493,7 +493,9 @@ exports.getOrderDetails = async (req, res) => {
      * bill needs each seller's legal name, business address and GST standing;
      * the customer's order page shows the shop name only.
      */
-    const sellerIds = [...new Set((order.items || []).map((i) => String(i.sellerId)).filter(Boolean))];
+    // Stamped at checkout (soldBy on the line) wins; older lines read the seller live.
+    const stamped = Object.fromEntries((order.items || []).filter((i) => i.soldBy && i.soldBy.legalName).map((i) => [String(i.sellerId), { businessName: i.soldBy.legalName, legalName: i.soldBy.legalName, address: i.soldBy.address || [], gstin: i.soldBy.gstin || '', enrolled: i.soldBy.enrolled || '' }]));
+    const sellerIds = [...new Set((order.items || []).map((i) => String(i.sellerId)).filter((id) => id && !stamped[id]))];
     const sellerDocs = sellerIds.length ? await Seller.find({ userId: { $in: sellerIds } }).select('userId businessName application.legalName application.gstin application.gstMode application.enrolmentNumber gstNumber pickupAddress').lean() : [];
     const sellers = Object.fromEntries(sellerDocs.map((sd) => {
       const a = sd.application || {};
@@ -511,7 +513,7 @@ exports.getOrderDetails = async (req, res) => {
     res.json({
       success: true,
       order,
-      sellers,
+      sellers: { ...sellers, ...stamped },
       canReturn,
       returnWindowClosesAt,
       returnWindowDays,

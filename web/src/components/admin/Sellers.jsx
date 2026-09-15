@@ -86,6 +86,9 @@ function BeforeYouApprove({ seller }) {
           <Fact ok={a.links > 0 ? true : null}>{a.links ? `${a.links} profile link${a.links === 1 ? '' : 's'}` : 'No Instagram / Google profile'}</Fact>
           {a.buyer && <Fact ok={a.buyer.orders > 0 && a.buyer.level === 'clean' ? true : a.buyer.level !== 'clean' ? false : null}>{a.buyer.orders ? `Bought here ${a.buyer.orders}× · ${a.buyer.level === 'clean' ? 'clean record' : a.buyer.signals.join(', ')}` : 'Never bought here'}</Fact>}
         </div>
+        {seller.duplicates === null && (
+          <p className="mt-2 rounded-md bg-amber-500/10 p-2 text-xs text-amber-800 dark:text-amber-200">Could not check for the same PAN / GSTIN / bank on other shops - reload before approving.</p>
+        )}
         {(seller.duplicates || []).length > 0 && (
           <p className="mt-2 rounded-md bg-amber-500/10 p-2 text-xs text-amber-800 dark:text-amber-200">
             Same {seller.duplicates.map((d) => `${d.shared.join(' + ')} as “${d.businessName}” (${d.state})`).join('; ')}.

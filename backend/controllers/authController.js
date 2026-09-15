@@ -204,8 +204,8 @@ exports.becomeSeller = async (req, res) => {
       // What the board says - one cheap vision call, recorded for the admin's list.
       if (shopPhoto) {
         require('../utils/boardRead').readBoard(shopPhoto, businessName)
-          .then((b) => (b.ok ? Seller.updateOne({ _id: seller._id }, { $set: { 'application.boardRead': { text: b.text, isShop: b.isShop, at: new Date() } } }) : null))
-          .catch(() => {});
+          .then((b) => (b.ok ? Seller.updateOne({ _id: seller._id, 'application.shopPhoto': shopPhoto }, { $set: { 'application.boardRead': { text: b.text, isShop: b.isShop, at: new Date() } } }) : null))
+          .catch((err) => console.warn('board read failed:', err.message));
       }
     });
 
