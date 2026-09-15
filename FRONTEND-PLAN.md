@@ -2184,3 +2184,37 @@ would be theatre). Duplicates are a query.
 
 **Fixed on the way.** The row state read `Seller.status` (default "active"),
 so every shop showed Approve; the sidebar clipped Settings on short screens.
+
+### 4.42 What the law asks a marketplace to show (15 Sep 2026)
+
+Rajat: "humesha sahi ho, legally, ethically, koi ungli na uthaye." Audited
+the site against the Consumer Protection (E-Commerce) Rules 2020 (with the
+2026 amendment, effective 1 Jan 2027), the Legal Metrology (Packaged
+Commodities) Rules 2011 and the DPDP Act 2023. Four things were missing and
+are now built; the rest was already right.
+
+- **Grievance officer** (rule 4(4)-(5)): a named person with designation and
+  contact, on the platform; complaints acknowledged in 48 hours, resolved in
+  a month. Settings → Business has the four fields; Contact, Privacy and Terms
+  print them, with the National Consumer Helpline (1915) as the next door.
+- **Seller of record** (rule 6(5)): every shop page now says "Sold by <legal
+  name> · <business address> · GSTIN … / not registered under GST · Complaints:
+  grievance officer". The address was a deliberate omission before ("city only,
+  never the address" - home-based sellers); the law does not exempt them and
+  Amazon prints it, so it is shown, and the Pickup address card tells the
+  seller so in plain words. The phone stays private.
+- **Country of origin** on every listing (rule 6(5)), **net quantity** and
+  **manufacturer / packer / importer** for packed goods (Legal Metrology rule
+  6(10)) - three fields under Details with the why in the hint, printed in the
+  product facts. Handmade, unpacked goods need only the country.
+- **/how-we-rank** (rule 5(3)(e)): the ranking parameters in plain words -
+  newest by default; search by name, then words/brand/colour, then
+  description; the four sorts; no paid placement; no seller preferred,
+  including any connected to the operator. Linked from the footer with the
+  other policies. When the ranking code changes, this page changes.
+
+Checked and left alone: total price with breakup before payment; free
+cancellation before dispatch; the return promise per item at checkout and on
+the invoice; stock counts are real, so "only N left" is not a dark pattern;
+the invoice is issued in the seller's name (§4.41); nothing in listing or
+search boosts any seller.

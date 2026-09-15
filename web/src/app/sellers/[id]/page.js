@@ -137,10 +137,12 @@ export default async function SellerPage({ params }) {
             Rules 2020 ask a marketplace to show (plan 2.40): legal name and
             GST standing. Amazon and Flipkart print the same on a seller's
             profile; a buyer who wants to know who is behind a shop finds it. */}
-        {seller.legal && (seller.legal.gstin || seller.legal.enrolled || seller.legal.name !== seller.businessName) && (
+        {seller.legal && (
           <p className="mt-3 text-xs text-muted-foreground">
             Sold by {seller.legal.name}
-            {seller.legal.gstin ? <> · GSTIN <span className="font-mono">{seller.legal.gstin}</span></> : seller.legal.enrolled ? ` · GST-enrolled seller, ships within ${seller.legal.enrolled}` : ''}
+            {seller.legal.address ? <> · {seller.legal.address}</> : null}
+            {seller.legal.gstin ? <> · GSTIN <span className="font-mono">{seller.legal.gstin}</span></> : seller.legal.enrolled ? ` · GST-enrolled seller, ships within ${seller.legal.enrolled}` : ' · not registered under GST'}
+            {' · '}Complaints: <Link href="/contact" className="text-brand-ink hover:underline">grievance officer</Link>
           </p>
         )}
 

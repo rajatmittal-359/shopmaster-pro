@@ -113,6 +113,15 @@ export default async function PrivacyPage() {
         </p>
       </Section>
 
+      <Section title="Grievance officer">
+        <p>
+          {BUSINESS.grievance
+            ? <>Questions or complaints about your data go to {BUSINESS.grievance.name}, {BUSINESS.grievance.designation}: <a href={`mailto:${BUSINESS.grievance.email}`} className="text-brand-ink hover:underline">{BUSINESS.grievance.email}</a>.</>
+            : <>Questions or complaints about your data go to <a href={`mailto:${BUSINESS.email}`} className="text-brand-ink hover:underline">{BUSINESS.email}</a>.</>}{' '}
+          Acknowledged within 48 hours, answered within one month. You may also raise it with the Data Protection Board of India under the Digital Personal Data Protection Act, 2023.
+        </p>
+      </Section>
+
       <Section title="Contact">
         <p>
           {BUSINESS.legalName}, {BUSINESS.addressLines.join(', ')}. Phone{' '}

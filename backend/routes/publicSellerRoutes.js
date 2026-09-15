@@ -101,6 +101,8 @@ router.get('/:userId', async (req, res) => {
          */
         legal: {
           name: seller.application?.legalName || seller.businessName,
+          // Rule 6(5)(a)-(b): the seller's geographic address, on the platform.
+          address: [seller.pickupAddress?.address1, [seller.pickupAddress?.city, seller.pickupAddress?.state, seller.pickupAddress?.pincode].filter(Boolean).join(' ')].filter(Boolean).join(', '),
           gstin: seller.application?.gstin || seller.gstNumber || '',
           enrolled: !seller.application?.gstin && !seller.gstNumber && seller.application?.gstMode === 'enrolment' ? (require('../utils/kyc').checkEnrolment(seller.application.enrolmentNumber).state || 'their state') : '',
         },

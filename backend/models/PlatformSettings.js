@@ -40,6 +40,17 @@ const settingsSchema = new mongoose.Schema(
       pincode: { type: String, trim: true, default: '' },
       hours: { type: String, trim: true, default: '' },
       gstin: { type: String, trim: true, default: '' },
+      /*
+       * The Consumer Protection (E-Commerce) Rules 2020, rule 4(4)-(5): every
+       * e-commerce entity names a grievance officer (and a nodal contact
+       * resident in India), displays name, designation and contact, acknowledges
+       * a complaint within 48 hours and resolves it within a month. Shown on
+       * Contact, Privacy and Terms; empty until the admin fills it in.
+       */
+      grievanceName: { type: String, trim: true, default: '' },
+      grievanceDesignation: { type: String, trim: true, default: 'Grievance Officer' },
+      grievanceEmail: { type: String, trim: true, default: '' },
+      grievancePhone: { type: String, trim: true, default: '' },
     },
 
     links: {

@@ -219,7 +219,7 @@ export default function SellerSettings() {
               <div id="pickup" className="scroll-mt-20">
               <PanelCard
                 title="Where the courier collects"
-                lead="This is the address a rider is sent to. If the shop moves and this does not, the pickup is wasted and the parcel misses its dispatch promise."
+                lead="This is the address a rider is sent to, and your business address of record - shown in the “Sold by” line on your shop page and on invoices, as the Consumer Protection (E-Commerce) Rules require. If the shop moves and this does not, the pickup is wasted."
               >
                 <div className="grid gap-5">
                   <div className="grid gap-5 sm:grid-cols-2">
@@ -294,7 +294,7 @@ export default function SellerSettings() {
                           Show my city on the shop page
                         </Label>
                         <p className="mt-1 text-sm text-muted-foreground">
-                          {form.pickupAddress.city ? `“${form.pickupAddress.city}, ${form.pickupAddress.state}” - the city only, never the address.` : 'Add a pickup address first (the Pickup address tab); only the city is shown.'}
+                          {form.pickupAddress.city ? `“${form.pickupAddress.city}, ${form.pickupAddress.state}” in the header, beside your rating. (Your business address is also printed in the small “Sold by” line on your shop page - the E-Commerce Rules require it.)` : 'Add a pickup address first (the Pickup address tab).'}
                         </p>
                       </div>
                       <Switch id="showLocation" checked={form.showLocation} onCheckedChange={(checked) => setForm({ ...form, showLocation: checked })} className="mt-0.5" disabled={!form.pickupAddress.city} />

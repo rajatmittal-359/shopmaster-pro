@@ -254,6 +254,10 @@ export default async function ProductPage({ params }) {
               ['Category', product.category?.name],
               ['Item code', product.sku],
               ['Weight', product.weight ? `${product.weight} g` : null],
+              // The law's lines (E-Commerce Rules 2020 rule 6(5); Legal Metrology rule 6(10)).
+              ['Country of origin', product.countryOfOrigin || 'India'],
+              ['Net quantity', product.netQuantity],
+              ['Manufacturer / packer', product.manufacturer],
             ]
               .filter(([, v]) => v)
               .map(([label, value]) => (

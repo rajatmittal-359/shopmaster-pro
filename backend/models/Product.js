@@ -335,6 +335,23 @@ const productSchema = new mongoose.Schema(
     type: String,
     trim: true,
   },
+  /*
+   * What the law asks a listing to say (15 Sep 2026):
+   *   countryOfOrigin  Consumer Protection (E-Commerce) Rules 2020, rule 6(5) -
+   *                    every seller states the country of origin. India for
+   *                    nearly everything here; an importer's goods say where.
+   *   manufacturer     Legal Metrology (Packaged Commodities) Rules 2011,
+   *                    rule 6(10): a PRE-PACKAGED commodity sold online shows the
+   *                    manufacturer / packer / importer's name and address,
+   *                    net quantity, MRP and customer care. Handmade jewellery
+   *                    is not pre-packaged; boxed electronics, cosmetics and
+   *                    food are. Optional here, shown when given, with the
+   *                    form saying which goods need it.
+   *   netQuantity      as printed on the pack ("100 g", "Set of 4").
+   */
+  countryOfOrigin: { type: String, trim: true, default: 'India', maxlength: 60 },
+  manufacturer: { type: String, trim: true, default: '', maxlength: 240 },
+  netQuantity: { type: String, trim: true, default: '', maxlength: 60 },
   sku: {
     type: String,
     trim: true,

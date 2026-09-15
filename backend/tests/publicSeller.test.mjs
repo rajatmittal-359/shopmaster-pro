@@ -123,7 +123,6 @@ describe('what never leaves the server', () => {
       'HDFC0000001',
       '"pan"',
       '9876500001',
-      'Test Lane',
       'isPlatformOwned',
     ]) {
       expect(body).not.toContain(secret);
@@ -137,9 +136,15 @@ describe('what never leaves the server', () => {
    * the seller profile, and it is on every invoice. Only under `legal`,
    * never the PAN on its own.
    */
-  it('shows the seller-of-record line: legal name and GSTIN, nothing more', async () => {
+  /*
+   * The business address joined the line on 15 Sep 2026: rule 6(5)(a)-(b) of
+   * the E-Commerce Rules 2020 makes the marketplace show each seller's
+   * geographic address, and Amazon prints it on the seller profile. The phone
+   * stays private - orders and complaints go through the platform.
+   */
+  it('shows the seller-of-record line: legal name, address and GSTIN - never the phone or PAN', async () => {
     const res = await request(app).get(`/api/public/sellers/${USER_ID}`);
-    expect(res.body.seller.legal).toEqual({ name: 'Meera Jewels', gstin: 'GSTIN1234567', enrolled: '' });
+    expect(res.body.seller.legal).toEqual({ name: 'Meera Jewels', address: '12, Test Lane', gstin: 'GSTIN1234567', enrolled: '' });
   });
 });
 

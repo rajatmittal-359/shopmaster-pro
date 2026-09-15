@@ -221,6 +221,9 @@ exports.addProduct = async (req, res) => {
       tags,
       salePrice,
       saleEndsAt,
+      countryOfOrigin,
+      manufacturer,
+      netQuantity,
 
       /*
        * The parcel weight, and the three attributes Google REQUIRES for free
@@ -272,6 +275,9 @@ exports.addProduct = async (req, res) => {
       tags,
       weight,
       color,
+      ...(countryOfOrigin ? { countryOfOrigin: String(countryOfOrigin).trim().slice(0, 60) } : {}),
+      ...(manufacturer !== undefined ? { manufacturer: String(manufacturer || '').trim().slice(0, 240) } : {}),
+      ...(netQuantity !== undefined ? { netQuantity: String(netQuantity || '').trim().slice(0, 60) } : {}),
       // Left undefined rather than defaulted here: the schema's defaults are
       // right for this shop, and writing an explicit value would mean a seller
       // of men's watches silently ships `female` because a form did not ask.
@@ -360,6 +366,9 @@ exports.updateProduct = async (req, res) => {
       freeShipping,
       salePrice,
       saleEndsAt,
+      countryOfOrigin,
+      manufacturer,
+      netQuantity,
       returnMode,
     } = req.body;
 
@@ -406,6 +415,9 @@ exports.updateProduct = async (req, res) => {
   product.lowStockThreshold = lowStockThreshold;
 };
     if (brand !== undefined) product.brand = brand;
+    if (countryOfOrigin !== undefined) product.countryOfOrigin = String(countryOfOrigin || 'India').trim().slice(0, 60);
+    if (manufacturer !== undefined) product.manufacturer = String(manufacturer || '').trim().slice(0, 240);
+    if (netQuantity !== undefined) product.netQuantity = String(netQuantity || '').trim().slice(0, 60);
     if (sku !== undefined) product.sku = sku;
     if (mrp !== undefined) product.mrp = mrp;
     if (Array.isArray(tags)) product.tags = tags;

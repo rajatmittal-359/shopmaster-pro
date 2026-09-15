@@ -176,6 +176,25 @@ export default function PlatformSettings() {
                     <Input id="gstin" value={b.gstin} onChange={set('business', 'gstin')} />
                   </Field>
                 </div>
+                {/* Rule 4 of the E-Commerce Rules 2020: a named officer, shown on the
+                    site, who acknowledges within 48 hours and resolves within a month. */}
+                <div className="mt-5 border-t pt-4">
+                  <p className="text-sm font-medium">Grievance officer <span className="font-normal text-muted-foreground">- required by the E-Commerce Rules 2020; shown on Contact, Privacy and Terms</span></p>
+                  <div className="mt-3 grid gap-4 sm:grid-cols-2">
+                    <Field id="grievanceName" label="Name" hint="A real person, resident in India. Can be you.">
+                      <Input id="grievanceName" value={b.grievanceName || ''} onChange={set('business', 'grievanceName')} />
+                    </Field>
+                    <Field id="grievanceDesignation" label="Designation">
+                      <Input id="grievanceDesignation" value={b.grievanceDesignation || ''} onChange={set('business', 'grievanceDesignation')} />
+                    </Field>
+                    <Field id="grievanceEmail" label="Email" hint="Complaints are acknowledged within 48 hours and resolved within one month - the law's clock, not ours.">
+                      <Input id="grievanceEmail" type="email" value={b.grievanceEmail || ''} onChange={set('business', 'grievanceEmail')} />
+                    </Field>
+                    <Field id="grievancePhone" label="Phone">
+                      <Input id="grievancePhone" value={b.grievancePhone || ''} onChange={set('business', 'grievancePhone')} />
+                    </Field>
+                  </div>
+                </div>
               </Block>
               <Block title="Where else we are" lead="Google joins the site to these profiles (sameAs). Only the ones you have." form={l} saved={doc.links} onSave={() => save('links')} busy={busy === 'links'}>
                 <div className="grid gap-4 sm:grid-cols-2">

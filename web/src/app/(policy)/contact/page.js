@@ -87,6 +87,34 @@ export default async function ContactPage() {
         </p>
       </Section>
 
+      {/* Consumer Protection (E-Commerce) Rules 2020, rule 4(4)-(5): the
+          grievance officer's name, designation and contact, on the platform;
+          acknowledgement within 48 hours, redress within one month. */}
+      <Section title="Grievance officer">
+        {BUSINESS.grievance ? (
+          <>
+            <p>
+              <strong>{BUSINESS.grievance.name}</strong>, {BUSINESS.grievance.designation}
+              <br />
+              <a href={`mailto:${BUSINESS.grievance.email}`} className="text-brand-ink hover:underline">{BUSINESS.grievance.email}</a>
+              {BUSINESS.grievance.phone ? <> · {BUSINESS.grievance.phone}</> : null}
+            </p>
+            <p>
+              Write with your order number and what went wrong. We acknowledge every
+              complaint within 48 hours and resolve it within one month, as the
+              Consumer Protection (E-Commerce) Rules 2020 require. If we fail you,
+              the National Consumer Helpline is 1915 (consumerhelpline.gov.in).
+            </p>
+          </>
+        ) : (
+          <p>
+            Complaints go to {BUSINESS.email}. We acknowledge every complaint within
+            48 hours and resolve it within one month, as the Consumer Protection
+            (E-Commerce) Rules 2020 require. The National Consumer Helpline is 1915.
+          </p>
+        )}
+      </Section>
+
       <Section title="Order questions">
         <p>
           The fastest route is your own order page: sign in and open{' '}

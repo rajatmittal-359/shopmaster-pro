@@ -81,6 +81,9 @@ const EMPTY = {
   ageGroup: 'adult',
   brand: '',
   sku: '',
+  countryOfOrigin: 'India',
+  manufacturer: '',
+  netQuantity: '',
   freeShipping: false,
   tags: [],
 };
@@ -655,6 +658,18 @@ export default function ProductForm({ productId, copyFromId }) {
           </Field>
           <Field id="sku" label="Your own item code" hint="Whatever you use in your own stock book.">
             <Input id="sku" value={form.sku ?? ''} onChange={set('sku')} className="h-10" />
+          </Field>
+          {/* What the law asks a listing to say: country of origin for everything
+              (E-Commerce Rules 2020); manufacturer/packer and net quantity for
+              anything sold in a pack (Legal Metrology). Said in the hint, once. */}
+          <Field id="countryOfOrigin" label="Country of origin" hint="Every listing must say it (E-Commerce Rules 2020). India unless you import it.">
+            <Input id="countryOfOrigin" value={form.countryOfOrigin ?? 'India'} onChange={set('countryOfOrigin')} className="h-10" />
+          </Field>
+          <Field id="netQuantity" label="Net quantity (packed goods)" hint="As printed on the pack - “100 g”, “Set of 4”. Needed for anything sold in a pack: electronics, cosmetics, food. Not for handmade, unpacked items.">
+            <Input id="netQuantity" value={form.netQuantity ?? ''} onChange={set('netQuantity')} className="h-10" placeholder="100 g" />
+          </Field>
+          <Field id="manufacturer" label="Manufacturer / packer / importer (packed goods)" hint="Name and address as printed on the pack. Legal Metrology asks for it online exactly as on the box." className="sm:col-span-2">
+            <Input id="manufacturer" value={form.manufacturer ?? ''} onChange={set('manufacturer')} className="h-10" placeholder="Name, city" />
           </Field>
           <Field
             id="tags"
