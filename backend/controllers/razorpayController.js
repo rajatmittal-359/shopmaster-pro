@@ -103,6 +103,10 @@ const commitStockForOrder = async (order, session) => {
     order.reservationStatus = 'consumed';
   }
 
+  // The sellers' invoice numbers - a prepaid order is confirmed here, once
+  // (utils/invoice; guarded, so a replayed webhook issues no second set).
+  await require('../utils/invoice').assignInvoiceNumbers(order, { session }).catch((err) => console.error('invoice numbers not issued for', order._id, err.message));
+
   return { ok: true };
 };
 

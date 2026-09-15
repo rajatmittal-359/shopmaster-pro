@@ -50,6 +50,15 @@ const orderItemSchema = new mongoose.Schema({
     gstin: { type: String, default: '' },
     enrolled: { type: String, default: '' },
   },
+  /*
+   * What the tax invoice needs per line, copied from the product at checkout
+   * (utils/invoice): the HSN and the GST rate the seller set. Both empty
+   * for an unregistered seller's goods - their invoice carries no tax
+   * columns. The rate is a percentage of the taxable value; the price on
+   * the line is inclusive of it.
+   */
+  hsn: { type: String, default: '' },
+  gstRate: { type: Number, default: null },
 
   // ---- Commission snapshot -------------------------------------------------
   // Copied from the seller's profile at the moment the order is placed and then
@@ -618,6 +627,17 @@ const orderSchema = new mongoose.Schema(
       type: String,
       enum: ['pending', 'paid', 'failed', 'refunded'],
       default: 'pending'
+    },
+
+    /*
+     * One invoice per seller on the order (utils/invoice, 15 Sep 2026):
+     * the seller's own serial - MJ/26-27/00042 - issued once, when the
+     * order is confirmed (COD at placement, prepaid when the payment lands).
+     * The customer's Invoice page prints it; a GST seller files it.
+     */
+    invoices: {
+      type: [{ _id: false, sellerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, number: { type: String }, issuedAt: { type: Date } }],
+      default: [],
     },
 
     // 💠 Razorpay references (safe for COD as null)

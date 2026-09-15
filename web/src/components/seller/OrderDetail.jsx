@@ -107,6 +107,11 @@ export default function SellerOrderDetail({ orderId }) {
             <p className="text-sm text-muted-foreground">
               {order.customerId?.name} · {order.customerId?.email} · {when(order.createdAt)}
             </p>
+            {order.invoiceNumber && (
+              <p className="text-sm text-muted-foreground">
+                {t('Invoice')} <span className="font-mono">{order.invoiceNumber}</span>
+              </p>
+            )}
           </div>
           <div className="text-right">
             <p className="font-medium capitalize">{order.status}</p>
@@ -328,6 +333,8 @@ export default function SellerOrderDetail({ orderId }) {
             <>
               <p className="mt-1 text-sm text-muted-foreground">{t('One photo of the packed item with its tag, before the courier comes. If a customer says "damaged" or "empty box", this photo is what decides it.')}</p>
               <div className="mt-2 flex flex-wrap items-center gap-3">
+                {/* The tag first, the photo with the tag showing second - the two together are the evidence. */}
+                <Link href={`/seller/orders/${orderId}/tag`} className="inline-flex items-center rounded-md border px-3 py-1.5 text-sm hover:bg-muted">{t('Print return tags')}</Link>
                 <PhotoPicker value={proof} onChange={setProof} max={1} label={t('Take it')} />
                 {proof.length > 0 && (
                   <Button size="sm" disabled={state.status === 'working'} onClick={async () => { await act('/pack-proof', { imageDataUrl: proof[0] }); setProof([]); }}>{t('Save pack proof')}</Button>

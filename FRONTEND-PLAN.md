@@ -2218,3 +2218,47 @@ cancellation before dispatch; the return promise per item at checkout and on
 the invoice; stock counts are real, so "only N left" is not a dark pattern;
 the invoice is issued in the seller's name (§4.41); nothing in listing or
 search boosts any seller.
+
+### 4.43 The seller's invoice number, and the tax invoice when there is tax (15 Sep 2026)
+
+Reference: Amazon's customer invoice (seller's serial, HSN, CGST/SGST or IGST
+columns, "place of supply") and Flipkart's; the rule behind both is CGST
+Rule 46. Gate: trust and cutover - the first GST-registered Jaipur shop
+that applies must be approvable without the platform printing a wrong
+document in its name; and every invoice, registered or not, needs a serial
+a customer can quote and a shop can file.
+
+- **One series per seller** (`utils/invoice.js`): `<prefix>/<FY>/<00042>`,
+  prefix from the shop's initials fixed on first use, counted on the Seller
+  with an atomic `$inc`. Issued once, when the order is confirmed - COD at
+  placement, prepaid when the payment lands - so an abandoned Razorpay
+  attempt never burns a number. If issuing fails the sale still stands; the
+  Invoice page issues on first open. The production move restarts the count.
+- **Tax facts on the product** (`hsn`, `gstRate`) - two fields under Details
+  that only a registered shop sees; nothing anywhere asks an unregistered
+  seller to register (Rajat, 15 Sep: "GST apn ne nahi le rakhi, dusron ko
+  force nahi karenge"). Stamped on the order line with the seller of record.
+- **The document**: unregistered → "Invoice", no tax column, footer says so.
+  Registered → "Tax Invoice", HSN per line, taxable value, CGST+SGST at home
+  or IGST across a border (GSTIN state vs delivery state), tax taken OUT of
+  the inclusive price so the customer's total never moves; "reverse charge:
+  No". Discounts now show per line and the totals add up.
+- Seller's order page shows the number; the ledger keeps credit notes and a
+  GSTR-1 CSV for the day a registered seller needs them.
+
+### 4.44 The return tag (15 Sep 2026)
+
+Reference: Myntra's and Flipkart's "no tag, no return" tag; Meesho's
+supplier panel prints per-order paperwork. Gate: trust - Fair Returns
+already asks the customer to confirm "tag intact", but the seller had
+nothing to put ON the piece, so the promise had no object.
+
+`/seller/orders/:id/tag` prints one card per unit - shop, order number,
+item, "piece 1/2", and the rule for that line's return mode in Hindi and
+English (R: back only with the tag on and unbroken; X: exchange only; N: no
+change-of-mind return, damaged or wrong always). Cut, tie on with the seal
+Rajat is ordering, then the pack-proof photo with the tag showing - the
+two together are the evidence. No barcode (the seller reads the order
+number themselves), no PDF library (the browser prints). The panel chrome
+hides on print. Learn lesson 2 walks the two minutes.
+

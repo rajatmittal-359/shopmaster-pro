@@ -70,6 +70,16 @@ const sellerSchema = new mongoose.Schema(
     },
 
     /*
+     * This shop's invoice series (utils/invoice, 15 Sep 2026): the count so
+     * far and the fixed prefix - "MJ" in MJ/26-27/00042. One series per
+     * seller because each seller is the supplier on their own invoices
+     * (CGST Rule 46 for the registered ones). The prefix is set the first
+     * time a number is issued and never changes after, renamed shop or not.
+     */
+    invoiceSeq: { type: Number, default: 0 },
+    invoicePrefix: { type: String, trim: true, uppercase: true, maxlength: 3, default: '' },
+
+    /*
      * The application (plan 2.40, 15 Sep 2026) - what Amazon, Flipkart and
      * Meesho ask before a shop goes live, sized for us: PAN always; a GSTIN,
      * or the GST portal's enrolment number for a shop without one (intra-

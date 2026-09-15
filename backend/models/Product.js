@@ -352,6 +352,15 @@ const productSchema = new mongoose.Schema(
   countryOfOrigin: { type: String, trim: true, default: 'India', maxlength: 60 },
   manufacturer: { type: String, trim: true, default: '', maxlength: 240 },
   netQuantity: { type: String, trim: true, default: '', maxlength: 60 },
+  /*
+   * For a GST-REGISTERED seller only (utils/invoice): the HSN code and the
+   * GST slab of this product, so the tax invoice the platform prints on
+   * their behalf can carry the split Rule 46 asks for. The form shows the
+   * two fields only to a registered shop; an unregistered one never sees
+   * them and nothing here asks anyone to register.
+   */
+  hsn: { type: String, trim: true, default: '', maxlength: 8 },
+  gstRate: { type: Number, default: null, enum: [0, 0.25, 1.5, 3, 5, 12, 18, 28, null] },
   sku: {
     type: String,
     trim: true,

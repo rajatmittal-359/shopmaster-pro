@@ -55,6 +55,8 @@ describe('what is stripped on the way', () => {
   it('products lose vectors and dev-history counters; the seller loses admin edits; the user loses a risk record', () => {
     expect(cleanProduct(products[0])).toEqual({ _id: 1, sellerId: 's', name: 'Kundan set', isActive: true, avgRating: 0, totalReviews: 0, reserved: 0 });
     expect(cleanSeller(sellers[0]).adminEdits).toEqual([]);
+    expect(cleanSeller({ ...sellers[0], invoiceSeq: 41, invoicePrefix: 'HS' })).toMatchObject({ invoiceSeq: 0 });
+    expect(cleanSeller({ ...sellers[0], invoiceSeq: 41, invoicePrefix: 'HS' }).invoicePrefix).toBeUndefined();
     expect(cleanUser(users[0]).risk).toBeUndefined();
   });
 });

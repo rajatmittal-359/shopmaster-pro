@@ -13,6 +13,7 @@ const { releaseReservation } = require("../utils/reservation");
 const { RETURN_WINDOW_DAYS, returnWindowFor } = require("../utils/payout");
 const Product = require("../models/Product");
 const Seller = require('../models/Seller');
+const { assignInvoiceNumbers, taxScheme } = require('../utils/invoice');
 const mongoose = require('mongoose'); 
 const Address = require('../models/Address'); 
 const { applyInventoryChange } = require("./inventoryController");
@@ -376,6 +377,11 @@ exports.checkout = async (req, res) => {
       await markCouponUsed(coupon.code, req.user._id, session);
     }
 
+    // The sellers' invoice numbers - COD is confirmed here (utils/invoice).
+    // A number that cannot be issued must not lose the sale: it is logged,
+    // and the Invoice page issues it on first open instead.
+    await assignInvoiceNumbers(order[0], { session }).catch((err) => console.error('invoice numbers not issued for', order[0]._id, err.message));
+
     // ✅ Clear cart
     cart.items = [];
     cart.totalAmount = 0;
@@ -510,10 +516,20 @@ exports.getOrderDetails = async (req, res) => {
       }];
     }));
 
+    // A confirmed order still without its invoice numbers (an issue failed at
+    // checkout, or the order predates numbering) gets them now, once.
+    if (!(order.invoices || []).length && (order.paymentMethod === 'cod' || order.paymentStatus === 'paid') && order.status !== 'cancelled') {
+      await assignInvoiceNumbers(order).catch((err) => console.error('invoice numbers not issued for', order._id, err.message));
+    }
+
+    // Home or away for a registered seller: CGST+SGST or IGST on their invoice (utils/invoice).
+    const deliveryState = order.shippingAddressId?.state || '';
+    const withTax = Object.fromEntries(Object.entries({ ...sellers, ...stamped }).map(([k, v]) => [k, { ...v, taxScheme: v.gstin ? taxScheme(v.gstin, deliveryState) : null }]));
+
     res.json({
       success: true,
       order,
-      sellers: { ...sellers, ...stamped },
+      sellers: withTax,
       canReturn,
       returnWindowClosesAt,
       returnWindowDays,

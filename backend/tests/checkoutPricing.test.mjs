@@ -53,6 +53,7 @@ beforeEach(() => {
   originals.inventoryCreate = InventoryLog.create;
   originals.startSession = mongoose.startSession;
   originals.sellerFind = Seller.find;
+  originals.sellerFindOneAndUpdate = Seller.findOneAndUpdate;
   originals.getShippingRate = shiprocket.getShippingRate;
 
   rateCalls = [];
@@ -86,6 +87,8 @@ beforeEach(() => {
   Seller.find = vi.fn(() =>
     chainableQuery([{ userId: SELLER_ID, commissionRate: 10 }])
   );
+  // The invoice counter (utils/invoice) - one number per seller on the order.
+  Seller.findOneAndUpdate = vi.fn(() => chainableQuery({ _id: 'sel', invoiceSeq: 1, invoicePrefix: 'MJ', businessName: 'Meera Jewels' }));
 
   Cart.findOne = vi.fn(() => chainableQuery(cartDoc));
   Address.findOne = vi.fn(() =>
@@ -134,6 +137,7 @@ afterEach(() => {
   Product.findOneAndUpdate = originals.productFindOneAndUpdate;
   Address.findOne = originals.addressFindOne;
   Seller.find = originals.sellerFind;
+  Seller.findOneAndUpdate = originals.sellerFindOneAndUpdate;
   Order.create = originals.orderCreate;
   InventoryLog.create = originals.inventoryCreate;
   mongoose.startSession = originals.startSession;

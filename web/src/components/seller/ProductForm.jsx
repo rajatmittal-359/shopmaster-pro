@@ -84,9 +84,15 @@ const EMPTY = {
   countryOfOrigin: 'India',
   manufacturer: '',
   netQuantity: '',
+  hsn: '',
+  gstRate: '',
   freeShipping: false,
   tags: [],
 };
+
+/** The GST slabs a product can carry - only a registered shop sees the field. */
+const GST_RATES = ['0', '0.25', '1.5', '3', '5', '12', '18', '28'];
+const GST_ITEMS = { none: 'Not set', ...Object.fromEntries(GST_RATES.map((r) => [r, `${r}%`])) };
 
 const GENDERS = { female: 'Women', male: 'Men', unisex: 'Anyone' };
 const AGES = { adult: 'Adult', kids: 'Kids', toddler: 'Toddler', infant: 'Infant', newborn: 'Newborn' };
@@ -154,6 +160,8 @@ export default function ProductForm({ productId, copyFromId }) {
   const [textModel, setTextModel] = useState('auto');
   const [ai, setAi] = useState({ status: 'idle' });
   const [usage, setUsage] = useState(null);
+  // Whether this shop is registered under GST - decides if the tax fields show at all.
+  const [gstRegistered, setGstRegistered] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -167,6 +175,11 @@ export default function ProductForm({ productId, copyFromId }) {
         // Today's AI allowance. A failure here must not block the form.
         authedFetch('/seller/ai/usage')
           .then((u) => !cancelled && setUsage(u))
+          .catch(() => {});
+        // A registered shop fills HSN + GST rate so its tax invoice is right;
+        // an unregistered one never sees the fields (nothing here asks anyone to register).
+        authedFetch('/seller/application')
+          .then((a) => !cancelled && setGstRegistered(a?.application?.gstMode === 'gstin' || Boolean(a?.application?.gstin)))
           .catch(() => {});
 
         const load = async (id) => {
@@ -313,6 +326,8 @@ export default function ProductForm({ productId, copyFromId }) {
       stock: Number(form.stock),
       lowStockThreshold: Number(form.lowStockThreshold) || 10,
       weight: form.weight === '' ? undefined : Number(form.weight),
+      hsn: form.hsn ?? '',
+      gstRate: form.gstRate === '' || form.gstRate === null || form.gstRate === undefined ? null : Number(form.gstRate),
       size: form.size || undefined,
       variantGroupId: form.variantGroupId || undefined,
       // In display order. The server keeps URLs that are ours and uploads the rest.
@@ -671,6 +686,30 @@ export default function ProductForm({ productId, copyFromId }) {
           <Field id="manufacturer" label="Manufacturer / packer / importer (packed goods)" hint="Name and address as printed on the pack. Legal Metrology asks for it online exactly as on the box." className="sm:col-span-2">
             <Input id="manufacturer" value={form.manufacturer ?? ''} onChange={set('manufacturer')} className="h-10" placeholder="Name, city" />
           </Field>
+          {/* Tax facts, for a GST-registered shop only: the invoice ShopMaster prints
+              on their behalf is a tax invoice and needs the HSN and the slab per line. */}
+          {(gstRegistered || Boolean(form.hsn) || typeof form.gstRate === 'number') && (
+            <>
+              <Field id="hsn" label="HSN code" hint="From your GST invoices - 4, 6 or 8 digits (jewellery 7113, 7117).">
+                <Input id="hsn" inputMode="numeric" value={form.hsn ?? ''} onChange={set('hsn')} className="h-10" placeholder="7117" />
+              </Field>
+              <Field id="gstRate" label="GST rate" hint="The slab you charge on this item. Prices you enter stay inclusive of it.">
+                <Select items={GST_ITEMS} value={form.gstRate === null || form.gstRate === undefined || form.gstRate === '' ? 'none' : String(form.gstRate)} onValueChange={(v) => setForm((f) => ({ ...f, gstRate: v === 'none' ? '' : v }))}>
+                  <SelectTrigger id="gstRate" className="h-10 w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Not set</SelectItem>
+                    {GST_RATES.map((r) => (
+                      <SelectItem key={r} value={r}>
+                        {r}%
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
+            </>
+          )}
           <Field
             id="tags"
             label="Search words"

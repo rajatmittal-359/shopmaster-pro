@@ -71,6 +71,9 @@ const priceOrder = async ({ items, couponCode, customerId, session }) => {
      */
     price: effectivePrice(item.productId).price || item.price,
     sellerId: item.productId.sellerId,
+    // For the tax invoice (utils/invoice): empty unless a registered seller set them.
+    hsn: item.productId.hsn || '',
+    gstRate: typeof item.productId.gstRate === 'number' ? item.productId.gstRate : null,
   }));
 
   const rates = await getRatesBySeller(

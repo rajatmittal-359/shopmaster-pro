@@ -9,6 +9,20 @@ import { orderRef } from '@/lib/orderRef';
 import { BUSINESS as DEFAULT_BUSINESS } from '@/config/policy';
 import { Button } from '@/components/ui/button';
 
+/*
+ * The GST split on a tax-inclusive line - the same arithmetic as
+ * backend/utils/invoice.js taxSplit: taxable = amount ÷ (1 + rate), tax is
+ * the remainder, CGST/SGST halves at home, IGST away, rounding paisa to SGST.
+ */
+const r2 = (n) => Math.round(n * 100) / 100;
+const taxSplit = (amount, rate, scheme) => {
+  const taxable = r2(amount / (1 + (Number(rate) || 0) / 100));
+  const tax = r2(amount - taxable);
+  if (scheme === 'igst') return { taxable, cgst: 0, sgst: 0, igst: tax, tax };
+  const half = r2(tax / 2);
+  return { taxable, cgst: half, sgst: r2(tax - half), igst: 0, tax };
+};
+
 /**
  * The customer's copy of what they bought.
  *
@@ -31,9 +45,10 @@ import { Button } from '@/components/ui/button';
  *   cash memo, with no tax fields and a line saying so. This page was titled
  *   "Bill of Supply" from the single-shop days; it is now "Invoice" for
  *   everyone, with no tax column, and the footer says whether the seller is
- *   registered. A seller WITH a GSTIN needs HSN and the tax split per line -
- *   data the catalogue does not hold yet (WHAT-IS-LEFT §3); until then their
- *   document prints the GSTIN and says prices include tax as applicable.
+ *   registered. A seller WITH a GSTIN gets a TAX INVOICE (15 Sep 2026,
+ *   utils/invoice): their own serial number, HSN per line, taxable value and
+ *   CGST+SGST or IGST by place of supply - what CGST Rule 46 asks for. An
+ *   unregistered seller's document carries the same serial and no tax column.
  *
  * WHY THERE IS NO PDF LIBRARY
  *   The browser makes better PDFs than a bundled generator, on every platform,
@@ -109,8 +124,17 @@ export default function Bill({ orderId, business }) {
 
       {groups.map((g, gi) => {
         const s = g.seller;
-        const title = 'Invoice';
-        const subtotal = g.items.reduce((sum, i) => sum + i.price * i.quantity, 0);
+        const taxed = Boolean(s?.gstin);
+        const title = taxed ? 'Tax Invoice' : 'Invoice';
+        const number = (order.invoices || []).find((x) => String(x.sellerId) === g.key)?.number || '';
+        // Each line net of its own discount - what the customer actually paid for it.
+        const net = (i) => r2(i.price * i.quantity - (i.discountAmount || 0));
+        const gross = g.items.reduce((sum, i) => sum + i.price * i.quantity, 0);
+        const discount = r2(g.items.reduce((sum, i) => sum + (i.discountAmount || 0), 0));
+        const subtotal = r2(gross - discount);
+        const scheme = s?.taxScheme || 'cgst_sgst';
+        const splits = taxed ? g.items.map((i) => taxSplit(net(i), i.gstRate, scheme)) : [];
+        const totals = splits.reduce((a, x) => ({ taxable: r2(a.taxable + x.taxable), cgst: r2(a.cgst + x.cgst), sgst: r2(a.sgst + x.sgst), igst: r2(a.igst + x.igst) }), { taxable: 0, cgst: 0, sgst: 0, igst: 0 });
         const last = gi === groups.length - 1;
         return (
           <div key={g.key || gi} className={`mx-auto mb-10 max-w-3xl rounded-xl border border-border bg-background p-8 print:mb-0 print:rounded-none print:border-0 print:p-0 ${last ? '' : 'print:break-after-page'}`}>
@@ -131,8 +155,10 @@ export default function Bill({ orderId, business }) {
               </div>
               <div className="text-right">
                 <h1 className="text-base font-semibold">{title}</h1>
-                <p className="mt-1 text-xs text-muted-foreground">{orderRef(order)}{multi ? ` · ${gi + 1} of ${groups.length}` : ''}</p>
+                {number && <p className="mt-1 font-mono text-sm">{number}</p>}
+                <p className="mt-1 text-xs text-muted-foreground">Order {orderRef(order)}{multi ? ` · ${gi + 1} of ${groups.length}` : ''}</p>
                 <p className="text-xs text-muted-foreground">{on(order.createdAt)}</p>
+                {taxed && address?.state && <p className="text-xs text-muted-foreground">Place of supply: {address.state}</p>}
               </div>
             </header>
 
@@ -167,30 +193,66 @@ export default function Bill({ orderId, business }) {
               </div>
             </div>
 
-            <table className="mt-5 w-full text-sm">
-              <thead>
-                <tr className="border-b border-border text-left text-xs text-muted-foreground">
-                  <th className="pb-2 font-medium">Item</th>
-                  <th className="pb-2 text-right font-medium">Qty</th>
-                  <th className="pb-2 text-right font-medium">Price</th>
-                  <th className="pb-2 text-right font-medium">Amount</th>
-                </tr>
-              </thead>
-              <tbody>
-                {g.items.map((item) => (
-                  <tr key={item._id} className="border-b border-border/60">
-                    <td className="py-2.5">{item.name}</td>
-                    <td className="py-2.5 text-right tabular-nums">{item.quantity}</td>
-                    <td className="py-2.5 text-right tabular-nums">{money(item.price)}</td>
-                    <td className="py-2.5 text-right tabular-nums">{money(item.price * item.quantity)}</td>
+            <div className="overflow-x-auto">
+              <table className="mt-5 w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border text-left text-xs text-muted-foreground">
+                    <th className="pb-2 font-medium">Item</th>
+                    {taxed && <th className="pb-2 font-medium">HSN</th>}
+                    <th className="pb-2 text-right font-medium">Qty</th>
+                    <th className="pb-2 text-right font-medium">Price</th>
+                    {taxed && <th className="pb-2 text-right font-medium">Taxable</th>}
+                    {taxed && <th className="pb-2 text-right font-medium">GST</th>}
+                    <th className="pb-2 text-right font-medium">Amount</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {g.items.map((item, ii) => (
+                    <tr key={item._id} className="border-b border-border/60">
+                      <td className="py-2.5">
+                        {item.name}
+                        {item.discountAmount > 0 && <span className="block text-xs text-muted-foreground">less {money(item.discountAmount)} discount</span>}
+                      </td>
+                      {taxed && <td className="py-2.5 font-mono text-xs">{item.hsn || '—'}</td>}
+                      <td className="py-2.5 text-right tabular-nums">{item.quantity}</td>
+                      <td className="py-2.5 text-right tabular-nums">{money(item.price)}</td>
+                      {taxed && <td className="py-2.5 text-right tabular-nums">{money(splits[ii].taxable)}</td>}
+                      {taxed && <td className="py-2.5 text-right tabular-nums">{item.gstRate === null || item.gstRate === undefined ? '—' : `${item.gstRate}%`}</td>}
+                      <td className="py-2.5 text-right tabular-nums">{money(net(item))}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
 
             <dl className="ml-auto mt-4 w-full space-y-1.5 text-sm sm:w-64">
+              {taxed && (
+                <>
+                  <div className="flex justify-between">
+                    <dt className="text-muted-foreground">Taxable value</dt>
+                    <dd className="tabular-nums">{money(totals.taxable)}</dd>
+                  </div>
+                  {scheme === 'igst' ? (
+                    <div className="flex justify-between">
+                      <dt className="text-muted-foreground">IGST</dt>
+                      <dd className="tabular-nums">{money(totals.igst)}</dd>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex justify-between">
+                        <dt className="text-muted-foreground">CGST</dt>
+                        <dd className="tabular-nums">{money(totals.cgst)}</dd>
+                      </div>
+                      <div className="flex justify-between">
+                        <dt className="text-muted-foreground">SGST</dt>
+                        <dd className="tabular-nums">{money(totals.sgst)}</dd>
+                      </div>
+                    </>
+                  )}
+                </>
+              )}
               <div className="flex justify-between">
-                <dt className="text-muted-foreground">Item total</dt>
+                <dt className="text-muted-foreground">Item total{taxed ? ' (incl. GST)' : ''}</dt>
                 <dd className="tabular-nums">{money(subtotal)}</dd>
               </div>
               {last && (
@@ -209,8 +271,8 @@ export default function Bill({ orderId, business }) {
 
             <footer className="mt-8 border-t border-border pt-4 text-xs leading-5 text-muted-foreground">
               <p>
-                {s?.gstin
-                  ? 'Prices are inclusive of tax as applicable. A tax invoice with HSN and the tax break-up is available from the seller on request.'
+                {taxed
+                  ? `Tax invoice of ${s?.legalName || 'the seller'}, GSTIN ${s.gstin}. Prices are inclusive of GST; the split above is by place of supply. Tax payable on reverse charge: No.`
                   : `${s?.legalName || 'The seller'} is not registered under GST. This is not a tax invoice; no GST has been charged on this sale.`}
               </p>
               <p className="mt-2">

@@ -2,6 +2,7 @@
 const { sendError } = require('../utils/apiError');
 const sellerRules = require('../config/sellerRules');
 const Product = require('../models/Product');
+const { cleanHsn, cleanGstRate } = require('../utils/invoice');
 const Order = require('../models/Order');
 const Seller = require('../models/Seller');
 /** Plan 2.32: up to six short Q&As, text only. */
@@ -224,6 +225,8 @@ exports.addProduct = async (req, res) => {
       countryOfOrigin,
       manufacturer,
       netQuantity,
+      hsn,
+      gstRate,
 
       /*
        * The parcel weight, and the three attributes Google REQUIRES for free
@@ -278,6 +281,9 @@ exports.addProduct = async (req, res) => {
       ...(countryOfOrigin ? { countryOfOrigin: String(countryOfOrigin).trim().slice(0, 60) } : {}),
       ...(manufacturer !== undefined ? { manufacturer: String(manufacturer || '').trim().slice(0, 240) } : {}),
       ...(netQuantity !== undefined ? { netQuantity: String(netQuantity || '').trim().slice(0, 60) } : {}),
+      // Tax facts for a registered seller's invoice (utils/invoice); ignored shapes become empty.
+      ...(hsn !== undefined ? { hsn: cleanHsn(hsn) } : {}),
+      ...(gstRate !== undefined ? { gstRate: cleanGstRate(gstRate) } : {}),
       // Left undefined rather than defaulted here: the schema's defaults are
       // right for this shop, and writing an explicit value would mean a seller
       // of men's watches silently ships `female` because a form did not ask.
@@ -369,6 +375,8 @@ exports.updateProduct = async (req, res) => {
       countryOfOrigin,
       manufacturer,
       netQuantity,
+      hsn,
+      gstRate,
       returnMode,
     } = req.body;
 
@@ -418,6 +426,8 @@ exports.updateProduct = async (req, res) => {
     if (countryOfOrigin !== undefined) product.countryOfOrigin = String(countryOfOrigin || 'India').trim().slice(0, 60);
     if (manufacturer !== undefined) product.manufacturer = String(manufacturer || '').trim().slice(0, 240);
     if (netQuantity !== undefined) product.netQuantity = String(netQuantity || '').trim().slice(0, 60);
+    if (hsn !== undefined) product.hsn = cleanHsn(hsn);
+    if (gstRate !== undefined) product.gstRate = cleanGstRate(gstRate);
     if (sku !== undefined) product.sku = sku;
     if (mrp !== undefined) product.mrp = mrp;
     if (Array.isArray(tags)) product.tags = tags;
@@ -762,6 +772,8 @@ exports.getOrderDetails = async (req, res) => {
     const orderData = {
       _id: order._id,
       orderNumber: order.orderNumber,
+      // This seller's own invoice serial for the order (utils/invoice) - what they file.
+      invoiceNumber: (order.invoices || []).find((x) => String(x.sellerId) === String(sellerId))?.number || null,
       customerId: order.customerId,
       items: sellerItems,
 

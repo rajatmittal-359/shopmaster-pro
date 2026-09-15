@@ -90,8 +90,9 @@ const cleanProduct = (p) => {
   return { ...rest, avgRating: 0, totalReviews: 0, reserved: 0 };
 };
 const cleanSeller = (s) => {
-  const { adminEdits, ...rest } = s; // eslint-disable-line no-unused-vars
-  return { ...rest, adminEdits: [] };
+  // The invoice series restarts at 00001 in production - dev orders were not real sales.
+  const { adminEdits, invoiceSeq, invoicePrefix, ...rest } = s; // eslint-disable-line no-unused-vars
+  return { ...rest, adminEdits: [], invoiceSeq: 0 };
 };
 const cleanUser = (u) => {
   const { risk, ...rest } = u; // eslint-disable-line no-unused-vars
