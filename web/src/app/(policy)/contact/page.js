@@ -10,7 +10,7 @@ import { getSettings } from '@/lib/api';
  */
 export const metadata = {
   title: 'Contact us',
-  description: 'Reach Charming Jewels in Jaipur by phone, email or post.',
+  description: 'Reach ShopMaster Pro in Jaipur by phone, email or post.',
   alternates: { canonical: '/contact' },
 };
 

@@ -20,7 +20,8 @@
  * refused.
  */
 const BUSINESS = {
-  legalName: process.env.BUSINESS_NAME || 'Charming Jewels',
+  // The operator, never a seller (see web/src/config/policy.js).
+  legalName: process.env.BUSINESS_NAME || 'ShopMaster Pro',
   contactName: process.env.BUSINESS_CONTACT_NAME || 'Rajat Mittal',
   address1: process.env.BUSINESS_ADDRESS_1 || 'C-13, Hari Marg, Devi Nagar',
   address2: process.env.BUSINESS_ADDRESS_2 || 'Near Meera Medical, Doorbin Hospital',

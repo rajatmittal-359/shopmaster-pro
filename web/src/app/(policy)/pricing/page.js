@@ -60,9 +60,9 @@ export default function PricingPage() {
 
       <Section title="Sellers on this marketplace">
         <p>
-          This is a marketplace: some items are sold by Charming Jewels and others
-          by independent sellers, and each product page names its seller. Prices
-          are set by the seller of that item.
+          This is a marketplace: every item is sold by an independent seller,
+          and each product page names its seller. Prices are set by the seller
+          of that item.
         </p>
       </Section>
     </>

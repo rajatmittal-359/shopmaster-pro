@@ -23,15 +23,21 @@ export const POLICY = {
 };
 
 /**
- * Who the customer is buying from.
+ * Who runs the marketplace - the OPERATOR, never a seller.
  *
  * Razorpay's website check and Google Merchant Center both require a real
- * postal address, a working phone and a working email - not a form alone. This
- * is the same address the Google Business Profile carries and the same one the
- * courier collects from.
+ * postal address, a working phone and a working email - not a form alone.
+ *
+ * THE PLATFORM IS NOT ANY OF ITS SELLERS (Rajat, 15 Sep 2026)
+ *   Amazon does not sign its footer "Cloudtail"; Myntra does not print
+ *   "Roadster" as its legal name. ShopMaster Pro's legal name, phone and
+ *   address are the operator's own and are set in /admin/settings →
+ *   Business. Nothing here, on any public page, in any invoice, mail or
+ *   structured data may name a seller as the platform - which shop the
+ *   operator's family runs is that shop's business, not the frame's.
  */
 export const BUSINESS = {
-  legalName: 'Charming Jewels',
+  legalName: 'ShopMaster Pro',
   tradeName: 'ShopMaster Pro',
   addressLines: ['C-13, Hari Marg, Devi Nagar', 'Jaipur, Rajasthan 302019', 'India'],
   landmark: 'Near Meera Medical, Doorbin Hospital',

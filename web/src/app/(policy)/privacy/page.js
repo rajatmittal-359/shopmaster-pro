@@ -15,7 +15,7 @@ import { getSettings } from '@/lib/api';
 export const metadata = {
   title: 'Privacy policy',
   description:
-    'What Charming Jewels collects, why, who it is shared with, and your rights.',
+    'What ShopMaster Pro collects, why, who it is shared with, and your rights.',
   alternates: { canonical: '/privacy' },
 };
 

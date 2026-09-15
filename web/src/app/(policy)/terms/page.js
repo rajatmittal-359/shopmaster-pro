@@ -6,7 +6,7 @@ import { getSettings } from '@/lib/api';
 
 export const metadata = {
   title: 'Terms and conditions',
-  description: 'The terms on which Charming Jewels sells through ShopMaster Pro.',
+  description: 'The terms on which sellers sell, and customers buy, through ShopMaster Pro.',
   alternates: { canonical: '/terms' },
 };
 
@@ -25,9 +25,9 @@ export default async function TermsPage() {
       <Section title="Who you are buying from">
         <p>
           {BUSINESS.tradeName} is a marketplace operated by {BUSINESS.legalName},{' '}
-          {BUSINESS.addressLines.join(', ')}. Some items are sold by us and others
-          by independent sellers. Every product page names its seller, and your
-          contract for that item is with them.
+          {BUSINESS.addressLines.join(', ')}. Items are sold by independent
+          sellers. Every product page names its seller, and your contract for
+          that item is with them.
         </p>
       </Section>
 

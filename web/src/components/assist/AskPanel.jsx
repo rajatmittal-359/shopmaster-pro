@@ -41,9 +41,9 @@ const STARTERS = {
     en: ['When is my next payout, and how much?', 'Which of my listings need fixing first?', 'A customer says the parcel never came - what do I do?', 'What does cancelling an order cost, and why?', 'How do I get my products on Google?'],
   },
   admin: {
-    hi: ['इस हफ्ते मुझे क्या तय करना है?', 'Charming Jewels का प्रदर्शन कैसा है?', 'कौन से विक्रेता cancel-rate की सीमा के पास हैं?', 'dispute खुला हो तो payout hold कैसे काम करता है?'],
-    hg: ['Is weekend mujhe kya decide karna hai?', 'Charming Jewels ka performance kaisa chal raha hai?', 'Kaunse sellers cancel-rate limit ke paas hain?', 'Dispute open ho to payout hold kaise kaam karta hai?', 'Cutover plan me abhi kya bacha hai?'],
-    en: ['What needs my decision this weekend?', 'How is Charming Jewels performing?', 'Which sellers are close to the cancel-rate limit?', 'How does the payout hold work when a dispute is open?', 'What is left in the cutover plan?'],
+    hi: ['इस हफ्ते मुझे क्या तय करना है?', 'सबसे ज़्यादा बिकने वाली दुकान कैसा कर रही है?', 'कौन से विक्रेता cancel-rate की सीमा के पास हैं?', 'dispute खुला हो तो payout hold कैसे काम करता है?'],
+    hg: ['Is weekend mujhe kya decide karna hai?', 'Sabse zyada bikne wali dukaan kaisa kar rahi hai?', 'Kaunse sellers cancel-rate limit ke paas hain?', 'Dispute open ho to payout hold kaise kaam karta hai?', 'Cutover plan me abhi kya bacha hai?'],
+    en: ['What needs my decision this weekend?', 'How is the best-selling shop performing?', 'Which sellers are close to the cancel-rate limit?', 'How does the payout hold work when a dispute is open?', 'What is left in the cutover plan?'],
   },
   customer: {
     hi: ['मेरा आखिरी ऑर्डर कहाँ है?', 'मेरा रिफ़ंड कब तक आएगा?', 'वापसी और बदली कैसे होती है?', 'कूरियर कहता है पहुँच गया, पर मुझे कुछ नहीं मिला।'],

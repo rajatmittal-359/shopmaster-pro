@@ -69,7 +69,7 @@ export async function generateMetadata({ searchParams }) {
   return {
     title,
     description: category
-      ? `${category.name} from Charming Jewels, Jaipur. Delivered across India with 7-day returns.`
+      ? `${category.name} from sellers on ShopMaster Pro, Jaipur. Delivered across India with 7-day returns.`
       : 'Jewellery, clothing, home and more from independent sellers in India. Delivered across India with 7-day returns.',
     alternates: { canonical: shopHref({ category: params.category, page: params.page }) },
     robots: isFiltered(params) || params.search ? { index: false, follow: true } : undefined,

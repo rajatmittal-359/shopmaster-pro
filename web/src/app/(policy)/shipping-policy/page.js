@@ -10,7 +10,7 @@ import { getSettings } from '@/lib/api';
 export const metadata = {
   title: 'Shipping policy',
   description:
-    'How and when orders from Charming Jewels are dispatched and delivered.',
+    'How and when orders from ShopMaster Pro sellers are dispatched and delivered.',
   alternates: { canonical: '/shipping-policy' },
 };
 
