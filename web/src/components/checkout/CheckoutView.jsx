@@ -36,6 +36,9 @@ export default function CheckoutView() {
   const [payment, setPayment] = useState('online');
   // Admin switches (Settings → Switches). The API enforces them; this only hides the option.
   const [switches, setSwitches] = useState({ codEnabled: true });
+  // Fair Returns: an account on prepaid-only is told here, with the reason,
+  // rather than by a refusal after pressing Place order.
+  const [risk, setRisk] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -44,6 +47,9 @@ export default function CheckoutView() {
       .then((d) => {
         if (!cancelled && d?.shop) setSwitches({ codEnabled: d.shop.codEnabled !== false });
       })
+      .catch(() => {});
+    authedFetch('/auth/me')
+      .then((me) => !cancelled && setRisk(me?.user?.risk || null))
       .catch(() => {});
     return () => {
       cancelled = true;
@@ -297,7 +303,7 @@ export default function CheckoutView() {
           <div className="mt-3 space-y-2 text-sm">
             {[
               ['online', 'Pay now', 'Card, UPI, netbanking or wallet, through Razorpay'],
-              ...(switches.codEnabled ? [['cod', 'Cash on delivery', 'Pay the delivery agent when it arrives']] : []),
+              ...(switches.codEnabled && risk?.level !== 'prepaid_only' ? [['cod', 'Cash on delivery', 'Pay the delivery agent when it arrives']] : []),
             ].map(([value, label, note]) => (
               <label
                 key={value}
@@ -316,6 +322,12 @@ export default function CheckoutView() {
                 </span>
               </label>
             ))}
+                      {risk?.level === 'prepaid_only' && (
+              <p className="rounded-lg bg-amber-500/10 p-3 text-xs">
+                Cash on delivery is not available on this account{risk.reason ? ` - ${risk.reason}` : ''}. Pay online; if you think this is wrong, the{' '}
+                <Link href="/contact" className="text-brand-ink hover:underline">grievance officer</Link> answers within 48 hours.
+              </p>
+            )}
           </div>
         </section>
       </div>

@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import ActionDialog from '@/components/common/ActionDialog';
 import NotForThisAccount from '@/components/common/NotForThisAccount';
 import NotificationPrefs from '@/components/common/NotificationPrefs';
+import AccountStanding from '@/components/account/AccountStanding';
 
 /**
  * Account - the page every marketplace has and ours did not.
@@ -94,6 +95,8 @@ export default function AccountView() {
 
   return (
     <div className="space-y-6">
+      {/* Fair Returns: an account under a restriction sees the reason here first. */}
+      <AccountStanding />
       <Section title="Who you are" lead={`Signed in as ${user?.email || ''}. The email cannot be changed here - write to us if it must.`}>
         <form onSubmit={saveName} className="flex flex-wrap items-end gap-3">
           <div className="min-w-64 flex-1 space-y-1.5">
