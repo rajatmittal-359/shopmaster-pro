@@ -35,9 +35,11 @@ export const BUSINESS = {
   tradeName: 'ShopMaster Pro',
   addressLines: ['Jaipur, Rajasthan', 'India'],
   landmark: '',
-  phone: process.env.NEXT_PUBLIC_BUSINESS_PHONE || '',
-  phoneHref: process.env.NEXT_PUBLIC_BUSINESS_PHONE ? `tel:${process.env.NEXT_PUBLIC_BUSINESS_PHONE.replace(/[^\d+]/g, '')}` : '',
-  email: process.env.NEXT_PUBLIC_BUSINESS_EMAIL || 'hello@example.com',
+  // The old (Vite) app: the operator's contact comes from its build env, never
+  // from the repository - VITE_BUSINESS_PHONE / VITE_BUSINESS_EMAIL.
+  phone: import.meta.env.VITE_BUSINESS_PHONE || '',
+  phoneHref: import.meta.env.VITE_BUSINESS_PHONE ? `tel:${String(import.meta.env.VITE_BUSINESS_PHONE).replace(/[^\d+]/g, '')}` : '',
+  email: import.meta.env.VITE_BUSINESS_EMAIL || 'hello@example.com',
   hours: 'Monday to Saturday, 10am - 7pm IST',
 };
 
