@@ -1837,3 +1837,65 @@ exports.updateSettings = async (req, res) => {
     return sendError(res, error);
   }
 };
+
+
+/*
+ * The seller's own application (plan 2.40): where it stands, what was asked
+ * for, and the fields - so a shop asked for "the GSTIN's PAN" fixes that one
+ * thing and goes back into the queue. Only while not yet approved.
+ */
+exports.getMyApplication = async (req, res) => {
+  try {
+    const s = await Seller.findOne({ userId: req.user._id }).select('businessName isApproved kycStatus status application pickupAddress.pincode bankDetails.accountNumber').lean();
+    if (!s) return res.status(404).json({ message: 'No seller profile found' });
+    const state = s.status === 'suspended' ? 'suspended' : s.kycStatus === 'rejected' ? 'rejected' : s.isApproved ? 'approved' : s.application?.status === 'needs_info' ? 'needs_info' : 'submitted';
+    const app = s.application || {};
+    res.json({
+      businessName: s.businessName,
+      state,
+      infoRequested: state === 'needs_info' ? app.infoRequested : null,
+      rejectReason: state === 'rejected' ? app.rejectReason || '' : '',
+      application: { legalName: app.legalName || '', pan: app.pan || '', gstMode: app.gstMode || '', gstin: app.gstin || '', enrolmentNumber: app.enrolmentNumber || '', phone: app.phone || '', city: app.city || '', pincode: app.pincode || '', sells: app.sells || '', shopPhoto: app.shopPhoto || '', submittedAt: app.submittedAt || null },
+    });
+  } catch (error) {
+    sendError(res, error);
+  }
+};
+
+exports.updateMyApplication = async (req, res) => {
+  try {
+    const s = await Seller.findOne({ userId: req.user._id });
+    if (!s) return res.status(404).json({ message: 'No seller profile found' });
+    if (s.isApproved) return res.status(409).json({ message: 'This shop is already approved - change details under Settings.' });
+    const { fieldsFrom } = require('../utils/application');
+    const parsed = fieldsFrom(req.body);
+    if (parsed.error) return res.status(400).json({ message: parsed.error });
+    if (req.body?.businessName && String(req.body.businessName).trim().length >= 2) s.businessName = String(req.body.businessName).trim();
+    Object.assign(s.application, parsed.fields);
+    if (parsed.fields.gstin) s.gstNumber = parsed.fields.gstin;
+    if (req.body?.shopPhotoDataUrl) {
+      const up = await require('../utils/evidence').uploadEvidence([req.body.shopPhotoDataUrl], 'shopmaster-sellers', { max: 1 });
+      if (!up.ok) return res.status(400).json({ message: up.message });
+      s.application.shopPhoto = up.urls[0] || s.application.shopPhoto;
+      s.application.boardRead = { text: '', isShop: null, at: null };
+    }
+    // Back into the queue: a turned-down or asked-for-info shop resubmits.
+    s.application.status = 'submitted';
+    s.application.submittedAt = new Date();
+    s.application.infoRequested = { reason: '', at: null };
+    if (s.kycStatus === 'rejected') s.kycStatus = 'pending';
+    await s.save();
+    const photo = s.application.shopPhoto;
+    setImmediate(() => {
+      require('../utils/notify').notifyAdmins({ category: 'account', title: `Application updated · ${s.businessName}`, body: 'Back in the queue on Sellers.', url: '/admin/sellers', tag: `seller-apply-${req.user._id}` }).catch(() => {});
+      if (req.body?.shopPhotoDataUrl && photo) {
+        require('../utils/boardRead').readBoard(photo, s.businessName)
+          .then((b) => (b.ok ? Seller.updateOne({ _id: s._id }, { $set: { 'application.boardRead': { text: b.text, isShop: b.isShop, at: new Date() } } }) : null))
+          .catch(() => {});
+      }
+    });
+    res.json({ message: 'Updated - it is back with the admin.', state: 'submitted' });
+  } catch (error) {
+    sendError(res, error);
+  }
+};

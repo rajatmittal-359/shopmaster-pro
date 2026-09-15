@@ -181,8 +181,33 @@ exports.becomeSeller = async (req, res) => {
       });
     }
 
-    const seller = await Seller.create({ userId: req.user._id, businessName, agreement: acceptedNow() });
-    setImmediate(() => require('../utils/notify').notifyAdmins({ category: 'account', title: `New seller application · ${businessName}`, body: 'Waiting for approval on Sellers.', url: '/admin/sellers', tag: `seller-apply-${req.user._id}` }).catch(() => {}));
+    /*
+     * The application proper (plan 2.40): PAN, GSTIN or enrolment number or
+     * neither, legal name, phone, city, a photo of the board. Each field is
+     * validated here (checksum, PAN-in-GSTIN) so a typo comes back as one
+     * plain sentence rather than a rejection a week later. The old React
+     * app sends only the name; that stays accepted until the cutover.
+     */
+    const { fieldsFrom } = require('../utils/application');
+    const parsed = fieldsFrom(req.body);
+    if (parsed.error) return res.status(400).json({ message: parsed.error });
+    let shopPhoto = '';
+    if (req.body?.shopPhotoDataUrl) {
+      const up = await require('../utils/evidence').uploadEvidence([req.body.shopPhotoDataUrl], 'shopmaster-sellers', { max: 1 });
+      if (!up.ok) return res.status(400).json({ message: up.message });
+      shopPhoto = up.urls[0] || '';
+    }
+    const application = { ...parsed.fields, shopPhoto, status: 'submitted', submittedAt: new Date() };
+    const seller = await Seller.create({ userId: req.user._id, businessName, agreement: acceptedNow(), application, ...(parsed.fields.gstin ? { gstNumber: parsed.fields.gstin } : {}) });
+    setImmediate(() => {
+      require('../utils/notify').notifyAdmins({ category: 'account', title: `New seller application · ${businessName}`, body: [application.city, application.gstin ? 'GSTIN' : application.enrolmentNumber ? 'GST enrolment' : 'no GST yet', application.pan ? 'PAN given' : 'no PAN'].filter(Boolean).join(' · '), url: '/admin/sellers', tag: `seller-apply-${req.user._id}` }).catch(() => {});
+      // What the board says - one cheap vision call, recorded for the admin's list.
+      if (shopPhoto) {
+        require('../utils/boardRead').readBoard(shopPhoto, businessName)
+          .then((b) => (b.ok ? Seller.updateOne({ _id: seller._id }, { $set: { 'application.boardRead': { text: b.text, isShop: b.isShop, at: new Date() } } }) : null))
+          .catch(() => {});
+      }
+    });
 
     return res.status(201).json({
       message: 'Thank you. An admin will review your shop before it goes live.',

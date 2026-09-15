@@ -275,11 +275,18 @@ exports.updateMyPayoutDetails = async (req, res) => {
       });
     }
 
+    // Bank and branch from the IFSC (Razorpay's open dataset) - the admin's
+    // "Before you approve" list reads it; a lookup failure is recorded, not fatal.
+    const ifsc = String(ifscCode).trim().toUpperCase();
+    const looked = await require('../utils/kyc').lookupIfsc(ifsc);
     const update = {
       bankDetails: {
         accountNumber: String(accountNumber).trim(),
-        ifscCode: String(ifscCode).trim().toUpperCase(),
+        ifscCode: ifsc,
         accountHolderName: String(accountHolderName).trim(),
+        bankName: looked.ok ? looked.bank : '',
+        branch: looked.ok ? looked.branch : '',
+        ifscLookupFailed: looked.ok ? '' : looked.reason || 'lookup failed',
       },
     };
     if (gstNumber !== undefined) update.gstNumber = String(gstNumber).trim().toUpperCase();
@@ -293,7 +300,7 @@ exports.updateMyPayoutDetails = async (req, res) => {
       return res.status(404).json({ success: false, message: 'No seller profile found' });
     }
 
-    res.json({ success: true, message: 'Payout details saved', canReceivePayouts: true });
+    res.json({ success: true, message: 'Payout details saved', canReceivePayouts: true, bank: looked.ok ? { name: looked.bank, branch: looked.branch } : null, ifscWarning: looked.ok ? null : looked.reason });
   } catch (error) {
     // A bad IFSC or GST format surfaces here as a validation error.
     const message = error.errors

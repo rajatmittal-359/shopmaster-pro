@@ -51,7 +51,41 @@ const sellerSchema = new mongoose.Schema(
       accountHolderName: {
         type: String,
         trim: true
-      }
+      },
+      // Resolved from the IFSC through Razorpay's open dataset when the
+      // account is saved (utils/kyc.lookupIfsc) - shown to the admin, never typed.
+      bankName: { type: String, trim: true, default: '' },
+      branch: { type: String, trim: true, default: '' },
+      ifscLookupFailed: { type: String, trim: true, default: '' },
+    },
+
+    /*
+     * The application (plan 2.40, 15 Sep 2026) - what Amazon, Flipkart and
+     * Meesho ask before a shop goes live, sized for us: PAN always; a GSTIN,
+     * or the GST portal's enrolment number for a shop without one (intra-
+     * state, under ₹40 lakh), or neither yet; the legal name the law makes
+     * us display; a photo of the shop board in place of a video KYC. Status
+     * is the review loop: submitted → needs_info (with what) → approved /
+     * rejected. isApproved / kycStatus stay the switches the API enforces.
+     */
+    application: {
+      legalName: { type: String, trim: true, maxlength: 120, default: '' },
+      pan: { type: String, trim: true, uppercase: true, default: '' },
+      gstMode: { type: String, enum: ['gstin', 'enrolment', 'none', ''], default: '' },
+      gstin: { type: String, trim: true, uppercase: true, default: '' },
+      enrolmentNumber: { type: String, trim: true, uppercase: true, default: '' },
+      phone: { type: String, trim: true, default: '' },
+      city: { type: String, trim: true, default: '' },
+      pincode: { type: String, trim: true, default: '' },
+      sells: { type: String, trim: true, maxlength: 120, default: '' },
+      shopPhoto: { type: String, trim: true, default: '' },
+      /** What the model read on the board (utils/kyc/boardRead), for the admin's list. */
+      boardRead: { text: { type: String, default: '' }, isShop: { type: Boolean, default: null }, at: { type: Date, default: null } },
+      status: { type: String, enum: ['submitted', 'needs_info', 'approved', 'rejected', ''], default: '' },
+      infoRequested: { reason: { type: String, trim: true, maxlength: 400, default: '' }, at: { type: Date, default: null } },
+      rejectReason: { type: String, trim: true, maxlength: 400, default: '' },
+      submittedAt: { type: Date, default: null },
+      reviewedAt: { type: Date, default: null },
     },
     /**
      * Platform commission taken from this seller's sales, as a percentage of

@@ -112,7 +112,7 @@ describe('what a shopper is told', () => {
 });
 
 describe('what never leaves the server', () => {
-  it('leaks no commission, bank details, GSTIN, phone or pickup address', async () => {
+  it('leaks no commission, bank details, PAN, phone or pickup address', async () => {
     const res = await request(app).get(`/api/public/sellers/${USER_ID}`);
     const body = JSON.stringify(res.body);
 
@@ -121,13 +121,25 @@ describe('what never leaves the server', () => {
       'bankDetails',
       '000123456789',
       'HDFC0000001',
-      'GSTIN1234567',
+      '"pan"',
       '8769766908',
       'Hari Marg',
       'isPlatformOwned',
     ]) {
       expect(body).not.toContain(secret);
     }
+  });
+
+  /*
+   * The GSTIN is the one identifier that IS public (plan 2.40, 15 Sep 2026):
+   * the Consumer Protection (E-Commerce) Rules 2020 ask a marketplace to
+   * show each seller's legal name and GSTIN, Amazon and Flipkart print it on
+   * the seller profile, and it is on every invoice. Only under `legal`,
+   * never the PAN on its own.
+   */
+  it('shows the seller-of-record line: legal name and GSTIN, nothing more', async () => {
+    const res = await request(app).get(`/api/public/sellers/${USER_ID}`);
+    expect(res.body.seller.legal).toEqual({ name: 'Charming Jewels', gstin: 'GSTIN1234567', enrolled: '' });
   });
 });
 

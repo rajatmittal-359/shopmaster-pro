@@ -35,6 +35,7 @@ router.use(authMiddleware, roleMiddleware('admin'));
 router.get('/sellers/pending', getAllSellers);
 router.patch('/sellers/:sellerId/approve', approveSeller);
 router.patch('/sellers/:sellerId/reject', rejectSeller);
+router.patch('/sellers/:sellerId/ask', require('../controllers/adminController').askSeller);
 router.patch('/sellers/:sellerId/suspend', suspendSeller);
 router.patch('/sellers/:sellerId/activate', activateSeller);
 

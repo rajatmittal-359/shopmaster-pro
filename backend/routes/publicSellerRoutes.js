@@ -35,7 +35,7 @@ router.get('/:userId', async (req, res) => {
     const { userId } = req.params;
 
     const seller = await Seller.findOne({ userId })
-      .select('businessName isApproved status createdAt about links showLocation pickupAddress aboutModeration')
+      .select('businessName isApproved status createdAt about links showLocation pickupAddress aboutModeration application.legalName application.gstin application.gstMode application.enrolmentNumber gstNumber')
       .lean();
 
     /*
@@ -93,6 +93,17 @@ router.get('/:userId', async (req, res) => {
         about: seller.aboutModeration?.status === 'held' || seller.aboutModeration?.status === 'removed' ? '' : seller.about || '',
         links: Object.fromEntries(Object.entries(seller.links || {}).filter(([, v]) => v)),
         city: seller.showLocation && seller.pickupAddress?.city ? { city: seller.pickupAddress.city, state: seller.pickupAddress.state || '' } : null,
+        /*
+         * The seller-of-record line the Consumer Protection (E-Commerce) Rules
+         * 2020 ask a marketplace to show: legal name and GST standing (plan
+         * 2.40). The PAN is not shown - a GSTIN already carries it, and a bare
+         * PAN on a public page is an identity-theft gift.
+         */
+        legal: {
+          name: seller.application?.legalName || seller.businessName,
+          gstin: seller.application?.gstin || seller.gstNumber || '',
+          enrolled: !seller.application?.gstin && !seller.gstNumber && seller.application?.gstMode === 'enrolment' ? (require('../utils/kyc').checkEnrolment(seller.application.enrolmentNumber).state || 'their state') : '',
+        },
         productCount: count,
         rating: totals?.reviews
           ? {

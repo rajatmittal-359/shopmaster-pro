@@ -1,4 +1,5 @@
 const express = require('express');
+const sellerCtrl = require('../controllers/sellerController');
 const router = express.Router();
 const authMiddleware = require('../middlewares/authMiddleware');
 const roleMiddleware = require('../middlewares/roleMiddleware');
@@ -26,6 +27,9 @@ router.use(authMiddleware, roleMiddleware('seller'), checkSellerStatus);
 // Read-only routes stay available to an unapproved seller so they can still see
 // their own dashboard and the "account under review" state.
 router.get('/profile', getSellerProfile);
+// The application itself (plan 2.40) - readable and editable while the shop waits.
+router.get('/application', sellerCtrl.getMyApplication);
+router.patch('/application', sellerCtrl.updateMyApplication);
 
 
 router.get('/products', getMyProducts);
@@ -118,7 +122,6 @@ router.get('/ai/drafts', requireApprovedSeller, ai.listDrafts);
 
 // A seller's own shop settings: whether they absorb delivery, and the address a
 // courier collects from.
-const sellerCtrl = require('../controllers/sellerController');
 router.get('/settings', sellerCtrl.getSettings);
 router.post('/agreement/accept', sellerCtrl.acceptAgreement);
 router.patch('/settings', sellerCtrl.updateSettings);

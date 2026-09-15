@@ -33,8 +33,15 @@ exports.getAllSellers = async (req, res) => {
         ...s,
         cancellations: await cancelStatsFor(s.userId?._id || s.userId),
         agreementUpToDate: s.agreement?.version === sellerRules.version,
-        // What the admin should know before approving (plan 2.19 - facts, no model).
+        // What the admin should know before approving (plan 2.19 / 2.40 - facts, no verdict).
         application: await applicationFacts(s),
+        checks: require('../utils/kyc').applicationChecks(s),
+        duplicates: s.isApproved ? [] : await require('../utils/application').duplicates(s).catch(() => []),
+        applicationState: s.application?.status || '',
+        infoRequested: s.application?.status === 'needs_info' ? s.application.infoRequested : null,
+        board: s.application?.boardRead?.at ? s.application.boardRead : null,
+        shopPhoto: s.application?.shopPhoto || '',
+        legalName: s.application?.legalName || '',
       }))
     );
 
@@ -52,13 +59,16 @@ exports.approveSeller = async (req, res) => {
 
     const seller = await Seller.findByIdAndUpdate(
       sellerId,
-      { isApproved: true, kycStatus: 'verified' },
+      { isApproved: true, kycStatus: 'verified', 'application.status': 'approved', 'application.reviewedAt': new Date(), 'application.infoRequested': { reason: '', at: null } },
       { new: true }
     ).populate('userId', 'name email');
 
     if (!seller) {
       return res.status(404).json({ message: 'Seller not found' });
     }
+
+    // The moment a shop waits for (plan 2.40): bell, push and mail, with the next step.
+    setImmediate(() => require('../utils/notify').notify({ userId: seller.userId?._id || seller.userId, role: 'seller', category: 'account', title: `${seller.businessName} is approved · दुकान मंज़ूर 🎉`, body: 'Your products can go live now. First: pickup address, then the first product.', url: '/seller', tag: `seller-approved-${seller._id}` }).catch(() => {}));
 
     res.json({
       message: 'Seller approved successfully',
@@ -74,15 +84,19 @@ exports.rejectSeller = async (req, res) => {
   try {
     const { sellerId } = req.params;
 
+    const reason = String(req.body?.reason || '').trim().slice(0, 400);
     const seller = await Seller.findByIdAndUpdate(
       sellerId,
-      { isApproved: false, kycStatus: 'rejected' },
+      { isApproved: false, kycStatus: 'rejected', 'application.status': 'rejected', 'application.rejectReason': reason, 'application.reviewedAt': new Date() },
       { new: true }
     ).populate('userId', 'name email');
 
     if (!seller) {
       return res.status(404).json({ message: 'Seller not found' });
     }
+
+    // Said to the shop, with the reason, and the door left open: they may fix and resubmit.
+    setImmediate(() => require('../utils/notify').notify({ userId: seller.userId?._id || seller.userId, role: 'seller', category: 'account', title: `Application not approved · ${seller.businessName}`, body: reason ? `${reason} - you can update the application and send it again.` : 'You can update the application and send it again.', url: '/sell', tag: `seller-rejected-${seller._id}` }).catch(() => {}));
 
     res.json({
       message: 'Seller rejected',
@@ -92,6 +106,29 @@ exports.rejectSeller = async (req, res) => {
     sendError(res, error);
   }
 };
+/*
+ * Ask the applicant for one thing (plan 2.40) - Amazon's "additional
+ * information required", without the week. The application moves to
+ * needs_info, the shop gets a bell + mail naming exactly what, and the
+ * moment they update it is back in the queue.
+ */
+exports.askSeller = async (req, res) => {
+  try {
+    const reason = String(req.body?.reason || '').trim().slice(0, 400);
+    if (reason.length < 4) return res.status(400).json({ message: 'Say what you need from them - one line.' });
+    const seller = await Seller.findOneAndUpdate(
+      { _id: req.params.sellerId, isApproved: false },
+      { 'application.status': 'needs_info', 'application.infoRequested': { reason, at: new Date() } },
+      { new: true }
+    ).populate('userId', 'name email');
+    if (!seller) return res.status(404).json({ message: 'No pending application with that id' });
+    setImmediate(() => require('../utils/notify').notify({ userId: seller.userId?._id || seller.userId, role: 'seller', category: 'account', title: `One thing before approval · ${seller.businessName}`, body: reason, url: '/sell', tag: `seller-ask-${seller._id}` }).catch(() => {}));
+    res.json({ message: 'Asked', seller });
+  } catch (error) {
+    sendError(res, error);
+  }
+};
+
 // Suspend seller
 exports.suspendSeller = async (req, res) => {
   try {
