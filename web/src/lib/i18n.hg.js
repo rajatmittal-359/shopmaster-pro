@@ -681,6 +681,14 @@ const HG = {
   'Bank account, payouts, deductions': 'Bank account, payments, katauti',
   'How your account is doing': 'Aapka account kaisa chal raha hai',
   'Pickup address, free shipping': 'Pickup address, free delivery',
+  // Return tags (15 Sep 2026)
+  'Print return tags': 'Wapsi tag print karein',
+  'Return tags': 'Wapsi tag',
+  'Back to the order': 'Order par wapas',
+  'piece': 'piece',
+  'Line': 'Line',
+  'Print, cut along the dotted line, tie one on each piece with the seal - then take the pack proof photo with the tag showing. A piece that comes back without it is not a change-of-mind return.': 'Print karein, dotted line par kaatein, har piece par seal se ek tag baandhein - phir tag dikhate hue pack proof photo lein. Bina tag lauta piece change-of-mind return nahi hai.',
+  Invoice: 'Bill',
 };
 
 export default HG;

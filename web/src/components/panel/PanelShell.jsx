@@ -44,9 +44,9 @@ export default function PanelShell({ title, groups, countsUrl = null, identity =
   const role = title === 'Admin' ? 'admin' : 'seller';
 
   return (
-    <div className="min-h-dvh bg-muted/30">
+    <div className="min-h-dvh bg-muted/30 print:bg-white">
       {/* THE PANEL'S OWN BAR */}
-      <header className="glass sticky top-0 z-40 border-b">
+      <header className="glass sticky top-0 z-40 border-b print:hidden">
         <div className="mx-auto flex h-14 max-w-7xl items-center gap-3 px-4">
           {/* Phone: the drawer */}
           <Sheet open={open} onOpenChange={setOpen}>
@@ -106,8 +106,8 @@ export default function PanelShell({ title, groups, countsUrl = null, identity =
         </div>
       </header>
 
-      <div className="mx-auto flex max-w-7xl gap-8 px-4 py-6">
-        <aside className="hidden w-60 shrink-0 lg:block">
+      <div className="mx-auto flex max-w-7xl gap-8 px-4 py-6 print:max-w-none print:p-0">
+        <aside className="hidden w-60 shrink-0 lg:block print:hidden">
           {/* Full height so "pinned" groups (Settings, Help) can sit at the bottom the way Shopify's do. */}
           <div className="sticky top-20 flex max-h-[calc(100dvh-6rem)] flex-col">
             {identity}

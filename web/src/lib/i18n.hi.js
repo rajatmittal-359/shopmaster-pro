@@ -720,6 +720,16 @@ const HI = {
   'Bank account, payouts, deductions': 'बैंक खाता, पेमेंट, कटौती',
   'How your account is doing': 'आपका खाता कैसा चल रहा है',
   'Pickup address, free shipping': 'पिकअप पता, मुफ़्त डिलीवरी',
+  // Return tags (15 Sep 2026)
+  'Print return tags': 'वापसी टैग प्रिंट करें',
+  'Return tags': 'वापसी टैग',
+  'Back to the order': 'ऑर्डर पर वापस',
+  'Print': 'प्रिंट',
+  'Loading…': 'लोड हो रहा है…',
+  'piece': 'पीस',
+  'Line': 'लाइन',
+  'Print, cut along the dotted line, tie one on each piece with the seal - then take the pack proof photo with the tag showing. A piece that comes back without it is not a change-of-mind return.': 'प्रिंट करें, बिंदुओं वाली लाइन पर काटें, हर पीस पर सील से एक टैग बाँधें - फिर टैग दिखाते हुए पैकिंग का सबूत वाली फोटो लें। बिना टैग लौटा पीस मन बदलने वाली वापसी नहीं है।',
+  Invoice: 'बिल',
 };
 
 export default HI;

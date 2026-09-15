@@ -6,7 +6,7 @@ import { ChevronDown } from 'lucide-react';
 import { useLang } from '@/lib/i18n';
 
 /**
- * सीखें - five short lessons for the person who runs the shop day to day.
+ * सीखें - short lessons for the person who runs the shop day to day.
  *
  * Written for Rajat's mother (13 Sep 2026): a 1970s-generation shopkeeper
  * on a phone, Hindi first, new to this. Each lesson is the daily loop in
@@ -22,12 +22,25 @@ const LESSONS = {
       steps: [
         ['मेल में नीला बटन "ऑर्डर खोलें" दबाएँ।', 'सीधे उस ऑर्डर पर पहुँचेंगे। या पैनल में Orders → "To pack"।'],
         ['देखें क्या और कितना भेजना है, ग्राहक का नाम और शहर।', 'फोटो के साथ लिखा होगा।'],
-        ['सामान पैक करें - मज़बूत डिब्बा, अंदर बबल रैप, ऊपर टेप।', 'ज्वेलरी हो तो छोटी थैली में, फिर डिब्बे में।'],
-        ['ऑर्डर पेज पर "Book courier and ship" दबाएँ।', 'कूरियर वाला 1-2 दिन में आपके पते से उठा लेगा। लेबल वही लाएगा - आपको कुछ प्रिंट नहीं करना।'],
+        ['सामान पैक करें - पहले वापसी टैग बाँधें और फोटो लें (अगला पाठ), फिर मज़बूत डिब्बा, अंदर बबल रैप, ऊपर टेप।', 'ज्वेलरी हो तो छोटी थैली में, फिर डिब्बे में।'],
+        ['ऑर्डर पेज पर "Book courier and ship" दबाएँ।', 'कूरियर वाला 1-2 दिन में आपके पते से उठा लेगा। लेबल वही लाएगा - आपको लेबल प्रिंट नहीं करना।'],
         ['बस। ग्राहक को खुद मैसेज चला जाएगा।', 'ऑर्डर "Shipped" में चला जाएगा। 2 दिन के अंदर भेजना ज़रूरी है।'],
       ],
       href: '/seller/orders?tab=pack',
       cta: 'ऑर्डर देखें',
+    },
+    {
+      title: 'पैक करने से पहले - टैग और फोटो',
+      when: 'हर ऑर्डर में, कूरियर बुक करने से पहले - 2 मिनट',
+      steps: [
+        ['ऑर्डर पेज पर "वापसी टैग प्रिंट करें" दबाएँ - हर पीस के लिए एक छोटा कार्ड निकलेगा।', 'कार्ड पर आपकी दुकान, ऑर्डर नंबर और नियम लिखा है - हिंदी और English में।'],
+        ['कार्ड काटें और सील (या धागे) से पीस पर बाँधें - ऐसी जगह जहाँ पहनने पर दिखे।', 'सील खोले बिना पीस पहना नहीं जा सकता - यही इसका मतलब है।'],
+        ['टैग दिखाते हुए पैक किए सामान की एक फोटो लें और "Save pack proof" दबाएँ।', 'यही फोटो तय करती है - "टूटा आया", "गलत आया", "डिब्बा खाली" - सब में।'],
+        ['अब "Book courier and ship"।', ''],
+        ['अगर पीस वापस आए: टैग लगा और सील सही → पैसा लौटा दें। टैग कटा या पीस इस्तेमाल हुआ → "Refuse it", फोटो के साथ।', 'बिना टैग की वापसी मन बदलने वाली वापसी नहीं है - नियम आपके साथ है।'],
+      ],
+      href: '/seller/orders?tab=pack',
+      cta: 'पैक करने वाले ऑर्डर',
     },
     {
       title: 'नया प्रोडक्ट डालना - फोटो से',
@@ -100,12 +113,25 @@ const LESSONS = {
       steps: [
         ['Tap the blue "Open the order" button in the mail.', 'Or Orders → "To pack" in the panel.'],
         ['See what to send, how many, the customer’s name and city.', ''],
-        ['Pack it - a firm box, bubble wrap inside, tape on top.', 'Jewellery in a small pouch first, then the box.'],
-        ['On the order page press "Book courier and ship".', 'The courier collects from your address in 1-2 days and brings the label - you print nothing.'],
+        ['Pack it - return tag tied on and the photo taken first (next lesson), then a firm box, bubble wrap inside, tape on top.', 'Jewellery in a small pouch first, then the box.'],
+        ['On the order page press "Book courier and ship".', 'The courier collects from your address in 1-2 days and brings the label - you do not print the label.'],
         ['Done. The customer is messaged automatically.', 'Dispatch within 2 working days.'],
       ],
       href: '/seller/orders?tab=pack',
       cta: 'See orders',
+    },
+    {
+      title: 'Before you pack - the tag and the photo',
+      when: 'Every order, before booking the courier - 2 minutes',
+      steps: [
+        ['On the order page press "Print return tags" - one small card per piece.', 'The card carries your shop, the order number and the rule, in Hindi and English.'],
+        ['Cut the cards out and tie one on each piece with the seal (or a thread) - where it would show if worn.', 'The piece cannot be worn without breaking the seal. That is the whole point.'],
+        ['Take one photo of the packed piece with the tag showing and press "Save pack proof".', 'This photo decides "arrived damaged", "wrong item", "empty box" - all of them.'],
+        ['Now "Book courier and ship".', ''],
+        ['If it comes back: tag on, seal unbroken → refund. Tag cut or piece used → "Refuse it", with photos.', 'A return without the tag is not a change-of-mind return - the rule is on your side.'],
+      ],
+      href: '/seller/orders?tab=pack',
+      cta: 'Orders to pack',
     },
     {
       title: 'Adding a product - from a photo',
