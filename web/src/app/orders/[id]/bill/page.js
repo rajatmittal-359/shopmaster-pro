@@ -2,7 +2,7 @@ import Bill from '@/components/orders/Bill';
 import { businessFrom } from '@/config/policy';
 import { getSettings } from '@/lib/api';
 
-export const metadata = { title: 'Bill of Supply', robots: { index: false, follow: false } };
+export const metadata = { title: 'Invoice', robots: { index: false, follow: false } };
 
 export default async function BillPage({ params }) {
   const { id } = await params;

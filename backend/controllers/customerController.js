@@ -12,6 +12,7 @@ const { releaseReservation } = require("../utils/reservation");
 // and the moment a seller's money is released can never drift apart.
 const { RETURN_WINDOW_DAYS, returnWindowFor } = require("../utils/payout");
 const Product = require("../models/Product");
+const Seller = require('../models/Seller');
 const mongoose = require('mongoose'); 
 const Address = require('../models/Address'); 
 const { applyInventoryChange } = require("./inventoryController");
@@ -484,9 +485,33 @@ exports.getOrderDetails = async (req, res) => {
      */
     const canCancel = canCancelOrder(order);
 
+    /*
+     * Who sold each line - the seller of record for the bill (plan 2.40,
+     * 15 Sep 2026). On a marketplace the SELLER is the supplier: Amazon's and
+     * Flipkart's invoices say "Sold by <legal name>, <address>, GSTIN …" and
+     * name the platform only as the issuer on the seller's behalf. So the
+     * bill needs each seller's legal name, business address and GST standing;
+     * the customer's order page shows the shop name only.
+     */
+    const sellerIds = [...new Set((order.items || []).map((i) => String(i.sellerId)).filter(Boolean))];
+    const sellerDocs = sellerIds.length ? await Seller.find({ userId: { $in: sellerIds } }).select('userId businessName application.legalName application.gstin application.gstMode application.enrolmentNumber gstNumber pickupAddress').lean() : [];
+    const sellers = Object.fromEntries(sellerDocs.map((sd) => {
+      const a = sd.application || {};
+      const gstin = a.gstin || sd.gstNumber || '';
+      const pa = sd.pickupAddress || {};
+      return [String(sd.userId), {
+        businessName: sd.businessName,
+        legalName: a.legalName || sd.businessName,
+        address: [pa.address1, pa.address2, [pa.city, pa.state, pa.pincode].filter(Boolean).join(' ')].filter(Boolean),
+        gstin,
+        enrolled: !gstin && a.gstMode === 'enrolment' ? a.enrolmentNumber : '',
+      }];
+    }));
+
     res.json({
       success: true,
       order,
+      sellers,
       canReturn,
       returnWindowClosesAt,
       returnWindowDays,

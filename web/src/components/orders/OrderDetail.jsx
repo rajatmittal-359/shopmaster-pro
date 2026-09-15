@@ -500,7 +500,7 @@ export default function OrderDetail({ orderId }) {
       )}
 
       <p className="text-sm text-muted-foreground">
-        <Link href={`/orders/${orderId}/bill`} className="text-brand-ink hover:underline">Bill of Supply</Link>
+        <Link href={`/orders/${orderId}/bill`} className="text-brand-ink hover:underline">Invoice</Link>
         {' '}- print it or save it as a PDF. Something else wrong?{' '}
         <Link href="/contact" className="text-brand-ink hover:underline">Tell us</Link>.
       </p>

@@ -122,6 +122,9 @@ synonyms collection (jhumka/jhumki/झुमका), Gemini query → filters.
 
 ## 3. Rajat's call — researched, waiting on a decision
 
+- **GST-registered seller's tax invoice (decide before the first GST seller is approved).** Research 15 Sep: on a marketplace the SELLER is the supplier and must issue the GST invoice (GSTIN, HSN, tax rate, CGST/SGST per line); the platform's PDF is a customer copy generated on the seller's behalf (Amazon does exactly this). An UNregistered seller may issue only a plain invoice/cash memo - not a 'Bill of Supply' (Rule 49 is for registered composition/exempt suppliers), so the customer bill is now titled **Invoice**, per seller, 'Sold by <legal name> · GSTIN or Not registered under GST', issued by ShopMaster Pro on the seller's behalf. Still needed for a GST seller: `Product.hsn` + tax rate, tax split on the bill, and the seller's own invoice numbering series. Nothing to do while every seller (ours included) is unregistered. Sources: cleartax GST on online sellers; taxguru Rule 49; caclubindia unregistered supplier invoice.
+
+
 ### 3a. The 13 Sep night list — sidebars and the next features
 
 **Decided 13 Sep 05:00 ("abhi kardo"): S1–S9, A1–A2, C1–C8 built and pushed — plan §4.32.** Still to eyeball in the browser signed in as seller and admin (the session had expired when I looked): the new sidebars with badges, Returns & issues, Promotions form, Performance, Help, admin Products/Customers. A3/A4 wait; F1–F12 still Rajat's pick.
