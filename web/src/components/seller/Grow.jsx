@@ -31,7 +31,7 @@ import { useT } from '@/lib/i18n';
 const AUTOMATIC = [
   ['Your product pages are built for Google', 'Fast, server-rendered pages with product structured data - price, stock, shipping, returns, your shop as the seller - on every product.'],
   ['Google is told about every page', 'The sitemap updates itself; Search Console and URL Inspection run on the platform account.'],
-  ['Your products go to Google Shopping', 'Once the marketplace’s Merchant Center listing is approved for outside sellers, the feed carries every approved listing with Google’s own category for it; the admin watches approvals for you.'],
+  ['Your products go to Google Shopping after your first approved listings', 'The marketplace’s Merchant Center feed carries approved listings with Google’s own category for each; outside shops join it once Google approves the marketplace programme - the admin watches approvals for you.'],
   ['Your coupons appear in Shopping results', 'Live promotions are sent to Google every night - a discount tag under your product, free.'],
   ['Customers are asked to rate the shop', 'Google Customer Reviews runs after every order; the stars go under the platform’s name in results.'],
   ['Visits are measured', 'Analytics runs on the storefront; you see what Google showed and clicked for your products in the listing panel.'],
