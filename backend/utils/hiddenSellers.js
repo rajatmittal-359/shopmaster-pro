@@ -16,6 +16,11 @@ const Seller = require('../models/Seller');
  *   call `forget()` so the change is immediate, not a minute late. Nothing
  *   is written to the products - the seller's own active/inactive choices
  *   survive a suspension and come back with them.
+ *
+ *   A shop on a break (utils/vacation, 19 Sep 2026) is hidden the same way
+ *   from every LIST - but not from its own pages: the product page and the
+ *   shop page check `status` themselves and say "back on <date>" instead of
+ *   404, the Etsy way. `suspendedOnly` is for those two.
  */
 const TTL = 60 * 1000;
 let cache = { at: 0, ids: [] };
@@ -49,5 +54,5 @@ module.exports = {
   withoutHiddenSellers,
   forget,
   /** The real lookup; tests/setup.mjs swaps it for one that answers without a database. */
-  defaults: { find: () => Seller.find({ status: 'suspended' }).select('userId').lean() },
+  defaults: { find: () => Seller.find({ $or: [{ status: 'suspended' }, require('./vacation').activeFilter()] }).select('userId').lean() },
 };

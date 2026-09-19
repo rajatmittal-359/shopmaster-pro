@@ -36,6 +36,8 @@ export default function BuyBox({
   /** The path to come back to after signing in. Given by the server - see the
    *  sign-in link below for why it cannot be read from the browser. */
   returnTo = '/',
+  /** { untilText, note } while the shop is on a break (utils/vacation) - buying waits. */
+  shopBreak = null,
 }) {
   const [quantity, setQuantity] = useState(1);
   const [state, setState] = useState({ status: 'idle' });
@@ -58,7 +60,11 @@ export default function BuyBox({
 
   const cap = Math.max(1, Math.min(Number(maxQuantity) || 1, 10));
 
-  const button = !inStock ? (
+  const button = shopBreak ? (
+    <Button disabled className="w-full" variant="ghost" size="sm">
+      {shopBreak.untilText ? `Shop on a break - back ${shopBreak.untilText}` : 'Shop on a break'}
+    </Button>
+  ) : !inStock ? (
     <Button
       disabled
       className="w-full" variant="ghost" size="sm">

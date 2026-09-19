@@ -16,6 +16,7 @@ const publicView = (doc) => ({
   business: doc.business,
   links: Object.fromEntries(Object.entries(doc.links || {}).filter(([, v]) => v)),
   shop: doc.shop,
+  home: doc.home || {},
   announcement: doc.announcement && doc.announcement.enabled ? doc.announcement : { enabled: false },
   rulesVersion: doc.rules && doc.rules.version,
   updatedAt: doc.updatedAt,
@@ -52,7 +53,7 @@ exports.updateSettings = async (req, res) => {
     const body = req.body || {};
 
     // Only keys the schema knows; anything else in the body is ignored.
-    for (const block of ['business', 'links', 'shop', 'announcement']) {
+    for (const block of ['business', 'links', 'shop', 'home', 'announcement']) {
       if (body[block] && typeof body[block] === 'object') {
         for (const [k, v] of Object.entries(body[block])) {
           if (doc.schema.path(`${block}.${k}`)) doc.set(`${block}.${k}`, v);

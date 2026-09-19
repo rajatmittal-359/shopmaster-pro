@@ -214,6 +214,18 @@ const sellerSchema = new mongoose.Schema(
       default: false
     },
 
+    /**
+     * The shop on a break - Etsy's Vacation Mode (utils/vacation, 19 Sep
+     * 2026). `on` with an optional `until` (the switch expires by itself the
+     * day after) and a line for the shop page ("Back after Diwali"). While
+     * on: products leave the lists, the pages say so, checkout refuses.
+     */
+    vacation: {
+      on: { type: Boolean, default: false },
+      until: { type: Date, default: null },
+      note: { type: String, trim: true, maxlength: 140, default: '' },
+    },
+
     isPlatformOwned: {
       type: Boolean,
       default: false

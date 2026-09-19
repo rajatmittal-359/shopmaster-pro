@@ -253,6 +253,13 @@ exports.checkout = async (req, res) => {
       }
     }
 
+    // A shop on a break sells nothing until it is back (utils/vacation).
+    const onBreak = await require('../utils/vacation').firstOnBreak(cart.items.map((i) => i.productId.sellerId));
+    if (onBreak) {
+      await session.abortTransaction();
+      return res.status(400).json({ message: onBreak.message });
+    }
+
     // Shipping for the COD endpoint is always priced with COD logic.
     // It previously read req.body.paymentMethod, which the client never sends
     // to /checkout-cod, so isCOD was false and the COD fee was silently dropped.

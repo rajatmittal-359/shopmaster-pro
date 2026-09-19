@@ -63,6 +63,10 @@ function Block({ title, lead, form, saved, onSave, busy, children, confirm }) {
   );
 }
 
+/** A settings doc saved before the Home block existed has none; the form needs the keys. */
+const EMPTY_HOME = { kicker: '', title: '', lead: '', featuredTitle: '', featuredHref: '', featuredUntil: null };
+const withHome = (settings) => ({ ...settings, home: { ...EMPTY_HOME, ...(settings.home || {}), featuredUntil: settings.home?.featuredUntil ? String(settings.home.featuredUntil).slice(0, 10) : '' } });
+
 export default function PlatformSettings() {
   const [doc, setDoc] = useState(null);
   const [defaults, setDefaults] = useState(null);
@@ -74,9 +78,9 @@ export default function PlatformSettings() {
     authedFetch('/admin/settings')
       .then((d) => {
         if (cancelled) return;
-        setDoc(d.settings);
+        setDoc(withHome(d.settings));
         setDefaults(d.defaults);
-        setForm(JSON.parse(JSON.stringify(d.settings)));
+        setForm(JSON.parse(JSON.stringify(withHome(d.settings))));
       })
       .catch((err) => toast.error(err.message));
     return () => {
@@ -96,9 +100,11 @@ export default function PlatformSettings() {
   const save = async (block) => {
     setBusy(block);
     try {
-      const d = await authedFetch('/admin/settings', { method: 'PATCH', body: { [block]: form[block] } });
-      setDoc(d.settings);
-      setForm((f) => ({ ...f, [block]: JSON.parse(JSON.stringify(d.settings[block])) }));
+      const body = block === 'home' ? { home: { ...form.home, featuredUntil: form.home.featuredUntil || null } } : { [block]: form[block] };
+      const d = await authedFetch('/admin/settings', { method: 'PATCH', body });
+      const next = withHome(d.settings);
+      setDoc(next);
+      setForm((f) => ({ ...f, [block]: JSON.parse(JSON.stringify(next[block])) }));
       toast.success(block === 'rules' ? `Rules saved - Seller Agreement is now v${d.rulesVersion}` : 'Saved');
     } catch (err) {
       toast.error(err.message);
@@ -114,6 +120,7 @@ export default function PlatformSettings() {
   const r = form.rules;
   const s = form.shop;
   const a = form.announcement;
+  const h = form.home;
 
   return (
     <>
@@ -128,6 +135,7 @@ export default function PlatformSettings() {
           { key: 'rules', label: `Rulebook v${doc.rules.version}`, count: !same(r, doc.rules) ? '•' : undefined },
           { key: 'switches', label: 'Switches', count: !same(s, doc.shop) ? '•' : undefined },
           { key: 'announcement', label: 'Announcement', count: !same(a, doc.announcement) ? '•' : undefined },
+          { key: 'home', label: 'Home page', count: !same(h, doc.home) ? '•' : undefined },
         ]}
       >
         {(tab) => (
@@ -292,6 +300,44 @@ export default function PlatformSettings() {
                   </Field>
                 </div>
               </Block>
+            )}
+            {tab === 'home' && (
+              <>
+                {/*
+                 * Home page (19 Sep 2026): the first screen's three lines and
+                 * one featured strip - Shopify's theme sections and Amazon's
+                 * storefront cut to what a festival needs. Empty = the built-in
+                 * copy; the strip is any /shop link filtered on the site itself.
+                 */}
+                <Block title="First screen" lead="The three lines at the top of the home page. Leave a box empty to keep the built-in words. No category names in the frame - the promise is variety." form={{ kicker: h.kicker, title: h.title, lead: h.lead }} saved={{ kicker: doc.home.kicker, title: doc.home.title, lead: doc.home.lead }} onSave={() => save('home')} busy={busy === 'home'}>
+                  <div className="grid gap-4">
+                    <Field id="hKicker" label="Small line above the headline" hint="Built-in: Made in Jaipur, sold across India">
+                      <Input id="hKicker" value={h.kicker} onChange={set('home', 'kicker')} maxLength={60} placeholder="Diwali week in Jaipur" />
+                    </Field>
+                    <Field id="hTitle" label="Headline" hint="Built-in: A marketplace from Jaipur, delivered across India.">
+                      <Input id="hTitle" value={h.title} onChange={set('home', 'title')} maxLength={90} />
+                    </Field>
+                    <Field id="hLead" label="One line under it" hint="Built-in: Clothing, jewellery, home and everyday things from sellers across India.">
+                      <Input id="hLead" value={h.lead} onChange={set('home', 'lead')} maxLength={140} />
+                    </Field>
+                  </div>
+                </Block>
+                <Block title="Featured strip" lead="A row of eight products above 'Just added'. Filter the shop the way you want it, copy the address bar, paste it here. It disappears by itself after the date." form={{ t: h.featuredTitle, l: h.featuredHref, u: h.featuredUntil }} saved={{ t: doc.home.featuredTitle, l: doc.home.featuredHref, u: doc.home.featuredUntil }} onSave={() => save('home')} busy={busy === 'home'}>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <Field id="hFt" label="Title" hint="Empty = no strip">
+                      <Input id="hFt" value={h.featuredTitle} onChange={set('home', 'featuredTitle')} maxLength={60} placeholder="Diwali picks" />
+                    </Field>
+                    <Field id="hFu" label="Show until" hint="Empty = until you clear it">
+                      <Input id="hFu" type="date" value={h.featuredUntil || ''} onChange={set('home', 'featuredUntil')} />
+                    </Field>
+                    <div className="sm:col-span-2">
+                      <Field id="hFl" label="Shop link with filters" hint="Must start with /shop - for example /shop?search=diya&sort=newest or /shop?category=jewellery">
+                        <Input id="hFl" value={h.featuredHref} onChange={set('home', 'featuredHref')} placeholder="/shop?search=diya" />
+                      </Field>
+                    </div>
+                  </div>
+                </Block>
+              </>
             )}
             {tab === 'announcement' && (
               <Block title="Announcement bar" lead="One line above the header - a festival offer, a holiday notice. Off by default." form={a} saved={doc.announcement} onSave={() => save('announcement')} busy={busy === 'announcement'}>

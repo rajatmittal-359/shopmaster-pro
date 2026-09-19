@@ -101,6 +101,24 @@ const settingsSchema = new mongoose.Schema(
       shippingRate: { type: Number, default: 100, min: 0 },
     },
 
+    /**
+     * The home page's words and its one featured strip (19 Sep 2026) -
+     * Shopify's theme sections and Amazon's storefront, cut to what a
+     * festival needs: change the first line for Diwali, put "Diwali picks"
+     * above "Just added", without a deploy. Empty text = the built-in copy.
+     * The strip is any /shop link the admin filtered themselves (a saved
+     * search is what a "collection" is); it switches itself off after
+     * `featuredUntil`.
+     */
+    home: {
+      kicker: { type: String, trim: true, maxlength: 60, default: '' },
+      title: { type: String, trim: true, maxlength: 90, default: '' },
+      lead: { type: String, trim: true, maxlength: 140, default: '' },
+      featuredTitle: { type: String, trim: true, maxlength: 60, default: '' },
+      featuredHref: { type: String, trim: true, default: '', match: [/^$|^\/shop(\?[^\s]*)?$/, 'The featured link must be a /shop page on this site, filters included'] },
+      featuredUntil: { type: Date, default: null },
+    },
+
     announcement: {
       enabled: { type: Boolean, default: false },
       text: { type: String, trim: true, maxlength: 140, default: '' },

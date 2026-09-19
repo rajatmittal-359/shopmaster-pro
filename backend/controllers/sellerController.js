@@ -1751,6 +1751,7 @@ exports.getSettings = async (req, res) => {
         about: seller.about || '',
         links: seller.links || {},
         showLocation: Boolean(seller.showLocation),
+        vacation: seller.vacation || { on: false, until: null, note: '' },
 
         /*
          * Shown, not editable. A seller seeing what the platform charges them
@@ -1790,7 +1791,7 @@ exports.getSettings = async (req, res) => {
  * @returns {Promise<{error?:string, changed:string[], aboutHeld:string|null}>}
  */
 const applyShopSettings = async (seller, body = {}) => {
-  const { offersFreeShipping, pickupAddress, about, links, showLocation } = body;
+  const { offersFreeShipping, pickupAddress, about, links, showLocation, vacation } = body;
   const changed = [];
   let aboutHeld = null;
 
@@ -1817,6 +1818,17 @@ const applyShopSettings = async (seller, body = {}) => {
   if (showLocation !== undefined && Boolean(showLocation) !== Boolean(seller.showLocation)) {
     seller.showLocation = Boolean(showLocation);
     changed.push('city on the shop page');
+  }
+  // The break switch (utils/vacation): validated dates, the list cache dropped so it is immediate.
+  if (vacation && typeof vacation === 'object') {
+    const v = require('../utils/vacation').cleanVacation(vacation);
+    if (v.error) return { error: v.error, changed, aboutHeld };
+    const before = seller.vacation || {};
+    if (Boolean(before.on) !== v.value.on || String(before.until || '') !== String(v.value.until || '') || (before.note || '') !== v.value.note) {
+      seller.vacation = v.value;
+      changed.push(v.value.on ? 'break on' : 'break off');
+      require('../utils/hiddenSellers').forget();
+    }
   }
   if (links && typeof links === 'object') {
     // Only http(s) links, only to the hosts each field is for - a link that
@@ -1896,6 +1908,7 @@ exports.updateSettings = async (req, res) => {
         about: seller.about || '',
         links: seller.links || {},
         showLocation: Boolean(seller.showLocation),
+        vacation: seller.vacation || { on: false, until: null, note: '' },
       },
     });
   } catch (error) {

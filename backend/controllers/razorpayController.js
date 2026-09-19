@@ -175,6 +175,13 @@ exports.createRazorpayOrder = async (req, res) => {
         .json({ success: false, message: "Cart is empty" });
     }
 
+    // A shop on a break sells nothing until it is back (utils/vacation).
+    const onBreak = await require('../utils/vacation').firstOnBreak(cart.items.map((i) => i.productId.sellerId));
+    if (onBreak) {
+      await session.abortTransaction();
+      return res.status(400).json({ success: false, message: onBreak.message });
+    }
+
     // 3) RESERVE the inventory rather than merely checking it.
     //
     // Checking was the old behaviour and it could not prevent anything: two

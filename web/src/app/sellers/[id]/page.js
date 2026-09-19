@@ -86,6 +86,11 @@ export default async function SellerPage({ params }) {
 
       <header className="rounded-xl border border-border p-6">
         <h1 className="text-2xl font-semibold tracking-tight">{seller.businessName}</h1>
+        {seller.break && (
+          <p className="mt-3 rounded-lg border border-amber-300/60 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-500/40 dark:bg-amber-950/40 dark:text-amber-100">
+            <strong>On a break{seller.break.untilText ? ` until ${seller.break.untilText}` : ''}.</strong> {seller.break.note || 'Products are hidden until then; orders open again the day after.'}
+          </p>
+        )}
 
         <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
           {/* A rating is shown only when somebody has actually left one. A shop
@@ -161,7 +166,7 @@ export default async function SellerPage({ params }) {
 
         {products.length === 0 ? (
           <p className="mt-3 text-sm text-muted-foreground">
-            Nothing in stock right now.
+            {seller.break ? 'The products come back when the shop reopens.' : 'Nothing in stock right now.'}
           </p>
         ) : (
           <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">

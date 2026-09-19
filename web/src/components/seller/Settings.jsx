@@ -45,6 +45,8 @@ const formFrom = (settings) => ({
   offersFreeShipping: Boolean(settings.offersFreeShipping),
   about: settings.about || '',
   showLocation: Boolean(settings.showLocation),
+  // The break switch (Etsy's Vacation Mode): a date is kept as yyyy-mm-dd for the input.
+  vacation: { on: Boolean(settings.vacation?.on), until: settings.vacation?.until ? String(settings.vacation.until).slice(0, 10) : '', note: settings.vacation?.note || '' },
   links: { instagram: '', facebook: '', googleBusiness: '', youtube: '', website: '', ...(settings.links || {}) },
   pickupAddress: {
     contactName: '',
@@ -106,6 +108,7 @@ export default function SellerSettings() {
       // sending an untouched empty one would stop a new seller from flipping
       // the delivery switch until they had typed an address.
       const body = { offersFreeShipping: form.offersFreeShipping, about: form.about, showLocation: form.showLocation, links: form.links };
+      if (!same(form.vacation, saved.vacation)) body.vacation = { ...form.vacation, until: form.vacation.until || null };
       if (!same(form.pickupAddress, saved.pickupAddress)) body.pickupAddress = form.pickupAddress;
       const data = await authedFetch('/seller/settings', { method: 'PATCH', body });
       const next = data.settings || settings;
@@ -130,7 +133,7 @@ export default function SellerSettings() {
   // Which tab holds an unsaved change - shown as a dot on the tab and named
   // in the save bar, so a change made on one tab is not forgotten on another.
   const changedIn = {
-    shop: form.offersFreeShipping !== saved.offersFreeShipping,
+    shop: form.offersFreeShipping !== saved.offersFreeShipping || !same(form.vacation, saved.vacation),
     pickup: !same(form.pickupAddress, saved.pickupAddress),
     web: form.about !== saved.about || form.showLocation !== saved.showLocation || !same(form.links, saved.links),
   };
@@ -212,6 +215,40 @@ export default function SellerSettings() {
                     className="mt-0.5"
                   />
                 </div>
+              </PanelCard>
+
+              {/*
+               * A break (19 Sep 2026) - Etsy's Vacation Mode, Seller Central's
+               * Holiday settings. One switch and a return date instead of
+               * forty products turned off by hand: the listings leave the
+               * lists, the pages say when the shop is back, checkout refuses,
+               * and it switches itself off the day after the date.
+               */}
+              <PanelCard title={t('Taking a break')}>
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <Label htmlFor="vacationOn" className="text-sm font-medium">
+                      {t('My shop is closed for a few days')}
+                    </Label>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {t('Your products leave the shop lists and cannot be ordered until the date below; your pages stay up and say when you are back. Orders already placed still need to be packed on time.')}
+                    </p>
+                  </div>
+                  <Switch id="vacationOn" checked={form.vacation.on} onCheckedChange={(on) => setForm({ ...form, vacation: { ...form.vacation, on } })} className="mt-0.5" />
+                </div>
+                {form.vacation.on && (
+                  <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="vacationUntil">{t('Back on')}</Label>
+                      <Input id="vacationUntil" type="date" value={form.vacation.until} min={new Date().toISOString().slice(0, 10)} onChange={(e) => setForm({ ...form, vacation: { ...form.vacation, until: e.target.value } })} />
+                      <p className="text-xs text-muted-foreground">{t('Up to 60 days. The shop reopens by itself the day after; leave it empty to reopen by hand.')}</p>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="vacationNote">{t('A line for your customers')}</Label>
+                      <Input id="vacationNote" value={form.vacation.note} maxLength={140} placeholder={t('Closed for Diwali - back with new stock')} onChange={(e) => setForm({ ...form, vacation: { ...form.vacation, note: e.target.value } })} />
+                    </div>
+                  </div>
+                )}
               </PanelCard>
 
               </>

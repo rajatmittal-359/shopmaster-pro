@@ -35,7 +35,7 @@ router.get('/:userId', async (req, res) => {
     const { userId } = req.params;
 
     const seller = await Seller.findOne({ userId })
-      .select('businessName isApproved status createdAt about links showLocation pickupAddress aboutModeration application.legalName application.gstin application.gstMode application.enrolmentNumber gstNumber')
+      .select('businessName isApproved status createdAt about links showLocation pickupAddress aboutModeration vacation application.legalName application.gstin application.gstMode application.enrolmentNumber gstNumber')
       .lean();
 
     /*
@@ -57,8 +57,10 @@ router.get('/:userId', async (req, res) => {
       category: { $in: browsable },
     };
 
+    // On a break (utils/vacation): the count stays (the shop is not empty), the grid does not.
+    const shopBreak = require('../utils/vacation').breakOf(seller);
     const [products, count, rating] = await Promise.all([
-      Product.find(filter)
+      shopBreak ? [] : Product.find(filter)
         .select('name slug price salePrice saleStartsAt saleEndsAt mrp images avgRating totalReviews')
         .sort({ createdAt: -1 })
         .limit(24)
@@ -106,6 +108,8 @@ router.get('/:userId', async (req, res) => {
           gstin: seller.application?.gstin || seller.gstNumber || '',
           enrolled: !seller.application?.gstin && !seller.gstNumber && seller.application?.gstMode === 'enrolment' ? (require('../utils/kyc').checkEnrolment(seller.application.enrolmentNumber).state || 'their state') : '',
         },
+        // On a break (utils/vacation): the page stays, the products are hidden, this says when.
+        break: shopBreak,
         productCount: count,
         rating: totals?.reviews
           ? {

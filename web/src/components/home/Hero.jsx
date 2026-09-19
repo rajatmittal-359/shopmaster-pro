@@ -18,12 +18,17 @@ import ProductMosaic from '@/components/home/ProductMosaic';
  *   VARIETY, the same one every large marketplace makes, and the wall of
  *   products is now making it visually rather than in a sentence.
  *
+ * THE WORDS (19 Sep 2026)
+ *   The three lines come from admin Settings → Home when set (a festival
+ *   line for Diwali without a deploy - Shopify's theme sections, cut to what
+ *   we need); empty means the built-in copy below.
+ *
  * THE EFFECT
  *   Two blurred blooms drifting behind the words, CSS only. The LCP element is
  *   either the heading or the first mosaic image, which is given `priority`
  *   so it is not lazy-loaded below the fold it is actually in.
  */
-export default function Hero({ products = [] }) {
+export default function Hero({ products = [], copy = {} }) {
   return (
     <section className="relative overflow-hidden border-b border-border">
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10">
@@ -33,16 +38,16 @@ export default function Hero({ products = [] }) {
 
       <div className="mx-auto grid max-w-5xl items-center gap-10 px-4 py-10 sm:py-14 md:grid-cols-[1.1fr_1fr]">
         <div>
-          <p className="text-sm font-medium text-brand-ink">Made in Jaipur, sold across India</p>
+          <p className="text-sm font-medium text-brand-ink">{copy.kicker || 'Made in Jaipur, sold across India'}</p>
 
           <h1 className="mt-2 text-3xl leading-tight font-semibold tracking-tight text-balance sm:text-4xl lg:text-5xl">
-            A marketplace from Jaipur, delivered across India.
+            {copy.title || 'A marketplace from Jaipur, delivered across India.'}
           </h1>
 
           {/* One line. Everything the paragraph used to say, the wall of
               products now shows. */}
           <p className="mt-3 max-w-md text-base text-muted-foreground">
-            Clothing, jewellery, home and everyday things from sellers across India.
+            {copy.lead || 'Clothing, jewellery, home and everyday things from sellers across India.'}
           </p>
 
           <div className="mt-6 flex flex-wrap gap-3">

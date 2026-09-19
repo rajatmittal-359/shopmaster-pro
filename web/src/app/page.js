@@ -3,6 +3,7 @@ import Image from 'next/image';
 import { getProducts, getCategories } from '@/lib/api';
 import { serialiseJsonLd } from '@/lib/jsonLd';
 import { POLICY, businessFrom } from '@/config/policy';
+import { featuredQuery } from '@/lib/homeFeatured';
 import { getSettings } from '@/lib/api';
 import Hero from '@/components/home/Hero';
 import ProductCard from '@/components/product/ProductCard';
@@ -51,12 +52,26 @@ const organisationFor = (BUSINESS) => ({
 
 export default async function Home() {
   // Who we are, as the admin last saved it - the schema and the trust block read the same object.
-  const business = businessFrom(await getSettings());
+  const settings = await getSettings();
+  const business = businessFrom(settings);
   const organisation = organisationFor(business);
-  const [newest, categories] = await Promise.all([
+  const home = settings?.home || {};
+
+  /*
+   * The featured strip (19 Sep 2026): admin Settings → Home names a title and
+   * any /shop link they filtered themselves ("Diwali picks" →
+   * /shop?search=diya&sort=newest). A saved filter is what a "collection" is
+   * on Shopify; there is nothing else to build. It switches itself off after
+   * the date, so nobody has to remember Diwali is over.
+   */
+  const featuredParams = featuredQuery(home);
+
+  const [newest, categories, featured] = await Promise.all([
     getProducts({ limit: 8, sort: 'newest' }),
     getCategories(),
+    featuredParams ? getProducts({ ...featuredParams, limit: 8 }).catch(() => null) : null,
   ]);
+  const picks = featured?.products || [];
 
   const products = newest?.products || [];
   // Only categories that actually have something in them. A tile leading to an
@@ -83,7 +98,23 @@ export default async function Home() {
         dangerouslySetInnerHTML={{ __html: serialiseJsonLd(organisation) }}
       />
 
-      <Hero products={products} />
+      <Hero products={products} copy={home} />
+
+      {picks.length > 0 && (
+        <section className="mx-auto max-w-5xl px-4 pt-10">
+          <div className="flex items-baseline justify-between">
+            <h2 className="text-lg font-semibold">{home.featuredTitle}</h2>
+            <Link href={home.featuredHref} className="text-sm text-brand-ink hover:underline">
+              See all
+            </Link>
+          </div>
+          <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
+            {picks.map((product) => (
+              <ProductCard key={product._id} product={product} />
+            ))}
+          </div>
+        </section>
+      )}
 
       {shown.length > 0 && (
         <section className="mx-auto max-w-5xl px-4 py-10">

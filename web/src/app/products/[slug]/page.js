@@ -187,6 +187,14 @@ export default async function ProductPage({ params }) {
             <p className="text-sm font-medium text-destructive">Only {available} left</p>
           )}
 
+          {/* The shop's own words while it is on a break (Etsy's "taking a short break"). */}
+          {product.shop?.break && (
+            <p className="rounded-lg border border-amber-300/60 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-500/40 dark:bg-amber-950/40 dark:text-amber-100">
+              <strong>{product.shop.name || 'This shop'} is on a break{product.shop.break.untilText ? ` until ${product.shop.break.untilText}` : ''}.</strong>
+              {product.shop.break.note ? ` ${product.shop.break.note}` : ' You can save this to your wishlist and order when they are back.'}
+            </p>
+          )}
+
           <PincodeCheck />
 
           <TrackView product={{ _id: product._id, name: product.name, price, brand: product.shop?.name, category: product.category }} />
@@ -196,6 +204,7 @@ export default async function ProductPage({ params }) {
             price={price}
             inStock={inStock}
             maxQuantity={available}
+            shopBreak={product.shop?.break || null}
             /* Handed down rather than read from window.location in the client:
                the two disagreed, which is a hydration mismatch on every product
                page. */

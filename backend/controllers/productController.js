@@ -417,12 +417,14 @@ exports.getProduct = async (req, res) => {
       .populate('category', 'name slug description ancestors')
       .populate('sellerId', 'name');
 
-    // A suspended seller's page is gone the same minute as their listings.
-    const hidden = await hiddenSellerIds();
+    // A suspended seller's page is gone the same minute as their listings; a
+    // shop on a break keeps its page and says when it is back (utils/vacation).
     const sellerUserId = product && (product.sellerId?._id || product.sellerId);
-    if (!product || hidden.some((id) => String(id) === String(sellerUserId))) {
+    const shopRow = product ? await require('../models/Seller').findOne({ userId: sellerUserId }).select('status vacation').lean() : null;
+    if (!product || shopRow?.status === 'suspended') {
       return res.status(404).json({ message: 'Product not found' });
     }
+    const shopBreak = require('../utils/vacation').breakOf(shopRow);
 
     /*
      * The other sizes of this same thing.
@@ -454,7 +456,7 @@ exports.getProduct = async (req, res) => {
     // Fair Returns: the promise the page shows before anyone buys.
     const { effectiveReturnMode, MODE_LABEL } = require('../utils/returnPolicy');
     const returnMode = effectiveReturnMode(product, product.category);
-    res.json({ product: { ...withShopName, returnMode, returnModeLabel: MODE_LABEL[returnMode] }, variants });
+    res.json({ product: { ...withShopName, shop: { ...withShopName.shop, break: shopBreak }, returnMode, returnModeLabel: MODE_LABEL[returnMode] }, variants });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

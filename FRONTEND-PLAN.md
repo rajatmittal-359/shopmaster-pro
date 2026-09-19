@@ -2288,6 +2288,34 @@ against a reference already in this plan.
   Outside card so nobody buys a wrapper for them.
 - **RETURN_KIND_REQUIRED** - the 2.29 cutover switch as an env flag, tested.
 
+### 4.48 Two things the operator and the seller manage themselves (19 Sep 2026)
+
+Rajat: "UI pe sab cheez ka management kar rakha hai na jo necessary hai -
+baad me code me matha marne me dikkat aati hai - reference bhi le lena."
+Audit of admin Settings against Shopify's Settings list, Amazon Seller
+Central's Settings and Sharetribe's Console: identity, rulebook, switches,
+announcement, commission, categories, coupons, moderation and notification
+preferences were already there. Two gaps had a date on them.
+
+**Home page from Settings.** Reference: Shopify's theme sections and
+Amazon's storefront, cut to a festival's needs - the first screen's three
+lines and one featured strip. A "collection" on Shopify is a saved filter,
+so the strip is any /shop link the admin filtered on the site and pasted;
+it switches itself off after a date. Empty boxes mean the built-in copy.
+Diwali is 8 Nov, the cutover is October: the first festival should not
+need a developer.
+
+**A shop on a break.** Reference: Etsy's Vacation Mode (listings leave
+search, the shop page says "taking a short break", the switch has a
+return date) and Seller Central's Holiday settings. Without it a seller
+turns forty products off by hand, forgets to turn them on, or leaves them
+on and pays late-dispatch penalties for orders nobody could pack. Ours:
+one switch, a date up to 60 days, a line for customers; lists hide the
+shop, its pages stay up with the note and a disabled buy button, checkout
+refuses in words, and it reopens by itself the day after. Orders already
+placed keep their dispatch clock - the card says so before the switch
+goes on. Built for every seller; the house shop simply needs it first.
+
 ### 4.47 The cookie choice, the pixel that waits for it, share cards, the bag reminder (19 Sep 2026)
 
 Rajat: "ab jo bhi apne faede ki cheez hai karo - scope define kardo."
