@@ -1,0 +1,4 @@
+# Scripts and container files must reach the Linux box with LF endings whatever Windows did.
+*.sh text eol=lf
+Dockerfile text eol=lf
+deploy/** text eol=lf
