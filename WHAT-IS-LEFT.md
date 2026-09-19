@@ -237,6 +237,36 @@ Assistant gaps found in the same pass (problem taxonomy in the chat of 13 Sep): 
 - The `/sell` recruitment page rebuilt with `taste-skill`'s dials against `web/DESIGN.md`; a brand board from `brandkit`.
 - Re-run the logged-out marketplace navigation research that a session limit cut off (plan §15).
 
+## 6. Live drill — what only the real world can answer
+
+Written 20 Sep 2026 after the first live ₹1 payment found three things 1223
+green tests could not (list 2.49). Tests mock the boundary; the mock says
+yes. Each row below is a scenario a mock has answered for and a real call has
+not. Done = the scenario was run for real, the result read on all three sides
+(customer / seller / admin), and the row struck through with the date. Most
+cost ₹1 or nothing. Rajat runs the human step; Claude reads the API, mails and
+records the same night.
+
+| # | Boundary | Scenario (₹1 or free) | Who | Done |
+|---|---|---|---|---|
+| L1 | Razorpay webhook | Pay ₹1 on the LIVE domain, close the tab before the success page - the webhook alone must confirm the order, clear the cart, mail | Rajat ₹1, Claude reads | ☐ |
+| L2 | Razorpay webhook | Cancel a paid live order once the balance exists - `refund.processed` must move `queued/processing` → `completed` | after L1 settles | ☐ |
+| L3 | Razorpay | Abandon at the UPI screen: the reservation must release in the timeout, stock back | Rajat | ☐ |
+| L4 | Refund queue | The 19 Sep ₹1 (SMP-260919-51B963) leaves the queue by itself when the balance settles; customer gets the "refund started" mail | wait + Claude | ☐ |
+| L5 | Shiprocket | One real parcel to Rajat's own address: book from the seller queue, label prints, AWB tracks, tracking webhook token accepted, `delivered` closes the return window and creates the payout row | when unparked, Rajat + Mummy | ☐ |
+| L6 | Shiprocket | NDR on purpose (refuse the parcel once) → NDR bell, re-attempt, RTO path | with L5 | ☐ |
+| L7 | Shiprocket | Return pickup with QC photo, cancel a booking before pickup | with L5 | ☐ |
+| L8 | Brevo mail | Open Abha's Gmail: order-confirmed, cancelled, refund-queued mails - inbox or spam, how the templates render on the phone, sender name | Rajat | ☐ |
+| L9 | OTP mail | Seller sign-in on a new phone: how many seconds until the code arrives; resend cooldown | Rajat | ☐ |
+| L10 | Web push | Seller on Android Chrome: allow → one order → notification with sound; iPhone only after Add to Home Screen | Rajat / Mummy | ☐ |
+| L11 | Phone browser | Product form from the phone camera: HEIC + 12 MB photo, voice input, invoice print/PDF, return tag print | Mummy's phone | ☐ |
+| L12 | Sessions | Two devices for a week: silent refresh after the hour, "log out everywhere" from one ends the other | Rajat | ☐ |
+| L13 | Cookie bar + tags | On the live domain: bar shows once, "Accept all" → `_ga` set, GA real-time shows the visit; Pixel when the ID exists; "Only necessary" → no `_ga` | Rajat, Claude reads GA | ☐ |
+| L14 | Google | After cutover: Merchant feed fetched, Search Console indexes the Next pages, GBP link | week 1 after cutover | ☐ |
+| L15 | Actions cron | One morning: low-stock 09:00 IST, growth note Monday 09:05, refunds job every 2 h - times right in IST | Claude reads the run log | ☐ |
+| L16 | Time | 1 April 2027: invoice numbers restart at 00001 under FY 27-28 | calendar | ☐ |
+| L17 | Backup | Restore the Sunday backup into a scratch database once, following the header steps | Rajat + Claude | ☐ |
+
 ## 5. After cutover only
 
 - Delete `frontend/` a week after the domain moves (plan §13a, OPS cutover list).
