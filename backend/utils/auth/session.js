@@ -38,7 +38,8 @@ const AuthEvent = require('../../models/AuthEvent');
 const ACCESS_TTL_SECONDS = 60 * 60;
 const REFRESH_DAYS = 30;
 const REAUTH_TTL_SECONDS = 10 * 60;
-const COOKIE = { access: 'smp_at', refresh: 'smp_rt', reauth: 'smp_su' };
+const DEVICE_DAYS = 365;
+const COOKIE = { access: 'smp_at', refresh: 'smp_rt', reauth: 'smp_su', device: 'smp_device' };
 
 const sha = (v) => crypto.createHash('sha256').update(String(v)).digest('hex');
 const secure = () => process.env.NODE_ENV === 'production' || process.env.COOKIE_SECURE === 'true';
@@ -70,6 +71,25 @@ const signAccess = (user, sid) => jwt.sign({ userId: String(user._id), role: use
 
 const deviceOf = (req) => ({ ua: String(req.headers?.['user-agent'] || '').slice(0, 200), ip: String(req.ip || '') });
 
+/*
+ * WHICH DEVICE IS THIS (security review, 19 Sep 2026)
+ *   The user-agent is a header anyone can type; a stolen password plus a
+ *   common Chrome string would have skipped the new-device step. So a
+ *   device is known by `smp_device`: 32 random bytes the server set in an
+ *   httpOnly cookie the first time it signed in here (a year, path
+ *   /api/auth so it travels only to sign-in). No cookie = new device,
+ *   whatever the header says.
+ */
+const deviceIdOf = (req) => cookies(req)[COOKIE.device] || '';
+const ensureDevice = (req, res) => {
+  let id = deviceIdOf(req);
+  if (!id) {
+    id = crypto.randomBytes(32).toString('base64url');
+    res.cookie(COOKIE.device, id, { ...base(), path: '/api/auth', maxAge: DEVICE_DAYS * 24 * 3600 * 1000 });
+  }
+  return id;
+};
+
 const record = (type, userId, req, meta) =>
   AuthEvent.create({ userId, type, ...deviceOf(req), ...(meta ? { meta } : {}) }).catch((err) => console.error('auth event not recorded:', type, err.message));
 
@@ -81,7 +101,8 @@ const record = (type, userId, req, meta) =>
 const issue = async (user, req, res, { family, event = 'login' } = {}) => {
   const refresh = crypto.randomBytes(32).toString('base64url');
   const fam = family || crypto.randomUUID();
-  const row = await Session.create({ userId: user._id, tokenHash: sha(refresh), family: fam, ...deviceOf(req), expiresAt: new Date(Date.now() + REFRESH_DAYS * 24 * 3600 * 1000) });
+  const deviceId = ensureDevice(req, res);
+  const row = await Session.create({ userId: user._id, tokenHash: sha(refresh), family: fam, deviceId, ...deviceOf(req), expiresAt: new Date(Date.now() + REFRESH_DAYS * 24 * 3600 * 1000) });
   const access = signAccess(user, String(row._id));
   setAuthCookies(res, { access, refresh });
   if (event) record(event, user._id, req);
@@ -138,12 +159,19 @@ const describe = (ua = '') => {
   return `${browser} on ${os}`;
 };
 
-/** Whether this device has signed in before - the "new sign-in" mail decides on it. */
-const seenBefore = async (userId, req) => {
-  const { ua } = deviceOf(req);
-  const n = await Session.countDocuments({ userId, ua, createdAt: { $gt: new Date(Date.now() - 90 * 24 * 3600 * 1000) } });
-  return n > 1; // the row just created counts once
+/**
+ * Whether this device (its cookie) has signed this account in within 90
+ * days. Decides the new-device mail and, for the money roles, the second
+ * step. `excludeSid` leaves out the row a sign-in just created.
+ */
+const knownDevice = async (userId, req, { excludeSid } = {}) => {
+  const deviceId = deviceIdOf(req);
+  if (!deviceId) return false;
+  const q = { userId, deviceId, createdAt: { $gt: new Date(Date.now() - 90 * 24 * 3600 * 1000) } };
+  if (excludeSid) q._id = { $ne: excludeSid };
+  return (await Session.countDocuments(q)) > 0;
 };
+const seenBefore = (userId, req, opts) => knownDevice(userId, req, opts);
 
 /** Step-up: a ten-minute proof that the password was just typed. */
 const grantReauth = (res, user, sid) => {
@@ -163,4 +191,4 @@ const hasRecentAuth = (req) => {
   }
 };
 
-module.exports = { ACCESS_TTL_SECONDS, REFRESH_DAYS, REAUTH_TTL_SECONDS, COOKIE, cookies, issue, rotate, revoke, revokeAll, list, describe, seenBefore, grantReauth, hasRecentAuth, clearAuthCookies, record, sha };
+module.exports = { ACCESS_TTL_SECONDS, REFRESH_DAYS, REAUTH_TTL_SECONDS, COOKIE, cookies, issue, rotate, revoke, revokeAll, list, describe, seenBefore, knownDevice, deviceIdOf, grantReauth, hasRecentAuth, clearAuthCookies, record, sha };

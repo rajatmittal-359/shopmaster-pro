@@ -36,12 +36,11 @@ const SECOND_STEP_ROLES = new Set(['seller', 'admin']);
 const needsSecondStep = async (user, req) => {
   if (!SECOND_STEP_ROLES.has(user.role)) return false;
   const Session = require('../models/Session');
-  const { ua } = { ua: String(req.headers['user-agent'] || '').slice(0, 200) };
-  const [known, any] = await Promise.all([
-    Session.countDocuments({ userId: user._id, ua, createdAt: { $gt: new Date(Date.now() - 90 * 24 * 3600 * 1000) } }),
-    Session.countDocuments({ userId: user._id }),
-  ]);
-  return any > 0 && known === 0;
+  // Known = this browser's server-issued device cookie has signed this
+  // account in within 90 days. The user-agent plays no part - it is a
+  // header anyone can type (security review, 19 Sep 2026).
+  const [known, any] = await Promise.all([sessions.knownDevice(user._id, req), Session.countDocuments({ userId: user._id })]);
+  return any > 0 && !known;
 };
 
 /*
@@ -56,13 +55,15 @@ const userBody = (user) => ({ id: user._id, name: user.name, email: user.email, 
 
 /** A fresh session on the response; the body the pages and the old app read. */
 const signedIn = async (user, req, res, message, extra = {}) => {
+  // Known or not is decided BEFORE issue writes the new row (and possibly the device cookie).
+  const known = await sessions.knownDevice(user._id, req).catch(() => true);
   const issued = await sessions.issue(user, req, res);
   User.updateOne({ _id: user._id }, { $set: { lastLoginAt: new Date(), failedLogins: 0, lockUntil: null } }).catch(() => {});
   // A device this account has not signed in from in 90 days gets a mail - the
   // one line that catches a stolen password before the order does.
   setImmediate(async () => {
     try {
-      if (await sessions.seenBefore(user._id, req)) return;
+      if (known) return;
       await require('../utils/notify').notify({ userId: user._id, role: user.role, category: 'account', title: 'New sign-in to your ShopMaster Pro account', body: `${sessions.describe(req.headers['user-agent'])} · if this was not you, change your password now.`, url: '/account', tag: `new-device-${user._id}-${Date.now()}`, mail: { subject: 'New sign-in to your ShopMaster Pro account', text: `Your account was just signed in to from ${sessions.describe(req.headers['user-agent'])} (${req.ip}). If this was you, nothing to do. If not, change your password at /account - that signs every device out.` } });
     } catch (err) {
       console.error('new-device mail failed:', err.message);

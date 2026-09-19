@@ -15,6 +15,9 @@ const sessionSchema = new mongoose.Schema(
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     tokenHash: { type: String, required: true, unique: true },
     family: { type: String, required: true, index: true },
+    // The device cookie this session was started with (utils/auth/session): the
+    // server's own random id, not the user-agent - a header anyone can type.
+    deviceId: { type: String, default: '', index: true },
     ua: { type: String, default: '' },
     ip: { type: String, default: '' },
     lastUsedAt: { type: Date, default: Date.now },

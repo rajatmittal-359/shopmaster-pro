@@ -77,15 +77,14 @@ describe('second step for a seller on a new device', () => {
   });
   afterEach(() => vi.restoreAllMocks());
 
-  it('a known device signs straight in; a new device gets 202 otp_required, then the code completes the sign-in', async () => {
-    // known: this UA has a session in the last 90 days
-    vi.spyOn(Session, 'countDocuments').mockResolvedValue(3);
-    let res = await request(app).post('/api/auth/login').set('User-Agent', 'Chrome/1').send({ email: 'shop@example.com', password: 'right' });
+  it('a device with the server-issued cookie signs straight in; without it 202 otp_required - the user-agent plays no part; the code completes the sign-in', async () => {
+    // known: this browser's device cookie has a session in the last 90 days
+    vi.spyOn(Session, 'countDocuments').mockImplementation(async (q) => (q.deviceId === 'dev-known' ? 2 : q.deviceId ? 0 : 3));
+    let res = await request(app).post('/api/auth/login').set('Cookie', 'smp_device=dev-known').set('User-Agent', 'Chrome/1').send({ email: 'shop@example.com', password: 'right' });
     expect(res.status).toBe(200);
 
-    // new: sessions exist but none from this UA
-    Session.countDocuments.mockImplementation(async (q) => (q.ua ? 0 : 3));
-    res = await request(app).post('/api/auth/login').set('User-Agent', 'Firefox/9').send({ email: 'shop@example.com', password: 'right' });
+    // the same user-agent with no device cookie (or a made-up one) is a new device
+    res = await request(app).post('/api/auth/login').set('User-Agent', 'Chrome/1').send({ email: 'shop@example.com', password: 'right' });
     expect(res.status).toBe(202);
     expect(res.body.code).toBe('otp_required');
     expect(res.body.message).toMatch(/s\*+@example\.com/);
@@ -97,11 +96,13 @@ describe('second step for a seller on a new device', () => {
     const ok = await request(app).post('/api/auth/login/code').send({ email: 'shop@example.com', otp: code });
     expect(ok.status).toBe(200);
     expect(ok.headers['set-cookie'].join()).toMatch(/smp_at=/);
+    // ...and this browser now gets its device cookie, so next time it is known.
+    expect(ok.headers['set-cookie'].join()).toMatch(/smp_device=.*Path=\/api\/auth.*HttpOnly/);
   });
 
   it('a customer on a new device is not asked - the new-sign-in mail is enough for a role that holds no money', async () => {
     doc.role = 'customer';
-    vi.spyOn(Session, 'countDocuments').mockImplementation(async (q) => (q.ua ? 0 : 3));
+    vi.spyOn(Session, 'countDocuments').mockImplementation(async (q) => (q.deviceId ? 0 : 3));
     const res = await request(app).post('/api/auth/login').set('User-Agent', 'Firefox/9').send({ email: 'shop@example.com', password: 'right' });
     expect(res.status).toBe(200);
   });
