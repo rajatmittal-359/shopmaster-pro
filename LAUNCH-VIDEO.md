@@ -130,6 +130,25 @@ need and keep the best.
 - YouTube (unlisted first, then public) → the embed; LinkedIn native upload;
   Instagram Reel from the 9:16 cut; WhatsApp status.
 
+## 7b. Where a little money genuinely beats free (Rajat, 19 Sep: "faeda mile to de dunga")
+
+Only where the paid thing does something the free one cannot. Prices are
+Sep 2026 list prices, approximate - check the day you buy.
+
+| Spend | ≈ Cost | What you get that free cannot | Verdict |
+|---|---|---|---|
+| **One day with a local videographer** (Jaipur; phone-gimbal or mirrorless) | ₹3,000–8,000 | Real bazaar, real shop counter, real hands packing a real order, real products. This is the footage AI cannot make honestly and the thing that makes the video *yours* | **Best rupee spent.** Do this before any subscription |
+| **FocuSee** (Windows) - Screen Studio's equivalent | ~₹3,000–5,000 one-time | Auto zoom-to-cursor, smoothed pointer, click ripples, device frames - the "Linear look" in minutes instead of hours of keyframing in Resolve/Remotion | **Worth it** if you do not want to hand-animate; skip if the Remotion route is going well |
+| **Google AI Pro** (Veo 3 in Flow) | ~₹1,950/month, cancel after 1 | 8-second clips with native sound, no watermark, far better than free Kling/PixVerse; 1 month covers the 3–4 mood shots ten times over | **Worth one month** if you want AI mood shots at all; skip entirely if the videographer day happens |
+| **ElevenLabs Starter** | ~$5 (₹420)/month | Commercial licence without attribution, 30k characters, voice cloning (your own voice, re-usable for Hindi audio lessons later) | **Worth it only** if you go synthetic; your own recorded voice is still better for trust |
+| **Kling / PixVerse paid** | ~$8–10/month | Removes the watermark, 1080p | Skip - Veo Pro month is better value if paying |
+| CapCut Pro, Canva Pro, Epidemic Sound, stock-video sites | ₹400–2,000/month | Nothing the free Resolve + Pexels/Pixabay + ElevenMusic do not | **Don't** |
+| Remotion licence | free for you | Paid only for companies with 4+ people | Nothing to pay |
+
+Rule of thumb: **spend on real footage first, tools second, subscriptions
+last** - and buy any subscription the week you edit, not before, so one
+month is enough.
+
 ## 8. Order of work (one weekend)
 
 1. Sat morning: script + shot list (1 h). Screenshots of the six screens
