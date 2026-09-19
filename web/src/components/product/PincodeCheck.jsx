@@ -26,7 +26,7 @@ const formatDate = (iso) =>
     month: 'long',
   });
 
-export default function PincodeCheck() {
+export default function PincodeCheck({ productId }) {
   const [code, setCode] = useState('');
   const [state, setState] = useState({ status: 'idle' });
 
@@ -39,7 +39,8 @@ export default function PincodeCheck() {
 
     setState({ status: 'checking' });
     try {
-      const res = await fetch(`${apiBase}/pincode/${code}/delivery`);
+      // The product's own ready-to-ship days go into the date (a made-to-order item is not on a shelf).
+      const res = await fetch(`${apiBase}/pincode/${code}/delivery${productId ? `?product=${encodeURIComponent(productId)}` : ''}`);
       if (!res.ok) throw new Error(String(res.status));
       setState({ status: 'done', data: await res.json() });
     } catch {

@@ -313,16 +313,24 @@ const describeArrival = (arrivalBy) => {
 const getDeliveryOptions = async (cartItems, address, isCOD) => {
   const standard = await calculateShipping(cartItems, address, isCOD);
 
+  // A made-to-order line moves the whole basket's date (utils/dispatch): the
+  // customer sees the longer wait here, before paying, not in a mail after.
+  const dispatch = require('./dispatch');
+  const extra = Math.max(0, dispatch.leadDaysOf(cartItems) - dispatch.defaultDays());
+  const days = `${2 + extra}-${3 + extra} days${extra ? ' · made to order' : ''}`;
   const options = [
     {
       id: 'standard',
       label: 'Standard Delivery',
       price: standard.shippingCharges,
       courier: standard.shippingCourier,
-      etaText: standard.freeShipping ? 'Free delivery, 2-3 days' : '2-3 days',
+      etaText: standard.freeShipping ? `Free delivery, ${days}` : days,
       arrivalBy: null,
     },
   ];
+
+  // Nothing made to order goes same-day - it is not made yet.
+  if (extra > 0) return options;
 
   // Skip the network call entirely for out-of-town addresses.
   if (!isLocalDelivery(address.zipCode)) return options;

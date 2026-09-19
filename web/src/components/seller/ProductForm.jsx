@@ -73,6 +73,7 @@ const EMPTY = {
   mrp: '',
   stock: '',
   lowStockThreshold: 10,
+  processingDays: '',
   weight: '',
   color: '',
   size: '',
@@ -196,7 +197,7 @@ export default function ProductForm({ productId, copyFromId }) {
         if (productId) {
           const product = await load(productId);
           if (cancelled) return;
-          setForm({ ...EMPTY, ...product, video: undefined, category: product.category?._id || product.category || '' });
+          setForm({ ...EMPTY, ...product, processingDays: product.processingDays ?? '', video: undefined, category: product.category?._id || product.category || '' });
           setPhotos((product.images || []).map((src) => ({ src, kind: 'existing' })));
           setVideo({ existing: product.video?.url ? product.video : null, next: null, nextFile: null, removed: false });
         } else if (copyFromId) {
@@ -331,6 +332,8 @@ export default function ProductForm({ productId, copyFromId }) {
       mrp: form.mrp === '' ? undefined : Number(form.mrp),
       stock: Number(form.stock),
       lowStockThreshold: Number(form.lowStockThreshold) || 10,
+      // '' = the rulebook's dispatch time; a number = made to order, shown on the page.
+      processingDays: form.processingDays === '' || form.processingDays === null ? null : Number(form.processingDays),
       weight: form.weight === '' ? undefined : Number(form.weight),
       hsn: form.hsn ?? '',
       gstRate: form.gstRate === '' || form.gstRate === null || form.gstRate === undefined ? null : Number(form.gstRate),
@@ -594,6 +597,25 @@ export default function ProductForm({ productId, copyFromId }) {
           </div>
         </div>
       
+        {/*
+         * Ready-to-ship time (19 Sep 2026) - Etsy's processing time, Amazon's
+         * handling time. Made-to-order work says so here; the product page
+         * shows it, the delivery date includes it, and the order's dispatch-by
+         * date and the late clock are set from it - not from the rulebook's 2.
+         */}
+        <Field
+          id="processingDays"
+          label={t('Ready to ship in')}
+          hint={t('Leave on the standard time unless this is made after the order - a name pendant, a ring to size. Say the honest number: the customer sees it before paying, and your late-dispatch clock runs from it.')}
+        >
+          <select id="processingDays" value={form.processingDays ?? ''} onChange={set('processingDays')} className="h-10 w-full rounded-md border bg-background px-3 text-sm">
+            <option value="">{t('Standard time (the rulebook)')}</option>
+            {[3, 5, 7, 10, 14, 21, 30].map((d) => (
+              <option key={d} value={d}>{t('{n} working days · made to order', { n: d })}</option>
+            ))}
+          </select>
+        </Field>
+
         {/* The return promise, inside what the category allows. Shown on the product page before anyone buys. */}
         {(() => {
           const cat = categories.find((c) => c._id === form.category);

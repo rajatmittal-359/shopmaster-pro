@@ -240,6 +240,18 @@ const productSchema = new mongoose.Schema(
       type: Number,
       default: 10,
     },
+    /**
+     * Working days the seller needs before this can leave (utils/dispatch,
+     * 19 Sep 2026) - Etsy's processing time, Amazon's handling time. null =
+     * the rulebook's number. Set for made-to-order work; the page shows it,
+     * the order's dispatch-by date and the late clock are set from it.
+     */
+    processingDays: {
+      type: Number,
+      default: null,
+      min: 1,
+      max: 30,
+    },
 
     // ✅ Reviews summary
     avgRating: {

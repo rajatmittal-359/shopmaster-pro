@@ -222,6 +222,7 @@ exports.addProduct = async (req, res) => {
       price,
       stock,
       lowStockThreshold,
+      processingDays,
       freeShipping,
       images, // base64 array
       brand,
@@ -265,6 +266,8 @@ exports.addProduct = async (req, res) => {
     // A typo in the HSN is refused, not silently blanked; a registered shop must give both.
     const taxError = taxFactsError({ hsn, gstRate }, await isGstRegistered(req.user.id));
     if (taxError) return res.status(400).json({ message: taxError });
+    const processing = require('../utils/dispatch').cleanProcessingDays(processingDays);
+    if (processing.error) return res.status(400).json({ message: processing.error });
 
     const product = new Product({
       name,
@@ -273,6 +276,8 @@ exports.addProduct = async (req, res) => {
       price,
       stock,
       lowStockThreshold: typeof lowStockThreshold === 'number' ? lowStockThreshold : 10,
+      // Made-to-order time, when the seller said so (utils/dispatch).
+      processingDays: processing.value,
       // The seller chooses to absorb delivery on this product.
       freeShipping: freeShipping === true,
 
@@ -371,6 +376,7 @@ exports.updateProduct = async (req, res) => {
       stock,
       isActive,
       lowStockThreshold,
+      processingDays,
       brand,
       sku,
       mrp,
@@ -438,6 +444,11 @@ exports.updateProduct = async (req, res) => {
     if (typeof lowStockThreshold === 'number') {
   product.lowStockThreshold = lowStockThreshold;
 };
+    if (processingDays !== undefined) {
+      const p = require('../utils/dispatch').cleanProcessingDays(processingDays);
+      if (p.error) return res.status(400).json({ success: false, message: p.error });
+      product.processingDays = p.value;
+    }
     if (brand !== undefined) product.brand = brand;
     if (countryOfOrigin !== undefined) product.countryOfOrigin = String(countryOfOrigin || 'India').trim().slice(0, 60);
     if (manufacturer !== undefined) product.manufacturer = String(manufacturer || '').trim().slice(0, 240);
@@ -708,6 +719,9 @@ exports.getMyOrders = async (req, res) => {
         disputeStatus: fulfilment?.disputeStatus || null,
         bookingFailedReason: fulfilment?.bookingFailedReason || null,
         bookingFailedKind: fulfilment?.bookingFailedKind || null,
+        // Hand it to the courier by this date (utils/dispatch); the queue shows it, red once passed.
+        dispatchBy: fulfilment?.dispatchBy || null,
+        shippedAt: fulfilment?.shippedAt || null,
         // What this cancellation cost them, if anything (config/sellerRules.js).
         cancelPenalty: fulfilment?.cancelPenalty || 0,
         ndrReason: fulfilment?.ndrReason || null,

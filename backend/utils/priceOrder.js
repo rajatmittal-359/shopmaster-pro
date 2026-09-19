@@ -73,6 +73,8 @@ const priceOrder = async ({ items, couponCode, customerId, session }) => {
     sellerId: item.productId.sellerId,
     // For the tax invoice (utils/invoice): empty unless a registered seller set them.
     hsn: item.productId.hsn || '',
+    // The ready-to-ship promise as it stood (utils/dispatch); null = the rulebook's number then.
+    processingDays: Number.isInteger(item.productId.processingDays) ? item.productId.processingDays : null,
     gstRate: typeof item.productId.gstRate === 'number' ? item.productId.gstRate : null,
   }));
 

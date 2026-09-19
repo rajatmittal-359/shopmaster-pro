@@ -2288,6 +2288,26 @@ against a reference already in this plan.
   Outside card so nobody buys a wrapper for them.
 - **RETURN_KIND_REQUIRED** - the 2.29 cutover switch as an env flag, tested.
 
+### 4.49 Ready to ship in N days - the maker's promise (19 Sep 2026)
+
+Rajat, on hearing the one seller-side gap the settings audit found: "hnn
+kardo agar aur bade log bhi aesa karte hai." They do: Etsy's processing
+time is on every listing ("Ready to ship in 3-5 business days"), Amazon's
+handling time is per SKU and its late-shipment rate is graded against it,
+Flipkart and Meesho stamp a dispatch-by date on every order. The rulebook
+said two working days for everyone, which is right for a shelf and wrong
+for a name pendant. A made-to-order seller either ate the late mark or did
+not list - and hand-makers are the sellers Jaipur actually has.
+
+The shape follows the three: the seller states it per product (a select,
+standard or 3-30 working days, with the honest-number hint); the customer
+sees it under the price, in the PIN-code date and in the checkout ETA
+before paying; same-day is not offered for something not yet made; the
+order line freezes the promise; the seller's queue shows the date, red
+once passed; the performance card grades against that date, not the
+rulebook's. Nobody loses: the customer knew, the seller has the time they
+asked for, the platform's late-dispatch rule still means what it says.
+
 ### 4.48 Two things the operator and the seller manage themselves (19 Sep 2026)
 
 Rajat: "UI pe sab cheez ka management kar rakha hai na jo necessary hai -

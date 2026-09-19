@@ -187,6 +187,13 @@ export default async function ProductPage({ params }) {
             <p className="text-sm font-medium text-destructive">Only {available} left</p>
           )}
 
+          {/* Made to order (Etsy's "ready to ship in"): said before the price is paid, not in a mail after. */}
+          {Number.isInteger(product.processingDays) && (
+            <p className="text-sm text-muted-foreground">
+              <strong className="text-foreground">Made to order</strong> · ready to ship in {product.processingDays} working day{product.processingDays === 1 ? '' : 's'}, then the courier&rsquo;s time.
+            </p>
+          )}
+
           {/* The shop's own words while it is on a break (Etsy's "taking a short break"). */}
           {product.shop?.break && (
             <p className="rounded-lg border border-amber-300/60 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-500/40 dark:bg-amber-950/40 dark:text-amber-100">
@@ -195,7 +202,7 @@ export default async function ProductPage({ params }) {
             </p>
           )}
 
-          <PincodeCheck />
+          <PincodeCheck productId={product._id} />
 
           <TrackView product={{ _id: product._id, name: product.name, price, brand: product.shop?.name, category: product.category }} />
           <BuyBox

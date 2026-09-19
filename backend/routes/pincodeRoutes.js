@@ -52,12 +52,22 @@ router.get('/:code/delivery', async (req, res) => {
   }
 
   try {
-    const estimate = await estimateDelivery(code);
+    // ?product=<id or slug>: a made-to-order item's own ready-to-ship days go
+    // into the date (utils/dispatch). Read here, never trusted from the query.
+    let dispatchDays;
+    if (req.query.product) {
+      const Product = require('../models/Product');
+      const mongoose = require('mongoose');
+      const key = String(req.query.product);
+      const p = await Product.findOne(mongoose.isValidObjectId(key) ? { $or: [{ _id: key }, { slug: key }] } : { slug: key }).select('processingDays').lean().catch(() => null);
+      if (p) dispatchDays = require('../utils/dispatch').processingDaysOf(p);
+    }
+    const estimate = await estimateDelivery(code, dispatchDays ? { dispatchDays } : {});
 
     // Six hours, matching the server-side cache. A delivery date is not
     // personal - it is the same answer for everyone asking about that PIN code
     // - so a shared cache may hold it.
-    res.set('Cache-Control', 'public, max-age=21600');
+    res.set('Cache-Control', dispatchDays ? 'public, max-age=3600' : 'public, max-age=21600');
     return res.json(estimate);
   } catch (err) {
     // 503 and no number. A date we could not check is worse than no date: the

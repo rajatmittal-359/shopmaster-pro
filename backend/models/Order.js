@@ -59,6 +59,8 @@ const orderItemSchema = new mongoose.Schema({
    */
   hsn: { type: String, default: '' },
   gstRate: { type: Number, default: null },
+  // The product's ready-to-ship days when the order was placed (utils/dispatch) - the promise the customer saw, frozen.
+  processingDays: { type: Number, default: null },
 
   // ---- Commission snapshot -------------------------------------------------
   // Copied from the seller's profile at the moment the order is placed and then
@@ -187,6 +189,8 @@ const fulfilmentSchema = new mongoose.Schema(
     },
 
     shippedAt: { type: Date, default: null },
+    /** When this seller's parcel must be with the courier (utils/dispatch): placed + longest processing time of their lines, working days. */
+    dispatchBy: { type: Date, default: null },
 
     /**
      * Why the last attempt to book a courier failed.
@@ -858,7 +862,12 @@ orderSchema.pre('validate', function () {
 
   sellerIds
     .filter((id) => !existing.has(id))
-    .forEach((id) => this.fulfilments.push({ sellerId: id, status: 'pending' }));
+    .forEach((id) => {
+      // The dispatch-by date is set once, from this seller's lines as they were promised (utils/dispatch).
+      const { dispatchByFor } = require('../utils/dispatch');
+      const mine = (this.items || []).filter((i) => String(i.sellerId) === id);
+      this.fulfilments.push({ sellerId: id, status: 'pending', dispatchBy: dispatchByFor(mine, this.createdAt || new Date()) });
+    });
 
   this.status = deriveStatus(this.fulfilments);
 

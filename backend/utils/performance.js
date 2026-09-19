@@ -51,13 +51,16 @@ const computePerformance = ({ orders = [], sellerId, products = [], now = new Da
   const cancelledBySeller = actionable.filter((o) => o.cancelledBy === 'seller' && mine(o)?.status === 'cancelled').length;
   const cancelRate = actionable.length ? Math.round((cancelledBySeller / actionable.length) * 1000) / 10 : null;
 
-  const dispatchTimes = actionable
+  const shipped = actionable
     .map((o) => ({ f: mine(o), at: new Date(o.createdAt) }))
-    .filter(({ f }) => f?.shippedAt)
-    .map(({ f, at }) => (new Date(f.shippedAt) - at) / HOUR);
+    .filter(({ f }) => f?.shippedAt);
+  const dispatchTimes = shipped.map(({ f, at }) => (new Date(f.shippedAt) - at) / HOUR);
   const dispatchHours = dispatchTimes.length ? Math.round(median(dispatchTimes)) : null;
   const windowHours = sellerRules.dispatchDays * 24;
-  const lateDispatch = dispatchTimes.length ? Math.round((dispatchTimes.filter((h) => h > windowHours).length / dispatchTimes.length) * 1000) / 10 : null;
+  // Late = after the order's own dispatch-by date when it has one (a made-to-order
+  // line earns its longer window, utils/dispatch); the rulebook window otherwise.
+  const isLate = ({ f, at }) => (f.dispatchBy ? new Date(f.shippedAt) > new Date(f.dispatchBy) : (new Date(f.shippedAt) - at) / HOUR > windowHours);
+  const lateDispatch = shipped.length ? Math.round((shipped.filter(isLate).length / shipped.length) * 1000) / 10 : null;
 
   const ndr = recent.filter((o) => (mine(o)?.ndrAttempts || 0) > 0).length;
   const rto = recent.filter((o) => mine(o)?.status === 'returned' && !mine(o)?.returnStage).length;

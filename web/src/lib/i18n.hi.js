@@ -742,6 +742,19 @@ const HI = {
   'Download CSV for Meta': 'Meta के लिए CSV डाउनलोड करें',
   '{n} products copied - paste into WhatsApp': '{n} प्रोडक्ट कॉपी हो गए - WhatsApp में पेस्ट करें',
   'Could not copy - select the text and copy it': 'कॉपी नहीं हुआ - टेक्स्ट चुनकर कॉपी करें',
+  // Taking a break + ready to ship + dispatch by (19 Sep 2026)
+  'Taking a break': 'कुछ दिन की छुट्टी',
+  'My shop is closed for a few days': 'मेरी दुकान कुछ दिन बंद है',
+  'Your products leave the shop lists and cannot be ordered until the date below; your pages stay up and say when you are back. Orders already placed still need to be packed on time.': 'नीचे की तारीख़ तक आपके प्रोडक्ट लिस्ट से हट जाएँगे और ऑर्डर नहीं हो पाएँगे; आपके पेज खुले रहेंगे और बताएँगे कि आप कब लौटेंगे। जो ऑर्डर पहले आ चुके हैं, वे समय पर पैक करने होंगे।',
+  'Back on': 'वापसी',
+  'Up to 60 days. The shop reopens by itself the day after; leave it empty to reopen by hand.': 'ज़्यादा से ज़्यादा 60 दिन। तारीख़ के अगले दिन दुकान अपने आप खुल जाएगी; खाली छोड़ें तो खुद खोलनी होगी।',
+  'A line for your customers': 'ग्राहकों के लिए एक लाइन',
+  'Closed for Diwali - back with new stock': 'दिवाली की छुट्टी - नए माल के साथ लौटेंगे',
+  'Ready to ship in': 'भेजने में लगेंगे',
+  'Leave on the standard time unless this is made after the order - a name pendant, a ring to size. Say the honest number: the customer sees it before paying, and your late-dispatch clock runs from it.': 'जब तक चीज़ ऑर्डर के बाद बनती न हो (नाम वाला पेंडेंट, नाप की अँगूठी), स्टैंडर्ड ही रहने दें। सही दिन बताएँ: ग्राहक पैसे देने से पहले देखता है, और देर से भेजने की घड़ी इसी से चलती है।',
+  'Standard time (the rulebook)': 'स्टैंडर्ड समय (नियम-पुस्तिका)',
+  '{n} working days · made to order': '{n} कामकाजी दिन · ऑर्डर पर बनता है',
+  'Dispatch by {date}': '{date} तक भेजें',
 };
 
 export default HI;

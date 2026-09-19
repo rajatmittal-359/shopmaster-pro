@@ -701,6 +701,19 @@ const HG = {
   'Download CSV for Meta': 'Meta ke liye CSV download karein',
   '{n} products copied - paste into WhatsApp': '{n} product copy ho gaye - WhatsApp me paste karein',
   'Could not copy - select the text and copy it': 'Copy nahi hua - text chunkar copy karein',
+  // Taking a break + ready to ship + dispatch by (19 Sep 2026)
+  'Taking a break': 'Kuch din ki chhutti',
+  'My shop is closed for a few days': 'Meri dukaan kuch din band hai',
+  'Your products leave the shop lists and cannot be ordered until the date below; your pages stay up and say when you are back. Orders already placed still need to be packed on time.': 'Neeche ki date tak aapke product list se hat jaayenge aur order nahi ho paayenge; aapke page khule rahenge aur batayenge ki aap kab lautenge. Jo order pehle aa chuke hain, woh time par pack karne honge.',
+  'Back on': 'Wapsi',
+  'Up to 60 days. The shop reopens by itself the day after; leave it empty to reopen by hand.': 'Zyada se zyada 60 din. Date ke agle din dukaan apne aap khul jaayegi; khaali chhodein to khud kholni hogi.',
+  'A line for your customers': 'Customers ke liye ek line',
+  'Closed for Diwali - back with new stock': 'Diwali ki chhutti - naye maal ke saath lautenge',
+  'Ready to ship in': 'Bhejne me lagenge',
+  'Leave on the standard time unless this is made after the order - a name pendant, a ring to size. Say the honest number: the customer sees it before paying, and your late-dispatch clock runs from it.': 'Jab tak cheez order ke baad banti na ho (naam wala pendant, naap ki anguthi), standard hi rehne dein. Sahi din batayein: customer paise dene se pehle dekhta hai, aur der se bhejne ki ghadi isi se chalti hai.',
+  'Standard time (the rulebook)': 'Standard time (rulebook)',
+  '{n} working days · made to order': '{n} kaam ke din · order par banta hai',
+  'Dispatch by {date}': '{date} tak bhejein',
 };
 
 export default HG;

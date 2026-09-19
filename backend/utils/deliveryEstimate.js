@@ -86,14 +86,14 @@ const isoDate = (date) => date.toISOString().slice(0, 10);
  * @throws if the courier API cannot be reached - the caller must answer 503.
  *         An estimate we could not check is not an estimate.
  */
-async function estimateDelivery(pincode, { now = new Date() } = {}) {
+async function estimateDelivery(pincode, { now = new Date(), dispatchDays = DISPATCH_DAYS } = {}) {
   const code = String(pincode).trim();
 
   const hit = cache.get(code);
   if (hit && hit.expires > Date.now()) {
     // The DATE is recomputed even on a cache hit: the transit time is what was
     // cached, and a date cached at 11pm would be a day stale by morning.
-    return withDate(hit.value, now);
+    return withDate(hit.value, now, dispatchDays);
   }
 
   const data = await shiprocket.getShippingRate(code, SAMPLE_WEIGHT_KG, false);
@@ -109,15 +109,16 @@ async function estimateDelivery(pincode, { now = new Date() } = {}) {
         { pincode: code, serviceable: false };
 
   cache.set(code, { value, expires: Date.now() + CACHE_TTL_MS });
-  return withDate(value, now);
+  return withDate(value, now, dispatchDays);
 }
 
-const withDate = (value, now) => {
+// dispatchDays: the product's ready-to-ship time when the page asked for one (utils/dispatch), else the default.
+const withDate = (value, now, dispatchDays = DISPATCH_DAYS) => {
   if (!value.serviceable) return { ...value };
   return {
     ...value,
-    dispatchDays: DISPATCH_DAYS,
-    deliveryBy: isoDate(addWorkingDays(now, DISPATCH_DAYS + value.transitDays)),
+    dispatchDays,
+    deliveryBy: isoDate(addWorkingDays(now, dispatchDays + value.transitDays)),
   };
 };
 

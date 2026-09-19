@@ -233,6 +233,15 @@ export default function OrderQueue() {
                     <p className="mt-1 text-sm text-muted-foreground">
                       {order.customerId?.name || t('Customer')} · {when(order.createdAt)} ·{' '}
                       {t(order.paymentMethod === 'cod' ? 'Collect cash at the door' : 'Paid online')}
+                      {/* Flipkart's "dispatch by": the date the seller must hand it over, red once passed and still unshipped. */}
+                      {order.dispatchBy && !order.shippedAt && !['cancelled', 'delivered', 'shipped', 'returned'].includes(order.status) && (
+                        <>
+                          {' · '}
+                          <span className={new Date(order.dispatchBy) < new Date() ? 'font-medium text-destructive' : ''}>
+                            {t('Dispatch by {date}', { date: new Date(order.dispatchBy).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) })}
+                          </span>
+                        </>
+                      )}
                     </p>
                   </div>
 
