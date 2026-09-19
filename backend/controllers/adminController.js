@@ -153,7 +153,7 @@ exports.editSellerShop = async (req, res) => {
     const seller = await Seller.findById(req.params.sellerId);
     if (!seller) return res.status(404).json({ message: 'Seller not found' });
     const { applyShopSettings } = require('./sellerController');
-    const r = await applyShopSettings(seller, req.body || {});
+    const r = await applyShopSettings(seller, req.body || {}, { adminOnly: true });
     if (r.error) return res.status(400).json({ message: r.error });
     if (!r.changed.length) return res.json({ message: 'Nothing changed', changed: [] });
     const note = String(req.body?.note || '').trim().slice(0, 200);

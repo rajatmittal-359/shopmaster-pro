@@ -43,7 +43,7 @@ const isBooked = (order) => Boolean(order.shippingAwb || order.shippingOrderId);
  *
  * @returns {{ok: true, update: object}|{ok: false, reason: string, update?: object}}
  */
-const bookForOrder = async (order, address) => {
+const bookForOrder = async (order, address, opts = {}) => {
   if (isBooked(order)) {
     return { ok: false, reason: 'A courier is already booked for this order' };
   }
@@ -56,7 +56,7 @@ const bookForOrder = async (order, address) => {
   const result =
     order.deliveryOption === 'same_day'
       ? await borzo.bookSameDay(order, address, weightKg)
-      : await shiprocket.bookShipment(order, address, weightKg);
+      : await shiprocket.bookShipment(order, address, weightKg, 1, { pickupLocation: opts.pickupLocation });
 
   if (!result.ok) {
     // A shipment that was created but never got an AWB still has ids worth

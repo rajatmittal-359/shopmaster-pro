@@ -113,7 +113,16 @@ const shipmentReference = (order, attempt = 1, prefixSuffix = null) => {
 };
 
 const bookShipment = async (order, address, weightKg, attempt = 1, opts = {}) => {
-  const pickupLocation = process.env.SHIPROCKET_PICKUP_LOCATION || 'Primary';
+  /*
+   * WHERE THE RIDER GOES (20 Sep 2026). Shiprocket collects from a saved,
+   * verified pickup address named by its nickname. The platform shop's is the
+   * env default ('Primary'); every other seller's parcel must name THEIR
+   * address (Seller.pickupAddress.shiprocketNickname, set by the admin after
+   * adding it in Shiprocket → Company Setup → Pick Up Address). Without this,
+   * a second seller's parcel sent a rider to the house shop - the fee charged,
+   * nothing found, and the booking itself "succeeded".
+   */
+  const pickupLocation = opts.pickupLocation || process.env.SHIPROCKET_PICKUP_LOCATION || 'Primary';
 
   // sub_total is the goods only. Shiprocket does not compute it, and sending
   // the order total instead would declare the shipping fee as goods value.

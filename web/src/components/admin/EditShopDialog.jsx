@@ -40,7 +40,7 @@ export default function EditShopDialog({ seller, open, onOpenChange, onSaved }) 
       })
       .then((d) => {
         if (cancelled || !d) return;
-        setForm({ ...d.shop, note: '', pickupAddress: { contactName: '', address1: '', address2: '', city: '', state: '', pincode: '', phone: '', ...(d.shop.pickupAddress || {}) } });
+        setForm({ ...d.shop, note: '', shiprocketNickname: d.shop.pickupAddress?.shiprocketNickname || '', pickupAddress: { contactName: '', address1: '', address2: '', city: '', state: '', pincode: '', phone: '', ...(d.shop.pickupAddress || {}) } });
         setEdits(d.adminEdits || []);
       })
       .catch((err) => !cancelled && setState({ status: 'error', message: err.message }));
@@ -57,7 +57,7 @@ export default function EditShopDialog({ seller, open, onOpenChange, onSaved }) 
       const hasPickup = ['contactName', 'address1', 'city', 'state', 'pincode', 'phone'].some((k) => String(pa[k] || '').trim());
       const r = await authedFetch(`/admin/sellers/${seller._id}/shop`, {
         method: 'PATCH',
-        body: { about: form.about, links: form.links, showLocation: form.showLocation, offersFreeShipping: form.offersFreeShipping, ...(hasPickup ? { pickupAddress: pa } : {}), note: form.note },
+        body: { about: form.about, links: form.links, showLocation: form.showLocation, offersFreeShipping: form.offersFreeShipping, shiprocketNickname: form.shiprocketNickname, ...(hasPickup ? { pickupAddress: pa } : {}), note: form.note },
       });
       setState({ status: 'saved', message: r.message });
       onSaved?.();
@@ -106,6 +106,13 @@ export default function EditShopDialog({ seller, open, onOpenChange, onSaved }) 
                 <Input placeholder="City" value={form.pickupAddress.city} onChange={setPa('city')} className="h-9" />
                 <Input placeholder="State" value={form.pickupAddress.state} onChange={setPa('state')} className="h-9" />
                 <Input placeholder="PIN code" value={form.pickupAddress.pincode} onChange={setPa('pincode')} className="h-9" inputMode="numeric" />
+              </div>
+              {/* The admin's half of a seller's courier setup (20 Sep 2026): Shiprocket only collects
+                  from a saved, verified pickup address, named by its nickname. Add it there first
+                  (Company Setup → Pick Up Address; the seller answers the OTP call), then name it here. */}
+              <div className="mt-3">
+                <Input placeholder="Shiprocket pickup nickname (as saved in Shiprocket, e.g. Primary)" value={form.shiprocketNickname || ''} onChange={(e) => setForm({ ...form, shiprocketNickname: e.target.value })} className="h-9" />
+                <p className="mt-1 text-xs text-muted-foreground">Add this shop&rsquo;s address in Shiprocket first (Settings → Company Setup → Pick Up Address); the seller answers the verification call. Until this box is filled, their Ship button asks you to finish it.</p>
               </div>
             </fieldset>
 

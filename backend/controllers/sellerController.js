@@ -1288,8 +1288,15 @@ exports.shipOrder = async (req, res) => {
     if (!pickup.ok) {
       return res.status(400).json({ success: false, message: pickup.reason });
     }
+    // A third-party seller ships from THEIR verified Shiprocket pickup address, named by
+    // its nickname; the platform shop from the env default (utils/shiprocketBooking).
+    const pickupLocation = sellerProfile?.isPlatformOwned ? undefined : sellerProfile?.pickupAddress?.shiprocketNickname;
+    if (!sellerProfile?.isPlatformOwned && !pickupLocation && order.deliveryOption !== 'same_day') {
+      setImmediate(() => require('../utils/notify').notifyAdmins({ category: 'account', title: `Pickup address not registered in Shiprocket · ${sellerProfile?.businessName || 'a shop'}`, body: 'Shiprocket → Settings → Company Setup → Pick Up Address → Add (their address + phone; they answer the OTP call) → then Admin → Sellers → this shop → Shiprocket pickup nickname.', url: `/admin/sellers/${sellerProfile?._id}`, tag: `pickup-nick-${sellerProfile?._id}` }).catch(() => {}));
+      return res.status(400).json({ success: false, message: 'Your pickup address is not registered with the courier yet. The admin has been told and will finish it - usually the same day.' });
+    }
 
-    const result = await shipment.bookForOrder(order, address);
+    const result = await shipment.bookForOrder(order, address, { pickupLocation });
 
     if (!result.ok) {
       /*
@@ -1809,8 +1816,8 @@ exports.getSettings = async (req, res) => {
  *
  * @returns {Promise<{error?:string, changed:string[], aboutHeld:string|null}>}
  */
-const applyShopSettings = async (seller, body = {}) => {
-  const { offersFreeShipping, pickupAddress, about, links, showLocation, vacation } = body;
+const applyShopSettings = async (seller, body = {}, opts = {}) => {
+  const { offersFreeShipping, pickupAddress, about, links, showLocation, vacation, shiprocketNickname } = body;
   const changed = [];
   let aboutHeld = null;
 
@@ -1837,6 +1844,15 @@ const applyShopSettings = async (seller, body = {}) => {
   if (showLocation !== undefined && Boolean(showLocation) !== Boolean(seller.showLocation)) {
     seller.showLocation = Boolean(showLocation);
     changed.push('city on the shop page');
+  }
+  // The admin's Shiprocket pickup nickname for this shop (opts.adminOnly from the admin route only).
+  if (shiprocketNickname !== undefined && opts.adminOnly) {
+    const nick = String(shiprocketNickname || '').trim().slice(0, 60);
+    if (!seller.pickupAddress) seller.pickupAddress = {};
+    if ((seller.pickupAddress.shiprocketNickname || '') !== nick) {
+      seller.pickupAddress.shiprocketNickname = nick || null;
+      changed.push('Shiprocket pickup nickname');
+    }
   }
   // The break switch (utils/vacation): validated dates, the list cache dropped so it is immediate.
   if (vacation && typeof vacation === 'object') {
