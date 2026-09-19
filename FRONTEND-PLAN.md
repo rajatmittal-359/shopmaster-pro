@@ -2288,3 +2288,32 @@ against a reference already in this plan.
   Outside card so nobody buys a wrapper for them.
 - **RETURN_KIND_REQUIRED** - the 2.29 cutover switch as an env flag, tested.
 
+### 4.46 Sessions - the login's life after login (19 Sep 2026)
+
+Rajat, reading the audit of our auth against the standard for a
+marketplace that handles money and three roles: "yeh foundation hai,
+sabse pehle banana chahiye tha." It was a seven-day JWT in localStorage
+that logout only deleted from the browser. References: OWASP Session
+Management Cheat Sheet (never a token in script-readable storage; short
+access + revocable refresh; destroy on logout), Amazon's "re-enter your
+password" before a payment method changes and its Manage Your Devices,
+Shopify's session extension, Auth0/Supabase refresh-rotation defaults.
+
+- Cookies, not storage: the API sets `smp_at` (1 h) and `smp_rt` (30 d,
+  path /api/auth) as httpOnly Secure SameSite=Lax. They are first-party
+  because the Next app proxies `/api/*` to the API service - which also
+  retired the dev-only `/dev-api` phone hack. The session store in the
+  browser keeps only the drawing copy (name, role, capabilities).
+- Refresh rotation with reuse detection; `tokenVersion` on the user so
+  "sign out of every device", a password change or a reset kills every
+  token at once; `X-Requested-With` required on cookie writes.
+- Step-up: money and identity actions answer `401 reauth`; `useReauth().run`
+  wraps the call, a small dialog asks for the password, a ten-minute cookie
+  comes back and the call is retried. Applied to bank details (seller and
+  onboarding), payout paid, dispute resolve, commission change.
+- Account page: "Where you are signed in" - devices with browser/OS, since,
+  last used; sign out one or all. New-device sign-in mail; ten wrong
+  passwords lock the account fifteen minutes and mail the owner.
+- The old React app keeps working on header tokens until it is deleted;
+  the sign-in body still carries `token` for it.
+

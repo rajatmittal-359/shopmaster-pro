@@ -58,3 +58,22 @@ WHY block above the behaviour; `FRONTEND-PLAN.md` §4 if the interface changed, 
 
 - **Suspended sellers vanish from the storefront** — every public product read goes through `utils/hiddenSellers.withoutHiddenSellers(filter)` (list, suggest, single page, feed, sitemap); suspend/activate call `forget()`. Add it to any new public product query.
 - **Dev data**: `seed.js` (happy history), `seedMessy.js` (the ugly cases, add-only, re-runnable), `backupDb.js`, `ensureSearchIndex.js`.
+
+## Sessions and step-up (19 Sep 2026)
+
+- `authMiddleware` accepts the `smp_at` cookie or `Authorization: Bearer`; a
+  cookie-authenticated non-GET must carry `X-Requested-With: fetch` (the web
+  client always sends it). Never read `req.header('Authorization')` in a
+  controller - `req.user` and `req.auth.sid` are what you get.
+- Sign-in paths (login, OTP verify, Google, password change) go through
+  `signedIn(user, req, res, message)` in authController - it issues the
+  session, sets the cookies and returns the old app's body. Do not call
+  `jwt.sign` anywhere else.
+- Anything that moves money or changes where it goes gets
+  `requireRecentAuth` on the route and `useReauth().run(...)` around the
+  call on the page. Today: bank details, payout paid, dispute resolve,
+  commission change. Add to both sides or neither.
+- Ending sessions: `sessions.revoke(sid, userId)` for one device,
+  `sessions.revokeAll(user, req, reason)` for all (bumps tokenVersion).
+  Password reset and change already do it.
+
