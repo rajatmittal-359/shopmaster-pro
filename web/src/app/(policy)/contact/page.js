@@ -21,10 +21,10 @@ export default async function ContactPage() {
       <PolicyHeading title="Contact us" />
 
       <p>
-        ShopMaster Pro is run by a small family business in Jaipur. Some items
-        are ours and others come from independent sellers, but every message
-        reaches a person here first - so please give us an order number if you
-        have one.
+        ShopMaster Pro is a marketplace run from Jaipur. Every item is sold by
+        an independent seller named on its page; the platform arranges payment,
+        delivery and returns. Every message reaches a person here first - so
+        please give us an order number if you have one.
       </p>
 
       <Section title="Address">

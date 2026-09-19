@@ -51,6 +51,16 @@ const settingsSchema = new mongoose.Schema(
       grievanceDesignation: { type: String, trim: true, default: 'Grievance Officer' },
       grievanceEmail: { type: String, trim: true, default: '' },
       grievancePhone: { type: String, trim: true, default: '' },
+      /*
+       * The E-Commerce (Amendment) Rules 2026, in force 1 January 2027: every
+       * marketplace runs an annual self-audit against the Dark Patterns
+       * Guidelines 2023 and displays a compliance certificate on the site.
+       * /compliance prints these three when filled; until then it says the
+       * first audit is due. Filled by the admin once a year, nowhere else.
+       */
+      selfAuditYear: { type: String, trim: true, default: '' },
+      selfAuditDate: { type: String, trim: true, default: '' },
+      selfAuditBy: { type: String, trim: true, default: '' },
     },
 
     links: {

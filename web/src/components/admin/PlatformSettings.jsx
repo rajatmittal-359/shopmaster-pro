@@ -195,6 +195,24 @@ export default function PlatformSettings() {
                     </Field>
                   </div>
                 </div>
+                {/* E-Commerce (Amendment) Rules 2026, from 1 Jan 2027: an annual
+                    self-audit against the Dark Patterns Guidelines, certified on the
+                    site. /compliance carries the checklist; these three lines are the
+                    certificate. Once a year, after actually walking the checklist. */}
+                <div className="mt-5 border-t pt-4">
+                  <p className="text-sm font-medium">Dark-pattern self-audit <span className="font-normal text-muted-foreground">- yearly from 2027 (E-Commerce Amendment Rules 2026); shown on /compliance</span></p>
+                  <div className="mt-3 grid gap-4 sm:grid-cols-3">
+                    <Field id="selfAuditYear" label="Audit year" hint="The calendar year the audit covers.">
+                      <Input id="selfAuditYear" inputMode="numeric" placeholder="2026" value={b.selfAuditYear || ''} onChange={set('business', 'selfAuditYear')} />
+                    </Field>
+                    <Field id="selfAuditDate" label="Signed on" hint="Leave empty until the checklist on /compliance has been walked.">
+                      <Input id="selfAuditDate" type="date" value={b.selfAuditDate || ''} onChange={set('business', 'selfAuditDate')} />
+                    </Field>
+                    <Field id="selfAuditBy" label="Signed by" hint="Name and role of the person who did it.">
+                      <Input id="selfAuditBy" placeholder="Name, Proprietor" value={b.selfAuditBy || ''} onChange={set('business', 'selfAuditBy')} />
+                    </Field>
+                  </div>
+                </div>
               </Block>
               <Block title="Where else we are" lead="Google joins the site to these profiles (sameAs). Only the ones you have." form={l} saved={doc.links} onSave={() => save('links')} busy={busy === 'links'}>
                 <div className="grid gap-4 sm:grid-cols-2">

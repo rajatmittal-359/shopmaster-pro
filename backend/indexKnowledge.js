@@ -50,6 +50,8 @@ const SOURCES = [
   ['web/src/app/(policy)/selling-policy/page.js', 'everyone', 'jsx-text'],
   ['web/src/app/(policy)/terms/page.js', 'everyone', 'jsx-text'],
   ['web/src/app/(policy)/privacy/page.js', 'everyone', 'jsx-text'],
+  ['web/src/app/(policy)/how-we-rank/page.js', 'everyone', 'jsx-text'],
+  ['web/src/app/(policy)/compliance/page.js', 'everyone', 'jsx-text'],
   ['web/src/app/help/page.js', 'everyone', 'jsx-text'],
   ['web/src/components/seller/Help.jsx', 'seller', 'jsx-text'],
   ['web/src/components/seller/Learn.jsx', 'seller', 'jsx-text'],

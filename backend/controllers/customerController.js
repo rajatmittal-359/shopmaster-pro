@@ -858,6 +858,11 @@ exports.cancelOrderItem = async (req, res) => {
        * request is taken as before - the cutover list makes `kind` required.
        */
       const kind = req.body?.kind ? String(req.body.kind) : null;
+      // The cutover switch: once the old app is gone, a request without a
+      // kind is refused - the policy cannot run without knowing what went wrong.
+      if (!kind && process.env.RETURN_KIND_REQUIRED === 'true') {
+        return res.status(400).json({ message: 'Say what is wrong: damaged, wrong item, faulty, not as described, size, or changed your mind.' });
+      }
       let evidence = [];
       let needsApproval = false;
       let finalResolution = resolution;

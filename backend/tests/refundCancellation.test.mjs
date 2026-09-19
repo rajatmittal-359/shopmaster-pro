@@ -268,6 +268,20 @@ describe('asking to return a delivered prepaid order', () => {
     expect(orderDoc.fulfilments[0].returnStage).toBeNull();
   });
 
+  it('after the cutover switch, a request without a kind is refused - the policy cannot run blind', async () => {
+    orderDoc = makeOrder({ status: 'delivered' });
+    Order.findOne = vi.fn(() => chainableQuery(orderDoc));
+    process.env.RETURN_KIND_REQUIRED = 'true';
+    try {
+      const res = await returnOrder({ reason: 'The clasp is broken' });
+      expect(res.status).toBe(400);
+      expect(res.body.message).toMatch(/Say what is wrong/);
+      expect(orderDoc.fulfilments[0].returnStage).toBeNull();
+    } finally {
+      delete process.env.RETURN_KIND_REQUIRED;
+    }
+  });
+
   it('refuses a second request while one is already open', async () => {
     orderDoc = makeOrder({ status: 'delivered' });
     orderDoc.fulfilments[0].returnStage = 'requested';

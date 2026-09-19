@@ -74,6 +74,7 @@ export const POLICY_PAGES = [
   ['Returns & refunds', '/refund-policy'],
   ['Pricing', '/pricing'],
   ['How products are ranked', '/how-we-rank'],
+  ['Compliance', '/compliance'],
   ['Terms & conditions', '/terms'],
   ['Privacy policy', '/privacy'],
 ];
@@ -105,6 +106,8 @@ export const businessFrom = (settings) => {
     // Rule 4, E-Commerce Rules 2020 - filled in /admin/settings; pages say
     // "not yet named" rather than inventing one.
     grievance: b.grievanceName ? { name: b.grievanceName, designation: b.grievanceDesignation || 'Grievance Officer', email: b.grievanceEmail || pick(b.email, BUSINESS.email), phone: b.grievancePhone || phone } : null,
+    // The annual dark-pattern self-audit (E-Commerce Amendment Rules 2026) - /compliance prints it when signed.
+    selfAudit: b.selfAuditDate ? { year: b.selfAuditYear || String(new Date(b.selfAuditDate).getFullYear()), date: b.selfAuditDate, by: b.selfAuditBy || pick(b.legalName, BUSINESS.legalName) } : null,
     sameAs: Object.values(links).filter(Boolean).length ? Object.values(links).filter(Boolean) : BUSINESS.sameAs,
   };
 };
