@@ -3,6 +3,8 @@ const { sendError } = require('../utils/apiError');
 const sellerRules = require('../config/sellerRules');
 const Product = require('../models/Product');
 const { cleanHsn, cleanGstRate, taxFactsError, assignInvoiceNumbers } = require('../utils/invoice');
+// Bing hears about a changed listing within seconds (utils/indexNow); fire-and-forget.
+const indexNow = require('../utils/indexNow');
 
 /** Whether this shop holds a GSTIN - then every product must carry HSN + rate (utils/invoice). */
 const isGstRegistered = async (userId) => {
@@ -347,6 +349,7 @@ exports.addProduct = async (req, res) => {
     }
 
     await product.save();
+    indexNow.ping(indexNow.productPaths(product));
 
     res.status(201).json({ message: 'Product created', product });
   } catch (error) {
@@ -516,6 +519,7 @@ exports.updateProduct = async (req, res) => {
     }
 
     await product.save();
+    indexNow.ping(indexNow.productPaths(product));
 
     // No-ops are ignored by logStockAdjustment, so editing other fields does
     // not produce a spurious inventory entry.
@@ -555,6 +559,8 @@ exports.deleteProduct = async (req, res) => {
     // keeps every existing "is this on sale" check correct without touching one
     // of them.
     product.isDeleted = true;
+    // A deleted page is a changed page too: Bing re-fetches it and drops it.
+    indexNow.ping(indexNow.productPaths(product));
     product.isActive = false;
     await product.save();
 
