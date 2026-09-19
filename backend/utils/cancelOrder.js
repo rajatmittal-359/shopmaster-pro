@@ -38,11 +38,15 @@ const CANCELLABLE = ['pending', 'processing'];
  * @param {string} [opts.sellerId] when a SELLER cancels: only their own lines
  * @returns {Promise<{ok: boolean, status?: number, message: string}>}
  */
+// A reason typed by a seller or a customer and a product name typed by a seller
+// go into HTML mail: text, never markup.
+const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+
 /** The words each side reads after a cancellation - see cancelOrderFor. */
 const tellEveryone = async (order, { by, sellerId, affected, refundAmount, refundQueued, reason }) => {
   const notifier = require('./notify');
-  const ref = order.orderNumber || String(order._id).slice(-6);
-  const names = affected.map((i) => i.name).filter(Boolean);
+  const ref = esc(order.orderNumber || String(order._id).slice(-6));
+  const names = affected.map((i) => i.name).filter(Boolean).map(esc);
   const what = names.length > 1 ? `${names[0]} +${names.length - 1} more` : names[0] || 'your order';
   const paidOnline = order.paymentMethod === 'razorpay' && ['paid', 'refunded'].includes(order.paymentStatus);
   const money = `₹${Number(refundAmount || 0).toLocaleString('en-IN')}`;
@@ -52,7 +56,7 @@ const tellEveryone = async (order, { by, sellerId, affected, refundAmount, refun
       ? `Your refund of ${money} is queued and goes out within two working days; we mail you the moment it is raised.`
       : `Your refund of ${money} has been raised and reaches the way you paid in 5-7 working days.`;
   const who = { seller: 'the seller', admin: 'ShopMaster Pro', platform: 'ShopMaster Pro' }[by] || 'the seller';
-  const why = reason ? ` Reason: ${String(reason).replace(/^"|"$/g, '')}` : '';
+  const why = reason ? ` Reason: ${esc(String(reason).replace(/^"|"$/g, ''))}` : '';
   const customerId = order.customerId?._id || order.customerId;
 
   if (by === 'customer') {
