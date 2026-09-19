@@ -38,6 +38,8 @@ export async function generateMetadata({ params }) {
       description: plain(product.description).slice(0, 200),
       url: `${SITE}${path}`,
       type: 'website',
+      siteName: 'ShopMaster Pro',
+      locale: 'en_IN',
       // A product without a photo still gets the brand card, not a bare link.
       images: product.images?.length ? [{ url: product.images[0] }] : ['/opengraph-image'],
     },

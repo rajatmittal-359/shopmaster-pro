@@ -52,6 +52,9 @@ export const metadata = {
     'across India. Delivered nationwide, with returns and refunds you can read ' +
     'before you buy.',
   alternates: { canonical: '/' },
+  // The card's small print: WhatsApp/LinkedIn print the site name under the title. A child
+  // page that sets its own openGraph replaces this whole object, so it repeats siteName.
+  openGraph: { siteName: 'ShopMaster Pro', locale: 'en_IN', type: 'website' },
 };
 
 export default function RootLayout({ children }) {
