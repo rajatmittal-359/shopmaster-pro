@@ -29,7 +29,7 @@ const sendSafeEmail = require('./sendSafeEmail');
  *   payouts    paid (seller)
  *   account    application approved / suspended / commission changed (seller) · new application (admin)
  *   trust      held review / About (admin only)
- *   growth     Monday's three things from Grow (sellers only, jobs/growthNote)
+ *   growth     Monday's three things from Grow and Thursday's catalogue sweep (sellers, jobs/growthNote + catalogueSweep); the sweep's totals (admin)
  */
 const CATEGORIES = [
   { key: 'orders', label: 'Orders', hint: 'New orders; confirmed, shipped, delivered' },
@@ -38,7 +38,7 @@ const CATEGORIES = [
   { key: 'payouts', label: 'Payouts', hint: 'Money transferred to your bank' },
   { key: 'account', label: 'Account', hint: 'Approval, commission, rules' },
   { key: 'trust', label: 'Trust queue', hint: 'Held reviews and shop text (admin)' },
-  { key: 'growth', label: 'Growth', hint: 'Monday morning: the three things that grow the shop this week (sellers)' },
+  { key: 'growth', label: 'Growth', hint: 'Monday: the three things that grow the shop this week; Thursday: listings to fix (sellers)' },
 ];
 const KEYS = CATEGORIES.map((c) => c.key);
 

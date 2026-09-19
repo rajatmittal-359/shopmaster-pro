@@ -7,6 +7,7 @@ const crypto = require('crypto');
 const lowStock = require('../jobs/lowStock');
 const tracking = require('../jobs/trackingReconcile');
 const growthNote = require('../jobs/growthNote');
+const catalogueSweep = require('../jobs/catalogueSweep');
 
 /**
  * Scheduled work, triggered from outside.
@@ -44,6 +45,8 @@ const JOBS = {
   'low-stock': { run: () => lowStock.runLowStockAlerts() },
   // Monday's three things for every seller (plan 2.25). No model, no key needed.
   'growth-note': { run: () => growthNote.sendGrowthNotes() },
+  // Thursday's catalogue sweep (plan 2.25/2.32): listing facts, three per seller. No model.
+  'catalogue-sweep': { run: () => catalogueSweep.sweep() },
   /*
    * Plan 2.17: product embeddings for "You may also like" and semantic
    * top-up (2.21) go stale as sellers edit; this embeds what changed (hash)

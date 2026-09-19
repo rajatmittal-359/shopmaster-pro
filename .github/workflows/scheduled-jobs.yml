@@ -34,6 +34,10 @@ on:
     # Monday 03:35 UTC = 09:05 IST - the week's three things for every seller
     # (plan 2.25), five minutes after the low-stock alert so the two land together.
     - cron: '35 3 * * 1'
+    # Thursday 03:35 UTC = 09:05 IST - the catalogue sweep (plan 2.25/2.32):
+    # every live listing checked for the facts that cost sales, three per
+    # seller under the same Growth switch, totals to the admin. No model.
+    - cron: '35 3 * * 4'
     # Sunday 22:00 UTC = 03:30 IST Monday - the quiet hour. Re-embeds products
     # that changed (plan 2.17) and, when the secrets exist, the knowledge base.
     - cron: '0 22 * * 0'
@@ -45,7 +49,7 @@ on:
         required: true
         default: reconcile
         type: choice
-        options: [reconcile, low-stock, growth-note, vectors]
+        options: [reconcile, low-stock, growth-note, catalogue-sweep, vectors]
 
 env:
   # The Singapore service. Renaming the old one did NOT free its subdomain -
@@ -68,6 +72,8 @@ jobs:
             echo "name=low-stock" >> "$GITHUB_OUTPUT"
           elif [ "${{ github.event.schedule }}" = "35 3 * * 1" ]; then
             echo "name=growth-note" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event.schedule }}" = "35 3 * * 4" ]; then
+            echo "name=catalogue-sweep" >> "$GITHUB_OUTPUT"
           elif [ "${{ github.event.schedule }}" = "0 22 * * 0" ]; then
             echo "name=vectors" >> "$GITHUB_OUTPUT"
           else
