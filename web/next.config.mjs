@@ -1,6 +1,12 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   /*
+   * standalone (20 Sep 2026): `next build` also writes .next/standalone - a
+   * self-contained server with only the node_modules it needs - which is what
+   * the Docker image runs on the Lightsail box. Dev and Vercel ignore it.
+   */
+  output: 'standalone',
+  /*
    * Development only (Next ignores this in production): the dev server refuses
    * its own scripts to a page opened from another host, and a phone on the
    * same Wi-Fi opening http://192.168.1.37:3000 got a page that never hydrated

@@ -23,7 +23,11 @@ const CONFIGURED_API = process.env.NEXT_PUBLIC_API_URL || 'https://shopmaster-ap
  * On the server (pages rendering) the configured URL is called directly.
  */
 const resolveApi = () => {
-  if (typeof window === 'undefined') return CONFIGURED_API;
+  // On the server: an internal address when one is given (in Docker the API
+  // is `http://api:5000/api` on the compose network - no trip through the
+  // public internet and Caddy for every server-rendered page), else the
+  // public one. API_INTERNAL_URL is read at runtime, never inlined.
+  if (typeof window === 'undefined') return process.env.API_INTERNAL_URL || CONFIGURED_API;
   return `${window.location.origin}/api`;
 };
 const API = resolveApi();

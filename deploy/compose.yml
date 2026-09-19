@@ -1,0 +1,75 @@
+# The whole site on one box (20 Sep 2026 - AWS Lightsail, Mumbai).
+#
+#   caddy  :80/:443  →  /api/*  → api:5000     (Express, backend/)
+#                    →  /*      → web:3000     (Next.js standalone, web/)
+#
+# Images are built by .github/workflows/deploy.yml and pulled here by tag;
+# this file never builds. `TAG` comes from /srv/shopmaster/.env (written by
+# the deploy step); `latest` is only for a hand-run.
+#
+# Runtime secrets live in env/api.env and env/web.env on the box (0600, ubuntu
+# only) - see bootstrap.sh for the templates. Nothing secret is in this file.
+name: shopmaster
+
+services:
+  api:
+    image: ghcr.io/rajatmittal-359/shopmaster-pro-api:${TAG:-latest}
+    env_file: ./env/api.env
+    environment:
+      NODE_ENV: production
+      PORT: "5000"
+    expose: ["5000"]
+    restart: unless-stopped
+    # 2 GB box: the API gets a hard ceiling so a leak cannot starve the web.
+    mem_limit: 512m
+    logging: &logging
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:5000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+
+  web:
+    image: ghcr.io/rajatmittal-359/shopmaster-pro-web:${TAG:-latest}
+    env_file: ./env/web.env
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      HOSTNAME: 0.0.0.0
+      # Server components talk to the API over the compose network, not the internet.
+      API_INTERNAL_URL: http://api:5000/api
+    expose: ["3000"]
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+    mem_limit: 768m
+    logging: *logging
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:3000/robots.txt"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  caddy:
+    image: caddy:2-alpine
+    ports: ["80:80", "443:443", "443:443/udp"]
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    environment:
+      # The hostnames Caddy serves - production and, when wanted, staging.
+      SITE_HOST: ${SITE_HOST:-www.shopmasterpro.in}
+      APEX_HOST: ${APEX_HOST:-shopmasterpro.in}
+    depends_on: [web, api]
+    restart: unless-stopped
+    logging: *logging
+
+volumes:
+  caddy_data:
+  caddy_config:

@@ -1,0 +1,59 @@
+# Caddy in front of the two containers (20 Sep 2026). Automatic HTTPS from
+# Let's Encrypt for every host named here; HTTP → HTTPS by default.
+#
+# Before the DNS points here, Caddy cannot get a certificate - that is
+# expected; it retries on its own once the A records land (OPS cutover steps).
+# To try the box by IP first, run: SITE_HOST=":80" (then no TLS).
+
+{
+	email rajatmittal359@gmail.com
+	# One box, one origin: no need for Caddy's admin API to listen at all.
+	admin off
+}
+
+# The apex redirects to www, so every page has one canonical URL (Google,
+# Razorpay and the OG cards were all told www).
+{$APEX_HOST} {
+	redir https://{$SITE_HOST}{uri} permanent
+}
+
+{$SITE_HOST} {
+	encode zstd gzip
+
+	# Security headers the app expects a proxy to add (helmet covers the API).
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		-Server
+	}
+
+	# The API, same origin: cookies stay first-party (utils/auth/session), the
+	# Razorpay and Shiprocket webhooks post here, and Next's own /api rewrite
+	# is never reached because this rule wins first.
+	handle /api/* {
+		reverse_proxy api:5000 {
+			# The API reads the real client address for rate limits and the AuthEvent log.
+			header_up X-Forwarded-For {remote_host}
+			header_up X-Real-IP {remote_host}
+		}
+	}
+
+	# The sitemap is built by the API from the catalogue (next.config rewrites it in dev).
+	handle /sitemap.xml {
+		rewrite * /api/sitemap.xml
+		reverse_proxy api:5000
+	}
+
+	# Everything else is the Next.js site.
+	handle {
+		reverse_proxy web:3000
+	}
+
+	log {
+		output file /data/access.log {
+			roll_size 20mb
+			roll_keep 5
+		}
+	}
+}

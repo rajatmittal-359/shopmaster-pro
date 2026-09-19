@@ -1,0 +1,126 @@
+# Ship to the Lightsail box (20 Sep 2026).
+#
+# Runs only after the `tests` workflow has passed on main - a build that failed
+# its tests never becomes an image. Builds the two images on GitHub's runners
+# (the box never compiles), pushes them to GHCR tagged with the commit SHA and
+# `latest`, then asks the box to release that SHA. release.sh waits for both
+# health checks and rolls back to the last good tag by itself if they fail.
+#
+# Needs, once (OPS): repository SECRETS `LIGHTSAIL_HOST` (the static IP) and
+# `LIGHTSAIL_SSH_KEY` (the Mumbai default key .pem, whole file); repository
+# VARIABLES for the public build values: NEXT_PUBLIC_API_URL,
+# NEXT_PUBLIC_SITE_URL, NEXT_PUBLIC_GOOGLE_CLIENT_ID,
+# NEXT_PUBLIC_TURNSTILE_SITE_KEY, NEXT_PUBLIC_GCR_MERCHANT_ID,
+# NEXT_PUBLIC_SAME_AS, NEXT_PUBLIC_GA_MEASUREMENT_ID, NEXT_PUBLIC_META_PIXEL_ID.
+# The GHCR packages must be public (Package settings → Change visibility) so
+# the box pulls without a token. Until the secrets exist the deploy job skips.
+name: deploy
+
+on:
+  workflow_run:
+    workflows: [tests]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release an existing image tag (rollback = an older SHA). Empty = build HEAD.'
+        required: false
+        default: ''
+
+concurrency:
+  group: deploy-main
+  cancel-in-progress: false
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_API: ghcr.io/${{ github.repository_owner }}/shopmaster-pro-api
+  IMAGE_WEB: ghcr.io/${{ github.repository_owner }}/shopmaster-pro-web
+
+jobs:
+  build:
+    name: build images
+    # Only when tests passed (or when started by hand without a tag).
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.tag == '' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      tag: ${{ steps.meta.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - id: meta
+        run: echo "tag=$(git rev-parse --short=12 HEAD)" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: api image
+        uses: docker/build-push-action@v6
+        with:
+          context: backend
+          push: true
+          tags: |
+            ${{ env.IMAGE_API }}:${{ steps.meta.outputs.tag }}
+            ${{ env.IMAGE_API }}:latest
+          cache-from: type=gha,scope=api
+          cache-to: type=gha,scope=api,mode=max
+
+      - name: web image
+        uses: docker/build-push-action@v6
+        with:
+          context: web
+          push: true
+          tags: |
+            ${{ env.IMAGE_WEB }}:${{ steps.meta.outputs.tag }}
+            ${{ env.IMAGE_WEB }}:latest
+          cache-from: type=gha,scope=web
+          cache-to: type=gha,scope=web,mode=max
+          build-args: |
+            NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL }}
+            NEXT_PUBLIC_SITE_URL=${{ vars.NEXT_PUBLIC_SITE_URL }}
+            NEXT_PUBLIC_GOOGLE_CLIENT_ID=${{ vars.NEXT_PUBLIC_GOOGLE_CLIENT_ID }}
+            NEXT_PUBLIC_TURNSTILE_SITE_KEY=${{ vars.NEXT_PUBLIC_TURNSTILE_SITE_KEY }}
+            NEXT_PUBLIC_GCR_MERCHANT_ID=${{ vars.NEXT_PUBLIC_GCR_MERCHANT_ID }}
+            NEXT_PUBLIC_SAME_AS=${{ vars.NEXT_PUBLIC_SAME_AS }}
+            NEXT_PUBLIC_GA_MEASUREMENT_ID=${{ vars.NEXT_PUBLIC_GA_MEASUREMENT_ID }}
+            NEXT_PUBLIC_META_PIXEL_ID=${{ vars.NEXT_PUBLIC_META_PIXEL_ID }}
+
+  release:
+    name: release on the box
+    needs: [build]
+    # `always()` so a hand-run with an existing tag (rollback) skips the build and still releases.
+    if: ${{ always() && (needs.build.result == 'success' || (github.event_name == 'workflow_dispatch' && inputs.tag != '')) }}
+    runs-on: ubuntu-latest
+    env:
+      # Secrets cannot be tested in `if` directly; an env mirror can.
+      HOST: ${{ secrets.LIGHTSAIL_HOST }}
+    steps:
+      - name: skip until the box is known
+        if: ${{ env.HOST == '' }}
+        run: echo "::warning::LIGHTSAIL_HOST / LIGHTSAIL_SSH_KEY are not set - images are built, nothing released."
+
+      - name: release ${{ inputs.tag || needs.build.outputs.tag }}
+        if: ${{ env.HOST != '' }}
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.LIGHTSAIL_HOST }}
+          username: ubuntu
+          key: ${{ secrets.LIGHTSAIL_SSH_KEY }}
+          script_stop: true
+          command_timeout: 10m
+          script: |
+            cd /srv/shopmaster
+            curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/main/deploy/compose.yml -o compose.yml
+            curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/main/deploy/Caddyfile -o Caddyfile
+            curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/main/deploy/release.sh -o release.sh && chmod +x release.sh
+            ./release.sh ${{ inputs.tag || needs.build.outputs.tag }}
