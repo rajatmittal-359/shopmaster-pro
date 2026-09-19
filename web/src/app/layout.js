@@ -9,6 +9,8 @@ import { ReauthProvider } from '@/components/common/Reauth';
 import ShopChrome from '@/components/layout/ShopChrome';
 import { Suspense } from 'react';
 import GoogleAnalytics from '@/components/analytics/GoogleAnalytics';
+import MetaPixel from '@/components/analytics/MetaPixel';
+import ConsentBanner from '@/components/common/ConsentBanner';
 import GoogleOneTap from '@/components/auth/GoogleOneTap';
 import BottomNav from '@/components/layout/BottomNav';
 
@@ -85,11 +87,15 @@ export default function RootLayout({ children }) {
           {/* One toaster for the whole site: undo after a removal, a word after
               a save. Bottom-right, out of the way of the sticky buy bar. */}
           <Toaster position="bottom-right" richColors closeButton />
+          {/* The cookie choice - only when a tag is configured and the host is real. */}
+          <ConsentBanner />
           </ReauthProvider>
         </ThemeProvider>
-        {/* GA4 - loads nothing until NEXT_PUBLIC_GA_MEASUREMENT_ID is set. */}
+        {/* GA4 - loads nothing until NEXT_PUBLIC_GA_MEASUREMENT_ID is set.
+            Meta Pixel - nothing until NEXT_PUBLIC_META_PIXEL_ID is set AND the visitor accepted. */}
         <Suspense fallback={null}>
           <GoogleAnalytics />
+          <MetaPixel />
         </Suspense>
       </body>
     </html>

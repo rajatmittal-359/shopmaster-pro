@@ -1,5 +1,5 @@
 /**
- * GA4, the honest way: one call site, silent without an ID.
+ * GA4 and the Meta Pixel, the honest way: one call site, silent without an ID.
  *
  * WHY EVENTS AND NOT JUST PAGE VIEWS
  *   Page views say people came. The four ecommerce events below say where
@@ -9,12 +9,24 @@
  *   see the funnel - it appears in Reports > Monetisation the day the ID is
  *   set.
  *
+ * WHY THE SAME FOUR GO TO META (19 Sep 2026)
+ *   Meta's ads only get cheap once the pixel has seen enough of these: the
+ *   standard events ViewContent / AddToCart / InitiateCheckout / Purchase
+ *   are what "retarget the people who looked", lookalike audiences and the
+ *   catalog's dynamic ads are built on. Sending them from day one means the
+ *   audience exists the day the first ad is ever bought - and nothing is
+ *   bought until then. Purchase carries an eventID (the order's id) so the
+ *   server-side copy (backend utils/metaCapi) is counted once, not twice.
+ *
  * WHAT IT NEVER DOES
- *   Throw, block, or run without consent of an ID. `NEXT_PUBLIC_GA_MEASUREMENT_ID`
- *   empty means every call is a no-op - localhost, previews and a fresh
- *   clone send nothing anywhere.
+ *   Throw, block, or run without consent or an ID. `NEXT_PUBLIC_GA_MEASUREMENT_ID`
+ *   / `NEXT_PUBLIC_META_PIXEL_ID` empty means every call is a no-op -
+ *   localhost, previews and a fresh clone send nothing anywhere. The pixel
+ *   is only loaded after "Accept all" (components/common/ConsentBanner), so
+ *   `window.fbq` simply does not exist for a visitor who said no.
  */
 export const GA_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || '';
+export const PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID || '';
 
 const gtag = (...args) => {
   // No gtag on localhost (GoogleAnalytics.jsx never loads it there), so this is a no-op in dev.
@@ -25,6 +37,19 @@ const gtag = (...args) => {
     // Analytics must never be the reason a page misbehaves.
   }
 };
+
+/** Meta standard event; `eventId` deduplicates against the server-side copy. */
+const fbq = (name, params = {}, eventId) => {
+  if (!PIXEL_ID || typeof window === 'undefined' || typeof window.fbq !== 'function') return;
+  try {
+    window.fbq('track', name, params, eventId ? { eventID: String(eventId) } : undefined);
+  } catch {
+    // Same rule: a tag never breaks a page.
+  }
+};
+
+const ids = (items) => items.map((i) => String(i._id || i.productId || i.id || '')).filter(Boolean);
+const count = (items) => items.reduce((n, i) => n + (Number(i.quantity) || 1), 0);
 
 export const track = (event, params = {}) => gtag('event', event, params);
 

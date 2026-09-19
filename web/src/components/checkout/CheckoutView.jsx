@@ -160,7 +160,7 @@ export default function CheckoutView() {
       if (payment === 'cod') {
         const data = await authedFetch('/customer/checkout-cod', { method: 'POST', body });
         if (!data.order?._id) throw new Error(data.message || 'Order could not be placed');
-        purchase({ orderId: data.order.orderNumber || data.order._id, value: payable, shipping: totals?.shippingCharges, coupon: coupon?.code, items: totals?.items });
+        purchase({ orderId: data.order.orderNumber || data.order._id, eventId: data.order._id, value: payable, shipping: totals?.shippingCharges, coupon: coupon?.code, items: totals?.items });
         router.push(`/orders?placed=${data.order._id}`);
         return;
       }
@@ -192,7 +192,7 @@ export default function CheckoutView() {
                 dbOrderId: started.dbOrderId,
               },
             });
-            purchase({ orderId: started.dbOrderId, value: payable, shipping: totals?.shippingCharges, coupon: coupon?.code, items: totals?.items });
+            purchase({ orderId: started.dbOrderId, eventId: started.dbOrderId, value: payable, shipping: totals?.shippingCharges, coupon: coupon?.code, items: totals?.items });
             router.push(`/orders?placed=${started.dbOrderId}`);
           } catch (err) {
             setState({

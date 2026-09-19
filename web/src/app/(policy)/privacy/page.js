@@ -79,11 +79,31 @@ export default async function PrivacyPage() {
         </p>
       </Section>
 
-      <Section title="Cookies">
+      <Section title="Cookies" id="cookies">
         <p>
-          We keep you signed in using storage in your own browser. We do not use
-          advertising or tracking cookies. If we add analytics, we will say so
-          here first.
+          <strong>Necessary cookies</strong> keep you signed in, remember your
+          cart and your light/dark choice, and protect forms from misuse. The
+          site cannot work without them, so they need no choice.
+        </p>
+        <p>
+          <strong>Analytics</strong> (Google Analytics 4) tells us which pages
+          help and where people stop. Until you accept, it counts visits
+          without setting a cookie and without identifying you.
+        </p>
+        <p>
+          <strong>Advertising</strong> (the Meta Pixel) lets us show products you
+          looked at here to you again on Facebook or Instagram, and lets Meta
+          measure whether an advertisement led to an order. It runs only after
+          you choose <em>Accept all</em>, and when it does, we also send Meta a
+          hashed (unreadable) form of your email and phone with an order so the
+          same purchase is not counted twice. Meta&rsquo;s own use of that data
+          is described in their privacy policy.
+        </p>
+        <p>
+          You choose in the bar at the bottom of the page the first time you
+          visit, and you can change your mind any time through <em>Cookie
+          choices</em> in the footer. Choosing <em>Only necessary</em> changes
+          nothing about how the shop works for you.
         </p>
       </Section>
 

@@ -507,6 +507,10 @@ exports.verifyRazorpayPayment = async (req, res) => {
     // The sellers' invoice numbers - after the commit, never inside it (utils/invoice).
     await require('../utils/invoice').assignInvoiceNumbers(order).catch((err) => console.error('invoice numbers not issued for', order._id, err.message));
 
+    // Meta's server-side Purchase - only with the visitor's consent cookie (utils/metaCapi).
+    // The webhook path below does not send one: no browser, no consent cookie, nothing to dedupe against.
+    setImmediate(() => require('../utils/metaCapi').purchase({ order, user: req.user, req }));
+
     // Reflect the committed state in the response payload.
     order.paymentMethod = "razorpay";
     order.paymentStatus = "paid";

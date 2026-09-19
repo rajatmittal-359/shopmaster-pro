@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { POLICY_PAGES, businessFrom } from '@/config/policy';
 import { getSettings } from '@/lib/api';
 import { TileMark } from '@/components/brand/Logo';
+import CookieChoices from '@/components/common/CookieChoices';
 
 /**
  * WHY THE FOOTER CARRIES THE ADDRESS AND NOT JUST LINKS
@@ -74,7 +75,7 @@ export default async function Footer() {
       <div className="border-t border-border">
         <p className="mx-auto max-w-5xl px-4 py-4 text-xs text-muted-foreground">
           &copy; {new Date().getFullYear()} {BUSINESS.legalName}. Prices in Indian
-          Rupees, inclusive of taxes.
+          Rupees, inclusive of taxes. <CookieChoices />
         </p>
       </div>
     </footer>

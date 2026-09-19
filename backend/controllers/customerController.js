@@ -14,6 +14,7 @@ const { RETURN_WINDOW_DAYS, returnWindowFor } = require("../utils/payout");
 const Product = require("../models/Product");
 const Seller = require('../models/Seller');
 const { assignInvoiceNumbers, taxFor } = require('../utils/invoice');
+const metaCapi = require('../utils/metaCapi');
 const mongoose = require('mongoose'); 
 const Address = require('../models/Address'); 
 const { applyInventoryChange } = require("./inventoryController");
@@ -390,6 +391,9 @@ exports.checkout = async (req, res) => {
     // conflict there must not abort a sale. A failed issue is logged and the
     // Invoice page issues on first open (utils/invoice).
     await assignInvoiceNumbers(order[0]).catch((err) => console.error('invoice numbers not issued for', order[0]._id, err.message));
+
+    // Meta's server-side Purchase - only with the visitor's consent cookie, never in the way of the response (utils/metaCapi).
+    setImmediate(() => metaCapi.purchase({ order: order[0], user: req.user, address, req }));
 
     // 🔥 Immediate response
     res.status(201).json({
