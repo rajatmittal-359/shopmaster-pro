@@ -38,6 +38,43 @@ const CANCELLABLE = ['pending', 'processing'];
  * @param {string} [opts.sellerId] when a SELLER cancels: only their own lines
  * @returns {Promise<{ok: boolean, status?: number, message: string}>}
  */
+/** The words each side reads after a cancellation - see cancelOrderFor. */
+const tellEveryone = async (order, { by, sellerId, affected, refundAmount, refundQueued, reason }) => {
+  const notifier = require('./notify');
+  const ref = order.orderNumber || String(order._id).slice(-6);
+  const names = affected.map((i) => i.name).filter(Boolean);
+  const what = names.length > 1 ? `${names[0]} +${names.length - 1} more` : names[0] || 'your order';
+  const paidOnline = order.paymentMethod === 'razorpay' && ['paid', 'refunded'].includes(order.paymentStatus);
+  const money = `₹${Number(refundAmount || 0).toLocaleString('en-IN')}`;
+  const refundLine = !paidOnline
+    ? 'Nothing was charged.'
+    : refundQueued
+      ? `Your refund of ${money} is queued and goes out within two working days; we mail you the moment it is raised.`
+      : `Your refund of ${money} has been raised and reaches the way you paid in 5-7 working days.`;
+  const who = { seller: 'the seller', admin: 'ShopMaster Pro', platform: 'ShopMaster Pro' }[by] || 'the seller';
+  const why = reason ? ` Reason: ${String(reason).replace(/^"|"$/g, '')}` : '';
+  const customerId = order.customerId?._id || order.customerId;
+
+  if (by === 'customer') {
+    // Their own action: a confirmation, and the seller(s) told the stock is back.
+    await notifier.notify({ userId: customerId, role: 'customer', category: 'orders', title: `Cancelled · ${ref}`, body: `${what}. ${refundLine}`, url: `/orders/${order._id}`, tag: `cancelled-${order._id}`, mail: { subject: `Cancelled · ${ref} · ShopMaster Pro`, text: `Your order ${ref} (${what}) is cancelled as you asked. ${refundLine}`, html: `<p>Your order <strong>${ref}</strong> (${what}) is cancelled as you asked.</p><p>${refundLine}</p>` } });
+    const sellers = [...new Set(affected.map((i) => String(i.sellerId)))];
+    for (const sid of sellers) {
+      await notifier.notify({ userId: sid, role: 'seller', category: 'orders', title: `Customer cancelled · ${ref}`, body: `${what}.${why} Stock is counted back in; nothing to pack.`, url: `/seller/orders/${order._id}`, tag: `cancelled-seller-${order._id}-${sid}`, mail: { subject: `Customer cancelled · ${ref}`, text: `The customer cancelled ${ref} (${what}).${why} Stock is counted back in; nothing to pack.`, html: `<p>The customer cancelled <strong>${ref}</strong> (${what}).${why}</p><p>Stock is counted back in; nothing to pack.</p>` } });
+    }
+    return;
+  }
+  // Cancelled ON the customer: they read who, why and where the money is.
+  await notifier.notify({ userId: customerId, role: 'customer', category: 'orders', title: `Cancelled by ${who} · ${ref}`, body: `${what}.${why} ${refundLine}`, url: `/orders/${order._id}`, tag: `cancelled-${order._id}`, mail: { subject: `Your order ${ref} was cancelled · ShopMaster Pro`, text: `${what} on order ${ref} was cancelled by ${who}.${why}
+
+${refundLine}
+
+We are sorry about this. If you need anything, reply to this mail.`, html: `<p><strong>${what}</strong> on order <strong>${ref}</strong> was cancelled by ${who}.${why}</p><p>${refundLine}</p><p>We are sorry about this. If you need anything, reply to this mail.</p>` } });
+  if (by === 'admin' && sellerId) {
+    await notifier.notify({ userId: sellerId, role: 'seller', category: 'orders', title: `Cancelled by ShopMaster Pro · ${ref}`, body: `${what}.${why} Stock is counted back in.`, url: `/seller/orders/${order._id}`, tag: `cancelled-seller-${order._id}-${sellerId}` });
+  }
+};
+
 const cancelOrderFor = async (order, { by, actorId, reason, sellerId }) => {
   if (!CANCELLABLE.includes(order.status)) {
     return {
@@ -170,6 +207,15 @@ const cancelOrderFor = async (order, { by, actorId, reason, sellerId }) => {
     const { charged } = await chargeForSellerCancel(order, sellerId, { by });
     if (charged) await order.save();
   }
+
+  /*
+   * Everyone who did NOT press the button hears about it (20 Sep 2026 - the
+   * first live seller-cancel showed the dialog promising "the customer is
+   * told why" while nothing told them). Amazon mails a cancellation from
+   * whichever side it came; Flipkart tells the seller the customer cancelled.
+   * Bell + mail through utils/notify, never in the way of the response.
+   */
+  setImmediate(() => tellEveryone(order, { by, sellerId, affected, refundAmount, refundQueued, reason }).catch((e) => console.error('cancel notifications failed:', e.message)));
 
   return {
     ok: true,

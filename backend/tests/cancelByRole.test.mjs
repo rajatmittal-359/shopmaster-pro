@@ -213,3 +213,28 @@ describe('what cancelling refuses to do', () => {
     expect(order.save).not.toHaveBeenCalled();
   });
 });
+
+describe('who hears about a cancellation (20 Sep 2026)', () => {
+  it('a seller cancel tells the customer who, why and where the money is; a customer cancel tells the seller and confirms to the customer', async () => {
+    const notifier = require('../utils/notify');
+    const notify = vi.spyOn(notifier, 'notify').mockResolvedValue({});
+    vi.spyOn(notifier, 'notifyAdmins').mockResolvedValue([]);
+
+    let order = buildOrder();
+    refunds.refundPayment = vi.fn(async () => ({ id: 'rfnd_1' }));
+    await cancelOrderFor(order, { by: 'seller', sellerId: SELLER_A, actorId: SELLER_A, reason: 'Out of stock' });
+    await new Promise((r) => setImmediate(r));
+    const toCustomer = notify.mock.calls.find((c) => c[0].role === 'customer')[0];
+    expect(toCustomer.title).toMatch(/Cancelled by the seller/);
+    expect(toCustomer.body).toMatch(/out of stock/i);
+    expect(toCustomer.mail.subject).toMatch(/was cancelled/);
+
+    notify.mockClear();
+    order = buildOrder();
+    await cancelOrderFor(order, { by: 'customer', actorId: 'cust', reason: 'changed_mind' });
+    await new Promise((r) => setImmediate(r));
+    const roles = notify.mock.calls.map((c) => c[0].role).sort();
+    expect(roles).toEqual(['customer', 'seller', 'seller']); // confirmation + both sellers of the shared basket
+    expect(notify.mock.calls.find((c) => c[0].role === 'seller')[0].title).toMatch(/Customer cancelled/);
+  });
+});
