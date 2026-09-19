@@ -690,6 +690,17 @@ const HG = {
   'Print, cut along the dotted line, tie one on each piece with the seal - then take the pack proof photo with the tag showing. A piece that comes back without it is not a change-of-mind return.': 'Print karein, dotted line par kaatein, har piece par seal se ek tag baandhein - phir tag dikhate hue pack proof photo lein. Bina tag lauta piece change-of-mind return nahi hai.',
   Invoice: 'Bill',
   'Invoice number pending - reload in a moment': 'Bill number abhi ban raha hai - thodi der me page phir kholein',
+  // WhatsApp catalog (19 Sep 2026)
+  'WhatsApp catalog': 'WhatsApp catalog',
+  'Your products, for WhatsApp': 'Aapke product, WhatsApp ke liye',
+  '{n} live products with a photo. Each line is the name, the price and its page on ShopMaster - the customer orders here, you never handle payment in chat.': 'Photo wale {n} live product. Har line me naam, daam aur ShopMaster par uska page hai - customer yahin order karta hai, payment chat me kabhi nahi.',
+  'WhatsApp Business app → Settings → Business tools → Catalog → Add item: photo, name, price, and paste the link as the item link.': 'WhatsApp Business app → Settings → Business tools → Catalog → Add item: photo, naam, daam, aur link ko item link me paste karein.',
+  'Or post the text as a Status / send it to a broadcast list - WhatsApp shows the product card from the link on its own.': 'Ya yeh text Status me daalein / broadcast list ko bhejein - WhatsApp link se product card khud dikhata hai.',
+  'Meta Commerce Manager (Instagram Shop tags, ads later): Data sources → Add items → Upload file → the CSV below.': 'Meta Commerce Manager (Instagram Shop tags, baad me ads): Data sources → Add items → Upload file → neeche wali CSV.',
+  'Copy the list': 'List copy karein',
+  'Download CSV for Meta': 'Meta ke liye CSV download karein',
+  '{n} products copied - paste into WhatsApp': '{n} product copy ho gaye - WhatsApp me paste karein',
+  'Could not copy - select the text and copy it': 'Copy nahi hua - text chunkar copy karein',
 };
 
 export default HG;

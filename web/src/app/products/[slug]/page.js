@@ -7,6 +7,7 @@ import { faqSchema, productSchema, breadcrumbSchema } from '@/lib/productSchema'
 import { POLICY, BUSINESS } from '@/config/policy';
 import Gallery from '@/components/product/Gallery';
 import BuyBox from '@/components/product/BuyBox';
+import ShareButtons from '@/components/product/ShareButtons';
 import TrackView from '@/components/analytics/TrackView';
 import PincodeCheck from '@/components/product/PincodeCheck';
 import ProductCard from '@/components/product/ProductCard';
@@ -197,6 +198,9 @@ export default async function ProductPage({ params }) {
                page. */
             returnTo={`/products/${product.slug || product._id}`}
           />
+
+          {/* The product travels on WhatsApp - the OG card above is what arrives. */}
+          <ShareButtons url={`${SITE}/products/${product.slug || product._id}`} name={product.name} price={price} />
 
           {/* Baymard: 60% of shoppers look for the return policy ON the product
               page, 15% abandon over an unsatisfactory one - and 44% of sites do

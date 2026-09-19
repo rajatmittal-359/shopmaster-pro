@@ -731,6 +731,17 @@ const HI = {
   'Print, cut along the dotted line, tie one on each piece with the seal - then take the pack proof photo with the tag showing. A piece that comes back without it is not a change-of-mind return.': 'प्रिंट करें, बिंदुओं वाली लाइन पर काटें, हर पीस पर सील से एक टैग बाँधें - फिर टैग दिखाते हुए पैकिंग का सबूत वाली फोटो लें। बिना टैग लौटा पीस मन बदलने वाली वापसी नहीं है।',
   Invoice: 'बिल',
   'Invoice number pending - reload in a moment': 'बिल नंबर अभी बन रहा है - थोड़ी देर में पेज फिर खोलें',
+  // WhatsApp catalog (19 Sep 2026)
+  'WhatsApp catalog': 'WhatsApp कैटलॉग',
+  'Your products, for WhatsApp': 'आपके प्रोडक्ट, WhatsApp के लिए',
+  '{n} live products with a photo. Each line is the name, the price and its page on ShopMaster - the customer orders here, you never handle payment in chat.': 'फोटो वाले {n} लाइव प्रोडक्ट। हर लाइन में नाम, दाम और ShopMaster पर उसका पेज है - ग्राहक यहीं ऑर्डर करता है, पेमेंट चैट में कभी नहीं।',
+  'WhatsApp Business app → Settings → Business tools → Catalog → Add item: photo, name, price, and paste the link as the item link.': 'WhatsApp Business ऐप → Settings → Business tools → Catalog → Add item: फोटो, नाम, दाम, और लिंक को item link में पेस्ट करें।',
+  'Or post the text as a Status / send it to a broadcast list - WhatsApp shows the product card from the link on its own.': 'या यह टेक्स्ट Status में डालें / broadcast list को भेजें - WhatsApp लिंक से प्रोडक्ट कार्ड खुद दिखाता है।',
+  'Meta Commerce Manager (Instagram Shop tags, ads later): Data sources → Add items → Upload file → the CSV below.': 'Meta Commerce Manager (Instagram Shop टैग, बाद में ads): Data sources → Add items → Upload file → नीचे वाली CSV।',
+  'Copy the list': 'लिस्ट कॉपी करें',
+  'Download CSV for Meta': 'Meta के लिए CSV डाउनलोड करें',
+  '{n} products copied - paste into WhatsApp': '{n} प्रोडक्ट कॉपी हो गए - WhatsApp में पेस्ट करें',
+  'Could not copy - select the text and copy it': 'कॉपी नहीं हुआ - टेक्स्ट चुनकर कॉपी करें',
 };
 
 export default HI;
