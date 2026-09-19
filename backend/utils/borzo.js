@@ -88,7 +88,7 @@ const quoteSameDay = async (address, weightKg) => {
   const pickupPhone = process.env.BORZO_PICKUP_PHONE;
   if (!pickup || !pickupPhone) return null;
 
-  const drop = [address.street, address.city, address.state, address.zipCode]
+  const drop = [address.street, address.landmark, address.city, address.state, address.zipCode]
     .filter(Boolean)
     .join(', ');
 
@@ -167,7 +167,7 @@ const bookSameDay = async (order, address, weightKg) => {
     return { ok: false, reason: 'Pickup address is not configured' };
   }
 
-  const drop = [address.street, address.city, address.state, address.zipCode]
+  const drop = [address.street, address.landmark, address.city, address.state, address.zipCode]
     .filter(Boolean)
     .join(', ');
 

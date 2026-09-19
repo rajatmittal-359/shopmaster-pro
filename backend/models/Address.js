@@ -24,6 +24,8 @@ const addressSchema = new mongoose.Schema(
     }
   },
     street: { type: String, required: true },
+    // "Near Hawa Mahal gate" - what a Jaipur courier actually navigates by (Amazon India's optional line). Never required.
+    landmark: { type: String, trim: true, maxlength: 80, default: '' },
     city: { type: String, required: true },
     state: { type: String, required: true },
     zipCode: {

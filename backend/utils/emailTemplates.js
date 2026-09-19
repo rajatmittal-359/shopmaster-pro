@@ -95,10 +95,25 @@ const returnLine = (order) => {
   return `Returns: 7-day return or exchange, counted from delivery, except ${odd.join('; ')}.`;
 };
 
+/**
+ * "Shipped in 1-3 working days" is the rulebook's promise; a made-to-order
+ * line (utils/dispatch) carries its own, stamped on the fulfilment. The mail
+ * says the real one - the customer read it before paying and should read the
+ * same here.
+ */
+const shipLine = (order) => {
+  const made = (order.items || []).some((i) => Number.isInteger(i.processingDays));
+  const dates = (order.fulfilments || []).map((f) => f.dispatchBy).filter(Boolean).map((d) => new Date(d).getTime());
+  if (!made || !dates.length) return null;
+  const by = new Date(Math.max(...dates)).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', timeZone: 'Asia/Kolkata' });
+  return `Made to order - ships by ${by}, delivered about 3-7 days after that.`;
+};
+
 exports.orderConfirmedEmail = (order, customer) => {
   const ref = order.orderNumber || `#${order._id.toString().slice(-6)}`;
   const link = orderUrl(order._id);
   const returns = returnLine(order);
+  const ships = shipLine(order);
 
   return {
     subject: `Order confirmed · ${ref} · ShopMaster Pro`,
@@ -114,7 +129,7 @@ exports.orderConfirmedEmail = (order, customer) => {
       `Track it here: ${link}
 
 ` +
-      `Shipped in 1-3 working days, delivered in about 3-7 after that.
+      `${ships || 'Shipped in 1-3 working days, delivered in about 3-7 after that.'}
 ` +
       (returns ? `
 ${returns}
@@ -161,8 +176,7 @@ ${returns}
           What happens next
         </p>
         <ul style="padding-left:20px;margin:0 0 16px 0">
-          <li style="margin-bottom:5px">Shipped within 1&ndash;3 working days.</li>
-          <li style="margin-bottom:5px">Delivery usually 3&ndash;7 days after that, depending on your pincode.</li>
+          ${ships ? `<li style="margin-bottom:5px">${ships}</li>` : '<li style="margin-bottom:5px">Shipped within 1&ndash;3 working days.</li><li style="margin-bottom:5px">Delivery usually 3&ndash;7 days after that, depending on your pincode.</li>'}
           <li>Cancel any time before it ships, from the link above.</li>
         </ul>
 

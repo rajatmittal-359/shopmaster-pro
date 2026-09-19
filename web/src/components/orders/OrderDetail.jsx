@@ -177,7 +177,7 @@ export default function OrderDetail({ orderId }) {
 
         {address && (
           <p className="mt-3 text-sm text-muted-foreground">
-            Delivering to {address.street}, {address.city}, {address.state} {address.zipCode}
+            Delivering to {address.street}{address.landmark ? `, ${address.landmark}` : ''}, {address.city}, {address.state} {address.zipCode}
           </p>
         )}
 

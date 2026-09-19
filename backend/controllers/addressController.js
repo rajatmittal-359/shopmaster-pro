@@ -7,6 +7,7 @@ const EDITABLE_FIELDS = [
   "label",
   "phoneNumber",
   "street",
+  "landmark",
   "city",
   "state",
   "zipCode",
@@ -26,8 +27,11 @@ exports.addAddress = async (req, res) => {
     // Whitelisted, and userId is set from the authenticated session only.
     // Previously req.body was spread AFTER userId, letting a client assign the
     // address to another user.
+    // PIN code known to India Post, state taken from it, phone as ten digits (utils/addressCheck).
+    const checked = await require('../utils/addressCheck').checkAddress(pickEditable(req.body));
+    if (checked.error) return res.status(400).json({ message: checked.error });
     const address = await Address.create({
-      ...pickEditable(req.body),
+      ...checked.value,
       userId: req.user._id,
     });
 
@@ -56,9 +60,11 @@ exports.updateAddress = async (req, res) => {
 
     // Scoped to the authenticated customer. Previously findByIdAndUpdate()
     // matched on _id alone, so any customer could edit any address.
+    const checked = await require('../utils/addressCheck').checkAddress(pickEditable(req.body));
+    if (checked.error) return res.status(400).json({ message: checked.error });
     const address = await Address.findOneAndUpdate(
       { _id: req.params.id, userId: req.user._id },
-      pickEditable(req.body),
+      checked.value,
       { new: true, runValidators: true }
     );
 

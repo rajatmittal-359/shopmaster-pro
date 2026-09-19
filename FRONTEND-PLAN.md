@@ -2288,6 +2288,27 @@ against a reference already in this plan.
   Outside card so nobody buys a wrapper for them.
 - **RETURN_KIND_REQUIRED** - the 2.29 cutover switch as an env flag, tested.
 
+### 4.50 The address, PIN code first (19 Sep 2026)
+
+Rajat picked it from the open list: "hnn". Reference: Amazon India's
+address form (mobile, PIN, then flat/building, area, landmark - city and
+state filled from the PIN), Flipkart and Meesho the same; Baymard's
+checkout research puts the address form second among abandonment points
+and finds a typed state is the field most often wrong. Google Places (G16)
+wants a card; India Post's PIN directory wants nothing and fixes the three
+errors that break a courier booking - PIN/city mismatch, wrong state,
+misspelt locality - so the `/api/pincode` lookup built on 12 Sep is now
+wired into the form, and the server repeats it (`utils/addressCheck`).
+
+Six digits typed: city and state fill themselves (editable), the localities
+show as a hint, an unknown PIN is said out loud and blocks save, and the
+courier check tells the person here - not after paying - that nobody
+delivers there yet. +91 / leading 0 phones become ten digits. A landmark
+line, because that is what a Jaipur delivery boy reads; it travels to
+Shiprocket (address_2), Borzo and the order page. India Post down: type it
+yourself, nothing blocked. Who loses without it: the customer a week, the
+seller the NDR/RTO charge, the courier the trip - one typo, three losers.
+
 ### 4.49 Ready to ship in N days - the maker's promise (19 Sep 2026)
 
 Rajat, on hearing the one seller-side gap the settings audit found: "hnn

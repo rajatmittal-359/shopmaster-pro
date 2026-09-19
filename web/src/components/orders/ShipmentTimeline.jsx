@@ -122,6 +122,25 @@ export default function ShipmentTimeline({ order, fulfilment }) {
         )
       )}
 
+      {/* Before the courier has it: the seller's own promise (Etsy's "ready to
+          ship by"). Shown only while it is still being made or packed, and
+          only when the date was set at order time - not a date invented here. */}
+      {!parcel.shippedAt && parcel.dispatchBy && ['pending', 'processing'].includes(parcel.status) && (
+        new Date(parcel.dispatchBy) < new Date() ? (
+          <p className="text-sm">
+            <strong className="text-amber-700 dark:text-amber-300">Not dispatched yet</strong> - was due to ship by {onDay(parcel.dispatchBy)}.
+            <span className="block text-xs text-muted-foreground">The seller can see this too. If nothing changes in two days, use <em>Something&rsquo;s wrong</em>.</span>
+          </p>
+        ) : (
+          <p className="text-sm">
+            Ships by <strong>{onDay(parcel.dispatchBy)}</strong>
+            <span className="block text-xs text-muted-foreground">
+              {(order.items || []).some((i) => Number.isInteger(i.processingDays)) ? 'Made to order - the seller is making it, then the courier takes over.' : 'The seller packs it by then; the courier&rsquo;s own date appears once it is on its way.'}
+            </span>
+          </p>
+        )
+      )}
+
       {/* How far along. Hidden once an order is cancelled or returned, where a
           progress bar would be describing a journey that stopped. */}
       {!stopped && stepIndex >= 0 && (

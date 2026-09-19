@@ -158,6 +158,7 @@ const bookShipment = async (order, address, weightKg, attempt = 1, opts = {}) =>
     billing_customer_name: firstName || 'Customer',
     billing_last_name: restOfName.join(' '),
     billing_address: address.street,
+    billing_address_2: address.landmark || '',
     billing_city: address.city,
     billing_pincode: address.zipCode,
     billing_state: address.state,
