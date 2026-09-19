@@ -28,11 +28,19 @@
  *   net to zero and make a genuine sale harder to find. Only the sale is
  *   logged, exactly as before this phase.
  *
- * WHY NO SCHEDULER
+ * WHY NO SCHEDULER (and the hole it left - 20 Sep 2026)
  *   An expired hold only matters when somebody else wants those units. So the
  *   sweep runs at that exact moment, scoped to the one product being reserved.
  *   It is bounded work on a hot path that already writes to that document, and
  *   it needs no cron, no queue and no external service.
+ *
+ *   The live drill (L3) showed the hole: the PRODUCT PAGE subtracts `reserved`
+ *   too, and the COD path checks stock - reserved without sweeping. So an
+ *   abandoned UPI screen on the last unit read "Out of stock" for everyone, and
+ *   since nobody could add it to a bag, no reservation attempt ever came to
+ *   release it. Now the page and the COD path sweep that one product first, and
+ *   the two-hourly job sweeps everything (`releaseAllExpired`) for the pages
+ *   nobody has opened since.
  */
 const mongoose = require('mongoose');
 
@@ -77,6 +85,16 @@ const releaseExpiredForProduct = async (productId, session) => {
     if (await releaseReservation(order, session)) released++;
   }
   return released;
+};
+
+/** Every expired hold, any product - for the two-hourly job. */
+const releaseAllExpired = async () => {
+  const stale = await Order.find({ reservationStatus: 'held', reservationExpiresAt: { $lt: new Date() } });
+  let released = 0;
+  for (const order of stale) {
+    if (await releaseReservation(order)) released++;
+  }
+  return { stale: stale.length, released };
 };
 
 /**
@@ -184,6 +202,7 @@ module.exports = {
   RESERVATION_WINDOW_MS,
   reserveForItems,
   releaseReservation,
+  releaseAllExpired,
   releaseExpiredForProduct,
   holdsInventory,
 };

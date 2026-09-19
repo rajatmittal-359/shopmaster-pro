@@ -419,6 +419,13 @@ exports.getProduct = async (req, res) => {
 
     // A suspended seller's page is gone the same minute as their listings; a
     // shop on a break keeps its page and says when it is back (utils/vacation).
+    // A hold that ran out of time must not read as "Out of stock" on the page
+    // that would otherwise never trigger its release (utils/reservation).
+    if (product && (product.reserved || 0) > 0) {
+      const freed = await require('../utils/reservation').releaseExpiredForProduct(product._id).catch(() => 0);
+      if (freed) product.reserved = Math.max(0, (await Product.findById(product._id).select('reserved').lean())?.reserved || 0);
+    }
+
     const sellerUserId = product && (product.sellerId?._id || product.sellerId);
     const shopRow = product ? await require('../models/Seller').findOne({ userId: sellerUserId }).select('status vacation').lean() : null;
     if (!product || shopRow?.status === 'suspended') {

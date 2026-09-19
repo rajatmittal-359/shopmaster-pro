@@ -7,7 +7,7 @@ const {
   getDeliveryOptions,
   priceDeliveryOption,
 } = require("../utils/shipping");
-const { releaseReservation } = require("../utils/reservation");
+const { releaseReservation, releaseExpiredForProduct } = require("../utils/reservation");
 // The same constant payout settles against, so the promise made to the customer
 // and the moment a seller's money is released can never drift apart.
 const { RETURN_WINDOW_DAYS, returnWindowFor } = require("../utils/payout");
@@ -228,6 +228,9 @@ exports.checkout = async (req, res) => {
 
     // ✅ Stock validation
     for (const item of cart.items) {
+      // Hand back any hold that has run out of time before deciding "insufficient"
+      // (utils/reservation). A failed sweep is logged, never the customer's problem.
+      await releaseExpiredForProduct(item.productId._id, session).catch((e) => console.error('expired-hold sweep skipped:', e.message));
       const product = await Product.findById(item.productId._id).session(
         session
       );

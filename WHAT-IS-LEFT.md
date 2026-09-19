@@ -249,14 +249,14 @@ records the same night.
 
 | # | Boundary | Scenario (₹1 or free) | Who | Done |
 |---|---|---|---|---|
-| L1 | Razorpay webhook | Pay ₹1 on the LIVE domain, close the tab before the success page - the webhook alone must confirm the order, clear the cart, mail | Rajat ₹1, Claude reads | ☐ |
+| L1 | Razorpay webhook | ~~Pay ₹1 against the live API (new web on localhost, `NEXT_PUBLIC_API_URL` → Render), close the tab before the success page~~ ✅ 20 Sep 00:47 - SMP-260919-CB0E74 confirmed by the webhook alone (`razorpaySignature: 'webhook'`, 85 s after checkout), cart cleared, invoice CJ/26-27/00006, mail in Inbox 12:47. Found on the way: the /api proxy forwarded the browser's Origin and the live API refused localhost → `proxy.js` drops Origin on the proxied hop outside production | Rajat ₹1, Claude reads | ✅ |
 | L2 | Razorpay webhook | Cancel a paid live order once the balance exists - `refund.processed` must move `queued/processing` → `completed` | after L1 settles | ☐ |
-| L3 | Razorpay | Abandon at the UPI screen: the reservation must release in the timeout, stock back | Rajat | ☐ |
+| L3 | Razorpay | ~~Abandon at the UPI screen: the reservation must release in the timeout, stock back~~ ✅ 20 Sep 00:50 - SMP-260919-CB0EC3 held → released at expiry (01:05), reserved 1 → 0. **Found a real hole:** the product page subtracts `reserved` and the COD path checked stock−reserved, but only a NEW prepaid reservation swept expired holds - so an abandoned UPI on the last unit read "Out of stock" for everyone, forever (nobody could add it to a bag to trigger the sweep). Now the product page and the COD path sweep that product first, and the two-hourly job sweeps all (`reservation.releaseAllExpired`) | Rajat | ✅ |
 | L4 | Refund queue | The 19 Sep ₹1 (SMP-260919-51B963) leaves the queue by itself when the balance settles; customer gets the "refund started" mail | wait + Claude | ☐ |
 | L5 | Shiprocket | One real parcel to Rajat's own address: book from the seller queue, label prints, AWB tracks, tracking webhook token accepted, `delivered` closes the return window and creates the payout row | when unparked, Rajat + Mummy | ☐ |
 | L6 | Shiprocket | NDR on purpose (refuse the parcel once) → NDR bell, re-attempt, RTO path | with L5 | ☐ |
 | L7 | Shiprocket | Return pickup with QC photo, cancel a booking before pickup | with L5 | ☐ |
-| L8 | Brevo mail | Open Abha's Gmail: order-confirmed, cancelled, refund-queued mails - inbox or spam, how the templates render on the phone, sender name | Rajat | ☐ |
+| L8 | Brevo mail | ~~Open Abha's Gmail~~ ✅ 20 Sep - both order-confirmed mails in **Inbox** (not spam), render cleanly on the phone in dark mode, sender "ShopMaster…", amounts/buttons right | Rajat | ✅ |
 | L9 | OTP mail | Seller sign-in on a new phone: how many seconds until the code arrives; resend cooldown | Rajat | ☐ |
 | L10 | Web push | Seller on Android Chrome: allow → one order → notification with sound; iPhone only after Add to Home Screen | Rajat / Mummy | ☐ |
 | L11 | Phone browser | Product form from the phone camera: HEIC + 12 MB photo, voice input, invoice print/PDF, return tag print | Mummy's phone | ☐ |
