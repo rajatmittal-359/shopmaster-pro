@@ -38,7 +38,8 @@ export async function generateMetadata({ params }) {
       description: plain(product.description).slice(0, 200),
       url: `${SITE}${path}`,
       type: 'website',
-      images: product.images?.length ? [{ url: product.images[0] }] : undefined,
+      // A product without a photo still gets the brand card, not a bare link.
+      images: product.images?.length ? [{ url: product.images[0] }] : ['/opengraph-image'],
     },
     other: { 'product:price:amount': String(price), 'product:price:currency': 'INR' },
   };
