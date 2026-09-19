@@ -188,7 +188,12 @@ export default function OrderDetail({ orderId }) {
             Cancelled by {WHO[order.cancelledBy] || 'the platform'}
             {order.cancelledAt ? ` on ${when(order.cancelledAt)}` : ''}
             {order.cancellationReason ? ` - ${order.cancellationReason}` : ''}.
-            {order.paymentMethod !== 'cod' && order.paymentStatus === 'paid' && (
+            {/* The refund's own state (utils/refundQueue): queued = owed and on its way,
+                processing/completed = raised with the gateway. Never a promise the record does not hold. */}
+            {order.paymentMethod !== 'cod' && order.refundStatus === 'queued' && (
+              <span className="text-muted-foreground"> Your refund of &#8377;{order.refundAmount} is queued and goes out within two working days; we mail you the moment it is raised, and it reaches you within {REFUND_DAYS} after that.</span>
+            )}
+            {order.paymentMethod !== 'cod' && order.refundStatus !== 'queued' && (order.paymentStatus === 'paid' || order.paymentStatus === 'refunded') && (
               <span className="text-muted-foreground"> Your money goes back the way you paid, within {REFUND_DAYS}.</span>
             )}
           </p>

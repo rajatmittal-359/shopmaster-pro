@@ -262,11 +262,16 @@ export default function CheckoutView() {
             <ul className="mt-3 space-y-2">
               {totals.deliveryOptions.map((option) => (
                 <li key={option.id}>
-                  <label className="flex cursor-pointer items-center gap-3 rounded-lg border border-border p-3 text-sm has-[:checked]:border-primary">
+                  {/* `available: false` is the server saying "this exists, but
+                      not yet" (same-day before Borzo goes live). It is shown so a
+                      Jaipur customer knows it is coming, and cannot be picked:
+                      the API would refuse it at Pay, which is the wrong moment. */}
+                  <label className={`flex items-center gap-3 rounded-lg border border-border p-3 text-sm ${option.available === false ? 'cursor-not-allowed opacity-70' : 'cursor-pointer has-[:checked]:border-primary'}`}>
                     {totals.deliveryOptions.length > 1 && (
                       <input
                         type="radio"
                         name="delivery"
+                        disabled={option.available === false}
                         checked={deliveryOption === option.id}
                         onChange={() => setDeliveryOption(option.id)}
                       />
@@ -282,14 +287,17 @@ export default function CheckoutView() {
                           {option.etaText || `Arrives by ${option.arrivalBy}`}
                         </span>
                       )}
+                      {option.note && <span className="block text-muted-foreground">{option.note}</span>}
                       {option.courier && (
                         <span className="block text-xs text-muted-foreground">{option.courier}</span>
                       )}
                     </span>
                     <span>
-                      {Number(option.price) > 0
-                        ? `₹${Number(option.price).toLocaleString('en-IN')}`
-                        : 'Free'}
+                      {option.available === false
+                        ? '—'
+                        : Number(option.price) > 0
+                          ? `₹${Number(option.price).toLocaleString('en-IN')}`
+                          : 'Free'}
                     </span>
                   </label>
                 </li>

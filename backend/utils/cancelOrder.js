@@ -78,6 +78,7 @@ const cancelOrderFor = async (order, { by, actorId, reason, sellerId }) => {
   const refundAmount = isPartial
     ? affected.reduce((sum, i) => sum + i.price * i.quantity, 0)
     : order.totalAmount;
+  let refundQueued = false;
 
   // ---- refund first, and abort if it fails --------------------------------
   if (order.paymentStatus === 'paid' && order.paymentMethod === 'razorpay') {
@@ -106,15 +107,29 @@ const cancelOrderFor = async (order, { by, actorId, reason, sellerId }) => {
       // rest of the basket still paid for.
       if (!isPartial) order.paymentStatus = 'refunded';
     } catch (refundErr) {
-      console.error('Refund failed for order', order.orderNumber, '-', refundErr.message);
-      return {
-        // 500 rather than 502: the existing contract, and the frontend only
-        // shows the message. Not worth churning for a more precise code.
-        ok: false,
-        status: 500,
-        message:
-          'The refund could not be started, so the order has been left alone. Your payment is safe - please try again shortly.',
-      };
+      /*
+       * The gateway would not raise the refund. Until 19 Sep 2026 this refused
+       * the cancellation too - and the first live test showed why that was
+       * wrong: Razorpay answers "not enough balance" for every refund until the
+       * first settlements land, so on day one no customer could cancel an
+       * unshipped order. The cancel now goes through and the refund is owed:
+       * marked `queued`, retried every two hours (utils/refundQueue), the admin
+       * told in Razorpay's own words. Only a partial (seller-side) cancel keeps
+       * the old refusal - a queued partial refund on a live basket is a ledger
+       * nobody can read.
+       *
+       * (The SDK rejects with { error: { description } } and no .message -
+       * logging .message alone printed "undefined".)
+       */
+      const rq = require('./refundQueue');
+      const why = rq.describe(refundErr);
+      console.error('Refund could not start for order', order.orderNumber, '-', why);
+      if (isPartial) {
+        return { ok: false, status: 500, message: 'The refund could not be started, so the order has been left alone. Your payment is safe - please try again shortly.' };
+      }
+      rq.queue(order, refundAmount, refundErr);
+      refundQueued = true;
+      setImmediate(() => require('./notify').notifyAdmins({ category: 'orders', title: `Refund queued · ${order.orderNumber} · ₹${refundAmount}`, body: `Cancelled; the refund could not be raised yet. Razorpay: ${String(why).slice(0, 220)}`, url: `/admin/orders/${order._id}`, tag: `refund-queued-${order._id}` }).catch(() => {}));
     }
   }
 
@@ -158,9 +173,12 @@ const cancelOrderFor = async (order, { by, actorId, reason, sellerId }) => {
 
   return {
     ok: true,
-    message: isPartial
-      ? 'Your items on this order have been cancelled and refunded'
-      : 'Order cancelled',
+    refundQueued,
+    message: refundQueued
+      ? `Order cancelled. Your refund of ₹${refundAmount} is queued and goes out within two working days - we will mail you the moment it is raised.`
+      : isPartial
+        ? 'Your items on this order have been cancelled and refunded'
+        : 'Order cancelled',
   };
 };
 

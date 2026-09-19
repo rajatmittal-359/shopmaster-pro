@@ -169,16 +169,26 @@ describe('cancelling a paid prepaid order', () => {
     expect(orderDoc.paymentStatus).toBe('refunded');
   });
 
-  it('aborts the cancellation if the refund call fails', async () => {
-    refundSpy.mockRejectedValueOnce(new Error('gateway down'));
+  it('cancels anyway when the gateway will not raise the refund yet, and queues the refund (19 Sep 2026: "not enough balance" on day one)', async () => {
+    const notifier = require('../utils/notify');
+    const admins = vi.spyOn(notifier, 'notifyAdmins').mockResolvedValue([]);
+    refundSpy.mockRejectedValueOnce({ statusCode: 400, error: { code: 'BAD_REQUEST_ERROR', description: 'Your account does not have enough balance to carry out the refund operation.' } });
 
     const res = await cancelOrder();
 
-    expect(res.status).toBe(500);
-    expect(res.body.message).toMatch(/refund could not be started/i);
-    // Nothing was persisted: the order is still live and still worth its total.
-    expect(orderDoc.__saveCount).toBeUndefined();
+    expect(res.status).toBe(200);
+    expect(res.body.message).toMatch(/cancelled.*refund of ₹.*queued/i);
+    expect(orderDoc.status).toBe('cancelled');
+    expect(orderDoc.refundStatus).toBe('queued');
+    expect(orderDoc.refundAmount).toBe(ORIGINAL_TOTAL);
+    expect(orderDoc.refundId).toBeNull();
+    expect(orderDoc.paymentStatus).toBe('paid'); // still owed - nothing pretends it went out
+    expect(orderDoc.refundLastError).toMatch(/enough balance/);
     expect(orderDoc.totalAmount).toBe(ORIGINAL_TOTAL);
+    await new Promise((r) => setImmediate(r));
+    expect(admins.mock.calls[0][0].title).toMatch(/Refund queued/);
+    expect(admins.mock.calls[0][0].body).toMatch(/enough balance/);
+    admins.mockRestore();
   });
 });
 

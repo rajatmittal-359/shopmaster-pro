@@ -429,6 +429,12 @@ const sellerPayoutStateFor = (order, sellerId) => {
     return { state: 'paid', releasesAt: null };
   }
 
+  // Every line of this seller's cancelled: nothing is owed and nothing awaited.
+  // (Seen 19 Sep 2026: a cancelled ₹1 test order still read "paid out 7 days after delivery".)
+  if (!lines.length) {
+    return { state: 'nothing_owed', releasesAt: null };
+  }
+
   if (order.paymentStatus !== 'paid') {
     return { state: 'unpaid_order', releasesAt: null };
   }

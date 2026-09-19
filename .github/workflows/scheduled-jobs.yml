@@ -29,6 +29,9 @@ on:
     # window and that window closing is what releases a seller's money, so a
     # day's delay is a day's delay in somebody's payment.
     - cron: '15 */2 * * *'
+    # Every two hours at :45 - refunds Razorpay would not raise yet (no settled
+    # balance): tried again until they go through (utils/refundQueue).
+    - cron: '45 */2 * * *'
     # 03:30 UTC is 09:00 IST - morning in Jaipur, when a seller can act on it.
     - cron: '30 3 * * *'
     # Monday 03:35 UTC = 09:05 IST - the week's three things for every seller
@@ -55,7 +58,7 @@ on:
         required: true
         default: reconcile
         type: choice
-        options: [reconcile, low-stock, growth-note, catalogue-sweep, cart-reminder, vectors, eval]
+        options: [reconcile, refunds, low-stock, growth-note, catalogue-sweep, cart-reminder, vectors, eval]
 
 env:
   # The Singapore service. Renaming the old one did NOT free its subdomain -
@@ -74,6 +77,8 @@ jobs:
         run: |
           if [ -n "${{ inputs.job }}" ]; then
             echo "name=${{ inputs.job }}" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event.schedule }}" = "45 */2 * * *" ]; then
+            echo "name=refunds" >> "$GITHUB_OUTPUT"
           elif [ "${{ github.event.schedule }}" = "30 3 * * *" ]; then
             echo "name=low-stock" >> "$GITHUB_OUTPUT"
           elif [ "${{ github.event.schedule }}" = "35 3 * * 1" ]; then

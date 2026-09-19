@@ -421,7 +421,7 @@ export default function OrderQueue() {
                   delivered, plus 7 days" is the actual answer to the question
                   they are asking.
                 */}
-                {order.payout && (
+                {order.payout && order.payout.state !== 'nothing_owed' && (
                   <p className="mt-3 text-xs text-muted-foreground">
                     {order.payout.releasesAt
                       ? t('Payout released on {date}', { date: when(order.payout.releasesAt) })

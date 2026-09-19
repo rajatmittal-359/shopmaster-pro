@@ -175,18 +175,31 @@ describe('what cancelling refuses to do', () => {
    * change nothing. Cancelling first would leave an order marked cancelled
    * while the customer's money is still gone.
    */
-  it('changes NOTHING when the refund fails', async () => {
+  it('cancels and QUEUES the refund when the gateway will not raise it (19 Sep 2026) - the money stays owed on the record', async () => {
     const order = buildOrder();
     refunds.refundPayment = vi.fn(async () => {
       throw new Error('gateway down');
     });
+    vi.spyOn(require('../utils/notify'), 'notifyAdmins').mockResolvedValue([]);
 
     const res = await cancelOrderFor(order, { by: 'admin', actorId: SELLER_A, reason: 'x' });
 
+    expect(res.ok).toBe(true);
+    expect(res.refundQueued).toBe(true);
+    expect(order.items.every((i) => i.status === 'cancelled')).toBe(true);
+    expect(order.refundStatus).toBe('queued');
+    expect(order.refundAmount).toBe(order.totalAmount);
+    expect(order.paymentStatus).toBe('paid'); // not 'refunded' - nothing went out yet
+    expect(order.save).toHaveBeenCalled();
+  });
+
+  it('a SELLER cancelling their part of a shared basket still waits for the refund - a queued partial is a ledger nobody can read', async () => {
+    const order = buildOrder();
+    refunds.refundPayment = vi.fn(async () => {
+      throw new Error('gateway down');
+    });
+    const res = await cancelOrderFor(order, { by: 'seller', sellerId: SELLER_A, actorId: SELLER_A, reason: 'x' });
     expect(res.ok).toBe(false);
-    expect(order.status).toBe('pending');
-    expect(order.items.every((i) => i.status === 'active')).toBe(true);
-    expect(order.fulfilments.every((f) => f.status === 'pending')).toBe(true);
     expect(order.save).not.toHaveBeenCalled();
   });
 

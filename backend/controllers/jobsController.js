@@ -47,6 +47,8 @@ const JOBS = {
   'growth-note': { run: () => growthNote.sendGrowthNotes() },
   // Thursday's catalogue sweep (plan 2.25/2.32): listing facts, three per seller. No model.
   'catalogue-sweep': { run: () => catalogueSweep.sweep() },
+  // Every two hours at :45: refunds the gateway would not raise yet (utils/refundQueue). No key beyond Razorpay's.
+  refunds: { run: () => require('../utils/refundQueue').retryQueued(), requires: 'RAZORPAY_KEY_SECRET' },
   // Daily 04:45 UTC: the bag left behind 20-48 h ago, once a week at most (jobs/cartReminder).
   'cart-reminder': { run: () => require('../jobs/cartReminder').remind() },
   /*

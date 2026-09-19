@@ -135,7 +135,7 @@ export default function ShipmentTimeline({ order, fulfilment }) {
           <p className="text-sm">
             Ships by <strong>{onDay(parcel.dispatchBy)}</strong>
             <span className="block text-xs text-muted-foreground">
-              {(order.items || []).some((i) => Number.isInteger(i.processingDays)) ? 'Made to order - the seller is making it, then the courier takes over.' : 'The seller packs it by then; the courier&rsquo;s own date appears once it is on its way.'}
+              {(order.items || []).some((i) => Number.isInteger(i.processingDays)) ? 'Made to order - the seller is making it, then the courier takes over.' : 'The seller packs it by then; the courier’s own date appears once it is on its way.'}
             </span>
           </p>
         )

@@ -146,7 +146,7 @@ const orderItemSchema = new mongoose.Schema({
   refundId: { type: String, default: null },
   refundStatus: {
     type: String,
-    enum: ['processing', 'completed', 'failed'],
+    enum: ['queued', 'processing', 'completed', 'failed'],
     default: null,
   },
   refundAmount: { type: Number, default: null },
@@ -666,11 +666,18 @@ const orderSchema = new mongoose.Schema(
       default: null
     },
 
+    /**
+     * 'queued' (utils/refundQueue, 19 Sep 2026): the order is cancelled and the
+     * refund is owed, but the gateway would not raise it yet (no settled
+     * balance on day one). A job retries every two hours; the admin hears.
+     */
     refundStatus: {
       type: String,
-      enum: ['processing', 'completed', 'failed'],
+      enum: ['queued', 'processing', 'completed', 'failed'],
       default: null
     },
+    refundQueuedAt: { type: Date, default: null },
+    refundLastError: { type: String, default: null },
 
     refundAmount: {
       type: Number,
