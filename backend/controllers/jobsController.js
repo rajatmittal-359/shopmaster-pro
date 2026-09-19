@@ -47,6 +47,8 @@ const JOBS = {
   'growth-note': { run: () => growthNote.sendGrowthNotes() },
   // Thursday's catalogue sweep (plan 2.25/2.32): listing facts, three per seller. No model.
   'catalogue-sweep': { run: () => catalogueSweep.sweep() },
+  // Daily 04:45 UTC: the bag left behind 20-48 h ago, once a week at most (jobs/cartReminder).
+  'cart-reminder': { run: () => require('../jobs/cartReminder').remind() },
   /*
    * Plan 2.23: the assistant's fixed exam, kept as an EvalRun for the trend on
    * /admin/ask. Weekly, Sunday night after the re-index - eleven real answers

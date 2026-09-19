@@ -2288,6 +2288,49 @@ against a reference already in this plan.
   Outside card so nobody buys a wrapper for them.
 - **RETURN_KIND_REQUIRED** - the 2.29 cutover switch as an env flag, tested.
 
+### 4.47 The cookie choice, the pixel that waits for it, share cards, the bag reminder (19 Sep 2026)
+
+Rajat: "ab jo bhi apne faede ki cheez hai karo - scope define kardo."
+Six free things, each with a market reference, none of them an ad.
+
+**Cookie choice.** Reference: Shopify's own privacy banner and Amazon.de's
+cookie bar - a bottom card that does not block the page, two buttons of
+equal weight, one plain line, a link to the notice. Not a wall, not a
+"manage partners" tree: the DPDP Act 2023 reads a nudge as no consent, and
+Baymard finds a modal costs more visitors than any tag returns. One
+cookie, `smp_consent`, because the API must know too (the server-side
+Purchase to Meta must not leave for a "necessary" visitor). Shows only
+when a tag is configured on a real host; "Cookie choices" in the footer
+reopens it. GA4 runs Google's Consent Mode v2: denied by default
+(cookieless pings, counted and modelled), granted on accept.
+
+**Meta Pixel + Conversions API.** Reference: every D2C store on Shopify
+ships both from day one; Meta's own guidance (and its ~13% more attributed
+purchases with the server copy). The point is not ads today - it is that
+retargeting and lookalikes are built from what the pixel has already seen,
+so an audience exists the day an ad is ever bought. Loads only after
+"Accept all"; the four standard events mirror the GA4 ones from the same
+helper; Purchase carries the order id as eventID so the browser and server
+copies count once. Hashed identifiers only, token in the request body.
+
+**Share cards.** Reference: Flipkart/Meesho's one brand card for anything
+that is not a product; Etsy's shop cards (name, city, a strip of products).
+A WhatsApp forward is judged by its card, and the home page, /shop and the
+policies showed a bare grey link. `next/og`, brand gradient, jharokha mark;
+each shop gets its own card - built for every seller equally.
+
+**Bag reminder.** Reference: Amazon, Flipkart, Myntra all send the plain
+"still in your bag" a day later; Baymard's 70.2% abandonment average;
+Klaviyo's benchmark (highest revenue per mail of any flow). One note,
+20-48 hours after the last touch, at most once a week, only live in-stock
+items at today's price, and **no coupon** - a discount in the reminder
+teaches people to abandon the bag to get one. Its own notification
+category with its own switch. Daily from Actions, 10:15 IST.
+
+**Left on purpose:** referral programme, paid ads, WhatsApp Cloud API
+(the Business app on the shop's number does the job at this size), phone
+OTP. Raised, recorded, not built.
+
 ### 4.46 Sessions - the login's life after login (19 Sep 2026)
 
 Rajat, reading the audit of our auth against the standard for a

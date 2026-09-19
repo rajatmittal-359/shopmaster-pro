@@ -14,7 +14,7 @@ const push = require('../utils/push');
 
 describe('CATEGORIES', () => {
   it('names the Amazon-style categories a person can route per channel', () => {
-    expect(notify.CATEGORIES.map((c) => c.key)).toEqual(['orders', 'returns', 'disputes', 'payouts', 'account', 'trust', 'growth']);
+    expect(notify.CATEGORIES.map((c) => c.key)).toEqual(['orders', 'returns', 'disputes', 'payouts', 'account', 'trust', 'growth', 'reminders']);
     for (const c of notify.CATEGORIES) expect(c.label.length).toBeGreaterThan(2);
   });
   it('fills defaults: everything on, per channel', () => {

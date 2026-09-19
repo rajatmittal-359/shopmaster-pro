@@ -26,6 +26,7 @@ Stage: three sellers, ~50 products, single-digit orders a day. Not Amazon.
 - Seller panel: `/seller/*` — Home · Orders · Products (tabs: all / studio / stock) · Payments · Settings; `components/seller/*`, `ProductsNav`; admin: `/admin/*`, `components/admin/*`; shared panel chrome `components/panel/*` (`PanelShell`, `PageHeader`, `PanelCard`).
 - AI tools: `components/ai/*` (Studio, ModelChip, AttachToProduct), `components/seller/MediaManager`.
 - Confirmations: `components/common/ActionDialog` (named reasons + optional details); toasts via sonner for undo.
+- Tags and consent: `lib/consent` (cookie `smp_consent`, `useConsent`, `useOnRealHost`), `common/ConsentBanner` + footer `CookieChoices`; `lib/analytics` is the ONE place events go (GA4 + Meta mirrored); `analytics/GoogleAnalytics` (Consent Mode v2, queue built in an effect) and `analytics/MetaPixel` (only after "Accept all"). Never add a tag anywhere else; never load one before consent except GA in denied mode. Share cards: `app/opengraph-image.js` + `app/sellers/[id]/opengraph-image.js` (`lib/ogCard`; satori needs explicit `display:flex` on any node with two children).
 
 ## Record after building
 Dated paragraph in `FRONTEND-PLAN.md` §4 (reference named, decision, reason); row removed/added in `WHAT-IS-LEFT.md`.

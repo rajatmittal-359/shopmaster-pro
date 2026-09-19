@@ -29,6 +29,11 @@ const cartSchema = new mongoose.Schema(
     totalAmount: {
       type: Number,
       default: 0
+    },
+    // When the bag reminder (jobs/cartReminder) last went out - at most one a week.
+    remindedAt: {
+      type: Date,
+      default: null
     }
   },
   {
