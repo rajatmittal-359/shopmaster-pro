@@ -116,6 +116,7 @@ const assist = require('../controllers/assistController');
 router.post('/assist', assist.admin);
 router.patch('/assist/:id', assist.rate);
 router.get('/assist', assist.adminLogs);
+router.get('/assist/evals', assist.adminEvals);
 router.post('/voice/transcribe', require('../controllers/voiceController').transcribe);
 const settings = require('../controllers/settingsController');
 router.get('/settings', settings.getSettings);

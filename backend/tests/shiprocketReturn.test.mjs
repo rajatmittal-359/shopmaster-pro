@@ -55,7 +55,7 @@ const ITEMS = [
 const book = (opts = {}) =>
   bookReturnPickup(ORDER, FULFILMENT, CUSTOMER_ADDRESS, {
     customerName: 'Abha Mittal',
-    customerEmail: 'mittalabha70@gmail.com',
+    customerEmail: 'customer@example.com',
     weightKg: 0.5,
     items: ITEMS,
     ...opts,

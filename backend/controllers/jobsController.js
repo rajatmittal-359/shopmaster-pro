@@ -48,6 +48,14 @@ const JOBS = {
   // Thursday's catalogue sweep (plan 2.25/2.32): listing facts, three per seller. No model.
   'catalogue-sweep': { run: () => catalogueSweep.sweep() },
   /*
+   * Plan 2.23: the assistant's fixed exam, kept as an EvalRun for the trend on
+   * /admin/ask. Weekly, Sunday night after the re-index - eleven real answers
+   * are a visible slice of a free Gemini day. The roads fall back on their
+   * own, so no single key is required; a day with every road down grades as
+   * FAILED rows, which is itself the finding.
+   */
+  eval: { run: () => require('../utils/ai/evals').runAndSave() },
+  /*
    * Plan 2.17: product embeddings for "You may also like" and semantic
    * top-up (2.21) go stale as sellers edit; this embeds what changed (hash)
    * and keeps the Atlas index. Weekly from GitHub Actions. Needs Gemini for

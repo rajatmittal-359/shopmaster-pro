@@ -41,6 +41,9 @@ on:
     # Sunday 22:00 UTC = 03:30 IST Monday - the quiet hour. Re-embeds products
     # that changed (plan 2.17) and, when the secrets exist, the knowledge base.
     - cron: '0 22 * * 0'
+    # Sunday 22:30 UTC - the assistant's weekly exam (plan 2.23), after the
+    # re-index so it is graded on fresh knowledge; the trend is on /admin/ask.
+    - cron: '30 22 * * 0'
   # So it can be run by hand from the Actions tab without waiting for the clock.
   workflow_dispatch:
     inputs:
@@ -49,7 +52,7 @@ on:
         required: true
         default: reconcile
         type: choice
-        options: [reconcile, low-stock, growth-note, catalogue-sweep, vectors]
+        options: [reconcile, low-stock, growth-note, catalogue-sweep, vectors, eval]
 
 env:
   # The Singapore service. Renaming the old one did NOT free its subdomain -
@@ -76,6 +79,8 @@ jobs:
             echo "name=catalogue-sweep" >> "$GITHUB_OUTPUT"
           elif [ "${{ github.event.schedule }}" = "0 22 * * 0" ]; then
             echo "name=vectors" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event.schedule }}" = "30 22 * * 0" ]; then
+            echo "name=eval" >> "$GITHUB_OUTPUT"
           else
             echo "name=reconcile" >> "$GITHUB_OUTPUT"
           fi

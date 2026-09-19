@@ -54,6 +54,19 @@ exports.rate = async (req, res) => {
   }
 };
 
+/** The weekly exam's last twelve runs (utils/ai/evals) - the quality trend on /admin/ask. */
+exports.adminEvals = async (req, res) => {
+  try {
+    const EvalRun = require('../models/EvalRun');
+    const runs = await EvalRun.find({}).sort({ at: -1 }).limit(12).lean();
+    res.json({
+      runs: runs.map((r) => ({ _id: r._id, at: r.at, cases: r.cases, clean: r.clean, byModel: r.byModel || {}, failing: (r.rows || []).filter((x) => x.problems && x.problems.length).map((x) => ({ role: x.role, language: x.language, question: x.question, model: x.model, problems: x.problems })) })),
+    });
+  } catch (error) {
+    sendError(res, error);
+  }
+};
+
 exports.adminLogs = async (req, res) => {
   try {
     const logs = await AssistLog.find({}).populate('userId', 'name email').sort({ createdAt: -1 }).limit(100).lean();

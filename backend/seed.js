@@ -60,26 +60,26 @@ const PLACEHOLDER_IMAGE =
  */
 const ACCOUNTS = {
   admin: {
-    name: 'Rajat Mittal',
+    name: process.env.SEED_ADMIN_NAME || 'Admin Demo',
     email: process.env.SEED_ADMIN_EMAIL || 'admin@example.com',
     role: 'admin',
     envKey: 'SEED_ADMIN_PASSWORD',
   },
   seller: {
-    name: 'Rajat Mittal',
+    name: process.env.SEED_SELLER_NAME || 'Seller Demo',
     email: process.env.SEED_SELLER_EMAIL || 'seller@example.com',
     role: 'seller',
     envKey: 'SEED_SELLER_PASSWORD',
   },
   customer: {
-    name: 'Abha Mittal',
-    email: 'mittalabha70@gmail.com',
+    name: process.env.SEED_CUSTOMER_NAME || 'Customer Demo',
+    email: process.env.SEED_CUSTOMER_EMAIL || 'customer@example.com',
     role: 'customer',
     envKey: 'SEED_CUSTOMER_PASSWORD',
   },
 };
 
-/** The platform's own jewellery business - the reason the site exists. */
+/** The house shop - the first seller on the platform. */
 const HOUSE_SELLER = {
   key: 'CJ',
   businessName: process.env.SEED_HOUSE_SHOP || 'Meera Jewels',
