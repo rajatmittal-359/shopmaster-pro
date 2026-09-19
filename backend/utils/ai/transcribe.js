@@ -14,12 +14,17 @@
  *      audio per hour), fast, good Hindi and Hinglish. Whisper writes Hindi
  *      in Devanagari; the assistant answers in whatever script it sees, so
  *      that is fine.
- *   2. Cloudflare Workers AI, the same Whisper large-v3-turbo (15 Sep 2026,
+ *   2. Sarvam saaras (19 Sep 2026, plan 2.37d): trained on Indian speech,
+ *      and for the Hinglish chip it writes roman-script code-mixed text
+ *      straight from the audio (`translit`) - no second model pass. Paid
+ *      per second from ₹100 of free credits (a 6-second clip ≈ ½ paisa), so
+ *      it sits behind Groq's free 2,000 a day, not in front.
+ *   3. Cloudflare Workers AI, the same Whisper large-v3-turbo (15 Sep 2026,
  *      plan 2.37): a different company's quota for the same ears. ~46
  *      neurons a minute of audio out of the 10,000 a day the account gets,
  *      so a 15-second question costs ~12 - the image editor's pool, barely
  *      touched. Same token and gateway as the rest; no new signup.
- *   3. Gemini audio understanding: the same free key the rest of the AI
+ *   4. Gemini audio understanding: the same free key the rest of the AI
  *      uses; slower, and every clip it hears is a product draft it cannot
  *      write (the flash quota ran out at 20 a day on 14 Sep), so it is last.
  *   Nothing is stored. The clip goes to the provider and is gone; only the
@@ -34,6 +39,7 @@
 const GROQ_MODEL = process.env.GROQ_STT_MODEL || 'whisper-large-v3-turbo';
 const { GEMINI_MODELS: GEMINI_API, GROQ_OPENAI } = require('./endpoints');
 const { toHinglish } = require('./hinglish');
+const sarvam = require('./sarvam');
 
 /**
  * Words the shop says that a generic model would mangle - a hint, not a
@@ -114,6 +120,9 @@ const viaCloudflare = async ({ buffer }, { language }) => {
   return { ok: true, text, language: info.language || language || null, model: CF_STT_MODEL, seconds: info.duration ? Math.round(info.duration) : null };
 };
 
+/** Sarvam, with the Hinglish chip asking for roman transliteration directly. */
+const viaSarvam = async (clip, { language, wanted }) => sarvam.stt(clip, { language: language === 'hi' && wanted === 'hg' ? 'hg' : language === 'auto' ? 'auto' : language, hinglish: wanted === 'hg' });
+
 const viaGemini = async ({ mimeType, buffer }, { language }) => {
   const key = process.env.GEMINI_API_KEY;
   if (!key) return { ok: false, reason: 'GEMINI_API_KEY is not set' };
@@ -179,25 +188,26 @@ const transcribe = async (dataUrl, { language: wanted = 'auto' } = {}) => {
   if (clip.buffer.length < 2000) return { ok: false, reason: 'The clip is too short - hold the mic and speak' };
   if (clip.buffer.length > 8 * 1024 * 1024) return { ok: false, reason: 'The clip is too long - keep it under a minute' };
 
-  const finish = async (r) => (wanted === 'hg' ? { ...r, text: await toHinglish(r.text), script: 'roman' } : r);
+  // A road that already wrote roman Hinglish (Sarvam codemix) skips the rewrite.
+  const finish = async (r) => (wanted === 'hg' && r.script !== 'roman' ? { ...r, text: await toHinglish(r.text), script: 'roman' } : r);
 
   /*
-   * Three roads, in the order that spends the scarcest quota last. Each
+   * Four roads, in the order that spends the scarcest quota last. Each
    * road's transcript passes the gate; one that is noise sends the clip to
    * the next company rather than to the person. A 4xx from the first road
    * is about the clip (unsupported file, too large) and comes straight
    * back - no point asking anyone else.
    */
-  const roads = [['Groq', viaGroq], ['Cloudflare', viaCloudflare], ['Gemini', viaGemini]];
+  const roads = [['Groq', viaGroq], ['Sarvam', viaSarvam], ['Cloudflare', viaCloudflare], ['Gemini', viaGemini]];
   const reasons = [];
   let heard = null;
   for (let i = 0; i < roads.length; i += 1) {
     const [name, road] = roads[i];
-    let r = await road(clip, { language });
+    let r = await road(clip, { language, wanted });
     // Auto-detect wandered off (Icelandic, Welsh, Nepali…) - a short clip does
     // that. Hindi is the shop's default; one more pass with it forced.
     if (r.ok && language === 'auto' && r.language && !EXPECTED.has(String(r.language).toLowerCase())) {
-      const again = await road(clip, { language: 'hi' });
+      const again = await road(clip, { language: 'hi', wanted });
       if (again.ok) r = { ...again, redetected: r.language };
     }
     if (r.ok) {

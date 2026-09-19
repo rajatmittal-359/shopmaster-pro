@@ -1,0 +1,37 @@
+{
+  "generatedAt": "2026-09-19T05:47:37.328Z",
+  "hi": [
+    "https://res.cloudinary.com/drpd6qxis/video/upload/v1789796710/shopmaster-lessons/hi-1.mp3",
+    "https://res.cloudinary.com/drpd6qxis/video/upload/v1789796721/shopmaster-lessons/hi-2.mp3",
+    "https://res.cloudinary.com/drpd6qxis/video/upload/v1789796732/shopmaster-lessons/hi-3.mp3",
+    "https://res.cloudinary.com/drpd6qxis/video/upload/v1789796742/shopmaster-lessons/hi-4.mp3",
+    "https://res.cloudinary.com/drpd6qxis/video/upload/v1789796748/shopmaster-lessons/hi-5.mp3",
+    "https://res.cloudinary.com/drpd6qxis/video/upload/v1789796779/shopmaster-lessons/hi-6.mp3",
+    "https://res.cloudinary.com/drpd6qxis/video/upload/v1789796805/shopmaster-lessons/hi-7.mp3"
+  ],
+  "en": [
+    "https://res.cloudinary.com/drpd6qxis/video/upload/v1789796811/shopmaster-lessons/en-1.mp3",
+    "https://res.cloudinary.com/drpd6qxis/video/upload/v1789796822/shopmaster-lessons/en-2.mp3",
+    "https://res.cloudinary.com/drpd6qxis/video/upload/v1789796828/shopmaster-lessons/en-3.mp3",
+    "https://res.cloudinary.com/drpd6qxis/video/upload/v1789796834/shopmaster-lessons/en-4.mp3",
+    "https://res.cloudinary.com/drpd6qxis/video/upload/v1789796839/shopmaster-lessons/en-5.mp3",
+    "https://res.cloudinary.com/drpd6qxis/video/upload/v1789796844/shopmaster-lessons/en-6.mp3",
+    "https://res.cloudinary.com/drpd6qxis/video/upload/v1789796853/shopmaster-lessons/en-7.mp3"
+  ],
+  "hashes": {
+    "hi-1": "71db4c24b9",
+    "hi-2": "a24d6210d8",
+    "hi-3": "095dbf1fa0",
+    "hi-4": "b30abb99e8",
+    "hi-5": "a7bb946d93",
+    "hi-6": "30fc279db1",
+    "hi-7": "2e35499c7d",
+    "en-1": "7b51f871f2",
+    "en-2": "ba8ccc7eb8",
+    "en-3": "c6d53e8a65",
+    "en-4": "73d78214dd",
+    "en-5": "0a91bd1bb2",
+    "en-6": "e0b3b40466",
+    "en-7": "923f17bcab"
+  }
+}

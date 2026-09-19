@@ -725,12 +725,14 @@ const adminRoads = async (req, res) => {
       { key: 'cloudflare', name: 'Cloudflare Workers AI (Llama 3.3 70B)', has: Boolean(process.env.CLOUDFLARE_API_TOKEN && process.env.CLOUDFLARE_ACCOUNT_ID), status: process.env.CLOUDFLARE_API_TOKEN ? 'ok' : 'off', note: '10,000 neurons/day, shared with image edits. Balance: Cloudflare → AI → Workers AI.' },
       { key: 'pollinations', name: 'Pollinations gpt-5.4-nano', has: Boolean(process.env.POLLINATIONS_API_KEY), status: process.env.POLLINATIONS_API_KEY ? 'ok' : 'off', note: 'Last road. No daily cap, slower, plainer; reads photos.' },
     ];
-    // The ears, in their order (plan 2.37): Groq's free Whisper, the same
-    // Whisper on Cloudflare's quota, Gemini last because every clip it hears
-    // is a draft it cannot write.
+    // The ears, in their order (plan 2.37): Groq's free Whisper, Sarvam's
+    // Indic saaras (paid per second, so second), the same Whisper on
+    // Cloudflare's quota, Gemini last because every clip it hears is a draft
+    // it cannot write.
     const cf = Boolean(process.env.CLOUDFLARE_API_TOKEN && process.env.CLOUDFLARE_ACCOUNT_ID);
     const voice = [
       { key: 'groq-whisper', name: 'Groq Whisper large-v3-turbo', status: process.env.GROQ_API_KEY ? 'ok' : 'off', note: '2,000 clips a day, fastest.' },
+      { key: 'sarvam-saaras', name: 'Sarvam saaras (Indic)', status: process.env.SARVAM_API_KEY ? 'ok' : 'off', note: 'Indian speech; roman Hinglish straight from the clip. ₹30 an hour from ₹100 free credits.' },
       { key: 'cf-whisper', name: 'Cloudflare Whisper large-v3-turbo', status: cf ? 'ok' : 'off', note: 'Same model, another quota: ~12 neurons a 15-second clip.' },
       { key: 'gemini-audio', name: 'Gemini audio', status: process.env.GEMINI_API_KEY ? 'ok' : 'off', note: 'Last - shares the drafting quota.' },
     ];
