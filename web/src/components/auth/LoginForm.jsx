@@ -35,6 +35,9 @@ export default function LoginForm({ next = '/' }) {
    * the shoulder-surfing case is real too - and it never persists.
    */
   const [showPassword, setShowPassword] = useState(false);
+  // The second step (19 Sep 2026): a seller or admin on a device this account has
+  // not used gets an emailed code after the right password. `code` holds it.
+  const [code, setCode] = useState('');
 
   const set = (key) => (e) => setForm({ ...form, [key]: e.target.value });
 
@@ -55,6 +58,10 @@ export default function LoginForm({ next = '/' }) {
         setState({ status: 'unverified', email: data.email || form.email });
         return;
       }
+      if (res.status === 202 && data.code === 'otp_required') {
+        setState({ status: 'code', message: data.message, email: data.email || form.email });
+        return;
+      }
       if (!res.ok) throw new Error(data.message || 'Could not sign you in');
 
       setSession({ role: data.role, user: data.user });
@@ -67,6 +74,61 @@ export default function LoginForm({ next = '/' }) {
       setState({ status: 'error', message: err.message });
     }
   };
+
+  const finishWithCode = async (e) => {
+    e.preventDefault();
+    setState((st) => ({ ...st, busy: true }));
+    try {
+      const res = await fetch(`${apiBase}/auth/login/code`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: state.email, otp: code }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.message || 'That code did not work');
+      setSession({ role: data.role, user: data.user });
+      router.replace(next);
+      router.refresh();
+    } catch (err) {
+      setState((st) => ({ ...st, busy: false, error: err.message }));
+    }
+  };
+
+  const resendCode = async () => {
+    const res = await fetch(`${apiBase}/auth/login/code/resend`, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: state.email }) });
+    const data = await res.json().catch(() => ({}));
+    setState((st) => ({ ...st, error: null, note: data.message }));
+  };
+
+  if (state.status === 'code') {
+    return (
+      <form onSubmit={finishWithCode} className="space-y-4">
+        <p className="text-sm text-muted-foreground">{state.message}</p>
+        <div>
+          <label htmlFor="login-code" className="text-sm font-medium">
+            The code from the email
+          </label>
+          <Input id="login-code" inputMode="numeric" autoComplete="one-time-code" autoFocus required value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))} className="mt-1" />
+        </div>
+        <Button type="submit" className="w-full" size="lg" disabled={state.busy || code.length !== 6}>
+          {state.busy ? 'Checking…' : 'Sign in'}
+        </Button>
+        <p aria-live="polite" className="min-h-5 text-sm">
+          {state.error && <span className="text-destructive">{state.error}</span>}
+          {state.note && !state.error && <span className="text-muted-foreground">{state.note}</span>}
+        </p>
+        <div className="flex justify-between text-sm">
+          <Button type="button" variant="link" size="sm" className="px-0" onClick={resendCode}>
+            Send a new code
+          </Button>
+          <Button type="button" variant="link" size="sm" className="px-0" onClick={() => setState({ status: 'idle' })}>
+            Back
+          </Button>
+        </div>
+      </form>
+    );
+  }
 
   return (
     <form onSubmit={submit} className="space-y-4">

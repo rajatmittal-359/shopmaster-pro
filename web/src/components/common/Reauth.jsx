@@ -17,20 +17,25 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
  * sees one password field, not an error. Amazon does exactly this before a
  * payment method changes.
  *
- * A Google-only account has no password; it is told to set one under
- * Account first (changePassword allows that without a current one).
+ * "Email me a code instead" covers a Google-only account (no password) and
+ * anyone who prefers it: POST /auth/reauth/code mails a six-digit code,
+ * POST /auth/reauth { otp } confirms it - same ten-minute cookie.
  */
 const Ctx = createContext(null);
 
 export function ReauthProvider({ children }) {
   const [open, setOpen] = useState(false);
   const [password, setPassword] = useState('');
+  const [mode, setMode] = useState('password'); // 'password' | 'code'
+  const [otp, setOtp] = useState('');
   const [state, setState] = useState({ status: 'idle' });
   const pending = useRef(null);
 
   const close = useCallback((ok) => {
     setOpen(false);
     setPassword('');
+    setOtp('');
+    setMode('password');
     setState({ status: 'idle' });
     const p = pending.current;
     pending.current = null;
@@ -50,8 +55,19 @@ export function ReauthProvider({ children }) {
     e.preventDefault();
     setState({ status: 'sending' });
     try {
-      await authedFetch('/auth/reauth', { method: 'POST', body: { password } });
+      await authedFetch('/auth/reauth', { method: 'POST', body: mode === 'code' ? { otp } : { password } });
       close(true);
+    } catch (err) {
+      setState({ status: 'error', message: err.message });
+    }
+  };
+
+  const sendCode = async () => {
+    setState({ status: 'sending' });
+    try {
+      const d = await authedFetch('/auth/reauth/code', { method: 'POST' });
+      setMode('code');
+      setState({ status: 'idle', note: d.message });
     } catch (err) {
       setState({ status: 'error', message: err.message });
     }
@@ -83,17 +99,30 @@ export function ReauthProvider({ children }) {
               <DialogTitle>Confirm it is you</DialogTitle>
               <DialogDescription>This changes money or account details, so we ask for your password once more. It holds for ten minutes.</DialogDescription>
             </DialogHeader>
-            <div className="space-y-1.5">
-              <Label htmlFor="reauth-password">Password</Label>
-              <Input id="reauth-password" type="password" autoComplete="current-password" autoFocus required value={password} onChange={(e) => setPassword(e.target.value)} />
-              <p className="text-xs text-muted-foreground">Signed in with Google and never set a password? Set one under Account → Password first.</p>
-            </div>
+            {mode === 'password' ? (
+              <div className="space-y-1.5">
+                <Label htmlFor="reauth-password">Password</Label>
+                <Input id="reauth-password" type="password" autoComplete="current-password" autoFocus value={password} onChange={(e) => setPassword(e.target.value)} />
+                <button type="button" onClick={sendCode} className="text-xs text-brand-ink underline">
+                  No password (signed in with Google)? Email me a code instead
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-1.5">
+                <Label htmlFor="reauth-code">The code from the email</Label>
+                <Input id="reauth-code" inputMode="numeric" autoComplete="one-time-code" autoFocus value={otp} onChange={(e) => setOtp(e.target.value.replace(/[^0-9]/g, '').slice(0, 6))} />
+                {state.note && <p className="text-xs text-muted-foreground">{state.note}</p>}
+                <button type="button" onClick={sendCode} className="text-xs text-brand-ink underline">
+                  Send a new code
+                </button>
+              </div>
+            )}
             {state.status === 'error' && <p className="text-sm text-destructive">{state.message}</p>}
             <DialogFooter>
               <Button type="button" variant="ghost" onClick={() => close(false)}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={state.status === 'sending' || !password}>
+              <Button type="submit" disabled={state.status === 'sending' || (mode === 'password' ? !password : otp.length !== 6)}>
                 {state.status === 'sending' ? 'Checking…' : 'Confirm'}
               </Button>
             </DialogFooter>

@@ -13,6 +13,7 @@ import NotForThisAccount from '@/components/common/NotForThisAccount';
 import NotificationPrefs from '@/components/common/NotificationPrefs';
 import AccountStanding from '@/components/account/AccountStanding';
 import Devices from '@/components/account/Devices';
+import { useReauth } from '@/components/common/Reauth';
 
 /**
  * Account - the page every marketplace has and ours did not.
@@ -47,6 +48,11 @@ export default function AccountView() {
   const [pw, setPw] = useState({ current: '', next: '', again: '' });
   const [busy, setBusy] = useState('');
   const [asking, setAsking] = useState(false);
+  const reauth = useReauth();
+  // Changing the sign-in email: step-up, then a code to the NEW address.
+  const [emailNext, setEmailNext] = useState('');
+  const [emailCode, setEmailCode] = useState('');
+  const [emailStage, setEmailStage] = useState('idle'); // idle | code
 
   if (!signedIn) return <NotForThisAccount />;
 
@@ -80,10 +86,43 @@ export default function AccountView() {
     }
   };
 
+  const requestEmail = async (e) => {
+    e.preventDefault();
+    setBusy('email');
+    try {
+      const d = await reauth.run(() => authedFetch('/auth/email/request', { method: 'POST', body: { email: emailNext.trim() } }));
+      toast(d.message);
+      setEmailStage('code');
+    } catch (err) {
+      if (err.code !== 'reauth_cancelled') toast.error(err.message);
+    } finally {
+      setBusy('');
+    }
+  };
+
+  const confirmEmail = async (e) => {
+    e.preventDefault();
+    setBusy('email');
+    try {
+      const d = await authedFetch('/auth/email/confirm', { method: 'POST', body: { otp: emailCode } });
+      setSession({ role: d.role, user: d.user });
+      toast.success(d.message);
+      setEmailStage('idle');
+      setEmailNext('');
+      setEmailCode('');
+      router.refresh();
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setBusy('');
+    }
+  };
+
   const deleteAccount = async () => {
     setBusy('delete');
     try {
-      const d = await authedFetch('/auth/me', { method: 'DELETE' });
+      // The most final action there is: the password once more (step-up).
+      const d = await reauth.run(() => authedFetch('/auth/me', { method: 'DELETE' }));
       clearSession();
       toast(d.message || 'Your account has been deleted.');
       router.push('/');
@@ -98,7 +137,7 @@ export default function AccountView() {
     <div className="space-y-6">
       {/* Fair Returns: an account under a restriction sees the reason here first. */}
       <AccountStanding />
-      <Section title="Who you are" lead={`Signed in as ${user?.email || ''}. The email cannot be changed here - write to us if it must.`}>
+      <Section title="Who you are" lead={`Signed in as ${user?.email || ''}.`}>
         <form onSubmit={saveName} className="flex flex-wrap items-end gap-3">
           <div className="min-w-64 flex-1 space-y-1.5">
             <Label htmlFor="name">Name</Label>
@@ -108,6 +147,33 @@ export default function AccountView() {
             {busy === 'name' ? 'Saving…' : 'Save'}
           </Button>
         </form>
+      </Section>
+
+      <Section title="Sign-in email" lead="Your email is the key to the account. Changing it asks for your password, then a code sent to the new address; every other device is signed out.">
+        {emailStage === 'idle' ? (
+          <form onSubmit={requestEmail} className="flex flex-wrap items-end gap-3">
+            <div className="min-w-64 flex-1 space-y-1.5">
+              <Label htmlFor="email-next">New email</Label>
+              <Input id="email-next" type="email" value={emailNext} onChange={(e) => setEmailNext(e.target.value)} required />
+            </div>
+            <Button type="submit" disabled={busy === 'email' || !emailNext}>
+              {busy === 'email' ? 'Sending…' : 'Send code'}
+            </Button>
+          </form>
+        ) : (
+          <form onSubmit={confirmEmail} className="flex flex-wrap items-end gap-3">
+            <div className="min-w-64 flex-1 space-y-1.5">
+              <Label htmlFor="email-code">The code sent to {emailNext}</Label>
+              <Input id="email-code" inputMode="numeric" autoComplete="one-time-code" value={emailCode} onChange={(e) => setEmailCode(e.target.value.replace(/[^0-9]/g, '').slice(0, 6))} required />
+            </div>
+            <Button type="submit" disabled={busy === 'email' || emailCode.length !== 6}>
+              {busy === 'email' ? 'Checking…' : 'Change email'}
+            </Button>
+            <Button type="button" variant="ghost" onClick={() => { setEmailStage('idle'); setEmailCode(''); }}>
+              Cancel
+            </Button>
+          </form>
+        )}
       </Section>
 
       <Section title="Password" lead="If you signed up with Google and never set a password, leave the current one empty.">

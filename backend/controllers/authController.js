@@ -22,6 +22,27 @@ const Seller = require('../models/Seller');
 const sessions = require('../utils/auth/session');
 // Was used in three handlers without ever being required - an error there threw ReferenceError instead of answering.
 const { sendError } = require('../utils/apiError');
+const codes = require('../utils/auth/oneTimeCode');
+const { isDisposable } = require('../utils/auth/disposableDomains');
+
+/*
+ * Second step on a new device (19 Sep 2026): the roles that touch money -
+ * seller, admin - get an emailed code the first time a device signs in
+ * (no session from that user-agent in 90 days, and the account has signed
+ * in before). Shopify makes 2FA compulsory for staff; this is the free
+ * version of the same idea. Customers get the "new sign-in" mail only.
+ */
+const SECOND_STEP_ROLES = new Set(['seller', 'admin']);
+const needsSecondStep = async (user, req) => {
+  if (!SECOND_STEP_ROLES.has(user.role)) return false;
+  const Session = require('../models/Session');
+  const { ua } = { ua: String(req.headers['user-agent'] || '').slice(0, 200) };
+  const [known, any] = await Promise.all([
+    Session.countDocuments({ userId: user._id, ua, createdAt: { $gt: new Date(Date.now() - 90 * 24 * 3600 * 1000) } }),
+    Session.countDocuments({ userId: user._id }),
+  ]);
+  return any > 0 && known === 0;
+};
 
 /*
  * Sign-in lock (19 Sep 2026): ten wrong passwords lock the account for
@@ -107,6 +128,10 @@ exports.register = async (req, res) => {
 
     if (!name || !email || !password) {
       return res.status(400).json({ message: 'Name, email and password required' });
+    }
+
+    if (isDisposable(email)) {
+      return res.status(400).json({ message: 'Please use a real email address - temporary inboxes cannot receive order updates or password resets.' });
     }
 
     const existingUser = await User.findOne({ email });
@@ -401,10 +426,50 @@ exports.login = async (req, res) => {
       });
     }
 
+    if (await needsSecondStep(user, req)) {
+      const full = await User.findById(user._id).select('+oneTimeCode');
+      const sent = await codes.sendCode(full, 'login');
+      if (!sent.ok && !sent.retryInSeconds) return res.status(500).json({ message: sent.reason });
+      sessions.record('login_second_step', user._id, req);
+      return res.status(202).json({ message: `This device is new to your account. We sent a code to ${maskEmail(user.email)}.`, code: 'otp_required', email: user.email, retryInSeconds: sent.retryInSeconds || 0 });
+    }
+
     return signedIn(user, req, res, 'Login successful');
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+const maskEmail = (e = '') => e.replace(/^(.)(.*)(@.*)$/, (m, a, b, c) => a + '*'.repeat(Math.min(6, b.length)) + c);
+
+/** The second step: the emailed code after a correct password on a new device. */
+exports.loginWithCode = async (req, res) => {
+  try {
+    const { email, otp } = req.body || {};
+    if (!email || !otp) return res.status(400).json({ message: 'Email and code required' });
+    const user = await User.findOne({ email }).select('+oneTimeCode');
+    if (!user) return res.status(400).json({ message: 'That code is not right' });
+    const r = await codes.checkCode(user, 'login', otp);
+    if (!r.ok) return res.status(400).json({ message: r.reason });
+    if (user.isBlocked) return res.status(403).json({ message: 'This account has been blocked. Write to us if you think that is a mistake.' });
+    return signedIn(user, req, res, 'Login successful');
+  } catch (error) {
+    return sendError(res, error);
+  }
+};
+
+/** Send the login code again (60-second cooldown). */
+exports.resendLoginCode = async (req, res) => {
+  try {
+    const user = await User.findOne({ email: req.body?.email }).select('+oneTimeCode');
+    // Same answer whether or not the address exists - no account enumeration.
+    if (!user || user.oneTimeCode?.purpose !== 'login') return res.json({ message: 'If a sign-in is waiting for a code, a new one has been sent.' });
+    const sent = await codes.sendCode(user, 'login');
+    if (!sent.ok) return res.status(429).json({ message: sent.reason, retryInSeconds: sent.retryInSeconds || 0 });
+    return res.json({ message: 'A new code has been sent.' });
+  } catch (error) {
+    return sendError(res, error);
   }
 };
 
@@ -722,18 +787,76 @@ exports.reauth = async (req, res) => {
     const user = await User.findById(req.user._id).select('+password');
     let ok = false;
     if (req.body?.password && user.password) ok = await user.comparePassword(String(req.body.password));
-    else if (req.body?.credential) {
+    else if (req.body?.otp) {
+      const full = await User.findById(req.user._id).select('+oneTimeCode');
+      const r = await codes.checkCode(full, 'stepup', req.body.otp);
+      ok = r.ok;
+      if (!ok) return res.status(400).json({ message: r.reason, code: 'reauth_failed' });
+    } else if (req.body?.credential) {
       const { verifyGoogleCredential } = require('../utils/googleIdentity');
       const identity = await verifyGoogleCredential(req.body.credential).catch(() => null);
       ok = Boolean(identity && identity.googleId && identity.googleId === user.googleId);
     }
     if (!ok) {
       sessions.record('reauth_fail', user._id, req);
-      return res.status(400).json({ message: user.password ? 'That password is not right' : 'Confirm with Google to continue', code: 'reauth_failed' });
+      return res.status(400).json({ message: user.password ? 'That password is not right' : 'Use the emailed code to continue', code: 'reauth_failed' });
     }
     const token = sessions.grantReauth(res, user, req.auth?.sid);
     sessions.record('reauth', user._id, req);
     return res.json({ message: 'Confirmed', reauthToken: token, expiresIn: sessions.REAUTH_TTL_SECONDS });
+  } catch (error) {
+    return sendError(res, error);
+  }
+};
+
+/** Step-up by emailed code - for an account without a password, or anyone who prefers it. */
+exports.reauthCode = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).select('+oneTimeCode');
+    const sent = await codes.sendCode(user, 'stepup');
+    if (!sent.ok) return res.status(429).json({ message: sent.reason, retryInSeconds: sent.retryInSeconds || 0 });
+    return res.json({ message: `A code has been sent to ${maskEmail(user.email)}.` });
+  } catch (error) {
+    return sendError(res, error);
+  }
+};
+
+/*
+ * Changing the sign-in email (19 Sep 2026). Two steps behind step-up: the
+ * code goes to the NEW address, so it is proven before it becomes the
+ * login; the old address is told afterwards. Every other device is signed
+ * out - the email is the account's key.
+ */
+exports.requestEmailChange = async (req, res) => {
+  try {
+    const next = String(req.body?.email || '').trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(next)) return res.status(400).json({ message: 'That does not look like an email address' });
+    if (isDisposable(next)) return res.status(400).json({ message: 'Please use a real email address - temporary inboxes cannot receive order updates or password resets.' });
+    if (next === String(req.user.email).toLowerCase()) return res.status(400).json({ message: 'That is already your email' });
+    if (await User.exists({ email: next })) return res.status(400).json({ message: 'That email is already on another account' });
+    const user = await User.findById(req.user._id).select('+oneTimeCode');
+    const sent = await codes.sendCode(user, 'email_change', { to: next });
+    if (!sent.ok) return res.status(429).json({ message: sent.reason, retryInSeconds: sent.retryInSeconds || 0 });
+    return res.json({ message: `A code has been sent to ${next}. Enter it here to finish.` });
+  } catch (error) {
+    return sendError(res, error);
+  }
+};
+
+exports.confirmEmailChange = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).select('+oneTimeCode');
+    const r = await codes.checkCode(user, 'email_change', req.body?.otp);
+    if (!r.ok) return res.status(400).json({ message: r.reason });
+    if (await User.exists({ email: r.target })) return res.status(400).json({ message: 'That email is already on another account' });
+    const old = user.email;
+    user.email = r.target;
+    user.isVerified = true;
+    await user.save();
+    sessions.record('email_changed', user._id, req, { from: old, to: r.target });
+    sendEmail({ to: old, subject: 'ShopMaster Pro - your sign-in email was changed', text: `The email on your ShopMaster Pro account was changed to ${r.target}. If this was not you, reply to this mail now.` }).catch(() => {});
+    await sessions.revokeAll(user, req, 'email_changed');
+    return signedIn(user, req, res, `Your email is now ${r.target}. Every other device has been signed out.`);
   } catch (error) {
     return sendError(res, error);
   }

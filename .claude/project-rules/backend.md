@@ -76,4 +76,5 @@ WHY block above the behaviour; `FRONTEND-PLAN.md` §4 if the interface changed, 
 - Ending sessions: `sessions.revoke(sid, userId)` for one device,
   `sessions.revokeAll(user, req, reason)` for all (bumps tokenVersion).
   Password reset and change already do it.
-
+- One-time codes: `utils/auth/oneTimeCode.sendCode(user, purpose, {to})` / `checkCode(user, purpose, code)` with purposes `login | stepup | email_change`; the user must be loaded with `.select('+oneTimeCode')`. Never store a code in plain text; never add SMS without a decision (it costs per message).
+- Sign-up refuses throwaway domains (`utils/auth/disposableDomains.isDisposable`); the same check guards an email change.

@@ -114,6 +114,16 @@
         failedLogins: { type: Number, default: 0 },
         lockUntil: { type: Date, default: null },
         lastLoginAt: { type: Date, default: null },
+        /*
+         * The one-time code in flight, if any (utils/auth/oneTimeCode): its
+         * hash, what it is for (login on a new device / step-up / email
+         * change), where it went, when it dies. Never selected by default.
+         */
+        oneTimeCode: {
+          type: { hash: String, purpose: String, target: String, expiresAt: Date, sentAt: Date, tries: Number },
+          default: undefined,
+          select: false,
+        },
 
         /**
          * Where each notification category also goes (plan 2.30). The bell

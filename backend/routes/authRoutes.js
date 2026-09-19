@@ -45,7 +45,7 @@ router.post('/reset-password', resetPassword);
 const account = require('../controllers/authController');
 router.patch('/me', authMiddleware, account.updateMe);
 router.post('/change-password', authMiddleware, account.changePassword);
-router.delete('/me', authMiddleware, account.deleteMe);
+router.delete('/me', authMiddleware, require('../middlewares/requireRecentAuth'), account.deleteMe);
 
 router.get('/me', authMiddleware, async (req, res) => {
   const { capabilitiesFor } = require('../utils/capabilities');
@@ -73,5 +73,13 @@ router.post('/logout-all', authMiddleware, auth.logoutAll);
 router.get('/sessions', authMiddleware, auth.listSessions);
 router.delete('/sessions/:id', authMiddleware, auth.deleteSession);
 router.post('/reauth', authMiddleware, auth.reauth);
+router.post('/reauth/code', authMiddleware, auth.reauthCode);
+// The second step after a correct password on a device the account has not used (seller/admin).
+router.post('/login/code', auth.loginWithCode);
+router.post('/login/code/resend', auth.resendLoginCode);
+// Changing the sign-in email: step-up first, then a code to the new address.
+router.post('/email/request', authMiddleware, require('../middlewares/requireRecentAuth'), auth.requestEmailChange);
+router.post('/email/confirm', authMiddleware, auth.confirmEmailChange);
+
 
 module.exports = router;
