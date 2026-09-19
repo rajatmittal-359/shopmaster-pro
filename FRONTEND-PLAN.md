@@ -2262,3 +2262,29 @@ two together are the evidence. No barcode (the seller reads the order
 number themselves), no PDF library (the browser prints). The panel chrome
 hides on print. Learn lesson 2 walks the two minutes.
 
+### 4.45 Compliance page, catalogue sweep, eval trend (19 Sep 2026)
+
+Built in one sitting from the "no-blocker" list while Rajat was away, each
+against a reference already in this plan.
+
+- **/compliance** - the E-Commerce (Amendment) Rules 2026 duties in one
+  place: the Dark Patterns Guidelines' 13 named patterns, one line each on
+  what this site does (written against the code, not aspiration), the two
+  extra duties (no own-brand promotion from consumer data, no bundled
+  fees), and the annual self-audit certificate rendered from three Settings
+  fields. Reference: how Flipkart's and Amazon.in's legal pages state
+  rule-by-rule compliance; ours is shorter and names the code paths.
+  Contact page fixed on the way: the platform sells nothing itself.
+- **Catalogue sweep** (Thursday) - Amazon's Listing Quality dashboard and
+  Shopify's "products needing attention", as a weekly push instead of a
+  page: the three worst facts per seller with the edit button, under the
+  same Growth switch as Monday's note. Deterministic; no model.
+- **Eval trend** on /admin/ask - twelve weekly bars of the assistant's
+  fixed exam (code-graded), the road that answered, and the failing cases
+  in words; the thing to read after a prompt change. Weekly rather than
+  nightly because eleven real answers are a slice of a free Gemini day.
+- **/admin/google** - the four free Google doors (GA4 insights, Search
+  Console Insights, Product Studio, GBP suggested replies) listed on the
+  Outside card so nobody buys a wrapper for them.
+- **RETURN_KIND_REQUIRED** - the 2.29 cutover switch as an env flag, tested.
+

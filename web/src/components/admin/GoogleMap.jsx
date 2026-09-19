@@ -23,6 +23,18 @@ const INSIDE = [
   ['Hinglish search + product vectors', 'Shoppers typing "lal jhumka" find red earrings - on ShopMaster, not Google, but the same sale'],
 ];
 
+/*
+ * Free things inside Google's own consoles that read the data we already send
+ * (plan 2.28). Not integrations - doors. Listed so the weekend admin opens
+ * them instead of buying a tool that wraps them.
+ */
+const FREE_TOOLS = [
+  ['GA4 → Insights ("Ask insights")', 'Plain-language questions about traffic - "which pages did visitors from Jaipur open" - answered from the tag we already run.', 'https://analytics.google.com'],
+  ['Search Console Insights', 'The one-page read of what content is growing and which queries bring people - the same data as the Traffic card, Google’s framing.', 'https://search.google.com/search-console/insights'],
+  ['Merchant Center → Product Studio', 'Free product-scene images and background swaps from the approved feed - the same job as the seller photo studio, on Google’s quota, for products already in the feed.', 'https://merchants.google.com'],
+  ['Business Profile → Reviews → suggested replies', 'Google drafts the reply to each review; a tap posts it. The GBP guide on the seller Grow page says when to use it.', 'https://business.google.com'],
+];
+
 const OUTSIDE = [
   { task: 'Search Console - property verified, service account added', done: true, when: '12 Sep', href: 'https://search.google.com/search-console', next: 'Submit the new domain\'s sitemap at cutover' },
   { task: 'Merchant Center - products approved, Merchant API live, promotions feed', done: true, when: '13 Sep', href: 'https://merchants.google.com', next: 'Link the house shop’s Business Profile once it is live' },
@@ -76,6 +88,20 @@ export default function GoogleMap() {
                 {o.next && <span className="block text-xs text-muted-foreground">{o.done ? 'Next: ' : ''}{o.next}</span>}
               </span>
               <a href={o.href} target="_blank" rel="noreferrer" className="shrink-0 text-muted-foreground hover:text-foreground" aria-label={`Open ${o.task}`}>
+                <ExternalLink className="size-4" />
+              </a>
+            </li>
+          ))}
+        </ul>
+        <p className="mt-4 text-sm font-medium">Free, already fed by our data - open, do not buy</p>
+        <ul className="mt-1 divide-y text-sm">
+          {FREE_TOOLS.map(([what, gives, href]) => (
+            <li key={what} className="flex gap-2 py-2">
+              <span className="min-w-0 flex-1">
+                <span className="font-medium">{what}</span>
+                <span className="block text-xs text-muted-foreground">{gives}</span>
+              </span>
+              <a href={href} target="_blank" rel="noreferrer" className="shrink-0 text-muted-foreground hover:text-foreground" aria-label={`Open ${what}`}>
                 <ExternalLink className="size-4" />
               </a>
             </li>
