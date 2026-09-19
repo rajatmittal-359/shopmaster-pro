@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { authedFetch } from "@/lib/client";
+import { useReauth } from "@/components/common/Reauth";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -76,10 +77,12 @@ export default function Payouts() {
     };
   }, []);
 
+  const reauth = useReauth();
   const run = async (fn) => {
     setState({ status: "working" });
     try {
-      await fn();
+      // Paying out is money leaving: the API asks for the password again (step-up).
+      await reauth.run(fn);
       await load();
     } catch (err) {
       setState({ status: "error", message: err.message });

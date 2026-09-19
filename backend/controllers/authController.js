@@ -19,7 +19,36 @@ const agreementRefusal = (body = {}) => {
 };
 const acceptedNow = () => ({ version: sellerRules.version, acceptedAt: new Date() });
 const Seller = require('../models/Seller');
-const { generateToken } = require('../utils/tokenUtils');
+const sessions = require('../utils/auth/session');
+// Was used in three handlers without ever being required - an error there threw ReferenceError instead of answering.
+const { sendError } = require('../utils/apiError');
+
+/*
+ * Sign-in lock (19 Sep 2026): ten wrong passwords lock the account for
+ * fifteen minutes, whatever address they came from, and the owner is
+ * mailed - the per-IP limiter does not stop a botnet trying one account.
+ */
+const LOCK_AFTER = 10;
+const LOCK_MINUTES = 15;
+
+const userBody = (user) => ({ id: user._id, name: user.name, email: user.email, role: user.role });
+
+/** A fresh session on the response; the body the pages and the old app read. */
+const signedIn = async (user, req, res, message, extra = {}) => {
+  const issued = await sessions.issue(user, req, res);
+  User.updateOne({ _id: user._id }, { $set: { lastLoginAt: new Date(), failedLogins: 0, lockUntil: null } }).catch(() => {});
+  // A device this account has not signed in from in 90 days gets a mail - the
+  // one line that catches a stolen password before the order does.
+  setImmediate(async () => {
+    try {
+      if (await sessions.seenBefore(user._id, req)) return;
+      await require('../utils/notify').notify({ userId: user._id, role: user.role, category: 'account', title: 'New sign-in to your ShopMaster Pro account', body: `${sessions.describe(req.headers['user-agent'])} · if this was not you, change your password now.`, url: '/account', tag: `new-device-${user._id}-${Date.now()}`, mail: { subject: 'New sign-in to your ShopMaster Pro account', text: `Your account was just signed in to from ${sessions.describe(req.headers['user-agent'])} (${req.ip}). If this was you, nothing to do. If not, change your password at /account - that signs every device out.` } });
+    } catch (err) {
+      console.error('new-device mail failed:', err.message);
+    }
+  });
+  return res.json({ message, token: issued.token, expiresIn: issued.expiresIn, role: user.role, user: userBody(user), ...extra });
+};
 const sendEmail = require('../utils/sendEmail');
 const crypto = require('crypto');
 const { passwordResetEmail } = require('../utils/emailTemplates');
@@ -281,19 +310,10 @@ exports.googleSignIn = async (req, res) => {
       }
     }
 
-    const token = generateToken(user._id, user.role);
-
-    return res.json({
-      message: 'Signed in with Google',
-      token,
-      role: user.role,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-      },
-    });
+    if (user.isBlocked) {
+      return res.status(403).json({ message: 'This account has been blocked. Write to us if you think that is a mistake.' });
+    }
+    return signedIn(user, req, res, 'Signed in with Google');
   } catch (error) {
     console.error('GOOGLE SIGN-IN ERROR:', error.message);
     return res.status(500).json({ message: 'Could not sign you in just now' });
@@ -324,18 +344,7 @@ exports.verifyOtp = async (req, res) => {
     user.otpExpiry = undefined;
     await user.save();
 
-    const token = generateToken(user._id, user.role);
-
-    res.json({
-      message: 'Email verified successfully',
-      token,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role
-      }
-    });
+    return signedIn(user, req, res, 'Email verified successfully');
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error', error: error.message });
@@ -358,8 +367,24 @@ exports.login = async (req, res) => {
       return res.status(400).json({ message: 'Invalid credentials ! Please Signup first....' });
     }
 
-    const isMatch = await user.comparePassword(password);
+    if (user.lockUntil && user.lockUntil > new Date()) {
+      const mins = Math.max(1, Math.ceil((user.lockUntil - Date.now()) / 60000));
+      return res.status(429).json({ message: `Too many wrong attempts. Try again in ${mins} minute${mins > 1 ? 's' : ''}, or reset your password.`, code: 'locked' });
+    }
+
+    const isMatch = user.password ? await user.comparePassword(password) : false;
     if (!isMatch) {
+      const failed = (user.failedLogins || 0) + 1;
+      const update = { failedLogins: failed };
+      if (failed >= LOCK_AFTER) {
+        update.lockUntil = new Date(Date.now() + LOCK_MINUTES * 60000);
+        update.failedLogins = 0;
+        sessions.record('locked', user._id, req, { attempts: failed });
+        setImmediate(() => require('../utils/notify').notify({ userId: user._id, role: user.role, category: 'account', title: 'Your account was locked for 15 minutes', body: 'Ten wrong passwords in a row. If that was not you, reset your password.', url: '/forgot-password', tag: `locked-${user._id}-${Date.now()}`, mail: { subject: 'ShopMaster Pro: too many sign-in attempts', text: `Ten wrong passwords were tried on your account, so it is locked for ${LOCK_MINUTES} minutes. If that was not you, reset your password - that signs every device out.` } }).catch(() => {}));
+      } else {
+        sessions.record('login_fail', user._id, req);
+      }
+      await User.updateOne({ _id: user._id }, { $set: update });
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
@@ -376,19 +401,7 @@ exports.login = async (req, res) => {
       });
     }
 
-    const token = generateToken(user._id, user.role);
-
-    res.json({
-      message: 'Login successful',
-      token,
-      role: user.role,                 // ← IMPORTANT
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-      },
-    });
+    return signedIn(user, req, res, 'Login successful');
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error', error: error.message });
@@ -562,9 +575,12 @@ exports.resetPassword = async (req, res) => {
     if (!user.isVerified) user.isVerified = true;
 
     await user.save();
+    // A reset means the old password may be in someone else's hands: every
+    // device is signed out, every access token dies.
+    await sessions.revokeAll(user, req, 'password_reset');
 
     return res.json({
-      message: 'Your password has been changed. You can sign in with it now.',
+      message: 'Your password has been changed. Every device has been signed out; you can sign in with it now.',
     });
   } catch (error) {
     console.error(error);
@@ -602,7 +618,10 @@ exports.changePassword = async (req, res) => {
     }
     user.password = String(newPassword);
     await user.save();
-    res.json({ message: 'Password changed' });
+    // Every other device out; this one gets a fresh session so the person
+    // who just typed the new password is not asked to sign in again.
+    await sessions.revokeAll(user, req, 'password_changed');
+    return signedIn(user, req, res, 'Password changed. Every other device has been signed out.');
   } catch (error) {
     return sendError(res, error);
   }
@@ -639,3 +658,84 @@ exports.deleteMe = async (req, res) => {
     return sendError(res, error);
   }
 };
+
+/*
+ * Sessions (19 Sep 2026, utils/auth/session): refresh, sign out of this or
+ * every device, see the devices, and the step-up that money actions ask for.
+ */
+exports.refresh = async (req, res) => {
+  try {
+    const r = await sessions.rotate(req, res);
+    if (!r.ok) {
+      sessions.clearAuthCookies(res);
+      return res.status(401).json({ message: r.reason, code: r.reuse ? 'reuse' : 'no_session' });
+    }
+    return res.json({ token: r.token, expiresIn: r.expiresIn, role: r.user.role, user: userBody(r.user) });
+  } catch (error) {
+    return sendError(res, error);
+  }
+};
+
+exports.logout = async (req, res) => {
+  try {
+    if (req.auth?.sid) await sessions.revoke(req.auth.sid, req.user._id);
+    sessions.record('logout', req.user._id, req);
+    sessions.clearAuthCookies(res);
+    return res.json({ message: 'Signed out' });
+  } catch (error) {
+    return sendError(res, error);
+  }
+};
+
+exports.logoutAll = async (req, res) => {
+  try {
+    await sessions.revokeAll(req.user, req, 'logout_all');
+    sessions.clearAuthCookies(res);
+    return res.json({ message: 'Signed out of every device' });
+  } catch (error) {
+    return sendError(res, error);
+  }
+};
+
+exports.listSessions = async (req, res) => {
+  try {
+    return res.json({ sessions: await sessions.list(req.user._id, req.auth?.sid) });
+  } catch (error) {
+    return sendError(res, error);
+  }
+};
+
+exports.deleteSession = async (req, res) => {
+  try {
+    const r = await sessions.revoke(req.params.id, req.user._id);
+    if (!r.matchedCount) return res.status(404).json({ message: 'That device is not signed in' });
+    sessions.record('logout_device', req.user._id, req, { sid: req.params.id });
+    return res.json({ message: 'That device has been signed out' });
+  } catch (error) {
+    return sendError(res, error);
+  }
+};
+
+/** The password again (or Google, for an account without one) → ten minutes of step-up. */
+exports.reauth = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).select('+password');
+    let ok = false;
+    if (req.body?.password && user.password) ok = await user.comparePassword(String(req.body.password));
+    else if (req.body?.credential) {
+      const { verifyGoogleCredential } = require('../utils/googleIdentity');
+      const identity = await verifyGoogleCredential(req.body.credential).catch(() => null);
+      ok = Boolean(identity && identity.googleId && identity.googleId === user.googleId);
+    }
+    if (!ok) {
+      sessions.record('reauth_fail', user._id, req);
+      return res.status(400).json({ message: user.password ? 'That password is not right' : 'Confirm with Google to continue', code: 'reauth_failed' });
+    }
+    const token = sessions.grantReauth(res, user, req.auth?.sid);
+    sessions.record('reauth', user._id, req);
+    return res.json({ message: 'Confirmed', reauthToken: token, expiresIn: sessions.REAUTH_TTL_SECONDS });
+  } catch (error) {
+    return sendError(res, error);
+  }
+};
+

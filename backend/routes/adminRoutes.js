@@ -27,6 +27,8 @@ const {
 
 // All routes require admin role
 router.use(authMiddleware, roleMiddleware('admin'));
+// Step-up (19 Sep 2026): the password again before money moves - middlewares/requireRecentAuth.
+const requireRecentAuth = require('../middlewares/requireRecentAuth');
 
 // Seller management
 // NOTE: the path says "pending" but this returns EVERY seller, whatever their
@@ -60,6 +62,7 @@ router.post('/orders/:orderId/cancel', require('../controllers/adminController')
 // disagree about what happened, and to be seen to have decided.
 router.post(
   '/orders/:orderId/dispute/resolve',
+  requireRecentAuth,
   require('../controllers/adminController').resolveDispute
 );
 
@@ -67,6 +70,7 @@ router.post(
 // they are placed, so this only ever changes what happens from here on.
 router.patch(
   '/sellers/:sellerId/commission',
+  requireRecentAuth,
   require('../controllers/adminController').setSellerCommission
 );
 
@@ -83,7 +87,7 @@ router.get('/analytics', getAnalytics);
 router.get('/payouts/payable', getPayableSellers);
 router.get('/payouts', listPayouts);
 router.post('/payouts', createPayout);
-router.patch('/payouts/:payoutId/paid', settlePayout);
+router.patch('/payouts/:payoutId/paid', requireRecentAuth, settlePayout);
 router.patch('/payouts/:payoutId/failed', failPayout);
 
 // Today's AI spend across the platform, and who used it. Read-only.

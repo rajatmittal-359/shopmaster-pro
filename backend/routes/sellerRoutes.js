@@ -135,6 +135,7 @@ const {
 
 router.get('/earnings', getMyEarnings);
 router.get('/payout-details', getMyPayoutDetails);
-router.patch('/payout-details', updateMyPayoutDetails);
+// Step-up: where the money goes changes only with the password just typed (middlewares/requireRecentAuth).
+router.patch('/payout-details', require('../middlewares/requireRecentAuth'), updateMyPayoutDetails);
 
 module.exports = router;

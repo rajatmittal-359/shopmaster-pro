@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ChevronDown, ExternalLink, MoreHorizontal } from 'lucide-react';
 import Link from 'next/link';
 import { authedFetch } from '@/lib/client';
+import { useReauth } from '@/components/common/Reauth';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -174,7 +175,9 @@ export default function Sellers() {
       setState({ status: 'error', message: err.message });
     }
   };
-  const patch = (id, path, body) => run(() => authedFetch(`/admin/sellers/${id}${path}`, { method: 'PATCH', body }));
+  const reauth = useReauth();
+  // The commission change is the one PATCH here that moves money: step-up.
+  const patch = (id, path, body) => run(() => (path === '/commission' ? reauth.run(() => authedFetch(`/admin/sellers/${id}${path}`, { method: 'PATCH', body })) : authedFetch(`/admin/sellers/${id}${path}`, { method: 'PATCH', body })));
 
   const counts = useMemo(() => {
     const c = { waiting: 0, selling: 0, suspended: 0, turned: 0 };

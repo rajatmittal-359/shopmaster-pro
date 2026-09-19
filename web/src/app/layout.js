@@ -5,6 +5,7 @@ import Footer from '@/components/layout/Footer';
 import { BUSINESS } from '@/config/policy';
 import ThemeProvider from '@/components/theme/ThemeProvider';
 import { Toaster } from '@/components/ui/sonner';
+import { ReauthProvider } from '@/components/common/Reauth';
 import ShopChrome from '@/components/layout/ShopChrome';
 import { Suspense } from 'react';
 import GoogleAnalytics from '@/components/analytics/GoogleAnalytics';
@@ -65,6 +66,7 @@ export default function RootLayout({ children }) {
     >
       <body className="flex min-h-full flex-col bg-background text-foreground">
         <ThemeProvider>
+          <ReauthProvider>
           {/* The storefront's chrome, on storefront routes only. The seller and
               admin panels are their own application and bring their own bar -
               a shop's header on top of a dashboard is neither. */}
@@ -83,6 +85,7 @@ export default function RootLayout({ children }) {
           {/* One toaster for the whole site: undo after a removal, a word after
               a save. Bottom-right, out of the way of the sticky buy bar. */}
           <Toaster position="bottom-right" richColors closeButton />
+          </ReauthProvider>
         </ThemeProvider>
         {/* GA4 - loads nothing until NEXT_PUBLIC_GA_MEASUREMENT_ID is set. */}
         <Suspense fallback={null}>

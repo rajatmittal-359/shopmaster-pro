@@ -4,8 +4,8 @@ import { useEffect } from 'react';
 import Link from 'next/link';
 import { ShoppingBag, UserRound } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useSession, clearSession, setCapabilities } from '@/lib/session';
-import { authedFetch } from '@/lib/client';
+import { useSession, setCapabilities } from '@/lib/session';
+import { authedFetch, signOut as endSession } from '@/lib/client';
 import NotificationBell from '@/components/common/NotificationBell';
 import {
   DropdownMenu,
@@ -67,8 +67,9 @@ export default function HeaderAccount({ showCart = true }) {
     };
   }, [signedIn]);
 
-  const signOut = () => {
-    clearSession();
+  const signOut = async () => {
+    // The server ends this device's session and clears the cookies first.
+    await endSession();
     router.push('/');
     router.refresh();
   };

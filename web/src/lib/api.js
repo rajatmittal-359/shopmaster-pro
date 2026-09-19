@@ -15,19 +15,16 @@
 const CONFIGURED_API = process.env.NEXT_PUBLIC_API_URL || 'https://shopmaster-api-sg.onrender.com/api';
 
 /*
- * On a phone on the same Wi-Fi, the page is opened as http://192.168.x.x:3000
- * and "localhost:5000" would mean the phone itself. When the configured API is
- * a localhost one and the page is not on localhost, the API follows the page's
- * host - the laptop runs both. Production URLs are never touched.
+ * In the browser the API is always /api on the page's own origin - Next
+ * proxies it to the API service (next.config.mjs rewrites). That is what
+ * makes the session cookies first-party (19 Sep 2026): the API sets them,
+ * the browser keeps them for this site, no script can read them. It also
+ * means a phone on the same Wi-Fi works without knowing the API's port.
+ * On the server (pages rendering) the configured URL is called directly.
  */
 const resolveApi = () => {
   if (typeof window === 'undefined') return CONFIGURED_API;
-  const host = window.location.hostname;
-  if (host === 'localhost' || host === '127.0.0.1') return CONFIGURED_API;
-  if (!/^https?:\/\/(localhost|127\.0\.0\.1)(?=[:/])/.test(CONFIGURED_API)) return CONFIGURED_API;
-  // Through Next's own port (see next.config.mjs rewrites) - the only one a
-  // phone can reach on this laptop.
-  return `${window.location.origin}/dev-api`;
+  return `${window.location.origin}/api`;
 };
 const API = resolveApi();
 

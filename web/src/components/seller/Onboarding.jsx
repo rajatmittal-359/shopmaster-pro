@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { Check, Copy } from 'lucide-react';
 import { toast } from 'sonner';
 import { authedFetch } from '@/lib/client';
+import { useReauth } from '@/components/common/Reauth';
 import { apiBase } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -305,6 +306,7 @@ function PickupStep({ onDone }) {
 }
 
 function BankStep({ onDone }) {
+  const reauth = useReauth();
   const [f, setF] = useState({ accountHolderName: '', accountNumber: '', ifscCode: '', gstNumber: '' });
   const [again, setAgain] = useState('');
   const [busy, setBusy] = useState(false);
@@ -313,7 +315,7 @@ function BankStep({ onDone }) {
     e.preventDefault();
     setBusy(true);
     try {
-      await authedFetch('/seller/payout-details', { method: 'PATCH', body: f });
+      await reauth.run(() => authedFetch('/seller/payout-details', { method: 'PATCH', body: f }));
       toast.success('Bank account saved');
       await onDone();
     } catch (err) {

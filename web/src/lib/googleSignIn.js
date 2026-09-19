@@ -16,12 +16,13 @@ export const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '';
 export const exchangeGoogleCredential = async (credential) => {
   const res = await fetch(`${apiBase}/auth/google`, {
     method: 'POST',
+    credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ credential }),
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.message || 'Could not sign you in with Google');
-  setSession({ token: data.token, role: data.role, user: data.user });
+  setSession({ role: data.role, user: data.user });
   return data;
 };
 

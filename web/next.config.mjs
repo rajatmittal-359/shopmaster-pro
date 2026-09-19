@@ -55,13 +55,15 @@ const nextConfig = {
     return [
       { source: '/sitemap.xml', destination: `${api}/sitemap.xml` },
       /*
-       * Development only: a phone on the same Wi-Fi reaches the laptop on
-       * :3000 but not :5000 (this is a company laptop; the firewall is set by
-       * group policy and local rules are ignored). So in dev the API is also
-       * served through here as /dev-api/*, and lib/api.js points a non-localhost
-       * page at it. Never present in a production build.
+       * The API, first-party (19 Sep 2026 - sessions). The browser calls
+       * /api/* on THIS host and Next proxies it to the API service, so the
+       * session cookies the API sets are same-site cookies: httpOnly, Secure,
+       * SameSite=Lax, never visible to a script, never blocked by Safari as
+       * third-party. Server components keep calling the API directly (no
+       * hop). It also does what /dev-api did: a phone on the same Wi-Fi
+       * reaches the laptop on :3000 but not :5000.
        */
-      ...(process.env.NODE_ENV !== 'production' ? [{ source: '/dev-api/:path*', destination: `${api}/api/:path*` }] : []),
+      { source: '/api/:path*', destination: `${api}/api/:path*` },
     ];
   },
 

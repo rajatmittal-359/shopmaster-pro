@@ -12,6 +12,7 @@ import ActionDialog from '@/components/common/ActionDialog';
 import NotForThisAccount from '@/components/common/NotForThisAccount';
 import NotificationPrefs from '@/components/common/NotificationPrefs';
 import AccountStanding from '@/components/account/AccountStanding';
+import Devices from '@/components/account/Devices';
 
 /**
  * Account - the page every marketplace has and ours did not.
@@ -54,7 +55,7 @@ export default function AccountView() {
     setBusy('name');
     try {
       const d = await authedFetch('/auth/me', { method: 'PATCH', body: { name } });
-      setSession({ token: localStorage.getItem('smp_token'), role, user: { ...user, name: d.user.name } });
+      setSession({ role, user: { ...user, name: d.user.name } });
       toast.success('Name saved');
       router.refresh();
     } catch (err) {
@@ -132,6 +133,7 @@ export default function AccountView() {
       </Section>
 
       {/* Order updates: confirmed, shipped, delivered, refunds - where they also go (plan 2.30). */}
+      <Devices />
       <NotificationPrefs title="Order updates" lead="The bell has every update. Choose what also comes to your phone or email." />
 
       <Section title="Delete my account" lead="Your name, email and sign-in are removed. Orders and reviews stay as records, no longer tied to you by name. This cannot be undone.">

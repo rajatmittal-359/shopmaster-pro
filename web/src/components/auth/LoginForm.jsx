@@ -45,6 +45,7 @@ export default function LoginForm({ next = '/' }) {
     try {
       const res = await fetch(`${apiBase}/auth/login`, {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
       });
@@ -56,7 +57,7 @@ export default function LoginForm({ next = '/' }) {
       }
       if (!res.ok) throw new Error(data.message || 'Could not sign you in');
 
-      setSession({ token: data.token, role: data.role, user: data.user });
+      setSession({ role: data.role, user: data.user });
 
       // replace, not push: the back button must not return to a sign-in form
       // that is no longer true.

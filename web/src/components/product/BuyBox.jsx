@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useSyncExternalStore } from 'react';
+import { useState } from 'react';
 import { addToCart } from '@/lib/analytics';
-import { apiBase } from '@/lib/api';
+import { authedFetch } from '@/lib/client';
+import { useSession } from '@/lib/session';
 import { Button } from '@/components/ui/button';
 
 /**
@@ -21,32 +22,10 @@ import { Button } from '@/components/ui/button';
  *   on a page this long.
  *
  * THE SESSION IT READS
- *   `smp_token`, the same key the React app writes. The two apps share a domain
- *   after the cutover, so one signed-in session serves both and nobody is
- *   logged out by the migration.
+ *   useSession's drawing copy (19 Sep 2026): the real session is in httpOnly
+ *   cookies that travel with authedFetch; this only decides which button to
+ *   draw before the first request answers.
  */
-/**
- * Reading the session without an effect.
- *
- * Setting state inside useEffect to "notice" localStorage renders the button
- * once and then corrects it, which React's own lint rule now flags. This
- * subscribes instead: the server snapshot is "signed out" (a server has no
- * localStorage), the client's real answer replaces it on hydration, and the
- * `storage` event means signing in on another tab updates this one.
- */
-const subscribeToSession = (onChange) => {
-  window.addEventListener('storage', onChange);
-  return () => window.removeEventListener('storage', onChange);
-};
-
-const readToken = () => {
-  try {
-    return localStorage.getItem('smp_token');
-  } catch {
-    // Private mode, or site data blocked. Signed out is the safe reading.
-    return null;
-  }
-};
 
 export default function BuyBox({
   productId,
@@ -61,27 +40,14 @@ export default function BuyBox({
   const [quantity, setQuantity] = useState(1);
   const [state, setState] = useState({ status: 'idle' });
   const [saved, setSaved] = useState(false);
-  const token = useSyncExternalStore(subscribeToSession, readToken, () => null);
-  const signedIn = Boolean(token);
+  const { signedIn } = useSession();
 
   const add = async () => {
     setState({ status: 'adding' });
     try {
-      const res = await fetch(`${apiBase}/customer/cart`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ productId, quantity }),
-      });
-
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        // The server's own words. It knows things this button does not - that
-        // the last one went while this page was open, for instance.
-        throw new Error(body.message || 'Could not add that to your cart');
-      }
+      // authedFetch throws the server's own words - it knows things this button
+      // does not, that the last one went while this page was open, for instance.
+      await authedFetch('/customer/cart', { method: 'POST', body: { productId, quantity } });
 
       setState({ status: 'added' });
       addToCart({ _id: productId, name, price }, quantity, price);
@@ -164,14 +130,7 @@ export default function BuyBox({
             disabled={saved}
             onClick={async () => {
               try {
-                await fetch(`${apiBase}/customer/wishlist`, {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`,
-                  },
-                  body: JSON.stringify({ productId }),
-                });
+                await authedFetch('/customer/wishlist', { method: 'POST', body: { productId } });
                 setSaved(true);
               } catch {
                 setState({ status: 'error', message: 'Could not save that just now.' });

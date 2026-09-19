@@ -2,7 +2,8 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { clearSession } from '@/lib/session';
+import { signOut } from '@/lib/client';
+
 import { Button } from '@/components/ui/button';
 
 /**
@@ -31,8 +32,9 @@ export default function NotForThisAccount({
 }) {
   const router = useRouter();
 
-  const switchAccount = () => {
-    clearSession();
+  const switchAccount = async () => {
+    // The server ends this session too - otherwise the cookie signs the wrong account straight back in.
+    await signOut();
     router.push('/login');
     router.refresh();
   };

@@ -64,4 +64,14 @@ router.get('/me', authMiddleware, async (req, res) => {
  * there is no userId in the body for anybody to tamper with.
  */
 router.post('/become-seller', authMiddleware, requireTurnstile, require('../controllers/authController').becomeSeller);
+// Sessions (19 Sep 2026): the refresh cookie travels only to /api/auth (its
+// path), so refresh sits here; the rest need the access token.
+const auth = require('../controllers/authController');
+router.post('/refresh', auth.refresh);
+router.post('/logout', authMiddleware, auth.logout);
+router.post('/logout-all', authMiddleware, auth.logoutAll);
+router.get('/sessions', authMiddleware, auth.listSessions);
+router.delete('/sessions/:id', authMiddleware, auth.deleteSession);
+router.post('/reauth', authMiddleware, auth.reauth);
+
 module.exports = router;

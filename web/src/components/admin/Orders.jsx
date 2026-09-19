@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { authedFetch } from '@/lib/client';
+import { useReauth } from '@/components/common/Reauth';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -62,10 +63,12 @@ export default function AdminOrders() {
     };
   }, [needsMe]);
 
+  const reauth = useReauth();
   const run = async (fn) => {
     setState({ status: 'working' });
     try {
-      await fn();
+      // A ruling moves money: the API asks for the password again (step-up).
+      await reauth.run(fn);
       setDeciding(null);
       setDecision(BLANK_DECISION);
       await load();

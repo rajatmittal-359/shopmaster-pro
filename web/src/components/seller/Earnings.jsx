@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { authedFetch } from '@/lib/client';
+import { useReauth } from '@/components/common/Reauth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -33,6 +34,7 @@ const when = (iso) =>
   iso ? new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : '';
 
 export default function Earnings() {
+  const reauth = useReauth();
   const t = useT();
   const [data, setData] = useState(null);
   const [bank, setBank] = useState(null);
@@ -76,7 +78,8 @@ export default function Earnings() {
     e.preventDefault();
     setState({ status: 'working' });
     try {
-      await authedFetch('/seller/payout-details', { method: 'PATCH', body: form });
+      // Where the money goes changes only with the password just typed (step-up).
+      await reauth.run(() => authedFetch('/seller/payout-details', { method: 'PATCH', body: form }));
       setEditing(false);
       setConfirmAccount('');
       await load();

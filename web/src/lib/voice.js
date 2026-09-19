@@ -91,11 +91,14 @@ export function useVoice({ role, language = 'auto', onText }) {
           r.onerror = () => no(new Error('Could not read the recording'));
           r.readAsDataURL(blob);
         });
+        // The session rides in the httpOnly cookie (credentials) - a leftover
+        // header token from the old app still goes along until it expires.
         const token = getToken();
-        const path = role === 'public' || !token ? '/public/voice/transcribe' : `/${role}/voice/transcribe`;
+        const path = role === 'public' ? '/public/voice/transcribe' : `/${role}/voice/transcribe`;
         const res = await fetch(`${apiBase}${path}`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', ...(token && role !== 'public' ? { Authorization: `Bearer ${token}` } : {}) },
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'fetch', ...(token && role !== 'public' ? { Authorization: `Bearer ${token}` } : {}) },
           body: JSON.stringify({ audio: dataUrl, language }),
         });
         const data = await res.json().catch(() => ({}));

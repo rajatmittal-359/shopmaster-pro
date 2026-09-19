@@ -102,6 +102,19 @@
         isBlocked: { type: Boolean, default: false },
         blockedReason: { type: String, default: null },
 
+        /*
+         * Sessions (utils/auth/session, 19 Sep 2026). tokenVersion is stamped
+         * into every access token; bumping it ends every session at once
+         * ("log out everywhere", password change, reset). failedLogins and
+         * lockUntil are the per-account lock: ten wrong passwords lock the
+         * account for fifteen minutes whatever address they came from - the
+         * per-IP limiter alone does not stop a botnet trying one account.
+         */
+        tokenVersion: { type: Number, default: 0 },
+        failedLogins: { type: Number, default: 0 },
+        lockUntil: { type: Date, default: null },
+        lastLoginAt: { type: Date, default: null },
+
         /**
          * Where each notification category also goes (plan 2.30). The bell
          * always gets it; these only ever switch a channel OFF. Missing = on,

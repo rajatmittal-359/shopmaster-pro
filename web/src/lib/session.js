@@ -5,11 +5,17 @@ import { useSyncExternalStore } from 'react';
 /**
  * Who is signed in, on the browser side.
  *
- * WHY THESE EXACT KEYS
- *   `smp_token` and `smp_role` are what the React app already writes. The two
- *   apps will share a domain during the cutover, so one signed-in session has
- *   to serve both - anything else logs every customer out on the day we switch.
- *   `smp_user` is added alongside them and ignored by the old app.
+ * WHERE THE SESSION LIVES (19 Sep 2026)
+ *   NOT here. The access and refresh tokens are httpOnly cookies the API
+ *   sets; no script - ours or an attacker's - can read them (OWASP: never a
+ *   token in localStorage). What this store keeps is the DRAWING copy: who
+ *   is signed in (name, role) and what they may do, so the header can render
+ *   without a round trip. If it is ever wrong, a request answers 401 and the
+ *   copy is cleared - the server, not this, decides.
+ *
+ *   `smp_token` is read but no longer written: a token the old React app
+ *   left behind keeps working as a header until it expires, so nobody was
+ *   signed out on the day this changed. Signing in here clears it.
  *
  * WHY IT IS A STORE AND NOT A CONTEXT
  *   The session is read by a handful of components in different trees - the
@@ -59,8 +65,9 @@ const CHANGED = 'smp-session-changed';
 
 const announce = () => window.dispatchEvent(new Event(CHANGED));
 
-export const setSession = ({ token, role, user }) => {
-  write(TOKEN, token);
+export const setSession = ({ role, user }) => {
+  // Cookies carry the session now; a leftover header token is retired.
+  write(TOKEN, null);
   write(ROLE, role || null);
   write(USER, user ? JSON.stringify(user) : null);
   // Cleared, not guessed: the next /auth/me says what this account can do.
@@ -122,7 +129,8 @@ export function useSession() {
     token: token || null,
     role: role || null,
     user: parse(userJson),
-    signedIn: Boolean(token),
+    // Signed in when the drawing copy says so (cookie sessions) or a legacy token is still around.
+    signedIn: Boolean(userJson) || Boolean(token),
     /*
      * Until /auth/me has answered, `capabilities` is null and the caller should
      * draw nothing role-specific rather than guess from `role` - guessing is

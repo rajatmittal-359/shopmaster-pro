@@ -27,6 +27,8 @@ const crypto = require('crypto');
 
 const app = require('../app');
 const User = require('../models/User');
+const Session = require('../models/Session');
+const AuthEvent = require('../models/AuthEvent');
 const sendEmail = require('../utils/sendEmail');
 
 const REAL_EMAIL = 'real@test.local';
@@ -62,6 +64,11 @@ beforeEach(() => {
 
   stored = makeUser();
   sent = [];
+  // A reset signs every device out (utils/auth/session.revokeAll): the two
+  // writes it makes are stood in for here, and asserted on below.
+  vi.spyOn(Session, 'updateMany').mockResolvedValue({ modifiedCount: 1 });
+  vi.spyOn(User, 'updateOne').mockResolvedValue({ modifiedCount: 1 });
+  vi.spyOn(AuthEvent, 'create').mockResolvedValue({});
 
   // Stand in for both shapes the controller queries with: by email, and by
   // token hash + unexpired.
@@ -92,6 +99,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.restoreAllMocks();
   User.findOne = originals.findOne;
   vi.restoreAllMocks();
 });
@@ -169,6 +177,10 @@ describe('using the reset link', () => {
 
     expect(res.status).toBe(200);
     expect(stored.password).toBe('brand-new-password');
+    // ...and every device is signed out: the old password may be in someone else's hands.
+    expect(Session.updateMany).toHaveBeenCalledWith({ userId: stored._id, revokedAt: null }, { $set: { revokedAt: expect.any(Date) } });
+    expect(User.updateOne).toHaveBeenCalledWith({ _id: stored._id }, { $set: { tokenVersion: 1 } });
+    expect(res.body.message).toMatch(/Every device has been signed out/);
   });
 
   it('works once, and never again', async () => {

@@ -38,6 +38,7 @@ export default function RegisterForm({ next = '/', verifyEmail = '' }) {
   const post = async (path, body) => {
     const res = await fetch(`${apiBase}${path}`, {
       method: 'POST',
+      credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });
@@ -74,7 +75,7 @@ export default function RegisterForm({ next = '/', verifyEmail = '' }) {
       const data = await post('/auth/verify-otp', { email: form.email, otp });
       // Verifying returns a token, so nobody is asked to sign in immediately
       // after proving they own the address.
-      setSession({ token: data.token, role: data.role, user: data.user });
+      setSession({ role: data.role, user: data.user });
       router.replace(next);
       router.refresh();
     } catch (err) {
