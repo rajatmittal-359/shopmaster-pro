@@ -9,7 +9,7 @@ import { toast } from 'sonner';
 import { authedFetch } from '@/lib/client';
 import { useT } from '@/lib/i18n';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import SharedBadge from '@/components/common/StatusBadge';
 import { Skeleton } from '@/components/ui/skeleton';
 import ActionDialog from '@/components/common/ActionDialog';
 import PanelCard from '@/components/panel/PanelCard';
@@ -62,17 +62,18 @@ const EMPTY = {
 };
 
 /** The seller's own status, said in words, with a colour that agrees with it. */
+/** The seller's words, the site's one badge (components/common/StatusBadge). */
 function StatusBadge({ order }) {
   const t = useT();
   const s = order.status;
   if (['requested', 'picked'].includes(order.returnStage)) {
-    return <Badge className="bg-amber-500/10 text-amber-700 dark:text-amber-300">{t(order.returnResolution === 'replacement' ? 'Exchange open' : 'Return open')}</Badge>;
+    return <SharedBadge tone="amber">{t(order.returnResolution === 'replacement' ? 'Exchange open' : 'Return open')}</SharedBadge>;
   }
-  if (s === 'cancelled') return <Badge variant="destructive">{t('Cancelled')}</Badge>;
-  if (s === 'delivered') return <Badge className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-300">{t('Delivered')}</Badge>;
-  if (s === 'returned') return <Badge variant="outline">{t('Returned')}</Badge>;
-  if (order.shippingAwb || s === 'shipped') return <Badge className="bg-sky-500/10 text-sky-700 dark:text-sky-300">{t('Shipped')}</Badge>;
-  return <Badge className="bg-primary/10 text-brand-ink">{t('To pack')}</Badge>;
+  if (s === 'cancelled') return <SharedBadge tone="destructive">{t('Cancelled')}</SharedBadge>;
+  if (s === 'delivered') return <SharedBadge tone="emerald">{t('Delivered')}</SharedBadge>;
+  if (s === 'returned') return <SharedBadge tone="muted">{t('Returned')}</SharedBadge>;
+  if (order.shippingAwb || s === 'shipped') return <SharedBadge tone="sky">{t('Shipped')}</SharedBadge>;
+  return <SharedBadge tone="brand">{t('To pack')}</SharedBadge>;
 }
 
 export default function OrderQueue() {

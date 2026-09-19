@@ -8,7 +8,8 @@ import { authedFetch } from '@/lib/client';
 import { useSession } from '@/lib/session';
 import ShipmentTimeline from '@/components/orders/ShipmentTimeline';
 import ActionDialog from '@/components/common/ActionDialog';
-import { Badge } from '@/components/ui/badge';
+import StatusBadge from '@/components/common/StatusBadge';
+import { customerStatus, placedOn } from '@/lib/orderStatus';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
@@ -86,15 +87,10 @@ const DISPUTE_REASONS = [
   'My return was refused',
 ];
 
-/** The order's own status in words, and a colour that agrees with it. */
-function StatusBadge({ status }) {
-  const s = String(status || '');
-  if (s === 'cancelled') return <Badge variant="destructive">Cancelled</Badge>;
-  if (s === 'delivered') return <Badge className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-300">Delivered</Badge>;
-  if (s === 'shipped') return <Badge className="bg-sky-500/10 text-sky-700 dark:text-sky-300">On its way</Badge>;
-  if (s === 'returned') return <Badge variant="outline">Returned</Badge>;
-  if (s === 'processing') return <Badge className="bg-primary/10 text-brand-ink">Being packed</Badge>;
-  return <Badge className="bg-primary/10 text-brand-ink">{s.replace(/_/g, ' ') || 'Placed'}</Badge>;
+/** The order's status in the customer's words (lib/orderStatus) - never the database's. */
+function OrderStatus({ order, parcel }) {
+  const s = customerStatus(order, parcel);
+  return <StatusBadge tone={s.tone}>{s.label}</StatusBadge>;
 }
 
 export default function OrderDetail({ orderId }) {
@@ -163,9 +159,9 @@ export default function OrderDetail({ orderId }) {
               <h1 className="text-xl font-semibold tabular-nums">
                 {order.orderNumber || `Order ${String(order._id).slice(-6).toUpperCase()}`}
               </h1>
-              <StatusBadge status={order.status} />
+              <OrderStatus order={order} />
             </div>
-            <p className="mt-1 text-sm text-muted-foreground">Placed {when(order.createdAt)}</p>
+            <p className="mt-1 text-sm text-muted-foreground">Placed {placedOn(order.createdAt)}</p>
           </div>
           <div className="text-right">
             <p className="text-lg font-semibold tabular-nums">{money(order.totalAmount)}</p>
@@ -221,7 +217,7 @@ export default function OrderDetail({ orderId }) {
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h2 className="font-semibold">{parcels.length > 1 ? `Parcel ${index + 1}` : 'Your parcel'}</h2>
               <p className="text-sm text-muted-foreground">
-                <StatusBadge status={parcel.status} />
+                <OrderStatus order={order} parcel={parcel} />
                 {parcel.deliveredAt ? <span className="ml-2">on {when(parcel.deliveredAt)}</span> : null}
               </p>
             </div>

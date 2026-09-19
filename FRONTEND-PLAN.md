@@ -2288,6 +2288,38 @@ against a reference already in this plan.
   Outside card so nobody buys a wrapper for them.
 - **RETURN_KIND_REQUIRED** - the 2.29 cutover switch as an env flag, tested.
 
+### 4.51 The status in the customer's words, and a date from day one (20 Sep 2026)
+
+Rajat, after the ₹1 test: "logistics ke status dekh lena - kitne dikhate
+hain, professional format kya hota hai, skill bhi use kar lena." Both
+skills were run: `/frontend` (gate, references, checklist) and
+ui-ux-pro-max (its SKILL.md loaded, nine searches). References: Baymard's
+six tracking details and its finding that the delivery DATE is the first
+thing looked for (41% of sites show a speed instead); Amazon's four steps
+(Ordered · Shipped · Out for delivery · Delivered); Flipkart's (Order
+Confirmed · Shipped · Out for Delivery · Delivered); Shopify's order status
+(Confirmed · On its way · Out for delivery · Delivered). ui-ux-pro-max
+added: a status never by colour alone, a compact label never wraps, async
+data must not move the layout, shadcn badges as a variant map.
+
+What was wrong: a paid order read "Pending" in the list (the database's
+word) while its mail said "confirmed"; the same states had three colour
+schemes in three files; "Out for delivery" was a grey hint, not a step;
+until the courier scanned, the page had no date at all - and the "Order
+placed" band invented one (+7 days); an abandoned UPI screen appeared in
+My orders as a ₹1 "Pending" order.
+
+Built: one vocabulary (`lib/orderStatus`) and one badge
+(`common/StatusBadge`) for every surface; the third step turns into "Out
+for delivery" on the courier's word; the checkout quotes a date for
+standard delivery (the PIN estimate: ready-to-ship days + transit) and
+stamps it on the order, so "Arriving by Wednesday" is there from the first
+minute, the courier's own date replaces it, and "Running late" appears
+when either passes; the date block holds its height; unpaid attempts are
+not listed. Left out on purpose: a fifth step (four is what all three
+references use and what 390 px holds), a map (no courier here gives
+coordinates).
+
 ### 4.50 The address, PIN code first (19 Sep 2026)
 
 Rajat picked it from the open list: "hnn". Reference: Amazon India's

@@ -316,16 +316,42 @@ const getDeliveryOptions = async (cartItems, address, isCOD) => {
   // A made-to-order line moves the whole basket's date (utils/dispatch): the
   // customer sees the longer wait here, before paying, not in a mail after.
   const dispatch = require('./dispatch');
-  const extra = Math.max(0, dispatch.leadDaysOf(cartItems) - dispatch.defaultDays());
+  const lead = dispatch.leadDaysOf(cartItems);
+  const extra = Math.max(0, lead - dispatch.defaultDays());
   const days = `${2 + extra}-${3 + extra} days${extra ? ' · made to order' : ''}`;
+
+  /*
+   * A DATE, not a speed (Baymard: 41% of sites say "2-3 days" where the
+   * customer wanted "Thursday"; the date is the detail they look for first,
+   * 20 Sep 2026). The same estimate the product page's PIN check shows -
+   * seller's ready-to-ship days + the courier's transit for this PIN - so the
+   * order carries a promised date from the moment it is placed
+   * (`deliveryPromisedBy`), and the order page can answer "when" before the
+   * courier has even scanned it. The courier's own ETD replaces it once the
+   * parcel moves. If the estimate cannot be had (courier API down), the words
+   * fall back to the day range and no date is promised.
+   */
+  let standardArrival = null;
+  let standardEta = standard.freeShipping ? `Free delivery, ${days}` : days;
+  try {
+    const est = await require('./deliveryEstimate').estimateDelivery(address.zipCode, { dispatchDays: lead });
+    if (est?.serviceable && est.deliveryBy) {
+      standardArrival = new Date(`${est.deliveryBy}T23:59:59+05:30`);
+      const dayText = standardArrival.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'Asia/Kolkata' });
+      standardEta = `${standard.freeShipping ? 'Free delivery · ' : ''}By ${dayText}${extra ? ' · made to order' : ''}`;
+    }
+  } catch (err) {
+    console.error('standard delivery estimate unavailable, quoting days instead:', err.message);
+  }
+
   const options = [
     {
       id: 'standard',
       label: 'Standard Delivery',
       price: standard.shippingCharges,
       courier: standard.shippingCourier,
-      etaText: standard.freeShipping ? `Free delivery, ${days}` : days,
-      arrivalBy: null,
+      etaText: standardEta,
+      arrivalBy: standardArrival,
     },
   ];
 

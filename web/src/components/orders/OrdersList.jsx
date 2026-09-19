@@ -8,6 +8,8 @@ import Image from 'next/image';
 import { authedFetch } from '@/lib/client';
 import { useSession } from '@/lib/session';
 import NotForThisAccount from '@/components/common/NotForThisAccount';
+import StatusBadge from '@/components/common/StatusBadge';
+import { customerStatus, placedOn } from '@/lib/orderStatus';
 
 /**
  * What you have bought.
@@ -23,16 +25,7 @@ import NotForThisAccount from '@/components/common/NotForThisAccount';
  *   The list used to draw a Cancel button on shipped parcels the API would then
  *   refuse. A button that cannot work is worse than no button.
  */
-const STATUS_TONE = {
-  delivered: 'text-green-700 dark:text-green-400',
-  cancelled: 'text-muted-foreground',
-  returned: 'text-muted-foreground',
-};
-
 const money = (n) => `₹${Number(n || 0).toLocaleString('en-IN')}`;
-
-const when = (iso) =>
-  new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 
 export default function OrdersList() {
   const { signedIn, user } = useSession();
@@ -112,13 +105,15 @@ export default function OrdersList() {
                       fallback nobody should have to read aloud. */}
                   {order.orderNumber || `Order ${String(order._id).slice(-6).toUpperCase()}`}
                 </p>
-                <p className="text-sm text-muted-foreground">Placed {when(order.createdAt)}</p>
+                <p className="text-sm text-muted-foreground">Placed {placedOn(order.createdAt)}</p>
               </div>
 
-              <div className="text-right">
-                <p className={`font-medium capitalize ${STATUS_TONE[order.status] || ''}`}>
-                  {String(order.status || '').replace(/_/g, ' ')}
-                </p>
+              <div className="flex flex-col items-end gap-1">
+                {/* The customer's word for it (lib/orderStatus), never "Pending". */}
+                {(() => {
+                  const s = customerStatus(order, (order.fulfilments || [])[0]);
+                  return <StatusBadge tone={s.tone}>{s.label}</StatusBadge>;
+                })()}
                 <p className="text-sm text-muted-foreground">{money(order.totalAmount)}</p>
               </div>
             </div>

@@ -1,4 +1,5 @@
 import { readable, hasLeftTheSeller } from '@/lib/courierText';
+import { isOutForDelivery } from '@/lib/orderStatus';
 
 /**
  * Where the parcel is, and when it will arrive.
@@ -33,12 +34,20 @@ import { readable, hasLeftTheSeller } from '@/lib/courierText';
  */
 const STEPS = ['pending', 'processing', 'shipped', 'delivered'];
 
-const STEP_WORDS = {
-  pending: 'Placed',
+/*
+ * Four steps, like Amazon (Ordered · Shipped · Out for delivery · Delivered)
+ * and Flipkart (Order Confirmed · Shipped · Out for Delivery · Delivered).
+ * Ours keeps "Being packed" because a seller here packs by hand and that
+ * day is real; the third step turns into "Out for delivery" the moment a
+ * scan says so (20 Sep 2026) - the one state a customer plans their day
+ * around, and the one both references give a step of its own.
+ */
+const stepWords = (scans) => ({
+  pending: 'Confirmed',
   processing: 'Being packed',
-  shipped: 'On its way',
+  shipped: isOutForDelivery(scans) ? 'Out for delivery' : 'On its way',
   delivered: 'Delivered',
-};
+});
 
 /**
  * What has not happened yet.
@@ -94,14 +103,37 @@ export default function ShipmentTimeline({ order, fulfilment }) {
 
   const stepIndex = STEPS.indexOf(parcel.status);
   const stopped = ['cancelled', 'returned'].includes(parcel.status);
+  const STEP_WORDS = stepWords(scans);
+  const live = parcel.status !== 'delivered' && !stopped;
+  /*
+   * The date the order was PLACED with (the PIN-code estimate the checkout
+   * quoted, stored as deliveryPromisedBy) carries the page until the courier
+   * has its own. Neither is invented here: both were said to the customer
+   * before, one at checkout and one by the courier's scan.
+   */
+  const promised = !parcel.expectedDeliveryAt && order?.deliveryPromisedBy ? new Date(order.deliveryPromisedBy) : null;
 
   return (
     <div className="space-y-4">
       {/* The expected delivery date first, because it is the question
-          underneath "where is it". Only the courier's own estimate is shown -
-          we do not compute one here, because a date we invented is a promise
-          nobody made. */}
-      {parcel.expectedDeliveryAt && parcel.status !== 'delivered' && !stopped && (
+          underneath "where is it". The block keeps its height so the stepper
+          below does not jump when the data arrives (ui-ux-pro-max: content
+          jumping). */}
+      <div className={live ? 'min-h-[3.25rem]' : ''}>
+      {promised && live && (
+        new Date(promised) < new Date() ? (
+          <p className="text-sm">
+            <strong className="text-amber-700 dark:text-amber-300">Running late</strong> - was expected by {onDay(promised)}.
+            <span className="block text-xs text-muted-foreground">The date we quoted at checkout has passed. If nothing changes in two days, use <em>Something&rsquo;s wrong</em>.</span>
+          </p>
+        ) : (
+          <p className="text-sm">
+            Arriving by <strong>{onDay(promised)}</strong>
+            <span className="block text-xs text-muted-foreground">The date quoted at checkout for your PIN code; the courier&rsquo;s own estimate replaces it once the parcel moves.</span>
+          </p>
+        )
+      )}
+      {parcel.expectedDeliveryAt && live && (
         new Date(parcel.expectedDeliveryAt) < new Date() ? (
           /* A date that has passed is not "arriving by" - it is late, and
              saying so is the difference between a customer who waits and one
@@ -121,6 +153,7 @@ export default function ShipmentTimeline({ order, fulfilment }) {
           </p>
         )
       )}
+      </div>
 
       {/* Before the courier has it: the seller's own promise (Etsy's "ready to
           ship by"). Shown only while it is still being made or packed, and
@@ -132,7 +165,7 @@ export default function ShipmentTimeline({ order, fulfilment }) {
             <span className="block text-xs text-muted-foreground">The seller can see this too. If nothing changes in two days, use <em>Something&rsquo;s wrong</em>.</span>
           </p>
         ) : (
-          <p className="text-sm">
+          <p className={promised ? 'text-xs text-muted-foreground' : 'text-sm'}>
             Ships by <strong>{onDay(parcel.dispatchBy)}</strong>
             <span className="block text-xs text-muted-foreground">
               {(order.items || []).some((i) => Number.isInteger(i.processingDays)) ? 'Made to order - the seller is making it, then the courier takes over.' : 'The seller packs it by then; the courier’s own date appears once it is on its way.'}
@@ -151,10 +184,12 @@ export default function ShipmentTimeline({ order, fulfilment }) {
                 className={`block h-1 rounded-full ${i <= stepIndex ? 'bg-primary' : 'bg-muted'}`}
                 aria-hidden="true"
               />
+              {/* A step label never wraps to a second line (ui-ux-pro-max: compact label overflow). */}
               <span
-                className={`mt-1 block text-[11px] ${
+                className={`mt-1 block truncate text-[11px] ${
                   i <= stepIndex ? 'text-foreground' : 'text-muted-foreground'
                 }`}
+                title={STEP_WORDS[step]}
               >
                 {STEP_WORDS[step]}
               </span>

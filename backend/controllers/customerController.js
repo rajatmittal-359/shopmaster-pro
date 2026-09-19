@@ -439,7 +439,9 @@ exports.checkout = async (req, res) => {
 // CUSTOMER - Get my orders (list)
 exports.getMyOrders = async (req, res) => {
   try {
-    const orders = await Order.find({ customerId: req.user._id })
+    // An online checkout that never paid is an attempt, not an order (drill L3,
+    // 20 Sep 2026): Amazon never lists one. It stays reachable by its id.
+    const orders = await Order.find({ customerId: req.user._id, $nor: [{ paymentMethod: 'razorpay', paymentStatus: 'pending' }] })
       .sort({ createdAt: -1 })
       .populate("shippingAddressId")
       .populate({ path: "items.productId", select: "name slug images" });

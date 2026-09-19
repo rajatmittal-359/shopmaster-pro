@@ -27,11 +27,11 @@ const GCR_ID = process.env.NEXT_PUBLIC_GCR_MERCHANT_ID || '';
 const isoDate = (d) => new Date(d).toISOString().slice(0, 10);
 
 export default function OrderPlaced({ order, email }) {
-  // The promised date the server gave; a week out only when it gave none.
-  const eta =
-    order.deliveryPromisedBy ||
-    (order.createdAt && new Date(new Date(order.createdAt).getTime() + 7 * 86400000).toISOString()) ||
-    null;
+  // The date the checkout quoted (standard delivery now carries one too,
+  // 20 Sep 2026). Google's opt-in still needs SOME date, so the week-out
+  // guess survives only for that field - never printed to the customer.
+  const eta = order.deliveryPromisedBy || null;
+  const gcrDate = eta || (order.createdAt && new Date(new Date(order.createdAt).getTime() + 7 * 86400000).toISOString()) || null;
 
   useEffect(() => {
     if (!GCR_ID || !email) return;
@@ -42,7 +42,7 @@ export default function OrderPlaced({ order, email }) {
           order_id: order.orderNumber || String(order._id),
           email,
           delivery_country: 'IN',
-          estimated_delivery_date: isoDate(eta || order.createdAt),
+          estimated_delivery_date: isoDate(gcrDate || order.createdAt),
           opt_in_style: 'BOTTOM_RIGHT_DIALOG',
         });
       });
@@ -50,7 +50,7 @@ export default function OrderPlaced({ order, email }) {
     // If platform.js is already on the page (a second order this session),
     // onload will not fire again - call it ourselves.
     if (window.gapi) window.renderOptIn();
-  }, [order._id, order.orderNumber, order.createdAt, email, eta]);
+  }, [order._id, order.orderNumber, order.createdAt, email, gcrDate]);
 
   return (
     <>

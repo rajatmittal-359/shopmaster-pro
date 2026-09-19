@@ -160,8 +160,11 @@ describe('COD checkout pricing consistency', () => {
   it('COD checkout requests a COD shipping rate', async () => {
     await codCheckout();
 
-    expect(rateCalls).toHaveLength(1);
-    expect(rateCalls[0].isCod).toBe(true);
+    // The checkout's own quote is a COD rate. (Since 20 Sep 2026 the standard
+    // option also asks deliveryEstimate for a prepaid sample rate to turn
+    // "2-3 days" into a date - cached six hours per PIN, so not per checkout.)
+    expect(rateCalls.some((c) => c.isCod === true)).toBe(true);
+    expect(rateCalls.filter((c) => c.isCod === true)).toHaveLength(1);
   });
 
   it('the created COD order includes the COD fee', async () => {
