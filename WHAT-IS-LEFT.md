@@ -232,6 +232,7 @@ Assistant gaps found in the same pass (problem taxonomy in the chat of 13 Sep): 
 - Delete `frontend/` a week after the domain moves (plan §13a, OPS cutover list).
 - Key rotation, test-data deletion, branding polish — the deferred cleanup.
 - Old Studio results made before `AiDraft` existed are not in the drafts strip; nothing to do unless he misses one.
+- **Launch video** - the whole free plan (script → Remotion scenes from screenshots → OBS flows → 3–4 AI mood clips → own voice → ElevenMusic → Resolve) is in `LAUNCH-VIDEO.md`; open it once the UI has stopped moving. Claude's part: the Remotion scaffold and the script.
 
 ---
 
