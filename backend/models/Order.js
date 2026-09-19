@@ -189,6 +189,13 @@ const fulfilmentSchema = new mongoose.Schema(
     },
 
     shippedAt: { type: Date, default: null },
+    /** Courier facts that are not states (utils/applyCourierUpdate, 20 Sep 2026). */
+    rtoAt: { type: Date, default: null },
+    rtoReason: { type: String, default: null },
+    lostAt: { type: Date, default: null },
+    lostReason: { type: String, default: null },
+    pickupIssue: { type: String, default: null },
+    pickupIssueAt: { type: Date, default: null },
     /** When this seller's parcel must be with the courier (utils/dispatch): placed + longest processing time of their lines, working days. */
     dispatchBy: { type: Date, default: null },
 

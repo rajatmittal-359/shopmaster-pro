@@ -755,6 +755,10 @@ const HI = {
   'Standard time (the rulebook)': 'स्टैंडर्ड समय (नियम-पुस्तिका)',
   '{n} working days · made to order': '{n} कामकाजी दिन · ऑर्डर पर बनता है',
   'Dispatch by {date}': '{date} तक भेजें',
+  // Courier facts on the queue (20 Sep 2026)
+  'Pickup did not happen - courier retries next working day': 'पिकअप नहीं हुआ - कूरियर अगले कामकाजी दिन फिर आएगा',
+  'Came back (RTO)': 'वापस आ गया (RTO)',
+  'Coming back (RTO)': 'वापस आ रहा है (RTO)',
 };
 
 export default HI;

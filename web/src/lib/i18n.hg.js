@@ -714,6 +714,10 @@ const HG = {
   'Standard time (the rulebook)': 'Standard time (rulebook)',
   '{n} working days · made to order': '{n} kaam ke din · order par banta hai',
   'Dispatch by {date}': '{date} tak bhejein',
+  // Courier facts on the queue (20 Sep 2026)
+  'Pickup did not happen - courier retries next working day': 'Pickup nahi hua - courier agle kaam ke din phir aayega',
+  'Came back (RTO)': 'Wapas aa gaya (RTO)',
+  'Coming back (RTO)': 'Wapas aa raha hai (RTO)',
 };
 
 export default HG;

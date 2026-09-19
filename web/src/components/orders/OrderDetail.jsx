@@ -304,6 +304,20 @@ export default function OrderDetail({ orderId }) {
               </p>
             )}
 
+            {/* The courier is bringing it back (RTO) or has lost it - said plainly, with what happens to the money (utils/courierEvents). */}
+            {parcel.rtoAt && parcel.status !== 'delivered' && (
+              <p className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-sm">
+                <strong>{parcel.status === 'returned' ? 'Back with the seller' : 'Coming back to the seller'}</strong>
+                {' - '}the courier could not deliver it{parcel.rtoReason ? ` (${parcel.rtoReason})` : ''}.{' '}
+                {order.paymentMethod === 'cod' ? 'Nothing was charged.' : parcel.status === 'returned' ? 'Your refund has been raised.' : 'Your refund is raised the day it reaches the seller.'}
+              </p>
+            )}
+            {parcel.lostAt && parcel.status !== 'delivered' && (
+              <p className="mt-3 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm">
+                <strong>The courier reports this parcel lost or damaged in transit.</strong> We are settling it - you will hear from us within two working days with a refund or a replacement.
+              </p>
+            )}
+
             {/* Said in words, with what to DO. In India the pickup rider brings
                 the label (Amazon, Flipkart, every reverse courier) - so the
                 answer to "what do I attach?" is "nothing; keep it packed with

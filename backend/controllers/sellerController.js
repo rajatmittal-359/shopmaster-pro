@@ -719,6 +719,11 @@ exports.getMyOrders = async (req, res) => {
         disputeStatus: fulfilment?.disputeStatus || null,
         bookingFailedReason: fulfilment?.bookingFailedReason || null,
         bookingFailedKind: fulfilment?.bookingFailedKind || null,
+        // Courier facts the seller must hear (utils/courierEvents): a failed pickup, an RTO, a loss.
+        pickupIssue: fulfilment?.pickupIssue || null,
+        pickupIssueAt: fulfilment?.pickupIssueAt || null,
+        rtoAt: fulfilment?.rtoAt || null,
+        lostAt: fulfilment?.lostAt || null,
         // Hand it to the courier by this date (utils/dispatch); the queue shows it, red once passed.
         dispatchBy: fulfilment?.dispatchBy || null,
         shippedAt: fulfilment?.shippedAt || null,

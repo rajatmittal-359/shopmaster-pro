@@ -168,7 +168,7 @@ exports.courierUpdate = async (req, res) => {
      * webhook goes missing, and two copies of this would quietly drift until
      * they disagreed about whether somebody had been paid.
      */
-    const { changed, was } = applyCourierUpdate(order, fulfilment, {
+    const { changed, was, events } = applyCourierUpdate(order, fulfilment, {
       status,
       statusId,
       reason,
@@ -179,6 +179,8 @@ exports.courierUpdate = async (req, res) => {
 
     // order.status is derived from the fulfilments by the pre-validate hook.
     await order.save();
+    // The bells a courier fact earns - NDR, pickup failed, RTO, lost (utils/courierEvents).
+    if (events?.length) setImmediate(() => require('../utils/courierEvents').notifyCourierEvents(order, fulfilment, events));
 
     console.log(
       `Courier update: ${order.orderNumber} ${was} -> ${fulfilment.status} (${status})`

@@ -91,7 +91,8 @@ describe('reading what the courier calls it', () => {
     ['PICKED UP', 'shipped'],
     ['UNDELIVERED', 'ndr'],
     ['Address issue - customer not available', 'ndr'],
-    ['RTO INITIATED', 'returned'],
+    // 20 Sep 2026: RTO on its way is a FACT (rto), not yet 'returned' - the seller has nothing in hand until RTO DELIVERED.
+    ['RTO INITIATED', 'rto'],
     // The trap: this contains "DELIVERED" but the parcel came BACK.
     ['RTO DELIVERED', 'returned'],
     ['CANCELED', 'cancelled'],

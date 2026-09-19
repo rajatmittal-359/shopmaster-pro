@@ -234,6 +234,19 @@ export default function OrderQueue() {
                     <p className="mt-1 text-sm text-muted-foreground">
                       {order.customerId?.name || t('Customer')} · {when(order.createdAt)} ·{' '}
                       {t(order.paymentMethod === 'cod' ? 'Collect cash at the door' : 'Paid online')}
+                      {/* A pickup the courier did not make - the seller waits for a van that is not coming unless told (utils/courierEvents). */}
+                      {order.pickupIssue && !order.shippedAt && !['cancelled', 'delivered', 'returned'].includes(order.status) && (
+                        <>
+                          {' · '}
+                          <span className="font-medium text-amber-700 dark:text-amber-300">{t('Pickup did not happen - courier retries next working day')}</span>
+                        </>
+                      )}
+                      {order.rtoAt && order.status !== 'delivered' && (
+                        <>
+                          {' · '}
+                          <span className="font-medium text-amber-700 dark:text-amber-300">{t(order.status === 'returned' ? 'Came back (RTO)' : 'Coming back (RTO)')}</span>
+                        </>
+                      )}
                       {/* Flipkart's "dispatch by": the date the seller must hand it over, red once passed and still unshipped. */}
                       {order.dispatchBy && !order.shippedAt && !['cancelled', 'delivered', 'shipped', 'returned'].includes(order.status) && (
                         <>

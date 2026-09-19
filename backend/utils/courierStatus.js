@@ -16,14 +16,39 @@
  */
 
 /** Ordered: the first pattern that matches wins, so put the specific ones first. */
+/*
+ * Shiprocket's own vocabulary (support article "Important terms", read
+ * 20 Sep 2026), worst-first so a compound word lands on the right rule:
+ *   forward   Pickup Scheduled/Error/Exception/Rescheduled · Out for Pickup ·
+ *             Picked Up · Shipped · In-Transit · Reached at Destination Hub ·
+ *             Out for Delivery · Delivered · Delayed · Misrouted · Lost/Damaged ·
+ *             Destroyed
+ *   NDR       Undelivered (three more attempts follow)
+ *   RTO       RTO Initiated · RTO In-Transit · RTO-OFD · RTO-NDR · RTO Delivered ·
+ *             RTO Acknowledged · RTO Rejected · Disposed Of
+ *   returns   Return Pending/Initiated/Pickup Generated/Picked Up/In-Transit/
+ *             Delivered/Canceled (the customer's return leg - its own AWB)
+ *
+ * Only "delivered"/"returned"/"cancelled"/"shipped" move the parcel's state.
+ * The rest are FACTS that applyCourierUpdate records and courierEvents
+ * turns into the right bell: an RTO that has started is not yet "returned"
+ * (the seller does not have it), a lost parcel is not "shipped", a failed
+ * pickup is a seller's problem to hear about today.
+ */
 const PATTERNS = [
-  // RTO before "delivered", or "RTO DELIVERED" would read as a delivery.
-  [/\brto\b|return to origin/i, 'returned'],
-  [/undeliver|\bndr\b|delivery attempt fail|address issue|customer not avail/i, 'ndr'],
+  // The customer's return leg: never a forward transition ("Return Delivered" is not "Delivered").
+  [/\breturn (pending|initiated|pickup|picked|in.?transit|delivered|cancel)/i, 'return_leg'],
+  // Back with the seller - the only RTO words that mean the parcel has physically arrived.
+  [/rto[ -]?(delivered|acknowledged)/i, 'returned'],
+  // RTO under way: initiated, in transit, out for delivery back, NDR on the way back, rejected by the seller.
+  [/\brto\b|return to origin/i, 'rto'],
+  [/lost|damaged|destroyed|disposed/i, 'lost'],
+  [/pickup (exception|error|rescheduled)|pickup not done|pickup failed/i, 'pickup_failed'],
+  [/undeliver|\bndr\b|delivery attempt fail|address issue|customer not avail|misrouted/i, 'ndr'],
   [/cancel/i, 'cancelled'],
   [/deliver(ed)?\b(?!.*out for)/i, 'delivered'],
   [/out for delivery|ofd/i, 'out_for_delivery'],
-  [/in transit|shipped|dispatch|picked ?up|manifest/i, 'shipped'],
+  [/in transit|shipped|dispatch|picked ?up|manifest|reached/i, 'shipped'],
 ];
 
 /**

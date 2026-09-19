@@ -263,7 +263,7 @@ export default function PlatformSettings() {
                     ['damagedClaimHours', 'Damaged / wrong claim within (hours)'],
                     ['receiptCheckHours', 'Seller receipt check within (hours)'],
                     ['goodwillCapRupees', 'Goodwill refund cap (₹)'],
-                    ['otpDeliveryAbove', 'OTP delivery at or above (₹)'],
+                    ['otpDeliveryAbove', 'High-value order at or above (₹) - proof of delivery required'],
                     ['unboxingVideoAbove', 'Unboxing video for wrong-item claims above (₹)'],
                     ['adminReviewAbove', 'Admin reviews every return above (₹)'],
                   ].map(([k, label]) => (

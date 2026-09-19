@@ -94,7 +94,7 @@ const reconcileOnce = async () => {
         continue;
       }
 
-      const { changed } = courierUpdate.applyCourierUpdate(order, fulfilment, {
+      const { changed, events } = courierUpdate.applyCourierUpdate(order, fulfilment, {
         status: result.status,
         statusId: result.statusId,
         reason: result.ndrReason,
@@ -147,6 +147,8 @@ const reconcileOnce = async () => {
         // save(), not updateOne(): order.status is derived from the fulfilments
         // by the pre-validate hook, and updateOne skips it.
         await order.save();
+        // Same bells as the webhook path, for the facts the webhook missed (utils/courierEvents).
+        if (events?.length) await require('../utils/courierEvents').notifyCourierEvents(order, fulfilment, events);
       } catch (err) {
         console.error(`Could not save reconciled order ${order.orderNumber}:`, err.message);
       }

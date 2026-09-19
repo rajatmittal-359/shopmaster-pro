@@ -84,14 +84,52 @@ const applyCourierUpdate = (order, fulfilment, update = {}) => {
   // the fallback for everything else. Unrecognised means "no opinion on where
   // the parcel is" - not "ignore everything the courier just said".
   const mapped = statusId === 7 ? 'delivered' : normaliseCourierStatus(status);
-  if (!mapped) return { changed: false, was, now: was };
+  if (!mapped) return { changed: false, was, now: was, events: [] };
 
+  /*
+   * FACTS that are not transitions (20 Sep 2026, after reading Shiprocket's
+   * full status list). Each is written once and named in `events`, so the
+   * caller can ring the right bell - utils/courierEvents. None of them moves
+   * the parcel's state: the courier still has it.
+   */
+  const events = [];
   if (mapped === 'ndr') {
     // Deliberately not a status. The parcel has not moved backwards and the
     // courier will try again, so overwriting 'shipped' would lose where it is.
+    const first = !fulfilment.ndrAt;
     fulfilment.ndrReason = reason || status;
     fulfilment.ndrAt = when;
-    return { changed: was !== fulfilment.status, was, now: fulfilment.status };
+    if (first) events.push('ndr');
+    return { changed: was !== fulfilment.status, was, now: fulfilment.status, events };
+  }
+  if (mapped === 'rto') {
+    // Started back, not yet back: the seller has nothing in hand and the
+    // customer has paid for nothing. Both hear it now; the refund waits for
+    // "RTO Delivered", when the goods are really with the seller.
+    if (!fulfilment.rtoAt) {
+      fulfilment.rtoAt = when;
+      fulfilment.rtoReason = reason || status;
+      events.push('rto_started');
+    }
+    return { changed: false, was, now: was, events };
+  }
+  if (mapped === 'lost') {
+    if (!fulfilment.lostAt) {
+      fulfilment.lostAt = when;
+      fulfilment.lostReason = reason || status;
+      events.push('lost');
+    }
+    return { changed: false, was, now: was, events };
+  }
+  if (mapped === 'pickup_failed') {
+    fulfilment.pickupIssue = reason || status;
+    fulfilment.pickupIssueAt = when;
+    events.push('pickup_failed');
+    return { changed: false, was, now: was, events };
+  }
+  if (mapped === 'return_leg') {
+    // The customer's return travelling back; utils/settleReturn owns that story.
+    return { changed: false, was, now: was, events: [] };
   }
 
   const next = FULFILMENT_STATE[mapped];
@@ -146,10 +184,15 @@ const applyCourierUpdate = (order, fulfilment, update = {}) => {
     }
   }
 
-  if (next === 'returned' && !fulfilment.returnedAt) fulfilment.returnedAt = when;
+  if (next === 'returned' && !fulfilment.returnedAt) {
+    fulfilment.returnedAt = when;
+    // Back with the seller without a return request = the courier brought it back (RTO).
+    if (!fulfilment.returnStage) events.push('rto_back');
+  }
   if (next === 'shipped' && !fulfilment.shippedAt) fulfilment.shippedAt = when;
 
-  return { changed: fulfilment.status !== was, was, now: fulfilment.status };
+  if (next === 'delivered' && fulfilment.status !== was) events.push('delivered');
+  return { changed: fulfilment.status !== was, was, now: fulfilment.status, events };
 };
 
 module.exports = { applyCourierUpdate, RANK };

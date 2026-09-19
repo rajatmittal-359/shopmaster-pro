@@ -61,7 +61,15 @@ const RULES = {
   receiptCheckHours: 48,
   /** Below this amount, a return with no evidence either way is refunded as goodwill - once per customer per 90 days. */
   goodwillCapRupees: 500,
-  /** At or above this order value the courier delivers against an OTP. */
+  /**
+   * High-value line (20 Sep 2026, after reading Shiprocket's docs): there is
+   * NO doorstep-OTP switch on a Shiprocket account - their "Order Verification"
+   * is a pre-ship tag, and delivery OTP exists only on a few couriers' own
+   * services. So at or above this value the platform asks for what CAN be
+   * had: the courier's proof of delivery is required before a "not received"
+   * claim is decided, the admin reviews every dispute, and the seller is told
+   * to photograph the pack. The number stays configurable.
+   */
   otpDeliveryAbove: 2000,
   /** At or above this amount an unboxing video is required for a wrong / missing item claim. */
   unboxingVideoAbove: 2000,
