@@ -16,7 +16,18 @@
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.shopmasterpro.in';
 const API = process.env.NEXT_PUBLIC_API_URL || 'https://shopmaster-api-sg.onrender.com/api';
 
+/**
+ * A STAGING host (anything that is not shopmasterpro.in - the Vercel/Render
+ * preview, 20 Sep 2026) tells every crawler to stay out. Otherwise Google
+ * indexes the preview as a duplicate of the shop, and the preview's product
+ * URLs compete with the real ones.
+ */
+const isStaging = !/(^|\.)shopmasterpro\.in$/.test(new URL(SITE).hostname);
+
 export default function robots() {
+  if (isStaging) {
+    return { rules: [{ userAgent: '*', disallow: '/' }] };
+  }
   return {
     rules: [
       {

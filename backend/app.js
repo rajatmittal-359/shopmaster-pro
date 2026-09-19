@@ -34,10 +34,18 @@ const PRODUCTION_ORIGINS = [
   'https://www.shopmasterpro.in',
 ];
 
+/**
+ * Hosts added without a deploy (20 Sep 2026): the new web's staging URL on
+ * Vercel/Render before the domain moves. Comma-separated, exact origins
+ * (scheme + host), e.g. EXTRA_ORIGINS=https://shopmaster-pro.vercel.app
+ */
+const extraOrigins = () => String(process.env.EXTRA_ORIGINS || '').split(',').map((s) => s.trim().replace(/\/$/, '')).filter(Boolean);
+
 const isAllowedOrigin = (origin) => {
   // Same-origin requests, curl and server-to-server calls send no Origin.
   if (!origin) return true;
   if (PRODUCTION_ORIGINS.includes(origin)) return true;
+  if (extraOrigins().includes(origin)) return true;
 
   // Outside production: the laptop itself, and a phone on the same Wi-Fi
   // hitting the laptop by its LAN address (192.168.x.x / 10.x / 172.16-31.x)
