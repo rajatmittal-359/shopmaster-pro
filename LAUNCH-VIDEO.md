@@ -132,8 +132,13 @@ need and keep the best.
 
 ## 7b. Where a little money genuinely beats free (Rajat, 19 Sep: "faeda mile to de dunga")
 
-Only where the paid thing does something the free one cannot. Prices are
-Sep 2026 list prices, approximate - check the day you buy.
+The bar (Rajat, 19 Sep): **mention paid only when free genuinely cannot do
+the thing AND the thing is necessary.** Held to that bar, honestly: nothing in
+this plan *needs* money. Real footage can come from your own phone at the shop
+(steady hands, golden hour, 10 clips of 8 seconds); zooms can be keyframed;
+your own voice is free; ElevenMusic and Resolve are free. The table below is
+the reference for the day you decide to spend anyway - ranked by how much
+the paid thing adds. Prices are Sep 2026 list prices, approximate.
 
 | Spend | ≈ Cost | What you get that free cannot | Verdict |
 |---|---|---|---|
