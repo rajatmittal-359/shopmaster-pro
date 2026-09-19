@@ -8,6 +8,7 @@ import { setSession } from '@/lib/session';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import AgreementConsent from '@/components/seller/AgreementConsent';
+import Turnstile, { turnstileEnabled } from '@/components/common/Turnstile';
 
 /**
  * Creating an account, in two steps on one page.
@@ -29,6 +30,8 @@ export default function RegisterForm({ next = '/', verifyEmail = '' }) {
   const [form, setForm] = useState({ name: '', email: verifyEmail, password: '' });
   const [otp, setOtp] = useState('');
   const [state, setState] = useState({ status: 'idle' });
+  // The bot check's token (plan 2.28); '' until the widget passes, and the button waits for it.
+  const [turnstileToken, setTurnstileToken] = useState('');
 
   const set = (key) => (e) => setForm({ ...form, [key]: e.target.value });
 
@@ -47,7 +50,7 @@ export default function RegisterForm({ next = '/', verifyEmail = '' }) {
     e.preventDefault();
     setState({ status: 'sending' });
     try {
-      const data = await post('/auth/register', form);
+      const data = await post('/auth/register', { ...form, turnstileToken });
       setStep('code');
       // The account exists even when the email did not send - the server says
       // so, and hiding that would leave somebody waiting for a code that is
@@ -221,9 +224,11 @@ export default function RegisterForm({ next = '/', verifyEmail = '' }) {
         )}
       </div>
 
+      <Turnstile action="register" onToken={setTurnstileToken} />
+
       <Button
         type="submit"
-        disabled={state.status === 'sending'}
+        disabled={state.status === 'sending' || (turnstileEnabled() && !turnstileToken)}
         className="w-full" size="lg">
         {state.status === 'sending' ? 'Creating…' : 'Create account'}
       </Button>

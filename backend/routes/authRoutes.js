@@ -9,8 +9,10 @@ const {
   resetPassword,
 } = require('../controllers/authController');
 const authMiddleware = require('../middlewares/authMiddleware');
+// The bot check on the two doors bots try (plan 2.28); off without TURNSTILE_SECRET.
+const { requireTurnstile } = require('../middlewares/turnstile');
 // Register user (customer or seller)
-router.post('/register', register);
+router.post('/register', requireTurnstile, register);
 
 // Verify OTP
 router.post('/verify-otp', verifyOtp);
@@ -61,5 +63,5 @@ router.get('/me', authMiddleware, async (req, res) => {
  * Authenticated, and nothing more: the applicant is whoever is signed in, so
  * there is no userId in the body for anybody to tamper with.
  */
-router.post('/become-seller', authMiddleware, require('../controllers/authController').becomeSeller);
+router.post('/become-seller', authMiddleware, requireTurnstile, require('../controllers/authController').becomeSeller);
 module.exports = router;

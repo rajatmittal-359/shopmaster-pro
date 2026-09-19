@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import AgreementConsent from '@/components/seller/AgreementConsent';
 import ApplicationStatus from '@/components/seller/ApplicationStatus';
+import Turnstile, { turnstileEnabled } from '@/components/common/Turnstile';
 
 /**
  * Adding selling to the account somebody already has.
@@ -81,6 +82,8 @@ export default function ApplyToSell() {
   const [form, setForm] = useState({ businessName: '', legalName: '', sells: '', city: '', pincode: '', phone: '', pan: '', gstMode: '', gstin: '', enrolmentNumber: '' });
   const [photo, setPhoto] = useState(null); // { dataUrl, name }
   const [agreed, setAgreed] = useState(false);
+  // The bot check's token (plan 2.28), rendered on the last step only.
+  const [turnstileToken, setTurnstileToken] = useState('');
   const [agreementVersion, setAgreementVersion] = useState(null);
   const [state, setState] = useState({ status: 'idle' });
 
@@ -145,6 +148,7 @@ export default function ApplyToSell() {
           shopPhotoDataUrl: photo?.dataUrl || '',
           acceptedSellerAgreement: agreed,
           agreementVersion,
+          turnstileToken,
         },
       });
       // Re-read rather than assume: the answer that matters is the one the
@@ -265,6 +269,7 @@ export default function ApplyToSell() {
             <div className="sm:col-span-2"><dt className="text-xs text-muted-foreground">GST</dt><dd className="font-medium">{form.gstMode === 'gstin' ? `${gstin.value} · ${gstin.state}` : form.gstMode === 'enrolment' ? `Enrolment ${enrol.value} · ${enrol.state} only` : 'Not yet - selling within the state'}</dd></div>
           </dl>
           <AgreementConsent checked={agreed} onChange={setAgreed} onVersion={setAgreementVersion} />
+          <Turnstile action="apply" onToken={setTurnstileToken} />
         </div>
       )}
 
@@ -279,7 +284,7 @@ export default function ApplyToSell() {
             Next
           </Button>
         ) : (
-          <Button type="submit" size="lg" disabled={state.status === 'sending' || !agreed}>
+          <Button type="submit" size="lg" disabled={state.status === 'sending' || !agreed || (turnstileEnabled() && !turnstileToken)}>
             {state.status === 'sending' ? <><Loader2 className="size-4 animate-spin" /> Sending…</> : 'Apply to sell'}
           </Button>
         )}
