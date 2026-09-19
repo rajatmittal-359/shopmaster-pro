@@ -44,7 +44,12 @@ function Section({ title, lead, children }) {
 export default function AccountView() {
   const router = useRouter();
   const { signedIn, user, role } = useSession();
-  const [name, setName] = useState(user?.name || '');
+  // null until typed: the session's drawing copy arrives after the first
+  // render (the server snapshot is signed-out), so an initial value read
+  // here was always '' - the box showed empty while the header said the name.
+  const [nameEdit, setNameEdit] = useState(null);
+  const name = nameEdit ?? user?.name ?? '';
+  const setName = setNameEdit;
   const [pw, setPw] = useState({ current: '', next: '', again: '' });
   const [busy, setBusy] = useState('');
   const [asking, setAsking] = useState(false);
