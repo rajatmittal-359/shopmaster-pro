@@ -118,6 +118,31 @@ describe('what a customer is offered', () => {
   });
 });
 
+describe('the wallet (19 Sep 2026)', () => {
+  const realAfford = borzo.canAfford;
+  afterEach(() => {
+    borzo.canAfford = realAfford;
+  });
+
+  it('an empty Borzo wallet hides same-day instead of letting a paid booking fail, and tells the admin once a day', async () => {
+    borzo.canAfford = vi.fn(async () => false);
+    const notifier = require('../utils/notify');
+    const admins = vi.spyOn(notifier, 'notifyAdmins').mockResolvedValue([]);
+    const options = await getDeliveryOptions(CART, JAIPUR, false);
+    expect(options.map((o) => o.id)).toEqual(['standard']);
+    expect(borzo.canAfford).toHaveBeenCalledWith(102);
+    expect(admins.mock.calls[0][0].title).toMatch(/wallet is empty/);
+    expect(admins.mock.calls[0][0].tag).toMatch(/^borzo-low-\d{4}-\d{2}-\d{2}$/);
+    admins.mockRestore();
+  });
+
+  it('an unreadable balance does not hide the option - the booking path already fails loudly', async () => {
+    borzo.canAfford = vi.fn(async () => null);
+    const options = await getDeliveryOptions(CART, JAIPUR, false);
+    expect(options.map((o) => o.id)).toEqual(['standard', 'same_day']);
+  });
+});
+
 describe('the courier being unavailable is not the customer\'s problem', () => {
   it('hides same-day when the courier declines the address', async () => {
     borzo.quoteSameDay = vi.fn(async () => null);

@@ -251,7 +251,49 @@ const cancelSameDay = async (externalOrderId) => {
   }
 };
 
+/*
+ * THE WALLET (19 Sep 2026)
+ *   Borzo books against a prepaid balance. With ₹0 the quote still succeeds
+ *   and the BOOKING fails - after the customer has paid for same-day. So the
+ *   balance is read before the option is offered: not enough for this
+ *   delivery, no same-day on the checkout, and the admin hears once a day.
+ *   GET /client returns balance_amount; cached ten minutes so a checkout
+ *   does not cost a second round trip. A failed read counts as "unknown"
+ *   and does NOT hide the option - the booking path already fails loudly.
+ */
+let balanceCache = { at: 0, amount: null };
+const BALANCE_TTL_MS = 10 * 60 * 1000;
+
+const balance = async ({ fresh = false } = {}) => {
+  if (!isConfigured()) return null;
+  if (!fresh && Date.now() - balanceCache.at < BALANCE_TTL_MS) return balanceCache.amount;
+  try {
+    const { data } = await axios.get(`${baseUrl()}/api/business/${API_VERSION}/client`, { headers: { 'X-DV-Auth-Token': process.env.BORZO_API_TOKEN }, timeout: 8000 });
+    const amount = data?.is_successful && data.client ? Number(data.client.balance_amount) : null;
+    balanceCache = { at: Date.now(), amount: Number.isFinite(amount) ? amount : null };
+  } catch (err) {
+    console.error('borzo balance read failed:', err.response?.data?.message || err.message);
+    balanceCache = { at: Date.now(), amount: null };
+  }
+  return balanceCache.amount;
+};
+
+/** Whether the wallet can pay for a delivery quoted at `price`; null when unknown. */
+const canAfford = async (price) => {
+  const amount = await balance();
+  if (amount === null) return null;
+  return amount >= Number(price || 0);
+};
+
+/** Tests. */
+const _resetBalanceCache = () => {
+  balanceCache = { at: 0, amount: null };
+};
+
 module.exports = {
+  balance,
+  canAfford,
+  _resetBalanceCache,
   isPending,
   quoteSameDay,
   bookSameDay,

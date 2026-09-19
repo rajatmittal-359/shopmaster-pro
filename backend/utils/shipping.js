@@ -364,6 +364,15 @@ const getDeliveryOptions = async (cartItems, address, isCOD) => {
     return options;
   }
 
+  // A quote the wallet cannot pay for is not an option: with ₹0 the booking
+  // fails after the customer has paid for same-day (utils/borzo balance).
+  if ((await borzo.canAfford(sameDay.price)) === false) {
+    const notifier = require('./notify');
+    const day = new Date().toISOString().slice(0, 10);
+    notifier.notifyAdmins({ category: 'account', title: 'Same-day is off: Borzo wallet is empty', body: `A ₹${sameDay.price} same-day delivery could not be offered - top up at borzodelivery.com or switch same-day off in Settings.`, url: '/admin/settings', tag: `borzo-low-${day}` }).catch(() => {});
+    return options;
+  }
+
   options.push({
     id: 'same_day',
     label: 'Same-day Delivery',
