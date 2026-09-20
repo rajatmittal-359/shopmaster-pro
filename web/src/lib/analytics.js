@@ -25,8 +25,9 @@
  *   is only loaded after "Accept all" (components/common/ConsentBanner), so
  *   `window.fbq` simply does not exist for a visitor who said no.
  */
-export const GA_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || '';
-export const PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID || '';
+export const GA_ID = (process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || '').trim();
+// .trim(): a CI variable left as a single space (GitHub refuses an empty one) must still mean "off".
+export const PIXEL_ID = (process.env.NEXT_PUBLIC_META_PIXEL_ID || '').trim();
 
 const gtag = (...args) => {
   // No gtag on localhost (GoogleAnalytics.jsx never loads it there), so this is a no-op in dev.
