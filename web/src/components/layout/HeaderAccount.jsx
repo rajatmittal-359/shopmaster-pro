@@ -87,8 +87,8 @@ export default function HeaderAccount({ showCart = true }) {
     <div className="flex items-center gap-4 text-sm">
       {/* The heart and the bag carry their counts (Flipkart, Myntra): proof that
           "Add to cart" and "Save" went somewhere. Zero draws no badge. */}
-      {showCart && signedIn && (
-        <Link href="/wishlist" aria-label={counts.wishlist ? `Saved items (${counts.wishlist})` : 'Saved items'} className="relative inline-flex text-muted-foreground hover:text-brand-ink">
+      {showCart && (
+        <Link href="/wishlist" aria-label={counts.wishlist ? `Saved items (${counts.wishlist})` : 'Saved items'} className="relative hidden text-muted-foreground hover:text-brand-ink sm:inline-flex">
           <Heart className="size-5" />
           <CountBadge n={counts.wishlist} />
         </Link>

@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import { Heart } from 'lucide-react';
 import Logo from '@/components/brand/Logo';
 import HeaderAccount from '@/components/layout/HeaderAccount';
 import RoleSwitch from '@/components/layout/RoleSwitch';
@@ -63,9 +62,7 @@ export default async function Header() {
             it. Fewer words in the bar, and the two icons everyone recognises. */}
         <nav className="flex items-center gap-4 text-sm">
           <RoleSwitch className="hidden sm:flex" />
-          <Link href="/wishlist" aria-label="Saved items" className="hidden text-muted-foreground hover:text-brand-ink sm:inline-flex">
-            <Heart className="size-5" />
-          </Link>
+          {/* The heart lives in HeaderAccount since 21 Sep, where it carries its count. */}
           <HeaderAccount />
           <ThemeToggle />
         </nav>
