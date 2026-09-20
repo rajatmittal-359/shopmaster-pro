@@ -335,7 +335,7 @@ const TOOLS = [
   {
     name: 'webSearch',
     roles: ['seller', 'customer', 'admin'],
-    description: 'Search the web (Google) for facts outside ShopMaster: how Amazon/Flipkart/Meesho/Myntra handle something, Indian consumer law, courier practice, GST, current events. Returns a sourced summary.',
+    description: 'Search the web (Google) for facts outside ShopMaster: how Amazon/Flipkart/Meesho/Myntra handle something, Indian consumer law, courier practice, GST, current events - and market checks for a listing: what similar products list for on Amazon/Flipkart/Meesho/Myntra (a price band), the words buyers type for it, what is trending this season. Returns a sourced summary.',
     parameters: { type: 'OBJECT', properties: { query: STR('The search question') }, required: ['query'] },
     run: async ({ query }) => {
       const ask = `Search the web and answer factually with sources (site names) in under 200 words: ${String(query).slice(0, 400)}`;
