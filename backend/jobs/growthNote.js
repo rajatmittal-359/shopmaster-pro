@@ -59,7 +59,7 @@ const gatherFor = async (seller) => {
 const render = (seller, three) => {
   const SITE = frontendUrl();
   const lines = three.map((s, i) => `${i + 1}. ${s.title}${s.progress ? ` (${s.progress})` : ''}${s.minutes ? ` · ${s.minutes} min` : ''}`);
-  const title = `This week, 3 things for ${seller.businessName || 'your shop'} · इस हफ़्ते के 3 काम`;
+  const title = `This week, 3 things for ${seller.businessName || 'your shop'}`;
   const body = lines.join(' · ');
   const li = three
     .map(
@@ -72,10 +72,10 @@ const render = (seller, three) => {
     )
     .join('');
   const mail = {
-    subject: `${seller.businessName || 'Your shop'}: 3 things this week · इस हफ़्ते के 3 काम`,
+    subject: `${seller.businessName || 'Your shop'}: 3 things this week`,
     text: `${title}\n\n${lines.join('\n')}\n\nOpen Grow: ${SITE}/seller/grow\n\nOne a day is plenty. Reply to this mail if something is unclear.`,
     html: `<div style="font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;max-width:600px;margin:0 auto;padding:8px 4px;font-size:16px;line-height:1.6;color:#1f2937">
-      <h2 style="font-size:20px;margin:0 0 6px 0;color:#111827">This week, three things · इस हफ़्ते के 3 काम</h2>
+      <h2 style="font-size:20px;margin:0 0 6px 0;color:#111827">This week, three things</h2>
       <p style="margin:0 0 16px 0;color:#6b7280;font-size:14px">${seller.businessName || 'Your shop'} on ShopMaster Pro. Ten minutes each, one a day is plenty.</p>
       <ol style="padding-left:20px;margin:0 0 16px 0">${li}</ol>
       <p style="margin:0 0 20px 0"><a href="${SITE}/seller/grow" style="display:inline-block;padding:12px 20px;background:#2563eb;color:#fff;text-decoration:none;border-radius:9px;font-weight:600">Open Grow</a></p>

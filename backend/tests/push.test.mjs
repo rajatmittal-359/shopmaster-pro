@@ -119,7 +119,7 @@ describe('notifySeller pushes beside the mail', () => {
     await notify.newOrder('o1');
     expect(sent).toHaveLength(2);
     const s1 = sent.find((x) => x.to === 's1');
-    expect(s1.title).toMatch(/नया ऑर्डर/);
+    expect(s1.title).toMatch(/New order/);
     expect(s1.body).toContain('Jhumka × 2');
     expect(s1.body).not.toContain('Kurta');
     expect(s1.body).toContain('COD');

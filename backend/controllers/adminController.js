@@ -70,7 +70,7 @@ exports.approveSeller = async (req, res) => {
     }
 
     // The moment a shop waits for (plan 2.40): bell, push and mail, with the next step.
-    setImmediate(() => require('../utils/notify').notify({ userId: seller.userId?._id || seller.userId, role: 'seller', category: 'account', title: `${seller.businessName} is approved · दुकान मंज़ूर 🎉`, body: 'Your products can go live now. First: pickup address, then the first product.', url: '/seller', tag: `seller-approved-${seller._id}`, mail: { subject: `${seller.businessName} is approved on ShopMaster Pro`, text: 'Your shop is approved. Your products can go live now - first the pickup address, then the first product, at /seller.', html: `<p style="font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;font-size:16px;line-height:1.6;color:#1f2937">${esc('Your shop is approved. Your products can go live now - first the pickup address, then the first product, at /seller.')}</p><p style="font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;font-size:14px;color:#6b7280">ShopMaster Pro</p>` } }).catch((err) => console.error('approve notify failed:', err.message)));
+    setImmediate(() => require('../utils/notify').notify({ userId: seller.userId?._id || seller.userId, role: 'seller', category: 'account', title: `${seller.businessName} is approved 🎉`, body: 'Your products can go live now. First: pickup address, then the first product.', url: '/seller', tag: `seller-approved-${seller._id}`, mail: { subject: `${seller.businessName} is approved on ShopMaster Pro`, text: 'Your shop is approved. Your products can go live now - first the pickup address, then the first product, at /seller.', html: `<p style="font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;font-size:16px;line-height:1.6;color:#1f2937">${esc('Your shop is approved. Your products can go live now - first the pickup address, then the first product, at /seller.')}</p><p style="font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;font-size:14px;color:#6b7280">ShopMaster Pro</p>` } }).catch((err) => console.error('approve notify failed:', err.message)));
 
     res.json({
       message: 'Seller approved successfully',
@@ -167,7 +167,7 @@ exports.editSellerShop = async (req, res) => {
       userId: seller.userId,
       role: 'seller',
       category: 'account',
-      title: `Admin updated your ${r.changed.join(', ')} · एडमिन ने बदला`,
+      title: `Admin updated your ${r.changed.join(', ')}`,
       body: editBody,
       url: '/seller/settings',
       tag: `admin-edit-${seller._id}-${Date.now()}`,
@@ -966,7 +966,7 @@ exports.resolveDispute = async (req, res) => {
       require('../utils/notifyCustomer').disputeDecided(order, inFavourOf);
       const { notify } = require('../utils/notify');
       for (const f of open) {
-        notify({ userId: f.sellerId, role: 'seller', category: 'disputes', title: inFavourOf === 'seller' ? `शिकायत आपके पक्ष में · Dispute decided for you · ${order.orderNumber}` : `शिकायत ग्राहक के पक्ष में · Dispute decided for the customer · ${order.orderNumber}`, body: inFavourOf === 'seller' ? 'आपका पेमेंट अब आगे बढ़ेगा। Your payout proceeds.' : 'रिफ़ंड ग्राहक को जाएगा; वजह ऑर्डर पेज पर है। The refund goes to the customer; the reason is on the order.', url: `/seller/orders/${order._id}`, tag: `dispute-decided-${order._id}-${f.sellerId}` }).catch(() => {});
+        notify({ userId: f.sellerId, role: 'seller', category: 'disputes', title: inFavourOf === 'seller' ? `Dispute decided in your favour · ${order.orderNumber}` : `Dispute decided for the customer · ${order.orderNumber}`, body: inFavourOf === 'seller' ? 'Your payout proceeds.' : 'The refund goes to the customer; the reason is on the order.', url: `/seller/orders/${order._id}`, tag: `dispute-decided-${order._id}-${f.sellerId}` }).catch(() => {});
       }
     });
 

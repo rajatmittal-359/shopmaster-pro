@@ -165,7 +165,7 @@ exports.approveReturn = async (req, res) => {
       await order.save();
       setImmediate(() => {
         require('../utils/notifyCustomer').returnDecided(order, true);
-        require('../utils/notify').notify({ userId: f.sellerId, role: 'seller', category: 'returns', title: `वापसी मंज़ूर · Return approved · ${order.orderNumber}`, body: 'अब पिकअप बुक करें। Book the pickup from the order page.', url: `/seller/orders/${order._id}`, tag: `return-approved-${order._id}-${f.sellerId}` }).catch(() => {});
+        require('../utils/notify').notify({ userId: f.sellerId, role: 'seller', category: 'returns', title: `Return approved · ${order.orderNumber}`, body: 'Book the pickup from the order page.', url: `/seller/orders/${order._id}`, tag: `return-approved-${order._id}-${f.sellerId}` }).catch(() => {});
       });
       return res.json({ ok: true, message: 'Approved. The seller can book the pickup now.' });
     }

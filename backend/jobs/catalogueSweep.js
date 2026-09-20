@@ -96,7 +96,7 @@ const pickThree = (issues) => {
 const render = (seller, three, total) => {
   const SITE = frontendUrl();
   const more = total - three.length;
-  const title = `${three.length} listing${three.length > 1 ? 's' : ''} to fix · ${three.length} लिस्टिंग ठीक करें`;
+  const title = `${three.length} listing${three.length > 1 ? 's' : ''} to fix`;
   const body = three.map((i) => `${i.name}: ${i.label}`).join(' · ') + (more > 0 ? ` · +${more} more` : '');
   const li = three
     .map(
@@ -111,7 +111,7 @@ const render = (seller, three, total) => {
     subject: `${seller.businessName || 'Your shop'}: ${three.length} listing${three.length > 1 ? 's' : ''} to fix this week`,
     text: `${title}\n\n${three.map((i) => `- ${i.name}: ${i.label} - ${i.why}\n  ${SITE}/seller/products/${i.productId}`).join('\n')}${more > 0 ? `\n\n+${more} more in Products.` : ''}\n\nProducts: ${SITE}/seller/products`,
     html: `<div style="font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;max-width:600px;margin:0 auto;padding:8px 4px;font-size:16px;line-height:1.6;color:#1f2937">
-      <h2 style="font-size:20px;margin:0 0 6px 0;color:#111827">Listings to fix · लिस्टिंग ठीक करें</h2>
+      <h2 style="font-size:20px;margin:0 0 6px 0;color:#111827">Listings to fix</h2>
       <p style="margin:0 0 16px 0;color:#6b7280;font-size:14px">${escapeHtml(seller.businessName || 'Your shop')} on ShopMaster Pro. The three that cost the most, worst first.</p>
       <ol style="padding-left:20px;margin:0 0 16px 0">${li}</ol>
       ${more > 0 ? `<p style="margin:0 0 16px 0;color:#6b7280;font-size:14px">+${more} more - the Products page shows each one.</p>` : ''}

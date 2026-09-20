@@ -60,7 +60,7 @@ exports.test = async (req, res) => {
   try {
     const r = await push.sendToUser(req.user._id, {
       title: 'ShopMaster Pro',
-      body: 'नोटिफ़िकेशन चालू हैं · Notifications are on. नया ऑर्डर आते ही यहीं दिखेगा।',
+      body: 'Notifications are on. A new order will show up right here.',
       url: '/seller',
       tag: 'push-test',
     });

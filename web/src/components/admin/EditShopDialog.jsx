@@ -131,7 +131,7 @@ export default function EditShopDialog({ seller, open, onOpenChange, onSaved }) 
                   offered here; on the house shop the switch has nothing to do. */}
               <label className={`flex items-center justify-between gap-3 rounded-lg border p-3 sm:col-span-2 ${form.isPlatformOwned ? 'opacity-60' : ''}`}>
                 <span className="flex flex-col">
-                  <span>Ghar jaisa - house-shop benefits</span>
+                  <span>House-shop benefits</span>
                   <span className="text-xs text-muted-foreground">
                     {form.isPlatformOwned
                       ? 'This is the house shop - it has all of this already.'

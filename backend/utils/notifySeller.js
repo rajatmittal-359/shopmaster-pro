@@ -12,7 +12,9 @@ const { notify } = require('./notify');
  *   sent it. An email to the seller's Gmail is the one notification that
  *   reaches a phone for free, needs no app, and is read the same minute.
  *
- * WHAT IS SENT (one short mail each, Hindi first, English under it)
+ * WHAT IS SENT (one short mail each, plain English - Rajat, 21 Sep 2026:
+ *   "emails saare proper English me hone chahiye"; the panel itself has the
+ *   हिंदी / Hinglish switch for whoever prefers it)
  *   new order          what to pack, for whom, one button to the order
  *   return requested   what is coming back and why
  *   dispute opened     the 72-hour clock has started
@@ -61,20 +63,19 @@ const newOrder = async (orderId) => {
   for (const sellerId of sellerIdsOf(order)) {
     const what = itemsOf(order, sellerId);
     const cod = order.paymentMethod === 'cod';
-    const subject = plain(`नया ऑर्डर · New order ${order.orderNumber} - ${what}`);
+    const subject = plain(`New order ${order.orderNumber} - ${what}`);
     const href = panelUrl(`/orders/${order._id}`);
     const html = shell(
-      'नया ऑर्डर आया है 🎉',
+      'You have a new order 🎉',
       [
         `<b>${what}</b>`,
         `${esc(order.customerId?.name || 'Customer')} · ${cod ? 'Cash on delivery' : 'Paid online'}`,
-        'पैक करके ऑर्डर पेज पर <b>Book courier</b> दबाएँ - राइडर आकर ले जाएगा। 2 दिन के अंदर भेजना है।',
         `Pack it and press <b>Book courier</b> on the order page - the rider collects. Dispatch within 2 working days.`,
       ],
       href,
-      'ऑर्डर खोलें · Open the order'
+      'Open the order'
     );
-    await tell(sellerId, { category: 'orders', title: 'नया ऑर्डर आया है 🎉', body: `${plain(what)} · ${plain(order.customerId?.name || 'Customer')} · ${cod ? 'COD' : 'Paid'}`, url: `/seller/orders/${order._id}`, tag: `order-${order._id}`, subject, html, text: `New order ${order.orderNumber}: ${what}. Open: ${href}` });
+    await tell(sellerId, { category: 'orders', title: 'New order 🎉', body: `${plain(what)} · ${plain(order.customerId?.name || 'Customer')} · ${cod ? 'COD' : 'Paid'}`, url: `/seller/orders/${order._id}`, tag: `order-${order._id}`, subject, html, text: `New order ${order.orderNumber}: ${what}. Open: ${href}` });
   }
 };
 
@@ -85,17 +86,16 @@ const returnRequested = async (orderId, sellerId) => {
   const what = itemsOf(order, sellerId);
   const href = panelUrl(`/orders/${order._id}`);
   const html = shell(
-    'ग्राहक ने वापसी माँगी है · Return requested',
+    'A customer asked for a return',
     [
       `<b>${what}</b> · ${order.orderNumber}`,
-      `कारण / reason: ${esc(f.returnReason || '-')}${f.returnResolution === 'replacement' ? ' · exchange (same item again)' : ' · refund'}`,
-      'अभी कुछ नहीं करना - पिकअप बुक हो रहा है। सामान पहुँचे तब ऑर्डर पेज से settle करें।',
+      `Reason: ${esc(f.returnReason || '-')}${f.returnResolution === 'replacement' ? ' · exchange (same item again)' : ' · refund'}`,
       'Nothing to do yet - the pickup is being booked. When it reaches you, settle it from the order page.',
     ],
     href,
-    'ऑर्डर देखें · See the order'
+    'See the order'
   );
-  await tell(sellerId, { category: 'returns', title: 'वापसी माँगी है · Return requested', body: `${plain(what)} · ${plain(f.returnReason || '')}`.slice(0, 200), url: `/seller/orders/${order._id}`, tag: `return-${order._id}-${sellerId}`, subject: plain(`वापसी · Return requested ${order.orderNumber} - ${what}`), html, text: `Return requested on ${order.orderNumber}: ${what}. ${href}` });
+  await tell(sellerId, { category: 'returns', title: 'Return requested', body: `${plain(what)} · ${plain(f.returnReason || '')}`.slice(0, 200), url: `/seller/orders/${order._id}`, tag: `return-${order._id}-${sellerId}`, subject: plain(`Return requested on ${order.orderNumber} - ${what}`), html, text: `Return requested on ${order.orderNumber}: ${what}. ${href}` });
 };
 
 const disputeOpened = async (orderId) => {
@@ -106,17 +106,16 @@ const disputeOpened = async (orderId) => {
     const what = itemsOf(order, f.sellerId);
     const href = panelUrl(`/orders/${order._id}`);
     const html = shell(
-      'शिकायत आई है · A dispute is open',
+      'A dispute is open - 72 hours to reply',
       [
         `<b>${what}</b> · ${order.orderNumber}`,
-        `ग्राहक कहता है / customer says: “${esc(f.disputeReason || '-')}”`,
-        '<b>72 घंटे</b> में अपनी बात और सबूत (कूरियर का प्रूफ, फोटो) ऑर्डर पेज पर जोड़ें। फैसला एडमिन करेगा।',
+        `The customer says: “${esc(f.disputeReason || '-')}”`,
         'Add your side and evidence (courier proof, photos) on the order page within <b>72 hours</b>. An admin decides.',
       ],
       href,
-      'जवाब दें · Reply now'
+      'Reply now'
     );
-    await tell(f.sellerId, { category: 'disputes', title: 'शिकायत · Dispute - 72 घंटे', body: `${plain(what)} · “${plain(f.disputeReason || '')}”`.slice(0, 200), url: `/seller/orders/${order._id}`, tag: `dispute-${order._id}-${f.sellerId}`, subject: plain(`शिकायत · Dispute on ${order.orderNumber} - ${what}`), html, text: `Dispute opened on ${order.orderNumber}: ${what}. Reply within 72h: ${href}` });
+    await tell(f.sellerId, { category: 'disputes', title: 'Dispute - reply within 72 hours', body: `${plain(what)} · “${plain(f.disputeReason || '')}”`.slice(0, 200), url: `/seller/orders/${order._id}`, tag: `dispute-${order._id}-${f.sellerId}`, subject: plain(`Dispute on ${order.orderNumber} - ${what}`), html, text: `Dispute opened on ${order.orderNumber}: ${what}. Reply within 72h: ${href}` });
   }
 };
 
