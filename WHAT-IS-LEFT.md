@@ -238,6 +238,7 @@ Assistant gaps found in the same pass (problem taxonomy in the chat of 13 Sep): 
 - Voice input for the AI listing (Groq or Cloudflare Whisper).
 - Text fallback when Gemini's quota is out — Pollinations serves free text models (`gpt-5.4-nano`, `deepseek-v4-flash-vision`, `glm-5.3-flash`).
 - Real 3D product views (Tripo3D) — "3D later" was Rajat's phrase.
+- A 3D / motion-led home concept (raised 20 Sep, launch day, home empty of products). Gate: no reference marketplace at our stage does it (Amazon/Flipkart/Myntra/Meesho heroes are photo + offer); it costs on a mid-range phone on mobile data and adds no trust. What the empty home actually needs is the first 20-30 real listings with clean photos. Revisit only after the catalogue exists, via `imagegen-frontend-web` references and a Lighthouse budget.
 - The `/sell` recruitment page rebuilt with `taste-skill`'s dials against `web/DESIGN.md`; a brand board from `brandkit`.
 - Re-run the logged-out marketplace navigation research that a session limit cut off (plan §15).
 
@@ -273,6 +274,8 @@ records the same night.
 
 ## 5. After cutover only
 
+- **Cutover ran 20 Sep 2026** (AWS Lightsail Mumbai; OPS has the facts and the short close-out list). The Render static site stays until the box has run a week; then delete it and `frontend/` (§1 must be empty).
+- **Home merchandising workspace + motion (Option A, researched 20 Sep, Rajat: "chalu karenge, dheere dheere")** - `home.sections[]` on the Shopify theme-editor pattern (hero with two arch-card products, category tiles ≤ 8, hand-picked collections, featured sellers, announcement/launch slot, recent reviews, "new this week" only at ≥ 8), admin editor with live preview, empty states for a thin catalogue, motion on transform/opacity only with a Lighthouse ≥ 85 gate. References and numbers in the 20 Sep chat: Baymard 2025 homepage, Etsy home modules, Dawn sections, web.dev CWV. Sequence S1 backend + editor → S2 render + empty states → S3 motion → S4 sellers/reviews. Seller-requested launch banners (C) after 3+ sellers.
 - Delete `frontend/` a week after the domain moves (plan §13a, OPS cutover list).
 - Key rotation, test-data deletion, branding polish — the deferred cleanup.
 - Old Studio results made before `AiDraft` existed are not in the drafts strip; nothing to do unless he misses one.

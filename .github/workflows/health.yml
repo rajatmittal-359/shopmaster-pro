@@ -4,9 +4,9 @@
 #   The API can be running with the database gone, and nothing on any screen
 #   says so until a customer's checkout fails. /api/health answers 200 only
 #   when Mongo pings back inside two seconds. This asks it every 30 minutes
-#   and turns RED - GitHub emails the owner - on anything else. It is not a
-#   keep-alive: a free Render service still sleeps between checks, and the
-#   first request after a sleep is allowed its 60 seconds to wake.
+#   and turns RED - GitHub emails the owner - on anything else. Since the
+#   20 Sep 2026 cutover the API lives on the Lightsail box behind Caddy, so
+#   it is always awake; the generous timeout is left for a slow morning.
 #
 #   UptimeRobot (on the manual list) does the same from more places and more
 #   often; this is the free floor under it that needs nobody to sign up.
@@ -26,8 +26,7 @@ jobs:
     steps:
       - name: ask the API whether the database answers
         run: |
-          url="https://shopmaster-api-sg.onrender.com/api/health"
-          # --max-time 90: a sleeping free-tier service takes ~40 s to wake before it can answer at all.
+          url="https://www.shopmasterpro.in/api/health"
           code=$(curl -sS -o body.json -w '%{http_code}' --max-time 90 --retry 2 --retry-delay 20 --retry-all-errors "$url" || echo 000)
           echo "HTTP $code"
           cat body.json 2>/dev/null || true
