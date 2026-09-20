@@ -2,11 +2,12 @@
 
 import { useEffect } from 'react';
 import Link from 'next/link';
-import { ShoppingBag, UserRound } from 'lucide-react';
+import { Heart, ShoppingBag, UserRound } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useSession, setCapabilities } from '@/lib/session';
 import { authedFetch, signOut as endSession } from '@/lib/client';
 import NotificationBell from '@/components/common/NotificationBell';
+import { useCounts } from '@/lib/useCounts';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -44,7 +45,15 @@ import {
  *   person running a shop is not shopping, and "Cart" in a dashboard's top bar
  *   is the storefront leaking in.
  */
+const CountBadge = ({ n }) =>
+  n > 0 ? (
+    <span className="absolute -right-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-brand-ink px-1 text-[0.6rem] font-semibold leading-none text-white">
+      {n > 99 ? '99+' : n}
+    </span>
+  ) : null;
+
 export default function HeaderAccount({ showCart = true }) {
+  const counts = useCounts();
   const router = useRouter();
   const { signedIn, user, canSell, isAdmin } = useSession();
 
@@ -76,9 +85,18 @@ export default function HeaderAccount({ showCart = true }) {
 
   return (
     <div className="flex items-center gap-4 text-sm">
+      {/* The heart and the bag carry their counts (Flipkart, Myntra): proof that
+          "Add to cart" and "Save" went somewhere. Zero draws no badge. */}
+      {showCart && signedIn && (
+        <Link href="/wishlist" aria-label={counts.wishlist ? `Saved items (${counts.wishlist})` : 'Saved items'} className="relative inline-flex text-muted-foreground hover:text-brand-ink">
+          <Heart className="size-5" />
+          <CountBadge n={counts.wishlist} />
+        </Link>
+      )}
       {showCart && (
-        <Link href="/cart" aria-label="Cart" className="inline-flex text-muted-foreground hover:text-brand-ink">
+        <Link href="/cart" aria-label={counts.cart ? `Cart (${counts.cart})` : 'Cart'} className="relative inline-flex text-muted-foreground hover:text-brand-ink">
           <ShoppingBag className="size-5" />
+          <CountBadge n={counts.cart} />
         </Link>
       )}
 

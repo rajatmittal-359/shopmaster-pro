@@ -86,17 +86,20 @@ const isoDate = (date) => date.toISOString().slice(0, 10);
  * @throws if the courier API cannot be reached - the caller must answer 503.
  *         An estimate we could not check is not an estimate.
  */
-async function estimateDelivery(pincode, { now = new Date(), dispatchDays = DISPATCH_DAYS } = {}) {
+async function estimateDelivery(pincode, { now = new Date(), dispatchDays = DISPATCH_DAYS, pickupPincode = null } = {}) {
   const code = String(pincode).trim();
+  // Transit depends on where the parcel starts: the seller's own pickup when the
+  // page asked about one product (2.54), else the default. Cached per pair.
+  const cacheKey = pickupPincode ? `${pickupPincode}>${code}` : code;
 
-  const hit = cache.get(code);
+  const hit = cache.get(cacheKey);
   if (hit && hit.expires > Date.now()) {
     // The DATE is recomputed even on a cache hit: the transit time is what was
     // cached, and a date cached at 11pm would be a day stale by morning.
     return withDate(hit.value, now, dispatchDays);
   }
 
-  const data = await shiprocket.getShippingRate(code, SAMPLE_WEIGHT_KG, false);
+  const data = await shiprocket.getShippingRate(code, SAMPLE_WEIGHT_KG, false, pickupPincode ? { pickupPincode } : {});
   const courier = shiprocket.pickBestCourier(data);
   const transitDays = courier ? transitDaysOf(courier) : null;
 
@@ -108,7 +111,7 @@ async function estimateDelivery(pincode, { now = new Date(), dispatchDays = DISP
         // checkout and find out there.
         { pincode: code, serviceable: false };
 
-  cache.set(code, { value, expires: Date.now() + CACHE_TTL_MS });
+  cache.set(cacheKey, { value, expires: Date.now() + CACHE_TTL_MS });
   return withDate(value, now, dispatchDays);
 }
 

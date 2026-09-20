@@ -42,9 +42,9 @@ const API = resolveApi();
  */
 const CATALOGUE_TTL = 300;
 
-const get = async (path, { revalidate = CATALOGUE_TTL } = {}) => {
+const get = async (path, { revalidate = CATALOGUE_TTL, tags } = {}) => {
   try {
-    const res = await fetch(`${API}${path}`, { next: { revalidate } });
+    const res = await fetch(`${API}${path}`, { next: { revalidate, ...(tags ? { tags } : {}) } });
     /*
      * 404 is an ANSWER, not a failure: the API sends it for a category slug
      * that does not exist. Collapsing it into null would make the page show
@@ -179,13 +179,19 @@ export const getCoupons = async () => {
 };
 
 /**
- * The platform's settings as the storefront reads them (public subset),
- * five-minute cache. Null when the API is down - callers fall back to the
- * code's defaults in config/policy.js.
+ * The platform's settings as the storefront reads them (public subset). Null
+ * when the API is down - callers fall back to the code's defaults in
+ * config/policy.js.
+ *
+ * Tagged `settings` so an admin save shows at once: the API asks the web
+ * server to drop the tag (app/_revalidate, 2.56) the moment Settings are
+ * saved. The 30-second floor is for when that call is not configured - Rajat
+ * cleared the home copy on launch night and watched the old words sit there
+ * for the five minutes this used to cache.
  */
 export const getSettings = async () => {
   try {
-    return await get('/public/settings', { revalidate: 300 });
+    return await get('/public/settings', { revalidate: 30, tags: ['settings'] });
   } catch {
     return null;
   }

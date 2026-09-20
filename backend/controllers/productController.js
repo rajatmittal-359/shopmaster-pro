@@ -454,7 +454,7 @@ exports.getProduct = async (req, res) => {
         isActive: true,
         isDeleted: { $ne: true },
       })
-        .select('name slug size price salePrice saleStartsAt saleEndsAt stock reserved')
+        .select('name slug size color images price salePrice saleStartsAt saleEndsAt stock reserved')
         .sort({ price: 1 })
         .lean();
     }

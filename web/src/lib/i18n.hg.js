@@ -336,6 +336,7 @@ const HG = {
   'Name, SKU or size': 'Naam, SKU ya size',
   'Edit': 'Edit',
   'Add a size': 'Size jodo',
+  'Add a size or colour': 'Size ya colour jodo',
   'View in shop': 'Dukaan me dekho',
   'Hide from shop': 'Dukaan se chhupao',
   'Show in shop': 'Dukaan me dikhao',

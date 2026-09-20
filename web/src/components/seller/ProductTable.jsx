@@ -318,7 +318,7 @@ export default function ProductTable() {
                           so only the size and the count are typed. */}
                       <DropdownMenuItem render={<Link href={`/seller/products/new?from=${product._id}`} />}>
                         <Plus className="size-4" />
-                        {t('Add a size')}
+                        {t('Add a size or colour')}
                       </DropdownMenuItem>
                       <DropdownMenuItem render={<Link href={`/products/${product.slug || product._id}`} target="_blank" rel="noreferrer" />}>
                         <ExternalLink className="size-4" />

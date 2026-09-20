@@ -234,6 +234,8 @@ exports.addProduct = async (req, res) => {
       countryOfOrigin,
       manufacturer,
       netQuantity,
+      material,
+      highlights,
       hsn,
       gstRate,
 
@@ -297,6 +299,8 @@ exports.addProduct = async (req, res) => {
       ...(countryOfOrigin ? { countryOfOrigin: String(countryOfOrigin).trim().slice(0, 60) } : {}),
       ...(manufacturer !== undefined ? { manufacturer: String(manufacturer || '').trim().slice(0, 240) } : {}),
       ...(netQuantity !== undefined ? { netQuantity: String(netQuantity || '').trim().slice(0, 60) } : {}),
+      ...(material !== undefined ? { material: require('../utils/productDetails').cleanMaterial(material) } : {}),
+      ...(highlights !== undefined ? { highlights: require('../utils/productDetails').cleanHighlights(highlights) } : {}),
       // Tax facts for a registered seller's invoice (utils/invoice); ignored shapes become empty.
       ...(hsn !== undefined ? { hsn: cleanHsn(hsn) } : {}),
       ...(gstRate !== undefined ? { gstRate: cleanGstRate(gstRate) } : {}),
@@ -393,6 +397,8 @@ exports.updateProduct = async (req, res) => {
       countryOfOrigin,
       manufacturer,
       netQuantity,
+      material,
+      highlights,
       hsn,
       gstRate,
       returnMode,
@@ -453,6 +459,8 @@ exports.updateProduct = async (req, res) => {
     if (countryOfOrigin !== undefined) product.countryOfOrigin = String(countryOfOrigin || 'India').trim().slice(0, 60);
     if (manufacturer !== undefined) product.manufacturer = String(manufacturer || '').trim().slice(0, 240);
     if (netQuantity !== undefined) product.netQuantity = String(netQuantity || '').trim().slice(0, 60);
+    if (material !== undefined) product.material = require('../utils/productDetails').cleanMaterial(material);
+    if (highlights !== undefined) product.highlights = require('../utils/productDetails').cleanHighlights(highlights);
     if (hsn !== undefined) product.hsn = cleanHsn(hsn);
     if (gstRate !== undefined) product.gstRate = cleanGstRate(gstRate);
     if (sku !== undefined) product.sku = sku;

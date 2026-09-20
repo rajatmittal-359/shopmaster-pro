@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { addToCart } from '@/lib/analytics';
 import { authedFetch } from '@/lib/client';
 import { useSession } from '@/lib/session';
@@ -42,17 +43,25 @@ export default function BuyBox({
   const [quantity, setQuantity] = useState(1);
   const [state, setState] = useState({ status: 'idle' });
   const [saved, setSaved] = useState(false);
-  const { signedIn } = useSession();
+  const { signedIn, capabilities } = useSession();
+  const router = useRouter();
+  // The admin account is not a shopper (backend/utils/capabilities: its orders
+  // would sit in every report). Say so quietly instead of letting the buttons
+  // fail with "Access denied" - Rajat saw exactly that on launch night.
+  const adminOnly = Boolean(capabilities?.admin) && !capabilities?.customer;
 
-  const add = async () => {
-    setState({ status: 'adding' });
+  const add = async (thenCheckout = false) => {
+    setState({ status: thenCheckout ? 'buying' : 'adding' });
     try {
       // authedFetch throws the server's own words - it knows things this button
       // does not, that the last one went while this page was open, for instance.
       await authedFetch('/customer/cart', { method: 'POST', body: { productId, quantity } });
-
-      setState({ status: 'added' });
       addToCart({ _id: productId, name, price }, quantity, price);
+      // "Buy now" (Amazon, Flipkart, Meesho all have it beside Add to cart): the
+      // same cart, straight to checkout - one screen less for the person who
+      // has already decided.
+      if (thenCheckout) return router.push('/checkout');
+      setState({ status: 'added' });
     } catch (err) {
       setState({ status: 'error', message: err.message });
     }
@@ -70,6 +79,10 @@ export default function BuyBox({
       className="w-full" variant="ghost" size="sm">
       Out of stock
     </Button>
+  ) : adminOnly ? (
+    <p className="rounded-lg border border-dashed p-3 text-sm text-muted-foreground">
+      The admin account does not shop - its orders would sit in every report. Use a customer account to buy.
+    </p>
   ) : !signedIn ? (
     <a
       /*
@@ -86,16 +99,25 @@ export default function BuyBox({
       Sign in to add to cart
     </a>
   ) : (
-    <Button
-      onClick={add}
-      disabled={state.status === 'adding'}
-      className="w-full" size="lg">
-      {state.status === 'adding'
-        ? 'Adding…'
-        : state.status === 'added'
-          ? 'Added to cart'
-          : 'Add to cart'}
-    </Button>
+    <div className="grid gap-2 sm:grid-cols-2">
+      <Button
+        onClick={() => add(false)}
+        disabled={state.status === 'adding' || state.status === 'buying'}
+        variant="outline"
+        className="w-full" size="lg">
+        {state.status === 'adding'
+          ? 'Adding…'
+          : state.status === 'added'
+            ? 'Added to cart'
+            : 'Add to cart'}
+      </Button>
+      <Button
+        onClick={() => add(true)}
+        disabled={state.status === 'adding' || state.status === 'buying'}
+        className="w-full" size="lg">
+        {state.status === 'buying' ? 'Opening checkout…' : 'Buy now'}
+      </Button>
+    </div>
   );
 
   return (
@@ -129,7 +151,7 @@ export default function BuyBox({
           It needs a session for the same reason the cart does - the list lives
           on the account, not in this browser.
         */}
-        {signedIn && (
+        {signedIn && !adminOnly && (
           <Button
             variant="outline"
             className="w-full"

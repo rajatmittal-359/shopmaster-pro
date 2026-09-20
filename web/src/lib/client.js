@@ -104,6 +104,14 @@ export async function authedFetch(path, { method = 'GET', body, headers: extraHe
     error.code = data.code;
     throw error;
   }
+  /*
+   * The header's cart and saved-items badges (useCounts) listen for this: any
+   * write to the cart or the wishlist, from any page, and they ask again. One
+   * event beats threading a callback through every button.
+   */
+  if (method !== 'GET' && /^\/customer\/(cart|wishlist)(\/|$|\?)/.test(path) && typeof window !== 'undefined') {
+    window.dispatchEvent(new Event('smp:counts'));
+  }
   return data;
 }
 

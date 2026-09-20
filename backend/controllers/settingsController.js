@@ -83,6 +83,8 @@ exports.updateSettings = async (req, res) => {
     await doc.save();
     await RULES.loadRules();
     require('../utils/liveSettings').forget();
+    // The storefront's cached copy goes the same moment (utils/webRevalidate, 2.56).
+    require('../utils/webRevalidate').webRevalidate('settings');
     res.json({ settings: doc, rulesVersion: doc.rules.version });
   } catch (error) {
     if (error.name === 'ValidationError') return res.status(400).json({ message: Object.values(error.errors)[0]?.message || 'Check the values' });

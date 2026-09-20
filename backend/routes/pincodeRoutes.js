@@ -55,14 +55,22 @@ router.get('/:code/delivery', async (req, res) => {
     // ?product=<id or slug>: a made-to-order item's own ready-to-ship days go
     // into the date (utils/dispatch). Read here, never trusted from the query.
     let dispatchDays;
+    let pickupPincode = null;
     if (req.query.product) {
       const Product = require('../models/Product');
+      const Seller = require('../models/Seller');
       const mongoose = require('mongoose');
       const key = String(req.query.product);
-      const p = await Product.findOne(mongoose.isValidObjectId(key) ? { $or: [{ _id: key }, { slug: key }] } : { slug: key }).select('processingDays').lean().catch(() => null);
-      if (p) dispatchDays = require('../utils/dispatch').processingDaysOf(p);
+      const p = await Product.findOne(mongoose.isValidObjectId(key) ? { $or: [{ _id: key }, { slug: key }] } : { slug: key }).select('processingDays sellerId').lean().catch(() => null);
+      if (p) {
+        dispatchDays = require('../utils/dispatch').processingDaysOf(p);
+        // The seller's own pickup pincode decides the transit (2.54); the house shop keeps the default.
+        const s = p.sellerId ? await Seller.findOne({ userId: p.sellerId }).select('isPlatformOwned pickupAddress.pincode').lean().catch(() => null) : null;
+        const pin = s && !s.isPlatformOwned ? String(s.pickupAddress?.pincode || '').trim() : '';
+        if (/^\d{6}$/.test(pin)) pickupPincode = pin;
+      }
     }
-    const estimate = await estimateDelivery(code, dispatchDays ? { dispatchDays } : {});
+    const estimate = await estimateDelivery(code, { ...(dispatchDays ? { dispatchDays } : {}), ...(pickupPincode ? { pickupPincode } : {}) });
 
     // Six hours, matching the server-side cache. A delivery date is not
     // personal - it is the same answer for everyone asking about that PIN code

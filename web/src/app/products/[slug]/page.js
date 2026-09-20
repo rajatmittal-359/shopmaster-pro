@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { getProduct, getReviews, getRelated, getSimilar } from '@/lib/api';
+import { getProduct, getReviews, getRelated, getSimilar, getSeller } from '@/lib/api';
 import { priceOf } from '@/lib/pricing';
 import { serialiseJsonLd } from '@/lib/jsonLd';
 import { faqSchema, productSchema, breadcrumbSchema } from '@/lib/productSchema';
@@ -69,11 +69,28 @@ export default async function ProductPage({ params }) {
 
   // Fetched after the product exists, and deliberately not inside Suspense:
   // both are small, and nothing a crawler needs may sit behind a boundary.
-  const [reviews, related, similar] = await Promise.all([
+  const [reviews, related, similar, shop] = await Promise.all([
     getReviews(product._id),
     getRelated(product.category?.slug, product._id),
     getSimilar(product._id).catch(() => []),
+    // "More from this shop" (Etsy, Amazon's brand row): the seller page already
+    // carries their 24 newest pieces; four of them, minus this one.
+    product.shop?.id ? getSeller(product.shop.id).catch(() => null) : null,
   ]);
+  const fromShop = (shop?.products || []).filter((p) => String(p._id) !== String(product._id)).slice(0, 4);
+  // Highlights (21 Sep 2026): what the shopper reads before the description -
+  // Amazon's "Top highlights" table + "About this item" bullets, from the
+  // fields the seller filled; an empty field is simply not a row.
+  const weightText = product.weight ? (product.weight >= 1 ? `${Number(product.weight.toFixed(2))} kg` : `${Math.round(product.weight * 1000)} g`) : null;
+  const facts = [
+    ['Material', product.material],
+    ['Colour', product.color],
+    ['Size', product.size],
+    ['Weight', weightText],
+    ['Country of origin', product.countryOfOrigin || 'India'],
+    ['Ready to ship in', product.processingDays ? `${product.processingDays} day${product.processingDays === 1 ? '' : 's'}` : null],
+  ].filter(([, v]) => v);
+  const bullets = (product.highlights || []).filter(Boolean);
 
   const crumbs = [
     { name: 'Home', url: `${SITE}/` },
@@ -218,6 +235,27 @@ export default async function ProductPage({ params }) {
             returnTo={`/products/${product.slug || product._id}`}
           />
 
+          {(bullets.length > 0 || facts.length > 0) && (
+            <section aria-labelledby="highlights" className="rounded-lg border border-border p-4">
+              <h2 id="highlights" className="text-sm font-semibold">Highlights</h2>
+              {bullets.length > 0 && (
+                <ul className="mt-2 space-y-1 text-sm text-muted-foreground [&_li]:ml-4 [&_li]:list-disc">
+                  {bullets.map((b) => <li key={b}>{b}</li>)}
+                </ul>
+              )}
+              {facts.length > 0 && (
+                <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm">
+                  {facts.map(([label, value]) => (
+                    <div key={label} className="contents">
+                      <dt className="text-muted-foreground">{label}</dt>
+                      <dd className="font-medium">{value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              )}
+            </section>
+          )}
+
           {/* The product travels on WhatsApp - the OG card above is what arrives. */}
           <ShareButtons url={`${SITE}/products/${product.slug || product._id}`} name={product.name} price={price} />
 
@@ -275,11 +313,8 @@ export default async function ProductPage({ params }) {
 
           <dl className="mt-6 grid grid-cols-2 gap-y-2 text-sm sm:grid-cols-3">
             {[
-              ['Size', product.size],
-              ['Colour', product.color],
               ['Category', product.category?.name],
               ['Item code', product.sku],
-              ['Weight', product.weight ? `${product.weight} g` : null],
               // The law's lines (E-Commerce Rules 2020 rule 6(5); Legal Metrology rule 6(10)).
               ['Country of origin', product.countryOfOrigin || 'India'],
               ['Net quantity', product.netQuantity],
@@ -406,10 +441,24 @@ export default async function ProductPage({ params }) {
         </section>
       )}
 
+      {fromShop.length > 0 && (
+        <section className="mt-12">
+          <h2 className="text-lg font-semibold">
+            More from{' '}
+            <Link href={`/sellers/${product.shop.id}`} className="text-brand-ink hover:underline">{product.shop?.name || 'this shop'}</Link>
+          </h2>
+          <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
+            {fromShop.map((p) => (
+              <ProductCard key={p._id} product={p} />
+            ))}
+          </div>
+        </section>
+      )}
+
       {related.length > 0 && (
         <section className="mt-12">
           <h2 className="text-lg font-semibold">
-            More from {product.category?.name || 'the shop'}
+            More in {product.category?.name || 'this category'}
           </h2>
           <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
             {related.map((p) => (

@@ -383,6 +383,7 @@ const HI = {
   'Name, SKU or size': 'नाम, SKU या साइज़',
   'Edit': 'बदलें',
   'Add a size': 'साइज़ जोड़ें',
+  'Add a size or colour': 'साइज़ या रंग जोड़ें',
   'View in shop': 'दुकान में देखें',
   'Hide from shop': 'दुकान से छिपाएँ',
   'Show in shop': 'दुकान में दिखाएँ',

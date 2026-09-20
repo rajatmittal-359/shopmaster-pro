@@ -31,6 +31,7 @@ const {
   addToWishlist,
   removeFromWishlist,
   clearWishlist,
+  getCounts,
 } = require("../controllers/wishlistController");
 
 // Razorpay controller imports (only for authenticated routes)
@@ -46,6 +47,8 @@ router.get("/test", (req, res) => res.json({ ok: true }));
 router.use(authMiddleware, roleMiddleware("customer"));
 
 // Cart routes
+// The header's two badges - one cheap call per page.
+router.get("/counts", getCounts);
 router.get("/cart", getCart);
 router.post("/cart", addToCart);
 router.patch("/cart", updateCartItem);

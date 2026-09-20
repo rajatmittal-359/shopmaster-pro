@@ -202,6 +202,43 @@ const freeAboveThreshold = async () => {
 const basketValue = (cartItems) =>
   cartItems.reduce((sum, item) => sum + effectivePrice(productOf(item)).price * (item.quantity || 1), 0);
 
+/**
+ * Where each seller's parcel starts (2.54, 21 Sep 2026). The first outside
+ * seller's checkout quoted Jaipur→Nasirabad for a Nasirabad shop, because the
+ * rate call always used the house shop's pincode while the BOOKING already
+ * went per seller. One query for the basket: userId → pickup pincode; the
+ * house shop and anyone without a pincode on file keep the env default.
+ */
+const pickupPincodes = async (sellerIds) => {
+  const map = new Map();
+  if (!sellerIds.length) return map;
+  try {
+    const sellers = await Seller.find({ userId: { $in: sellerIds } }).select('userId isPlatformOwned pickupAddress.pincode');
+    for (const s of sellers || []) {
+      const pin = s.isPlatformOwned ? null : String(s.pickupAddress?.pincode || '').trim();
+      if (pin && /^\d{6}$/.test(pin)) map.set(String(s.userId), pin);
+    }
+  } catch (err) {
+    console.error('pickup pincode lookup failed - quoting from the default pickup:', err.message);
+  }
+  return map;
+};
+
+/** One rate call for one seller's lines; the cheapest courier of what came back. */
+const quoteParcel = async (lines, address, isCOD, pickupPincode) => {
+  const weight = lines.reduce((sum, item) => sum + weightOf(item), 0);
+  const shippingData = await shiprocketService.getShippingRate(address.zipCode, weight, isCOD, pickupPincode ? { pickupPincode } : {});
+  const couriers =
+    (shippingData && shippingData.data && shippingData.data.available_courier_companies) ||
+    (shippingData && shippingData.available_courier_companies) ||
+    [];
+  if (couriers.length === 0) return { weight, charge: fallbackPrice(weight, address.zipCode), courier: 'Standard Shipping', fallback: true };
+  const rateOf = (c) => c.freight_charge || c.rate || c.total_charge || 0;
+  const cheapest = couriers.reduce((min, curr) => (rateOf(curr) < rateOf(min) ? curr : min));
+  const codFee = isCOD ? cheapest.cod_charges || cheapest.cod_charge || 0 : 0;
+  return { weight, charge: rateOf(cheapest) + codFee, courier: cheapest.courier_name || cheapest.courier_company_id || 'Shiprocket', fallback: false };
+};
+
 const calculateShipping = async (cartItems, address, isCOD) => {
   const freeSellers = await freeShippingSellers(cartItems);
   const billable = cartItems.filter((item) => !isFreeShipping(item, freeSellers));
@@ -227,38 +264,23 @@ const calculateShipping = async (cartItems, address, isCOD) => {
 
   const totalWeight = billable.reduce((sum, item) => sum + weightOf(item), 0);
 
+  // One parcel per seller: grouped by who ships it, quoted from where they ship.
+  const groups = new Map();
+  for (const item of billable) {
+    const key = String(productOf(item).sellerId || '');
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(item);
+  }
+  const origins = await pickupPincodes([...groups.keys()].filter(Boolean));
+
   try {
-    const shippingData = await shiprocketService.getShippingRate(
-      address.zipCode,
-      totalWeight,
-      isCOD
+    const parcels = await Promise.all(
+      [...groups.entries()].map(([sellerId, lines]) => quoteParcel(lines, address, isCOD, origins.get(sellerId)))
     );
-
-    const couriers =
-      (shippingData && shippingData.data && shippingData.data.available_courier_companies) ||
-      (shippingData && shippingData.available_courier_companies) ||
-      [];
-
-    if (couriers.length === 0) {
-      console.warn('Shiprocket: no couriers available - using the weight fallback');
-      return {
-        shippingCharges: fallbackPrice(totalWeight, address.zipCode),
-        shippingCourier: 'Standard Shipping',
-        freeShipping: false,
-      };
-    }
-
-    const rateOf = (c) => c.freight_charge || c.rate || c.total_charge || 0;
-    const cheapest = couriers.reduce((min, curr) => (rateOf(curr) < rateOf(min) ? curr : min));
-
-    const baseRate = rateOf(cheapest);
-    const codFee = isCOD ? cheapest.cod_charges || cheapest.cod_charge || 0 : 0;
-
-    return {
-      shippingCharges: Math.round(baseRate + codFee),
-      shippingCourier: cheapest.courier_name || cheapest.courier_company_id || 'Shiprocket',
-      freeShipping: false,
-    };
+    if (parcels.some((p) => p.fallback)) console.warn('Shiprocket: no couriers for at least one parcel - weight fallback used for it');
+    const shippingCharges = Math.round(parcels.reduce((sum, p) => sum + p.charge, 0));
+    const shippingCourier = parcels.length === 1 ? parcels[0].courier : `${parcels.length} parcels · ${[...new Set(parcels.map((p) => p.courier))].join(', ')}`;
+    return { shippingCharges, shippingCourier, freeShipping: false };
   } catch (err) {
     // Never block a checkout because the courier API is down; charge the
     // weight band instead, which is priced not to lose money.

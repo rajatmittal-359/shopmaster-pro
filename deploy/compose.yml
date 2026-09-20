@@ -18,6 +18,9 @@ services:
     environment:
       NODE_ENV: production
       PORT: "5000"
+      # Settings save -> the web drops its cached copy at once (utils/webRevalidate).
+      # The shared token is WEB_REVALIDATE_TOKEN in env/api.env = REVALIDATE_TOKEN in env/web.env.
+      WEB_INTERNAL_URL: http://web:3000
     expose: ["5000"]
     restart: unless-stopped
     # 2 GB box: the API gets a hard ceiling so a leak cannot starve the web.

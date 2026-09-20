@@ -1,6 +1,7 @@
 // backend/controllers/wishlistController.js
 const { sendError } = require('../utils/apiError');
 const Wishlist = require('../models/Wishlist');
+const Cart = require('../models/Cart');
 const Product = require('../models/Product');
 
 // GET /api/customer/wishlist
@@ -119,5 +120,24 @@ exports.clearWishlist = async (req, res) => {
     });
   } catch (error) {
     sendError(res, error);
+  }
+};
+
+/**
+ * GET /customer/counts - the two badges on the header (21 Sep 2026): pieces in
+ * the cart and items saved. Asked on every page, so it reads two lean
+ * documents and populates nothing. Flipkart and Myntra show both numbers;
+ * a header without them tells nobody that the thing they added is there.
+ */
+exports.getCounts = async (req, res) => {
+  try {
+    const [cart, list] = await Promise.all([
+      Cart.findOne({ userId: req.user._id }).select('items.quantity').lean(),
+      Wishlist.findOne({ userId: req.user._id }).select('items').lean(),
+    ]);
+    const cartCount = (cart?.items || []).reduce((n, i) => n + (Number(i.quantity) || 0), 0);
+    res.json({ cart: cartCount, wishlist: (list?.items || []).length });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 };

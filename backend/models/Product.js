@@ -361,6 +361,17 @@ const productSchema = new mongoose.Schema(
    *                    form saying which goods need it.
    *   netQuantity      as printed on the pack ("100 g", "Set of 4").
    */
+  /*
+   * What the shopper reads before the description (21 Sep 2026): the material
+   * in one line and up to five short highlights - Amazon's "Top highlights" and
+   * "About this item", Flipkart's "Highlights". Cleaned by utils/productDetails.
+   */
+  material: { type: String, trim: true, default: '', maxlength: 80 },
+  highlights: {
+    type: [{ type: String, trim: true, maxlength: 90 }],
+    default: [],
+    validate: { validator: (v) => !v || v.length <= 5, message: 'At most five highlights' },
+  },
   countryOfOrigin: { type: String, trim: true, default: 'India', maxlength: 60 },
   manufacturer: { type: String, trim: true, default: '', maxlength: 240 },
   netQuantity: { type: String, trim: true, default: '', maxlength: 60 },

@@ -32,10 +32,15 @@
     return token;
     }
 
-    async function getShippingRate(deliveryPincode, weightKg, isCod) {
+    /**
+     * The courier's rate card for one parcel. `opts.pickupPincode` is the
+     * seller's own pickup (utils/shipping quotes per seller since 21 Sep
+     * 2026); without it the house shop's env pincode is the origin.
+     */
+    async function getShippingRate(deliveryPincode, weightKg, isCod, opts = {}) {
     try {
         const token = await getShiprocketToken();
-        const pickupPincode = process.env.SHIPROCKET_PICKUP_PINCODE;
+        const pickupPincode = opts.pickupPincode || process.env.SHIPROCKET_PICKUP_PINCODE;
         if (!pickupPincode)
         throw new Error('Shiprocket pickup pincode not configured');
 

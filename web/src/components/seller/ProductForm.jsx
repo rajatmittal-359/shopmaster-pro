@@ -85,6 +85,8 @@ const EMPTY = {
   countryOfOrigin: 'India',
   manufacturer: '',
   netQuantity: '',
+  material: '',
+  highlights: '',
   hsn: '',
   gstRate: '',
   freeShipping: false,
@@ -339,6 +341,8 @@ export default function ProductForm({ productId, copyFromId }) {
       gstRate: form.gstRate === '' || form.gstRate === null || form.gstRate === undefined ? null : Number(form.gstRate),
       size: form.size || undefined,
       variantGroupId: form.variantGroupId || undefined,
+      material: form.material ?? '',
+      highlights: Array.isArray(form.highlights) ? form.highlights : String(form.highlights || '').split(/\r?\n/),
       // In display order. The server keeps URLs that are ours and uploads the rest.
       images: photos.map((p) => p.src),
       // A data URL replaces, null removes, undefined keeps - the server's contract.
@@ -372,8 +376,9 @@ export default function ProductForm({ productId, copyFromId }) {
     <form onSubmit={submit} className="max-w-3xl space-y-5">
       {copyFromId && (
         <p className="rounded-xl border bg-muted/40 p-3 text-sm text-muted-foreground">
-          Another size of an existing product. Everything is copied except the size, the stock and
-          your item code - and both sizes are shown together on one page.
+          Another size or colour of the same product. Everything is copied except the size, the stock
+          and your item code. For a new colour: change the colour, swap the photos, keep the size. All of
+          them are shown together on one page - colours as photos, sizes as buttons.
         </p>
       )}
 
@@ -538,6 +543,18 @@ export default function ProductForm({ productId, copyFromId }) {
             placeholder="Describe it the way you would to a customer standing in front of you…"
           />
         </Field>
+
+        {/* What the shopper reads BEFORE the description (21 Sep 2026): Amazon's
+            "Top highlights" and "About this item", Flipkart's "Highlights". The
+            page shows them in a box beside the price; an empty field is no row. */}
+        <div className="mt-5 grid gap-5 sm:grid-cols-2">
+          <Field id="material" label="Material" hint="One line, honest: “Brass with kundan stones”, “Polyester blend”, “Pure cotton”. Shoppers filter on it and Google reads it.">
+            <Input id="material" value={form.material ?? ''} onChange={set('material')} maxLength={80} className="h-10" placeholder="Brass with kundan stones" />
+          </Field>
+          <Field id="highlights" label="Highlights (up to 5, one per line)" hint="The five things a customer asks at the counter - nickel-free, adjustable, comes in a gift box, hand wash only, set of 3.">
+            <Textarea id="highlights" rows={5} value={Array.isArray(form.highlights) ? form.highlights.join('\n') : (form.highlights ?? '')} onChange={set('highlights')} placeholder={'Nickel-free, skin safe\nAdjustable chain 16-18 in\nComes in a gift box'} />
+          </Field>
+        </div>
       </Card>
 
       {/* 3. ORGANISATION */}

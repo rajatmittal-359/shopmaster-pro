@@ -126,40 +126,43 @@ jobs:
           fi
 
   # The knowledge base (Ask ShopMaster's RAG) is built from the repo's own
-  # files - plans, rules, page comments - so it cannot run on Render. Weekly,
-  # here, with a checkout. Skips itself, loudly, until the two secrets exist:
-  #   Settings -> Secrets and variables -> Actions -> MONGO_URI, GEMINI_API_KEY
+  # files - plans, rules, page comments - so it needs a checkout. Since the
+  # 20 Sep cutover the production cluster admits only the box, so the runner
+  # cannot write to it: it tars the sources (~1 MB), ships them over the same
+  # SSH the deploy uses, and runs the indexer INSIDE the api container, which
+  # already carries MONGO_URI and GEMINI_API_KEY. Skips itself until the two
+  # deploy secrets exist (LIGHTSAIL_HOST, LIGHTSAIL_SSH_KEY).
   knowledge:
     if: github.event.schedule == '0 22 * * 0' || inputs.job == 'vectors'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: backend/package-lock.json
-      - name: skip until the secrets exist
+      - name: skip until the box is known
         id: gate
         env:
-          HAVE_MONGO: ${{ secrets.MONGO_URI != '' }}
-          HAVE_GEMINI: ${{ secrets.GEMINI_API_KEY != '' }}
+          HAVE_BOX: ${{ secrets.LIGHTSAIL_HOST != '' && secrets.LIGHTSAIL_SSH_KEY != '' }}
         run: |
-          if [ "$HAVE_MONGO" != "true" ] || [ "$HAVE_GEMINI" != "true" ]; then
-            echo "::notice::knowledge re-index skipped - add MONGO_URI and GEMINI_API_KEY as repository secrets to enable it"
+          if [ "$HAVE_BOX" != "true" ]; then
+            echo "::notice::knowledge re-index skipped - LIGHTSAIL_HOST / LIGHTSAIL_SSH_KEY are not set"
             echo "go=false" >> "$GITHUB_OUTPUT"
           else
             echo "go=true" >> "$GITHUB_OUTPUT"
           fi
-      - name: install
+      - name: re-index the knowledge base on the box
         if: steps.gate.outputs.go == 'true'
-        working-directory: backend
-        run: npm ci --no-audit --no-fund
-      - name: re-index the knowledge base
-        if: steps.gate.outputs.go == 'true'
-        working-directory: backend
         env:
-          MONGO_URI: ${{ secrets.MONGO_URI }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          NODE_ENV: production
-        run: node indexKnowledge.js
+          HOST: ${{ secrets.LIGHTSAIL_HOST }}
+          KEY: ${{ secrets.LIGHTSAIL_SSH_KEY }}
+        run: |
+          # Only what backend/indexKnowledge.js reads (its SOURCES and CODE_DIRS).
+          tar czf kb.tgz --exclude=node_modules --exclude=.next \
+            CLAUDE.md WHAT-IS-LEFT.md FRONTEND-PLAN.md .claude/project-rules web/DESIGN.md web/src \
+            backend/config backend/utils backend/controllers backend/models backend/jobs \
+            backend/indexKnowledge.js backend/package.json
+          ls -l kb.tgz
+          install -m 600 /dev/null box.key && printf '%s\n' "$KEY" > box.key
+          # The tarball travels on stdin; on the box a one-off api container runs
+          # the indexer from /repo with the image's own node_modules (NODE_PATH).
+          ssh -i box.key -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20 "ubuntu@$HOST" \
+            'set -e; rm -rf /tmp/kb && mkdir -p /tmp/kb && tar xzf - -C /tmp/kb && cd /srv/shopmaster && docker compose run --rm --no-deps -v /tmp/kb:/repo -w /repo/backend -e NODE_PATH=/app/node_modules -e NODE_ENV=production api node indexKnowledge.js; rm -rf /tmp/kb' < kb.tgz
+          rm -f box.key

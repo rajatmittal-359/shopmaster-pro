@@ -450,6 +450,19 @@ export default function MediaManager({
                     <Loader2 className="size-5 animate-spin" />
                   </span>
                 )}
+                {/* The × on the corner (Shopify's media grid, Amazon's image
+                    manager): always there on touch, on hover with a pointer.
+                    Rajat, 21 Sep: "upar bhi kahin dikhna chahiye". Same Undo. */}
+                {!busy && (
+                  <button
+                    type="button"
+                    onClick={() => remove(i)}
+                    aria-label={`Remove photo ${i + 1}`}
+                    className="absolute top-1 right-1 flex size-6 items-center justify-center rounded-full bg-black/60 text-white opacity-100 transition hover:bg-black/80 md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100"
+                  >
+                    <X className="size-3.5" />
+                  </button>
+                )}
               </div>
 
               <div className="mt-1 flex items-center justify-between">
