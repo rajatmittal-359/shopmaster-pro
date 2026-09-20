@@ -140,9 +140,9 @@ exports.askSeller = async (req, res) => {
  */
 exports.getSellerShop = async (req, res) => {
   try {
-    const s = await Seller.findById(req.params.sellerId).select('businessName about links showLocation offersFreeShipping pickupAddress adminEdits').lean();
+    const s = await Seller.findById(req.params.sellerId).select('businessName about links showLocation offersFreeShipping pickupAddress adminEdits aiUnlimited').lean();
     if (!s) return res.status(404).json({ message: 'Seller not found' });
-    res.json({ shop: { businessName: s.businessName, about: s.about || '', links: s.links || {}, showLocation: Boolean(s.showLocation), offersFreeShipping: Boolean(s.offersFreeShipping), pickupAddress: s.pickupAddress || {} }, adminEdits: (s.adminEdits || []).slice(-5).reverse() });
+    res.json({ shop: { businessName: s.businessName, about: s.about || '', links: s.links || {}, showLocation: Boolean(s.showLocation), offersFreeShipping: Boolean(s.offersFreeShipping), pickupAddress: s.pickupAddress || {}, aiUnlimited: Boolean(s.aiUnlimited) }, adminEdits: (s.adminEdits || []).slice(-5).reverse() });
   } catch (error) {
     sendError(res, error);
   }

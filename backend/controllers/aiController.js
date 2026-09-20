@@ -59,7 +59,9 @@ const isImageDataUrl = (s) =>
 
 /**
  * WHO IS EXEMPT FROM THE CAPS
- *   The admin, and the platform's own shop (the same person, two hats).
+ *   The admin, the platform's own shop (the same person, two hats), and any
+ *   shop the admin has switched to "AI without limits" (Seller.aiUnlimited,
+ *   20 Sep 2026 - the first outside seller was a friend's shop, "sab ek hai").
  *   Rajat's rule: while there are no other sellers, that account uses the AI
  *   freely, even if it leaves nothing for anyone else that day; the caps are
  *   for the sellers who come later. The exempt account can put the caps back
@@ -72,7 +74,7 @@ const isImageDataUrl = (s) =>
  */
 const isExempt = async (req) => {
   const admin = req.user?.role === 'admin' || req.capabilities?.admin;
-  const ownShop = Boolean(req.seller?.isPlatformOwned);
+  const ownShop = Boolean(req.seller?.isPlatformOwned) || Boolean(req.seller?.aiUnlimited);
   if (!admin && !ownShop) return false;
   const u = await User.findById(req.user._id).select('aiLimitsLikeSeller').lean();
   return !u?.aiLimitsLikeSeller;
@@ -128,8 +130,8 @@ const getCatalog = async (req, res) => {
       // banners and category art.
       models: state.models.filter((m) => admin || m.can.includes('edit') || m.can.includes('text')),
       usage,
-      canToggleLimits: admin || Boolean(req.seller?.isPlatformOwned),
-      limitsLikeSeller: !exempt && (admin || Boolean(req.seller?.isPlatformOwned)),
+      canToggleLimits: admin || Boolean(req.seller?.isPlatformOwned) || Boolean(req.seller?.aiUnlimited),
+      limitsLikeSeller: !exempt && (admin || Boolean(req.seller?.isPlatformOwned) || Boolean(req.seller?.aiUnlimited)),
     });
   } catch (error) {
     sendError(res, error);
@@ -140,7 +142,7 @@ const getCatalog = async (req, res) => {
 const setLimits = async (req, res) => {
   try {
     const admin = req.user?.role === 'admin' || req.capabilities?.admin;
-    if (!admin && !req.seller?.isPlatformOwned) {
+    if (!admin && !req.seller?.isPlatformOwned && !req.seller?.aiUnlimited) {
       return res.status(403).json({ message: 'Only an exempt account can change this.' });
     }
     const likeSeller = Boolean(req.body?.likeSeller);

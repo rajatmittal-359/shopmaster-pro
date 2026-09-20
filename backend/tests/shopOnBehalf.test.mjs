@@ -47,6 +47,23 @@ describe('applyShopSettings - one set of rules for both doors', () => {
   });
 });
 
+describe('AI without limits - a per-shop switch the admin flips (20 Sep 2026)', () => {
+  it('the admin door turns it on and off and names the change; the seller door cannot', async () => {
+    const s = shop();
+    const on = await applyShopSettings(s, { aiUnlimited: true }, { adminOnly: true });
+    expect(on.changed).toEqual(['AI without limits']);
+    expect(s.aiUnlimited).toBe(true);
+    const same = await applyShopSettings(s, { aiUnlimited: true }, { adminOnly: true });
+    expect(same.changed).toEqual([]);
+    const off = await applyShopSettings(s, { aiUnlimited: false }, { adminOnly: true });
+    expect(off.changed).toEqual(['AI within the daily limits']);
+    expect(s.aiUnlimited).toBe(false);
+    const fromSeller = await applyShopSettings(s, { aiUnlimited: true });
+    expect(fromSeller.changed).toEqual([]);
+    expect(s.aiUnlimited).toBe(false);
+  });
+});
+
 describe('admin edits on behalf', () => {
   const originals = { findById: Seller.findById, notify: notifier.notify, moderate: moderate.moderateText };
   let sent;

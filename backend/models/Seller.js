@@ -226,6 +226,15 @@ const sellerSchema = new mongoose.Schema(
       note: { type: String, trim: true, maxlength: 140, default: '' },
     },
 
+    /*
+     * AI without the daily caps (20 Sep 2026). Only the admin flips it, from
+     * the Sellers page. Rajat, launch night, about the first outside seller -
+     * a friend's shop: "Charming Jewels aur Rahul ki shop sync me hai, same AI
+     * access de do, sab ek hai." The free AI quota is one pool, so this is
+     * given by hand, shop by shop, never by default.
+     */
+    aiUnlimited: { type: Boolean, default: false },
+
     isPlatformOwned: {
       type: Boolean,
       default: false

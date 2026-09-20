@@ -1817,7 +1817,7 @@ exports.getSettings = async (req, res) => {
  * @returns {Promise<{error?:string, changed:string[], aboutHeld:string|null}>}
  */
 const applyShopSettings = async (seller, body = {}, opts = {}) => {
-  const { offersFreeShipping, pickupAddress, about, links, showLocation, vacation, shiprocketNickname } = body;
+  const { offersFreeShipping, pickupAddress, about, links, showLocation, vacation, shiprocketNickname, aiUnlimited } = body;
   const changed = [];
   let aboutHeld = null;
 
@@ -1852,6 +1852,14 @@ const applyShopSettings = async (seller, body = {}, opts = {}) => {
     if ((seller.pickupAddress.shiprocketNickname || '') !== nick) {
       seller.pickupAddress.shiprocketNickname = nick || null;
       changed.push('Shiprocket pickup nickname');
+    }
+  }
+  // AI without the daily caps - the admin's switch alone (models/Seller aiUnlimited).
+  if (aiUnlimited !== undefined && opts.adminOnly) {
+    const want = Boolean(aiUnlimited);
+    if (Boolean(seller.aiUnlimited) !== want) {
+      seller.aiUnlimited = want;
+      changed.push(want ? 'AI without limits' : 'AI within the daily limits');
     }
   }
   // The break switch (utils/vacation): validated dates, the list cache dropped so it is immediate.

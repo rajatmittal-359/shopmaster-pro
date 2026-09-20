@@ -57,7 +57,7 @@ export default function EditShopDialog({ seller, open, onOpenChange, onSaved }) 
       const hasPickup = ['contactName', 'address1', 'city', 'state', 'pincode', 'phone'].some((k) => String(pa[k] || '').trim());
       const r = await authedFetch(`/admin/sellers/${seller._id}/shop`, {
         method: 'PATCH',
-        body: { about: form.about, links: form.links, showLocation: form.showLocation, offersFreeShipping: form.offersFreeShipping, shiprocketNickname: form.shiprocketNickname, ...(hasPickup ? { pickupAddress: pa } : {}), note: form.note },
+        body: { about: form.about, links: form.links, showLocation: form.showLocation, offersFreeShipping: form.offersFreeShipping, aiUnlimited: form.aiUnlimited, shiprocketNickname: form.shiprocketNickname, ...(hasPickup ? { pickupAddress: pa } : {}), note: form.note },
       });
       setState({ status: 'saved', message: r.message });
       onSaved?.();
@@ -124,6 +124,15 @@ export default function EditShopDialog({ seller, open, onOpenChange, onSaved }) 
               <label className="flex items-center justify-between gap-3 rounded-lg border p-3">
                 <span>They pay delivery on everything</span>
                 <Switch checked={form.offersFreeShipping} onCheckedChange={(v) => setForm({ ...form, offersFreeShipping: v })} />
+              </label>
+              {/* The AI's daily caps lifted for this one shop - the free AI quota is
+                  one pool, so this is a by-hand decision per shop (20 Sep 2026). */}
+              <label className="flex items-center justify-between gap-3 rounded-lg border p-3 sm:col-span-2">
+                <span className="flex flex-col">
+                  <span>AI without the daily limits</span>
+                  <span className="text-xs text-muted-foreground">Like the house shop: no cap on drafts and photo edits. The free quota is shared, so give it shop by shop.</span>
+                </span>
+                <Switch checked={Boolean(form.aiUnlimited)} onCheckedChange={(v) => setForm({ ...form, aiUnlimited: v })} />
               </label>
             </div>
 
