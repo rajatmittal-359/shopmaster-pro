@@ -57,7 +57,7 @@ export default function EditShopDialog({ seller, open, onOpenChange, onSaved }) 
       const hasPickup = ['contactName', 'address1', 'city', 'state', 'pincode', 'phone'].some((k) => String(pa[k] || '').trim());
       const r = await authedFetch(`/admin/sellers/${seller._id}/shop`, {
         method: 'PATCH',
-        body: { about: form.about, links: form.links, showLocation: form.showLocation, offersFreeShipping: form.offersFreeShipping, aiUnlimited: form.aiUnlimited, shiprocketNickname: form.shiprocketNickname, ...(hasPickup ? { pickupAddress: pa } : {}), note: form.note },
+        body: { about: form.about, links: form.links, showLocation: form.showLocation, offersFreeShipping: form.offersFreeShipping, ...(form.isPlatformOwned ? {} : { homeTreatment: Boolean(form.homeTreatment) }), shiprocketNickname: form.shiprocketNickname, ...(hasPickup ? { pickupAddress: pa } : {}), note: form.note },
       });
       setState({ status: 'saved', message: r.message });
       onSaved?.();
@@ -125,14 +125,20 @@ export default function EditShopDialog({ seller, open, onOpenChange, onSaved }) 
                 <span>They pay delivery on everything</span>
                 <Switch checked={form.offersFreeShipping} onCheckedChange={(v) => setForm({ ...form, offersFreeShipping: v })} />
               </label>
-              {/* The AI's daily caps lifted for this one shop - the free AI quota is
-                  one pool, so this is a by-hand decision per shop (20 Sep 2026). */}
-              <label className="flex items-center justify-between gap-3 rounded-lg border p-3 sm:col-span-2">
+              {/* "Ghar jaisa" (20 Sep 2026): one switch, the whole house-shop bundle -
+                  0% commission + AI without the caps + whatever benefit comes next.
+                  Identity (the house shop itself) is a different thing and is not
+                  offered here; on the house shop the switch has nothing to do. */}
+              <label className={`flex items-center justify-between gap-3 rounded-lg border p-3 sm:col-span-2 ${form.isPlatformOwned ? 'opacity-60' : ''}`}>
                 <span className="flex flex-col">
-                  <span>AI without the daily limits</span>
-                  <span className="text-xs text-muted-foreground">Like the house shop: no cap on drafts and photo edits. The free quota is shared, so give it shop by shop.</span>
+                  <span>Ghar jaisa - house-shop benefits</span>
+                  <span className="text-xs text-muted-foreground">
+                    {form.isPlatformOwned
+                      ? 'This is the house shop - it has all of this already.'
+                      : 'One switch: 0% commission and AI without the daily limits, plus every benefit added later. Off puts the platform rate and the limits back. Past orders keep their rate.'}
+                  </span>
                 </span>
-                <Switch checked={Boolean(form.aiUnlimited)} onCheckedChange={(v) => setForm({ ...form, aiUnlimited: v })} />
+                <Switch disabled={Boolean(form.isPlatformOwned)} checked={Boolean(form.isPlatformOwned || form.homeTreatment)} onCheckedChange={(v) => setForm({ ...form, homeTreatment: v })} />
               </label>
             </div>
 

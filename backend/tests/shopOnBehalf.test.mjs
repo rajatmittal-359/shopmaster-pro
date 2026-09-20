@@ -47,6 +47,26 @@ describe('applyShopSettings - one set of rules for both doors', () => {
   });
 });
 
+describe('"Ghar jaisa" - one switch, the whole house-shop bundle (Rajat, 20 Sep 2026)', () => {
+  it('on: 0% and AI without limits, named; off: the platform rate and the caps come back; the seller door cannot touch it', async () => {
+    const s = shop({ commissionRate: 8 });
+    const on = await applyShopSettings(s, { homeTreatment: true }, { adminOnly: true, platformRate: 8 });
+    expect(on.changed).toEqual(['ghar jaisa: 0% commission + AI without limits']);
+    expect(s.homeTreatment).toBe(true);
+    expect(s.commissionRate).toBe(0);
+    expect(s.aiUnlimited).toBe(true);
+    expect((await applyShopSettings(s, { homeTreatment: true }, { adminOnly: true, platformRate: 8 })).changed).toEqual([]);
+    const off = await applyShopSettings(s, { homeTreatment: false }, { adminOnly: true, platformRate: 8 });
+    expect(off.changed).toEqual(['ghar jaisa off: 8% commission + the daily AI limits']);
+    expect(s.homeTreatment).toBe(false);
+    expect(s.commissionRate).toBe(8);
+    expect(s.aiUnlimited).toBe(false);
+    const fromSeller = await applyShopSettings(s, { homeTreatment: true });
+    expect(fromSeller.changed).toEqual([]);
+    expect(s.homeTreatment).toBe(false);
+  });
+});
+
 describe('AI without limits - a per-shop switch the admin flips (20 Sep 2026)', () => {
   it('the admin door turns it on and off and names the change; the seller door cannot', async () => {
     const s = shop();

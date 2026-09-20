@@ -1817,7 +1817,7 @@ exports.getSettings = async (req, res) => {
  * @returns {Promise<{error?:string, changed:string[], aboutHeld:string|null}>}
  */
 const applyShopSettings = async (seller, body = {}, opts = {}) => {
-  const { offersFreeShipping, pickupAddress, about, links, showLocation, vacation, shiprocketNickname, aiUnlimited } = body;
+  const { offersFreeShipping, pickupAddress, about, links, showLocation, vacation, shiprocketNickname, aiUnlimited, homeTreatment } = body;
   const changed = [];
   let aboutHeld = null;
 
@@ -1854,8 +1854,22 @@ const applyShopSettings = async (seller, body = {}, opts = {}) => {
       changed.push('Shiprocket pickup nickname');
     }
   }
-  // AI without the daily caps - the admin's switch alone (models/Seller aiUnlimited).
-  if (aiUnlimited !== undefined && opts.adminOnly) {
+  // "Ghar jaisa": the whole house-shop bundle from one switch (models/Seller
+  // homeTreatment). On writes 0% + AI without caps; off restores the platform
+  // rate (opts.platformRate, read from the live rulebook by the admin route)
+  // and the caps. Past orders keep the rate they were placed at, as always.
+  if (homeTreatment !== undefined && opts.adminOnly) {
+    const want = Boolean(homeTreatment);
+    if (Boolean(seller.homeTreatment) !== want) {
+      const platformRate = Number.isFinite(Number(opts.platformRate)) ? Number(opts.platformRate) : 8;
+      seller.homeTreatment = want;
+      seller.commissionRate = want ? 0 : platformRate;
+      seller.aiUnlimited = want;
+      changed.push(want ? 'ghar jaisa: 0% commission + AI without limits' : `ghar jaisa off: ${platformRate}% commission + the daily AI limits`);
+    }
+  }
+  // AI without the daily caps on its own - the admin's switch alone (models/Seller aiUnlimited).
+  if (aiUnlimited !== undefined && opts.adminOnly && homeTreatment === undefined) {
     const want = Boolean(aiUnlimited);
     if (Boolean(seller.aiUnlimited) !== want) {
       seller.aiUnlimited = want;

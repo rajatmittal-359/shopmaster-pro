@@ -140,9 +140,9 @@ exports.askSeller = async (req, res) => {
  */
 exports.getSellerShop = async (req, res) => {
   try {
-    const s = await Seller.findById(req.params.sellerId).select('businessName about links showLocation offersFreeShipping pickupAddress adminEdits aiUnlimited').lean();
+    const s = await Seller.findById(req.params.sellerId).select('businessName about links showLocation offersFreeShipping pickupAddress adminEdits aiUnlimited homeTreatment isPlatformOwned commissionRate').lean();
     if (!s) return res.status(404).json({ message: 'Seller not found' });
-    res.json({ shop: { businessName: s.businessName, about: s.about || '', links: s.links || {}, showLocation: Boolean(s.showLocation), offersFreeShipping: Boolean(s.offersFreeShipping), pickupAddress: s.pickupAddress || {}, aiUnlimited: Boolean(s.aiUnlimited) }, adminEdits: (s.adminEdits || []).slice(-5).reverse() });
+    res.json({ shop: { businessName: s.businessName, about: s.about || '', links: s.links || {}, showLocation: Boolean(s.showLocation), offersFreeShipping: Boolean(s.offersFreeShipping), pickupAddress: s.pickupAddress || {}, aiUnlimited: Boolean(s.aiUnlimited), homeTreatment: Boolean(s.homeTreatment), isPlatformOwned: Boolean(s.isPlatformOwned), commissionRate: s.commissionRate }, adminEdits: (s.adminEdits || []).slice(-5).reverse() });
   } catch (error) {
     sendError(res, error);
   }
@@ -153,7 +153,9 @@ exports.editSellerShop = async (req, res) => {
     const seller = await Seller.findById(req.params.sellerId);
     if (!seller) return res.status(404).json({ message: 'Seller not found' });
     const { applyShopSettings } = require('./sellerController');
-    const r = await applyShopSettings(seller, req.body || {}, { adminOnly: true });
+    const live = await require('../utils/liveSettings').liveSettings().catch(() => null);
+    const platformRate = live?.rules?.defaultCommissionPct ?? require('../config/sellerRules').defaultCommissionPct ?? 8;
+    const r = await applyShopSettings(seller, req.body || {}, { adminOnly: true, platformRate });
     if (r.error) return res.status(400).json({ message: r.error });
     if (!r.changed.length) return res.json({ message: 'Nothing changed', changed: [] });
     const note = String(req.body?.note || '').trim().slice(0, 200);

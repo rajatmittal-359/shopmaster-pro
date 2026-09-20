@@ -235,6 +235,20 @@ const sellerSchema = new mongoose.Schema(
      */
     aiUnlimited: { type: Boolean, default: false },
 
+    /*
+     * "Ghar jaisa" (20 Sep 2026, launch night). Rajat: "Rahul ko sirf humare
+     * jaisa fayda milega, har cheez ka - aur aise aur bhi seller ho sakte hain
+     * jinhe ek button se ghar jaisa fayda de sakoon. Lekin iska matlab ye nahi
+     * ki hum ek ho gaye." So: ONE switch that grants the whole house-shop
+     * BUNDLE of benefits - 0% commission, AI without the caps, and whatever
+     * benefit comes next reads this flag - while isPlatformOwned (the
+     * platform's identity: footer, feed, payout route) stays the house shop's
+     * alone. Flipkart's seller tiers and Amazon's fee waivers are the shape.
+     * The admin flips it from Edit shop; applyShopSettings writes the
+     * concrete fields so the money and AI code paths stay exactly as they are.
+     */
+    homeTreatment: { type: Boolean, default: false },
+
     isPlatformOwned: {
       type: Boolean,
       default: false
