@@ -70,6 +70,14 @@ export default function RootLayout({ children }) {
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col bg-background text-foreground">
+        {/* scripts/run.js sets ENV_MODE when the laptop runs against production
+            data read-only: a bar nobody can miss, so a dev tab is never mistaken
+            for the live shop (and vice versa). Never set in a real deployment. */}
+        {process.env.ENV_MODE === 'prod-read' && (
+          <div className="bg-red-700 px-4 py-1 text-center text-xs font-semibold tracking-wide text-white">
+            PROD DATA · READ-ONLY · local server
+          </div>
+        )}
         <ThemeProvider>
           <ReauthProvider>
           {/* The storefront's chrome, on storefront routes only. The seller and

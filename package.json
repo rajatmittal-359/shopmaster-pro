@@ -1,0 +1,10 @@
+{
+  "name": "shopmaster-pro",
+  "private": true,
+  "description": "One word in the ENV file (local | prod) decides which environment `npm run server` and `npm run web` start - see scripts/run.js.",
+  "scripts": {
+    "server": "node scripts/run.js server",
+    "web": "node scripts/run.js web",
+    "env": "node -e \"const f=require('fs');console.log('ENV =', f.existsSync('ENV')?f.readFileSync('ENV','utf8').trim():'local (no ENV file)')\""
+  }
+}
