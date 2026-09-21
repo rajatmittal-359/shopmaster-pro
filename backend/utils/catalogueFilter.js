@@ -22,7 +22,7 @@ const escapeRegex = (text) => String(text).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'
  *   page. Answering 200 with zero products creates a soft 404, which Google
  *   indexes as real content.
  */
-async function buildCatalogueFilter({ category, search, minPrice, maxPrice, color, size, minRating }) {
+async function buildCatalogueFilter({ category, search, minPrice, maxPrice, color, size, minRating, attrs }) {
   const filter = { isActive: true, stock: { $gt: 0 } };
   await withoutHiddenSellers(filter);
 
@@ -68,6 +68,25 @@ async function buildCatalogueFilter({ category, search, minPrice, maxPrice, colo
         { brand: searchRegex },
         { tags: searchRegex },
       ];
+    }
+  }
+
+  /*
+   * The category's own facts (config/listingTemplates, S3): `attrs` is a map
+   * of attribute key → value or comma-list ("plating=Gold Plated",
+   * "stoneType=Kundan,Pearl"), matched whole and case-insensitively like
+   * colour. Keys are plain identifiers only - anything else from the URL is
+   * ignored, never turned into a Mongo path.
+   */
+  if (attrs && typeof attrs === 'object') {
+    for (const [key, raw] of Object.entries(attrs)) {
+      if (!/^[a-zA-Z][a-zA-Z0-9]{0,40}$/.test(key)) continue;
+      const wanted = String(raw || '').split(',').map((v) => v.trim()).filter(Boolean).slice(0, 8);
+      if (!wanted.length) continue;
+      filter[`attributes.${key}`] =
+        wanted.length > 1
+          ? { $in: wanted.map((v) => new RegExp(`^${escapeRegex(v)}$`, 'i')) }
+          : { $regex: `^${escapeRegex(wanted[0])}$`, $options: 'i' };
     }
   }
 

@@ -144,7 +144,7 @@ function TreeItem({ href, on, depth = 0, count, children }) {
   );
 }
 
-export default function FilterPanel({ params, categories, colors, sizes = [], price, ratings = null }) {
+export default function FilterPanel({ params, categories, colors, sizes = [], price, ratings = null, facets = [] }) {
   const active = (key, value) => String(params[key] || '') === String(value);
   const live = categories.filter((c) => c.productCount > 0);
   const currentParent = live.find((c) => active('category', c.slug) || (c.children || []).some((ch) => active('category', ch.slug)));
@@ -242,6 +242,36 @@ export default function FilterPanel({ params, categories, colors, sizes = [], pr
           </ul>
         </Section>
       )}
+
+      {/* The category's own facets (listing templates S3): plating and stone
+          on a jewellery page, fabric and sleeve on kurtas, thread count on
+          bedsheets - Flipkart's rail, from the same option lists. Chips like
+          sizes; several values at once. */}
+      {facets.map((f) => {
+        const key = `attr.${f.key}`;
+        return (
+          <Section key={f.key} title={f.label} count={listOf(params[key]).length}>
+            <ul className="flex flex-wrap gap-2">
+              {f.values.map((v) => {
+                const on = hasValue(params[key], v.value);
+                return (
+                  <li key={v.value}>
+                    <Link
+                      href={shopHref(params, { [key]: toggled(params[key], v.value) })}
+                      aria-current={on ? 'true' : undefined}
+                      className={`block rounded-full border px-3 py-1.5 text-sm transition ${
+                        on ? 'border-brand-ink bg-brand-ink font-medium text-white' : 'border-border text-muted-foreground hover:border-foreground/40 hover:text-foreground'
+                      }`}
+                    >
+                      {v.value} <span className={`text-xs ${on ? 'text-white/70' : 'text-muted-foreground/70'}`}>{v.count}</span>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </Section>
+        );
+      })}
 
       <Section title="Rating" count={params.minRating ? 1 : 0}>
         <ul className="space-y-0.5">

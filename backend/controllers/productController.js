@@ -150,7 +150,7 @@ exports.listProducts = async (req, res) => {
     } = req.query;
 
     const built = await buildCatalogueFilter({
-      category, search, minPrice, maxPrice, color, size, minRating,
+      category, search, minPrice, maxPrice, color, size, minRating, attrs: attrsFrom(req.query),
     });
 
     // A category that does not exist is a 404, not an empty result page.
@@ -329,6 +329,9 @@ exports.suggest = async (req, res) => {
  *   panel showing one colour - the one already chosen - and no way back to the
  *   others without clearing everything.
  */
+/** `?attr.plating=Gold%20Plated&attr.stoneType=Kundan,Pearl` → { plating: ..., stoneType: ... } (utils/catalogueFilter validates keys). */
+const attrsFrom = (query) => Object.fromEntries(Object.entries(query || {}).filter(([k, v]) => k.startsWith('attr.') && v).map(([k, v]) => [k.slice(5), v]));
+
 exports.filters = async (req, res) => {
   try {
     const { category, search, minPrice, maxPrice, color, size, minRating } = req.query;
@@ -338,11 +341,12 @@ exports.filters = async (req, res) => {
      * before counting colours would leave the panel showing the one colour
      * already chosen, with no way back to the others; the same is true of size.
      */
+    const attrs = attrsFrom(req.query);
     const forColours = await buildCatalogueFilter({
-      category, search, minPrice, maxPrice, size, minRating,
+      category, search, minPrice, maxPrice, size, minRating, attrs,
     });
     const forSizes = await buildCatalogueFilter({
-      category, search, minPrice, maxPrice, color, minRating,
+      category, search, minPrice, maxPrice, color, minRating, attrs,
     });
     if (forColours.notFound) return res.status(404).json({ message: 'Category not found' });
     if (forColours.empty) return res.json({ colors: [], sizes: [], price: null });
@@ -353,7 +357,42 @@ exports.filters = async (req, res) => {
     const forPrices = await buildCatalogueFilter({ category, search });
     // Rating counted with everything but itself, like the others - so "4★ & up"
     // can say how many, and grey out when the answer is none.
-    const forRatings = await buildCatalogueFilter({ category, search, minPrice, maxPrice, color, size });
+    const forRatings = await buildCatalogueFilter({ category, search, minPrice, maxPrice, color, size, attrs });
+
+    /*
+     * The category's own facets (listing templates S3): for a category page,
+     * the template's select/multi attributes are counted like colours - each
+     * with every filter except itself - so a jewellery page offers Plating and
+     * Stone, a bedsheet page Thread count and Size. Only facets with two or
+     * more values are worth a row; the search page (no category) shows none.
+     */
+    let facets = [];
+    if (category) {
+      const { templateForCategoryId } = require('../utils/listingTemplate');
+      const catDoc = mongoose.isValidObjectId(category) ? { _id: category } : await Category.findOne({ slug: category }).select('_id').lean();
+      const template = catDoc ? await templateForCategoryId(catDoc._id) : null;
+      const facetable = (template?.attributes || []).filter((a) => a.type === 'select' || a.type === 'multi').slice(0, 6);
+      facets = (
+        await Promise.all(
+          facetable.map(async (a) => {
+            const others = { ...attrs };
+            delete others[a.key];
+            const built = await buildCatalogueFilter({ category, search, minPrice, maxPrice, color, size, minRating, attrs: others });
+            if (!built.filter) return null;
+            const rows = await Product.aggregate([
+              { $match: built.filter },
+              { $match: { [`attributes.${a.key}`]: { $exists: true, $nin: [null, ''] } } },
+              { $unwind: `$attributes.${a.key}` },
+              { $group: { _id: `$attributes.${a.key}`, count: { $sum: 1 } } },
+              { $sort: { count: -1, _id: 1 } },
+              { $limit: 12 },
+            ]);
+            if (rows.length < 2) return null;
+            return { key: a.key, label: a.label, values: rows.map((r) => ({ value: r._id, count: r.count })) };
+          })
+        )
+      ).filter(Boolean);
+    }
 
     const [colors, sizes, priceRange, ratings] = await Promise.all([
       Product.aggregate([
@@ -393,6 +432,7 @@ exports.filters = async (req, res) => {
         ? { min: Math.floor(priceRange[0].min), max: Math.ceil(priceRange[0].max) }
         : null,
       ratings: { 4: ratings[0]?.four || 0, 3: ratings[0]?.three || 0 },
+      facets,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });

@@ -87,3 +87,24 @@ describe('the attributes Google asks for survive the trip from the form', () => 
     expect(product.validateSync()?.errors?.color).toBeTruthy();
   });
 });
+
+describe('template attributes in the feed (listing templates S3, 22 Sep 2026)', () => {
+  const { feedAttributeLines } = require('../controllers/feedController');
+  it('a bedsheet sends material, pattern and thread count as product_detail', () => {
+    const lines = feedAttributeLines({ templateKey: 'home-textiles', attributes: { material: 'Cotton', pattern: 'Jaipuri Prints', threadCount: '144 TC', type: 'Flat' } });
+    expect(lines.join('')).toContain('<g:material>Cotton</g:material>');
+    expect(lines.join('')).toContain('<g:pattern>Jaipuri Prints</g:pattern>');
+    expect(lines.join('')).toContain('<g:attribute_name>Thread count</g:attribute_name><g:attribute_value>144 TC</g:attribute_value>');
+  });
+  it('a necklace sends base material + plating as material and the stone as a detail; escapes XML', () => {
+    const lines = feedAttributeLines({ templateKey: 'jewellery', attributes: { baseMaterial: 'Brass', plating: 'Gold Plated', stoneType: 'American Diamond (AD)', closure: 'Hook & Eye' } });
+    const xml = lines.join('');
+    expect(xml).toContain('<g:material>Brass</g:material>');
+    expect(xml).toContain('American Diamond (AD)');
+    expect(xml).toContain('Hook &amp; Eye');
+  });
+  it('falls back to the plain material field when the template names none', () => {
+    expect(feedAttributeLines({ templateKey: 'general', material: 'Wood', attributes: {} }).join('')).toContain('<g:material>Wood</g:material>');
+    expect(feedAttributeLines({ attributes: {} })).toEqual([]);
+  });
+});

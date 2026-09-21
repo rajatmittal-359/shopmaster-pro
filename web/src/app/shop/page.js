@@ -34,6 +34,14 @@ const cleanParams = (raw) => {
     const value = Array.isArray(raw[key]) ? raw[key][0] : raw[key];
     if (value) out[key] = String(value);
   }
+  // The category's own facets (listing templates S3): attr.<key>=Value,Value.
+  // Plain identifiers only; the API validates the same way.
+  for (const [key, v] of Object.entries(raw || {})) {
+    if (/^attr\.[a-zA-Z][a-zA-Z0-9]{0,40}$/.test(key)) {
+      const value = Array.isArray(v) ? v[0] : v;
+      if (value) out[key] = String(value).slice(0, 200);
+    }
+  }
   return out;
 };
 
@@ -140,12 +148,12 @@ export default async function ShopPage({ searchParams }) {
       <div className="grid gap-8 md:grid-cols-[15rem_1fr]">
         {/* The rail on a wide screen; behind a "Filters" button on a phone. */}
         <div className="hidden md:block">
-          <FilterPanel params={params} categories={categories} colors={filters.colors || []} sizes={filters.sizes || []} price={filters.price} ratings={filters.ratings} />
+          <FilterPanel params={params} categories={categories} colors={filters.colors || []} sizes={filters.sizes || []} price={filters.price} ratings={filters.ratings} facets={filters.facets || []} />
         </div>
 
         <div>
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <FilterDrawer params={params} categories={categories} colors={filters.colors || []} sizes={filters.sizes || []} price={filters.price} ratings={filters.ratings} />
+            <FilterDrawer params={params} categories={categories} colors={filters.colors || []} sizes={filters.sizes || []} price={filters.price} ratings={filters.ratings} facets={filters.facets || []} />
             <AppliedFilters params={params} categoryName={category?.name} />
             <div className="ml-auto">
               <SortSelect params={params} />

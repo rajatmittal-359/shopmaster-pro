@@ -161,3 +161,17 @@ describe('what is always true', () => {
     expect(filter.stock).toEqual({ $gt: 0 });
   });
 });
+
+describe('template attributes (listing templates S3, 22 Sep 2026)', () => {
+  it('filters on attributes.<key> with whole, case-insensitive values, several at once', async () => {
+    const filter = await filterFor({ attrs: { plating: 'Gold Plated', stoneType: 'kundan,Pearl' } });
+    expect(filter['attributes.plating'].$regex).toBe('^Gold Plated$');
+    expect(filter['attributes.stoneType'].$in).toHaveLength(2);
+    expect(filter['attributes.stoneType'].$in[0].test('Kundan')).toBe(true);
+    expect(filter['attributes.stoneType'].$in[0].test('Kundan Set')).toBe(false);
+  });
+  it('ignores keys that are not plain attribute names', async () => {
+    const filter = await filterFor({ attrs: { '$where': '1', 'a.b': 'x', plating: 'None' } });
+    expect(Object.keys(filter).filter((k) => k.startsWith('attributes.'))).toEqual(['attributes.plating']);
+  });
+});

@@ -30,6 +30,7 @@ export const shopHref = (current = {}, changes = {}) => {
    */
   if ('category' in changes && String(changes.category || '') !== String(current.category || '')) {
     for (const key of REFINEMENTS) delete merged[key];
+    for (const key of Object.keys(merged)) if (key.startsWith('attr.')) delete merged[key];
   }
 
   const params = new URLSearchParams();

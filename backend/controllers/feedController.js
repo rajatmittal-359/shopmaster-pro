@@ -43,6 +43,34 @@ const representativeShipping = async () => {
 };
 
 /** XML has five characters that cannot appear raw, and product names contain them. */
+/**
+ * Google's attribute lines from the listing template (S3, 22 Sep 2026):
+ * `material` and `pattern` are filters in Shopping; `product_detail` rows
+ * (section / name / value) show under "About this item". The template's
+ * `feed` map says which of the category's attributes go where, so a
+ * bedsheet sends its thread count and a necklace its stone.
+ */
+const feedAttributeLines = (p) => {
+  const { TEMPLATES } = require('../config/listingTemplates');
+  const t = TEMPLATES[p.templateKey] || TEMPLATES.general;
+  const attrs = p.attributes || {};
+  const first = (keys) => keys.map((k) => attrs[k]).map((v) => (Array.isArray(v) ? v[0] : v)).find((v) => v && String(v).trim());
+  const labelOf = (k) => (t.attributes.find((a) => a.key === k) || {}).label || k;
+  const lines = [];
+  const material = first(t.feed?.material || []) || p.material;
+  if (material) lines.push(`<g:material>${esc(String(material).slice(0, 200))}</g:material>`);
+  const pattern = first(t.feed?.pattern || []);
+  if (pattern) lines.push(`<g:pattern>${esc(String(pattern).slice(0, 100))}</g:pattern>`);
+  for (const k of t.feed?.product_detail || []) {
+    const v = attrs[k];
+    const value = Array.isArray(v) ? v.join(', ') : v;
+    if (value && String(value).trim()) {
+      lines.push(`<g:product_detail><g:section_name>${esc(t.label)}</g:section_name><g:attribute_name>${esc(labelOf(k))}</g:attribute_name><g:attribute_value>${esc(String(value).slice(0, 750))}</g:attribute_value></g:product_detail>`);
+    }
+  }
+  return lines;
+};
+
 const esc = (value) =>
   String(value ?? '')
     .replace(/&/g, '&amp;')
@@ -160,6 +188,7 @@ exports.googleProductFeed = async (req, res) => {
          * (1604) and Shoes (187).
          */
         if (p.color) parts.push(`<g:color>${esc(p.color)}</g:color>`);
+        parts.push(...feedAttributeLines(p));
         if (p.gender) parts.push(`<g:gender>${esc(p.gender)}</g:gender>`);
         if (p.ageGroup) parts.push(`<g:age_group>${esc(p.ageGroup)}</g:age_group>`);
 
@@ -275,3 +304,5 @@ exports.googlePromotionsFeed = async (req, res) => {
     return res.status(500).send('promotions feed unavailable');
   }
 };
+
+module.exports.feedAttributeLines = feedAttributeLines;

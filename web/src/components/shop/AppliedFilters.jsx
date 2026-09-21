@@ -19,6 +19,10 @@ export default function AppliedFilters({ params, categoryName }) {
       // must not appear as "rings" on a chip when the category is "Rings".
       text: label(key === 'category' ? categoryName || params[key] : params[key]),
     }));
+  // The category's facets (attr.plating=Gold Plated): the value reads as itself.
+  for (const [key, value] of Object.entries(params)) {
+    if (key.startsWith('attr.') && value) chips.push({ key, text: String(value).split(',').join(', ') });
+  }
 
   if (chips.length === 0) return null;
 
