@@ -131,7 +131,7 @@ const { authLimiter, checkoutLimiter, aiLimiter } = require('./middlewares/rateL
  * signing in (found on the two-step drill). Twenty guesses a quarter hour
  * per address still stands, on the routes where a guess is possible.
  */
-const GUESSABLE = /^\/(login|register|verify-otp|resend-otp|forgot-password|reset-password|google|reauth|change-password|2fa\/(verify|disable)|email\/confirm)(\/|$)/;
+const GUESSABLE = /^\/(login|register|verify-otp|resend-otp|forgot-password|reset-password|google|reauth|change-password|2fa\/(verify|disable)|email\/confirm)(\/|$)/i; // /i: Express routes are case-insensitive, so /LOGIN must count too
 app.use('/api/auth', (req, res, next) => (req.method !== 'GET' && GUESSABLE.test(req.path) ? authLimiter(req, res, next) : next()), authRoutes);
 app.use('/api/admin', adminRoutes);
 /*

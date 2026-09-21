@@ -66,6 +66,11 @@ describe('rate limits', () => {
     expect(res.headers['ratelimit']).toMatch(/remaining=19/);
   });
 
+  it('an odd-cased path is still a guess (Express routes are case-insensitive)', async () => {
+    const res = await request(app).post('/api/auth/LOGIN').set('X-Forwarded-For', '198.51.100.78').send({ email: 'x@y.z', password: 'nope' });
+    expect(res.headers['ratelimit']).toMatch(/remaining=19/);
+  });
+
   it('is per address - a different visitor is not punished for a stranger\'s attempts', async () => {
     const res = await request(app)
       .post('/api/auth/login')
