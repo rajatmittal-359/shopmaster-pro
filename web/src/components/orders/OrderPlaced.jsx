@@ -2,7 +2,6 @@
 
 import { useEffect } from 'react';
 import Script from 'next/script';
-import { CheckCircle2 } from 'lucide-react';
 
 /**
  * The band at the top of My orders right after checkout, and Google's
@@ -55,7 +54,11 @@ export default function OrderPlaced({ order, email }) {
   return (
     <>
       <div className="mb-6 flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-900 dark:bg-emerald-950/40">
-        <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-emerald-700 dark:text-emerald-300" aria-hidden />
+        {/* E3: the moment. The circle pops, the tick draws itself - 700 ms, once, then still. */}
+        <svg viewBox="0 0 24 24" className="pop-in mt-0.5 size-6 shrink-0 text-emerald-700 dark:text-emerald-300" aria-hidden fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="10" />
+          <path className="draw-check" d="M7.5 12.5l3 3 6-6.5" />
+        </svg>
         <div className="text-sm">
           <p className="font-medium">Order placed. Thank you.</p>
           <p className="mt-0.5 text-muted-foreground">

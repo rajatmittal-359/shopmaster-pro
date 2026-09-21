@@ -71,6 +71,7 @@ export default function Gallery({ images = [], video = null, name, facts = '' })
   return (
     <div>
       <div
+        data-gallery-main
         className={`relative aspect-square w-full overflow-hidden rounded-xl bg-muted ${current.kind === 'image' ? 'cursor-zoom-in' : ''}`}
         onPointerMove={current.kind === 'image' ? (e) => (e.pointerType === 'mouse' ? onMove(e) : null) : undefined}
         onPointerLeave={() => setOrigin(null)}

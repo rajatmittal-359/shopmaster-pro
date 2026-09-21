@@ -25,7 +25,7 @@ const Row = ({ title, href, hrefLabel, children }) => (
         </Link>
       )}
     </div>
-    <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">{children}</div>
+    <div className="stagger mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">{children}</div>
   </section>
 );
 

@@ -46,7 +46,7 @@ export default function BottomNav() {
                 aria-current={active ? 'page' : undefined}
                 className={`flex flex-col items-center gap-0.5 py-2 text-[0.65rem] font-medium ${active ? 'text-brand-ink' : 'text-muted-foreground'}`}
               >
-                <Icon className={`size-5 ${active ? 'stroke-[2.25]' : ''}`} />
+                <Icon className={`size-5 ${active ? 'stroke-[2.25]' : ''}`} {...(href === '/cart' ? { 'data-cart-target': '' } : {})} />
                 {label}
               </Link>
             </li>

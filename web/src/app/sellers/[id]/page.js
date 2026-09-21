@@ -169,7 +169,7 @@ export default async function SellerPage({ params }) {
             {seller.break ? 'The products come back when the shop reopens.' : 'Nothing in stock right now.'}
           </p>
         ) : (
-          <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+          <div className="stagger mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
             {products.map((product) => (
               <ProductCard key={product._id} product={product} />
             ))}

@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import PanelCard from '@/components/panel/PanelCard';
 import PushToggle from '@/components/seller/PushToggle';
+import FirstSale from '@/components/seller/FirstSale';
 import { useSession } from '@/lib/session';
 import ApplicationStatus from '@/components/seller/ApplicationStatus';
 
@@ -72,6 +73,8 @@ export default function SellerDashboard() {
       analytics,
       lowStock: low.products || low || [],
       waiting: all.filter((o) => WAITING.includes(o.status) && !o.shippingAwb),
+      // Exactly one order ever = the first sale (components/seller/FirstSale).
+      firstSale: all.length === 1 ? all[0] : null,
       settings: settings.settings || {},
       bankSet: Boolean(settings.settings?.bankSet),
     };
@@ -115,7 +118,7 @@ export default function SellerDashboard() {
     );
   }
 
-  const { analytics, lowStock, waiting, settings, bankSet } = data;
+  const { analytics, lowStock, waiting, settings, bankSet, firstSale } = data;
   const productsTotal = analytics?.products?.total || 0;
   const pickupSet = Boolean(settings.pickupAddress?.pincode);
   const agreed = Boolean(settings.agreement?.upToDate);
@@ -139,6 +142,8 @@ export default function SellerDashboard() {
 
       {/* ONE next thing. A panel that lists everything says nothing; Shopify's
           Home and Seller Central both lead with the single most urgent action. */}
+      <FirstSale order={firstSale} />
+
       <NextUp waiting={waiting} pickupSet={pickupSet} bankSet={bankSet} lowStock={lowStock} productsTotal={productsTotal} />
 
       {/* Once, in one line: the phone buzzes on a new order (plan 2.26). Gone when on. */}

@@ -28,13 +28,14 @@ export default function QuickAdd({ productId, name, price, href, className = '' 
   const add = async (e) => {
     e.preventDefault();
     e.stopPropagation();
+    const from = e.currentTarget.closest('.group')?.querySelector('img') || null;
     if (!signedIn) return router.push(`/login?next=${encodeURIComponent(href)}`);
     if (state !== 'idle') return undefined;
     setState('adding');
     try {
       await authedFetch('/customer/cart', { method: 'POST', body: { productId, quantity: 1 } });
       addToCart({ _id: productId, name, price }, 1, price);
-      announceAdded({ productId, name, price, quantity: 1 });
+      announceAdded({ productId, name, price, quantity: 1, from });
       setState('added');
       setTimeout(() => setState('idle'), 1800);
     } catch (err) {

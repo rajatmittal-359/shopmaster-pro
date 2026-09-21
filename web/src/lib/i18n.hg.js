@@ -531,6 +531,9 @@ const HG = {
   // Product form hints (15 Sep)
   'Up to five. The first is the main one - white background sells best.': 'Zyada se zyada paanch. Pehli main hai - safed background sabse accha bikta hai.',
   'Main photo: the product alone on a plain or white background, filling most of the frame - no text, borders or collage. Cards and Google crop to a square. Edit → White background fixes one in a tap.': 'Main photo: plain ya white background par sirf product, frame ka zyada hissa bharta hua - koi text, border ya collage nahi. Card aur Google square me kaatte hain. Edit → White background ek tap me theek kar deta hai.',
+  'Your first sale!': 'Aapki pehli sale!',
+  'Somebody chose your shop. Pack it well, ship on time, and the review that follows brings the next one.': 'Kisi ne aapki dukaan chuni. Achhe se pack karo, time par bhejo - jo review aayega wahi agla order laayega.',
+  'Pack the order': 'Order pack karo',
   'Drop photos here, or click to choose': 'Photo yahan drop karo, ya chunne ke liye click karo',
   'Preparing…': 'Taiyaar ho raha hai…',
   'Add from your AI pictures': 'Apni AI pictures se jodo',

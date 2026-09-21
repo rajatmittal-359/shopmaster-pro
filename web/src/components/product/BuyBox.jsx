@@ -63,7 +63,7 @@ export default function BuyBox({
       // has already decided.
       if (thenCheckout) return router.push('/checkout');
       setState({ status: 'added' });
-      announceAdded({ productId, name, price, quantity }); // opens the cart drawer, refreshes the header count
+      announceAdded({ productId, name, price, quantity, from: document.querySelector('[data-gallery-main] img') }); // photo flies to the bag, drawer opens, header count refreshes
     } catch (err) {
       setState({ status: 'error', message: err.message });
     }

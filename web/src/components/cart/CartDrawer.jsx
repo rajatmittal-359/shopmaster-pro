@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { authedFetch } from '@/lib/client';
 import { CART_ADDED } from '@/lib/cartEvents';
+import { flyToCart } from '@/lib/flyToCart';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 
@@ -38,8 +39,10 @@ export default function CartDrawer() {
       if (pathname.startsWith('/cart') || pathname.startsWith('/checkout')) return;
       setAdded(e.detail || null);
       setCart(null);
+      // The photo flies first (600 ms), the drawer follows it in.
+      flyToCart(e.detail?.from);
       setOpenedOn(pathname);
-      setOpen(true);
+      setTimeout(() => setOpen(true), e.detail?.from ? 450 : 0);
       authedFetch('/customer/cart').then((d) => setCart(d.cart || { items: [], totalAmount: 0 })).catch(() => setCart({ items: [], totalAmount: 0 }));
     };
     window.addEventListener(CART_ADDED, onAdded);

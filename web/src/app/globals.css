@@ -407,6 +407,67 @@ body::before {
 }
 
 /*
+ * THE MOTION LAYER (E3, 22 Sep 2026)
+ *
+ * Four moves, each with a meaning, and one rule: every one of them is off
+ * under prefers-reduced-motion. Durations follow the Material/Apple bands -
+ * 200-300 ms for something entering, under 150 ms for a press.
+ *
+ *   page-enter   the new route rises 6px into place (app/template.js) - the
+ *                cheap version of a view transition, no experimental runtime;
+ *   stagger      a grid's first twelve tiles arrive 35 ms apart, so a page of
+ *                products reads as laid out rather than dumped (Myntra, Zara);
+ *   fly-to-cart  the photo you tapped shrinks along a curve into the bag icon
+ *                (lib/flyToCart) - the confirmation that needs no words;
+ *   pop / draw   the order-placed check draws itself, the seller's first sale
+ *                bursts once. Celebration is rationed: those two moments only.
+ */
+@keyframes smp-rise {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes smp-pop {
+  0% { transform: scale(0.6); opacity: 0; }
+  60% { transform: scale(1.08); opacity: 1; }
+  100% { transform: scale(1); }
+}
+@keyframes smp-draw {
+  to { stroke-dashoffset: 0; }
+}
+@keyframes smp-burst {
+  0% { transform: translate(0, 0) scale(1); opacity: 1; }
+  100% { transform: translate(var(--dx), var(--dy)) scale(0.4); opacity: 0; }
+}
+.page-enter { animation: smp-rise 260ms cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+.stagger > * { animation: smp-rise 320ms cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+.stagger > :nth-child(1) { animation-delay: 0ms; }
+.stagger > :nth-child(2) { animation-delay: 35ms; }
+.stagger > :nth-child(3) { animation-delay: 70ms; }
+.stagger > :nth-child(4) { animation-delay: 105ms; }
+.stagger > :nth-child(5) { animation-delay: 140ms; }
+.stagger > :nth-child(6) { animation-delay: 175ms; }
+.stagger > :nth-child(7) { animation-delay: 210ms; }
+.stagger > :nth-child(8) { animation-delay: 245ms; }
+.stagger > :nth-child(9) { animation-delay: 280ms; }
+.stagger > :nth-child(10) { animation-delay: 315ms; }
+.stagger > :nth-child(11) { animation-delay: 350ms; }
+.stagger > :nth-child(12) { animation-delay: 385ms; }
+.stagger > :nth-child(n + 13) { animation-delay: 420ms; }
+.pop-in { animation: smp-pop 420ms cubic-bezier(0.2, 0.8, 0.2, 1.2) both; }
+.draw-check { stroke-dasharray: 48; stroke-dashoffset: 48; animation: smp-draw 500ms 250ms ease-out forwards; }
+.burst > i {
+  position: absolute; left: 50%; top: 50%; width: 8px; height: 8px; border-radius: 9999px;
+  animation: smp-burst 900ms cubic-bezier(0.1, 0.8, 0.3, 1) both;
+}
+/* The flying photo is appended to <body> by lib/flyToCart and animated with the Web Animations API. */
+.fly-to-cart { position: fixed; z-index: 80; pointer-events: none; border-radius: 12px; object-fit: cover; box-shadow: 0 12px 28px -12px rgb(0 0 0 / 0.5); }
+
+@media (prefers-reduced-motion: reduce) {
+  .page-enter, .stagger > *, .pop-in, .burst > i { animation: none; }
+  .draw-check { stroke-dashoffset: 0; animation: none; }
+}
+
+/*
  * THE EFFECTS LAYER
  *
  * Four techniques, each one doing a job the others cannot, and each one used in

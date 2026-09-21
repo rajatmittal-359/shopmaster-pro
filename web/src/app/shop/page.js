@@ -167,7 +167,7 @@ export default async function ShopPage({ searchParams }) {
           {products.length === 0 ? (
             <NoResults params={params} categoryName={category?.name} />
           ) : (
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+            <div className="stagger grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
               {products.map((product) => (
                 <ProductCard key={product._id} product={product} />
               ))}

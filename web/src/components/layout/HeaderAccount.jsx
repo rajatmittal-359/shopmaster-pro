@@ -94,7 +94,7 @@ export default function HeaderAccount({ showCart = true }) {
         </Link>
       )}
       {showCart && (
-        <Link href="/cart" aria-label={counts.cart ? `Cart (${counts.cart})` : 'Cart'} className="relative inline-flex text-muted-foreground hover:text-brand-ink">
+        <Link href="/cart" data-cart-target aria-label={counts.cart ? `Cart (${counts.cart})` : 'Cart'} className="relative inline-flex text-muted-foreground hover:text-brand-ink">
           <ShoppingBag className="size-5" />
           <CountBadge n={counts.cart} />
         </Link>
