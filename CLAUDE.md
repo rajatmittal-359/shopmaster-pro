@@ -1,9 +1,12 @@
 # ShopMaster Pro — read this first
 
 Marketplace from Jaipur, run by Rajat Mittal. One of its sellers is run by his
-family; these documents call it **the house shop** and never name it - the world
-must not be able to tell which seller the operator owns (Amazon does not sign as
-Cloudtail). Two accounts, kept apart: the **house-shop seller** login (a family
+family - **the house shop**, Charming Jewels. **Decided 21 Sep 2026 (Rajat: "pata
+chal jaane do, hum dono ek hi hain"):** the operator and the house shop are openly
+the same business - legal name, address, phone and profile links may say Charming
+Jewels; no more hiding it. What still holds: other sellers get the same rules and
+ranking (the /how-we-rank page is the promise), and the platform's own name in
+the frame stays ShopMaster Pro. Two accounts, kept apart: the **house-shop seller** login (a family
 member's daily login, also that shop's Google Business Profile) and the **admin**
 login (every Google/Atlas/Render console). The addresses are in `private/` and
 `OPS-AND-MANUAL-ACTIONS.md`, never in tracked files. The site is **ShopMaster Pro**;
