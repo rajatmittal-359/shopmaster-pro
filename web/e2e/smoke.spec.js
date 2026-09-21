@@ -50,8 +50,7 @@ async function signIn(page, who, next = '/') {
     if (String(e.message).includes('SECOND_STEP')) test.skip(true, 'this account asks for the emailed code on a new device - run against a fresh seed');
     // Say what the form said, so a failure reads as a cause, not a timeout.
     const said = await page.locator('[aria-live], [role="alert"]').allInnerTexts().catch(() => []);
-    throw new Error(`${who} could not sign in (${e.message.split('
-')[0]}); the form said: ${JSON.stringify(said)}`);
+    throw new Error(`${who} could not sign in (${String(e.message).split(String.fromCharCode(10))[0]}); the form said: ${JSON.stringify(said)}`);
   });
 }
 
