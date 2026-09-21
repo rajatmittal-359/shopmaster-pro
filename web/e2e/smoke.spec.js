@@ -77,7 +77,8 @@ test('a product reaches the cart and the checkout preview (COD)', async ({ page 
   await page.waitForURL(/\/products\//);
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   await page.getByRole('button', { name: /^add to cart$/i }).first().click();
-  await expect(page.getByText(/in your cart/i)).toBeVisible();
+  // The cart drawer (E2) opens with the line just added; its heading is the confirmation.
+  await expect(page.getByRole('dialog').getByRole('heading', { name: /in your cart/i })).toBeVisible();
   await page.goto('/checkout');
   await expect(page.getByText(/cash on delivery/i)).toBeVisible();
   await expect(page.getByText(/to pay/i)).toBeVisible();

@@ -569,6 +569,7 @@ const HI = {
   'Next, about {n} min:': 'अगला, लगभग {n} मिनट:',
   // Product form hints (15 Sep)
   'Up to five. The first is the main one - white background sells best.': 'ज़्यादा से ज़्यादा पाँच। पहली मुख्य है - सफ़ेद बैकग्राउंड सबसे अच्छा बिकता है।',
+  'Main photo: the product alone on a plain or white background, filling most of the frame - no text, borders or collage. Cards and Google crop to a square. Edit → White background fixes one in a tap.': 'मुख्य फोटो: सादे या सफ़ेद बैकग्राउंड पर सिर्फ़ प्रोडक्ट, फ्रेम का ज़्यादातर हिस्सा भरता हुआ - कोई टेक्स्ट, बॉर्डर या कोलाज नहीं। कार्ड और Google चौकोर काटते हैं। Edit → White background एक टैप में ठीक कर देता है।',
   'Drop photos here, or click to choose': 'फोटो यहाँ छोड़ें, या चुनने के लिए क्लिक करें',
   'Preparing…': 'तैयार हो रहा है…',
   'Add from your AI pictures': 'अपनी AI तस्वीरों से जोड़ें',

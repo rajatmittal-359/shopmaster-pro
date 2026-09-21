@@ -12,6 +12,7 @@ import GoogleAnalytics from '@/components/analytics/GoogleAnalytics';
 import MetaPixel from '@/components/analytics/MetaPixel';
 import ConsentBanner from '@/components/common/ConsentBanner';
 import GoogleOneTap from '@/components/auth/GoogleOneTap';
+import CartDrawer from '@/components/cart/CartDrawer';
 import BottomNav from '@/components/layout/BottomNav';
 
 const geistSans = Geist({
@@ -107,6 +108,7 @@ export default function RootLayout({ children }) {
             <Header />
             {/* One Tap for signed-out visitors - storefront only, never in the panels. */}
             <GoogleOneTap />
+            <CartDrawer />
           </ShopChrome>
           {/* flex-1 so a short page still pushes the footer to the bottom. */}
           {/* pb on phones so the bottom tab bar never covers the last row. */}

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { addToCart } from '@/lib/analytics';
+import { announceAdded } from '@/lib/cartEvents';
 import { authedFetch } from '@/lib/client';
 import { useSession } from '@/lib/session';
 import { Button } from '@/components/ui/button';
@@ -62,6 +63,7 @@ export default function BuyBox({
       // has already decided.
       if (thenCheckout) return router.push('/checkout');
       setState({ status: 'added' });
+      announceAdded({ productId, name, price, quantity }); // opens the cart drawer, refreshes the header count
     } catch (err) {
       setState({ status: 'error', message: err.message });
     }

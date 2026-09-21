@@ -392,6 +392,15 @@ export default function MediaManager({
         }}
       />
 
+      {/* THE RULES (E2, 22 Sep 2026). Amazon's main-image rule in one line,
+          with the reason: the card, the search result and Google's shopping
+          tile all crop to a square and sit beside other shops' photos, so a
+          collage or a busy background is what makes a listing look cheap
+          next to them. The fix is one tap away in each photo's Edit menu. */}
+      <p className="text-xs text-muted-foreground">
+        {t('Main photo: the product alone on a plain or white background, filling most of the frame - no text, borders or collage. Cards and Google crop to a square. Edit → White background fixes one in a tap.')}
+      </p>
+
       {/* THE SLOTS. Five, always shown, so the seller can see what is empty. */}
       <ul className="grid grid-cols-3 gap-3 sm:grid-cols-5">
         {Array.from({ length: MAX }).map((_, i) => {
