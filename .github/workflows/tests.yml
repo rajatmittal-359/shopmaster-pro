@@ -136,7 +136,6 @@ jobs:
     env:
       MONGO_URI: mongodb://127.0.0.1:27017/shopmaster_e2e
       JWT_SECRET: e2e-only-not-a-secret-0123456789abcdef
-      NODE_ENV: development
       PORT: '5000'
       FRONTEND_URL: http://localhost:3000
       SITE_URL: http://localhost:3000
@@ -167,6 +166,9 @@ jobs:
         run: node seed.js --minimal
       - name: start the API
         working-directory: backend
+        # development, not production: cookies without Secure over http://localhost, and no NODE_ENV leaking into `next build` (which must not see "development").
+        env:
+          NODE_ENV: development
         run: |
           (node server.js > ../api.log 2>&1 &)
           for i in $(seq 1 30); do curl -sf http://127.0.0.1:5000/api/health && break; sleep 2; done
@@ -174,9 +176,10 @@ jobs:
       - name: build and start the web
         working-directory: web
         run: |
-          npm run build 2>&1 | tail -40
+          set -o pipefail
+          npm run build 2>&1 | tail -60 || { echo "::error::next build failed - see the lines above"; exit 1; }
           # output: standalone (the production image runs this exact server) - `next start` refuses it.
-          ls .next/standalone >/dev/null
+          ls .next/standalone >/dev/null || { echo "::error::no .next/standalone after the build"; exit 1; }
           cp -r .next/static .next/standalone/.next/static && cp -r public .next/standalone/public
           (PORT=3000 HOSTNAME=127.0.0.1 node .next/standalone/server.js > ../web.log 2>&1 &)
           ok=0
