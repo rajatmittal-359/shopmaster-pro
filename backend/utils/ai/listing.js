@@ -245,8 +245,9 @@ const draftListing = async (input, deps = { generate }) => {
     const about = `${draft.name} ${draft.productType} ${input.categoryName || ''} ${draft.description}`.toLowerCase();
     const tokens = new Set(about.match(/[a-z]{4,}/g) || []);
     const seeds = [...(template.seoSeeds || []), ...(input.marketWords || [])].map((t) => t.toLowerCase());
-    const generic = (template.seoSeeds || []).slice(0, 2).map((t) => t.toLowerCase());
-    const relevant = seeds.filter((t) => generic.includes(t) || t.split(/\s+/).some((w) => w.length >= 4 && tokens.has(w) && !['women', 'girls', 'set', 'with'].includes(w)));
+    // No "always" seeds: a shirt must not carry "kurti for women" because it
+    // is the category's first seed. Only a seed that names this item joins.
+    const relevant = seeds.filter((t) => t.split(/\s+/).some((w) => w.length >= 4 && tokens.has(w) && !['women', 'girls', 'mens', 'set', 'with', 'wear'].includes(w)));
     draft.tags = [...new Set([...draft.tags, ...relevant])].slice(0, 15);
   } else {
     delete draft.attributes;
