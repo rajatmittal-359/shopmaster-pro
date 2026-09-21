@@ -55,6 +55,49 @@ exports.getProductReviews = async (req, res) => {
   }
 };
 
+/**
+ * ✅ PUBLIC: the newest good reviews across the shop, for the home page's
+ * "What customers say" section (S4, 22 Sep 2026).
+ *  GET /api/reviews/recent?limit=6&min=4
+ *
+ * Only reviews with real words (20+ characters), not held or removed, of
+ * `min` stars or more, on a live product with a photograph. The buyer is
+ * named the way Amazon and Flipkart name them - first name and an initial -
+ * never the email, never the full name. Built field by field: public.
+ */
+exports.recentReviews = async (req, res) => {
+  try {
+    const limit = Math.min(12, Math.max(1, Number(req.query.limit) || 6));
+    const min = Math.min(5, Math.max(1, Number(req.query.min) || 4));
+    const rows = await Review.find({ rating: { $gte: min }, 'moderation.status': { $nin: ['held', 'removed'] }, $expr: { $gte: [{ $strLenCP: { $ifNull: ['$comment', ''] } }, 20] } })
+      .sort({ createdAt: -1 })
+      .limit(limit * 3)
+      .populate('userId', 'name')
+      .populate('productId', 'name slug images isActive isDeleted')
+      .lean();
+    const shortName = (full = '') => {
+      const [first = '', second = ''] = String(full).trim().split(/\s+/);
+      return second ? `${first} ${second[0].toUpperCase()}.` : first;
+    };
+    const reviews = rows
+      .filter((r) => r.productId && r.productId.isActive && !r.productId.isDeleted && r.productId.images?.[0])
+      .slice(0, limit)
+      .map((r) => ({
+        _id: r._id,
+        rating: r.rating,
+        title: r.title || '',
+        comment: String(r.comment || '').slice(0, 280),
+        by: shortName(r.userId?.name) || 'A customer',
+        at: r.createdAt,
+        product: { _id: r.productId._id, name: r.productId.name, slug: r.productId.slug, image: r.productId.images[0] },
+      }));
+    res.set('Cache-Control', 'public, max-age=300');
+    return res.json({ reviews });
+  } catch (error) {
+    return sendError(res, error);
+  }
+};
+
 // ✅ CUSTOMER: Create or update review for a product
 exports.createOrUpdateReview = async (req, res) => {
   try {

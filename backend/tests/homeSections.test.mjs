@@ -37,6 +37,12 @@ describe('normaliseSections', () => {
     expect(out[1].slugs).toHaveLength(8);
     expect(out[2].ids).toEqual(['123', 'abc']);
   });
+  it('a reviews section keeps count within 3-8 and the star floor within 1-5 (S4)', () => {
+    const [, r1, r2] = normaliseSections([{ type: 'reviews', count: 99, minRating: -3 }, { type: 'reviews' }]);
+    expect(r1).toMatchObject({ type: 'reviews', count: 8, minRating: 1, title: 'What customers say' });
+    expect(r2).toMatchObject({ count: 6, minRating: 4 });
+  });
+
   it('every type has a default title and the hero cannot be disabled', () => {
     for (const t of TYPES) expect(typeof normaliseSections([{ type: 'hero' }, { type: t }]).find((s) => s.type === t).title).toBe('string');
     expect(normaliseSections([{ type: 'hero', enabled: false }])[0].enabled).toBe(true);

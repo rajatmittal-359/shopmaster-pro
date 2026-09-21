@@ -330,7 +330,7 @@ export default function PlatformSettings() {
                  * first Product row; backend/utils/homeSections is the contract.
                  */}
                 <Block title="Sections" lead="What the home page shows below the hero, top to bottom. Add, reorder, switch off. A section with nothing to show hides itself." form={h} saved={doc.home} onSave={() => save('home')} busy={busy === 'home'}>
-                  <HomeSections value={h.sections || []} onChange={(sections) => setForm({ ...form, home: { ...form.home, sections } })} />
+                  <HomeSections value={h.sections || []} heroTitle={h.title || ''} onChange={(sections) => setForm({ ...form, home: { ...form.home, sections } })} />
                 </Block>
               </>
             )}

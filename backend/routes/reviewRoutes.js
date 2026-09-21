@@ -16,6 +16,8 @@ const {
 // ✅ PUBLIC: list reviews of a product
 // GET /api/reviews/product/:productId
 router.get('/product/:productId', getProductReviews);
+// ✅ PUBLIC: the newest good reviews across the shop (home page "What customers say")
+router.get('/recent', require('../controllers/reviewController').recentReviews);
 
 // ✅ PROTECTED: customer-only routes
 router.use(authMiddleware, roleMiddleware('customer'));

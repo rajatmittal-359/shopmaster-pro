@@ -104,6 +104,12 @@ export const getSimilar = async (productIdOrSlug, limit = 8) => {
   return (data?.products || []).slice(0, limit);
 };
 
+/** The newest good reviews across the shop (home "What customers say", S4). */
+export const getRecentReviews = async (limit = 6, min = 4) => {
+  const data = await get(`/reviews/recent?limit=${limit}&min=${min}`, { revalidate: 300 });
+  return data?.reviews || [];
+};
+
 export const getRelated = async (categorySlug, excludeId, limit = 4) => {
   if (!categorySlug) return [];
   const data = await get(

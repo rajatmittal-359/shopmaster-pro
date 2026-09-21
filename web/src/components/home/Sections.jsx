@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
-import { getProducts, getProduct, getCategories, getSeller } from '@/lib/api';
+import { getProducts, getProduct, getCategories, getSeller, getRecentReviews } from '@/lib/api';
+import Stars from '@/components/product/Stars';
 import ProductCard from '@/components/product/ProductCard';
 
 /**
@@ -136,7 +137,44 @@ function Banner({ section }) {
   );
 }
 
-const RENDER = { categories: Categories, collection: Collection, newest: Newest, sellers: Sellers, banner: Banner };
+/*
+ * "What customers say" (S4, 22 Sep 2026). Etsy's home has "What shoppers
+ * are saying"; every Shopify theme ships a testimonial section. Ours is
+ * real reviews, not testimonials: each card is a delivered order's words,
+ * the buyer as first name + initial, on the product it was about - and it
+ * is a link to that product, because a good review is the best card a
+ * product can have. Hidden until there are three.
+ */
+async function Reviews({ section }) {
+  const reviews = await getRecentReviews(section.count || 6, section.minRating || 4);
+  if (reviews.length < 3) return null;
+  const when = (iso) => new Date(iso).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' });
+  return (
+    <section className="mx-auto max-w-5xl px-4 py-8">
+      <h2 className="font-display text-xl sm:text-2xl">{section.title}</h2>
+      <div className="stagger mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {reviews.map((r) => (
+          <Link key={r._id} href={`/products/${r.product.slug || r.product._id}`} className="glow-hover flex flex-col rounded-xl border border-border bg-card p-4">
+            <Stars value={r.rating} className="text-sm" />
+            {r.title && <p className="mt-2 font-medium">{r.title}</p>}
+            <p className="mt-1 line-clamp-4 text-sm text-muted-foreground">&ldquo;{r.comment}&rdquo;</p>
+            <span className="mt-auto flex items-center gap-3 pt-4">
+              <span className="relative size-10 shrink-0 overflow-hidden rounded-lg bg-muted">
+                <Image src={r.product.image} alt="" fill sizes="40px" className="object-cover" />
+              </span>
+              <span className="min-w-0 text-xs">
+                <span className="block truncate font-medium text-foreground">{r.product.name}</span>
+                <span className="text-muted-foreground">{r.by} · {when(r.at)}</span>
+              </span>
+            </span>
+          </Link>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+const RENDER = { categories: Categories, collection: Collection, newest: Newest, sellers: Sellers, banner: Banner, reviews: Reviews };
 
 export default function Sections({ sections = [] }) {
   return sections

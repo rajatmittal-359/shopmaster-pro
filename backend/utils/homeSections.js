@@ -17,10 +17,13 @@
  *   sellers     up to 8 shops (admin-picked seller user ids), each with its newest pieces
  *   banner      one image with a line and a link, optionally until a date
  *   newest      "Just added" - shown only when there are at least `min` products
+ *   reviews     "What customers say" (S4, 22 Sep 2026) - the newest `count` reviews of
+ *               `minRating` stars or more with real words, each on its product;
+ *               shown only when there are at least three (GET /reviews/recent)
  *
- * Reviews and a launch-banner request flow are S4/C in WHAT-IS-LEFT.
+ * The launch-banner request flow is C in WHAT-IS-LEFT.
  */
-const TYPES = ['hero', 'categories', 'collection', 'sellers', 'banner', 'newest'];
+const TYPES = ['hero', 'categories', 'collection', 'sellers', 'banner', 'newest', 'reviews'];
 const MAX_TITLE = 60;
 const MAX_PICKS = 8;
 
@@ -31,6 +34,7 @@ const DEFAULT_TITLES = {
   sellers: 'Shops on ShopMaster Pro',
   banner: '',
   newest: 'Just added',
+  reviews: 'What customers say',
 };
 
 /** The layout a fresh platform ships with - what the page drew before S1. */
@@ -68,6 +72,8 @@ const one = (raw) => {
       return { ...base, image: httpsImage(raw.image), text: text(raw.text, 140), href: safeHref(raw.href), until: dateOrNull(raw.until) };
     case 'newest':
       return { ...base, min: Math.min(24, Math.max(1, Number(raw.min) || 4)) };
+    case 'reviews':
+      return { ...base, count: Math.min(8, Math.max(3, Number(raw.count) || 6)), minRating: Math.min(5, Math.max(1, Number(raw.minRating) || 4)) };
     default:
       return base;
   }
