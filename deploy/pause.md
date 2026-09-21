@@ -48,3 +48,23 @@ Scheduled jobs (`.github/workflows/scheduled-jobs.yml`) will fail while paused
 
 - The static IP (always new after a resume → steps 2–5 above).
 - Anything in Atlas — nothing to carry; the database never paused.
+
+## Emergency: the bill is running away (21 Sep 2026)
+
+The Budget mails at 50 / 80 / 100 % of $15. 100 % means the month reached
+$15 - the box alone is ~$12 + tax, so that is not yet a problem. A jump
+beyond it is.
+
+1. **Look first** (2 min): Billing → **Bills** → this month by service. Normal
+   is Lightsail only. Anything else (EC2, S3, transfer) is the culprit - open
+   that service's console and delete the resource.
+2. **Stop the bleed = delete, not Stop.** A stopped Lightsail instance still
+   bills its plan. Do the Pause steps above: snapshot → delete instance →
+   release the static IP. The bill stops that hour; the site is back in 10 min
+   from the snapshot whenever you want it.
+3. **Everything off:** Billing → Account → **Close account**. All charges end;
+   the account can be reopened for 90 days.
+
+Never: cancel the UPI mandate or remove the card to "stop" AWS - the bill
+keeps accruing, the account gets blocked, and the box keeps running until
+AWS itself pulls it. Delete the resource instead.
