@@ -1791,6 +1791,22 @@ buyer-protection line on the product page (copy), buyer-seller messaging
 (large; later). The verified-purchase badge is a small backend flag and can be
 done any time.
 
+**22 Sep 2026 - the experience layer (E1-E4) and the sections editor (S2, S4),
+built overnight on the 21 Sep decision.** References named per piece: card
+(Myntra hover second image and quick add, Meesho/Zara tile "+", Amazon and
+Flipkart rating line), cart drawer (Zara, Myntra, every Shopify theme; Baymard
+on cart-confirmation revisits), gallery (Zara/Myntra in-place magnify, Baymard's
+image-zoom finding, a black edge-to-edge lightbox), motion (Material/Apple
+duration bands, Commerce-UI's motion-in-ecommerce: route rise, stagger, press,
+fly-to-cart, one rationed celebration each for buyer and seller), discovery
+(Amazon "recently viewed", Myntra "complete the look" at one shop's range),
+editor (Shopify theme editor pickers + preview). Two ideas were dropped against
+the system: a warm hero surface (DESIGN.md forbids warm UI hues) and automatic
+photo clean-up (the media manager's human-in-the-loop rule). Two-step sign-in
+(Shopify staff 2FA) and DPDP-style delete-and-retain landed the same night;
+rows 2.65-2.67 and the Option A line in WHAT-IS-LEFT hold the details. Checked
+at 1440 and 390, light, on dev data; the e2e smoke suite is green in CI.
+
 ---
 
 ## 13a. Before `frontend/` can be deleted
