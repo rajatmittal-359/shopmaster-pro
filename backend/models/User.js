@@ -62,9 +62,11 @@
          */
         googleId: {
         type: String,
-        default: null,
-        unique: true,
-        sparse: true,
+        // No default: `default: null` STORED a null, and a sparse unique index
+        // still indexes a stored null - so the second password account on a
+        // fresh database was "a duplicate googleId" (found by the e2e seed on
+        // a throwaway Mongo, 22 Sep 2026; the dev and prod databases predate
+        // the index and never hit it). Absent field + the partial index below.
         select: false
         },
         role: {
@@ -240,6 +242,13 @@
     return this.otp === enteredOTP && this.otpExpiry > Date.now();
     };
 
+
+    // Unique only where a Google id exists (see the field's note above).
+    // Its own name: the dev and prod databases already carry the old sparse
+    // `googleId_1`, and an index of the same name with other options would
+    // fail to build at boot. The old one stays; with no default it never sees
+    // a null again, so the two agree.
+    userSchema.index({ googleId: 1 }, { name: 'googleId_present_unique', unique: true, partialFilterExpression: { googleId: { $type: 'string' } } });
 
     const User = mongoose.model('User', userSchema);
 
