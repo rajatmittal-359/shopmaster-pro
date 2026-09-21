@@ -175,7 +175,9 @@ jobs:
         working-directory: web
         run: |
           npm run build
-          npx next start -p 3000 > ../web.log 2>&1 &
+          # output: standalone (the production image runs this exact server) - `next start` refuses it.
+          cp -r .next/static .next/standalone/.next/static && cp -r public .next/standalone/public
+          PORT=3000 HOSTNAME=127.0.0.1 node .next/standalone/server.js > ../web.log 2>&1 &
           for i in $(seq 1 30); do curl -sf -o /dev/null http://localhost:3000/ && break; sleep 2; done
           curl -sf -o /dev/null http://localhost:3000/
       - name: playwright browsers
