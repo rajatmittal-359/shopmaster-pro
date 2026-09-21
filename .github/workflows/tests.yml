@@ -170,7 +170,8 @@ jobs:
         run: |
           (node server.js > ../api.log 2>&1 &)
           for i in $(seq 1 30); do curl -sf http://127.0.0.1:5000/api/health && break; sleep 2; done
-          curl -sf http://127.0.0.1:5000/api/health || { echo "== api.log"; cat ../api.log; exit 1; }
+          curl -sf http://127.0.0.1:5000/api/health || { echo "== api.log"; cat ../api.log; echo "::error::API did not answer - $(tail -c 600 ../api.log | tr '
+' ' ')"; exit 1; }
       - name: build and start the web
         working-directory: web
         run: |
@@ -185,7 +186,9 @@ jobs:
             sleep 2
           done
           echo "== web.log"; cat ../web.log || true
-          [ "$ok" = 1 ] || { echo "::error::the web did not answer on :3000 in 90 s"; exit 1; }
+          # The tail also goes out as an annotation: the checks API shows those to anyone, the raw log only to admins.
+          [ "$ok" = 1 ] || { echo "::error::the web did not answer on :3000 in 90 s - $(tail -c 600 ../web.log | tr '
+' ' ')"; exit 1; }
       - name: playwright browsers
         working-directory: web
         run: npx playwright install --with-deps chromium
