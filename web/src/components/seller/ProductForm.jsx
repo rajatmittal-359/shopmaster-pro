@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import MediaManager from '@/components/seller/MediaManager';
 import VideoSlot from '@/components/seller/VideoSlot';
 import RichTextEditor from '@/components/seller/RichTextEditor';
+import TemplateFacts, { useListingTemplate } from '@/components/seller/TemplateFacts';
 import CategoryPicker from '@/components/seller/CategoryPicker';
 import FieldAssist from '@/components/seller/FieldAssist';
 import Fold from '@/components/panel/Fold';
@@ -87,6 +88,10 @@ const EMPTY = {
   netQuantity: '',
   material: '',
   highlights: '',
+  productType: '',
+  attributes: {},
+  mfgDate: '',
+  bestBefore: '',
   hsn: '',
   gstRate: '',
   freeShipping: false,
@@ -160,6 +165,8 @@ export default function ProductForm({ productId, copyFromId }) {
   const [faqBusy, setFaqBusy] = useState(false);
   // Market check (21 Sep 2026): { status, data?, message? } - advice beside the price, never applied by itself.
   const [market, setMarket] = useState({ status: 'idle' });
+  // The category's own questions (TemplateFacts); refetched when the category changes.
+  const template = useListingTemplate(form.category);
   // Which model writes: 'auto' (Gemini, nano behind it), 'gemini', 'nano'. The
   // same rule as the photo tools - the seller always sees who is doing the work.
   const [textModel, setTextModel] = useState('auto');
@@ -282,6 +289,11 @@ export default function ProductForm({ productId, copyFromId }) {
         gender: draft.gender || f.gender,
         ageGroup: draft.ageGroup || f.ageGroup,
         tags: draft.tags?.length ? draft.tags : f.tags,
+        // The category's facts, from the photo (listing templates S2): the seller corrects, never retypes.
+        productType: draft.productType || f.productType,
+        attributes: draft.attributes && Object.keys(draft.attributes).length ? { ...f.attributes, ...draft.attributes } : f.attributes,
+        material: draft.material || f.material,
+        highlights: draft.bullets?.length && !(Array.isArray(f.highlights) ? f.highlights.length : String(f.highlights || '').trim()) ? draft.bullets.join('\n') : f.highlights,
       }));
       if (u) setUsage(u);
       setAi({ status: 'done', warnings: warnings || [], writtenBy });
@@ -314,6 +326,11 @@ export default function ProductForm({ productId, copyFromId }) {
         gender: draft.gender || f.gender,
         ageGroup: draft.ageGroup || f.ageGroup,
         tags: draft.tags?.length ? draft.tags : f.tags,
+        // The category's facts, from the photo (listing templates S2): the seller corrects, never retypes.
+        productType: draft.productType || f.productType,
+        attributes: draft.attributes && Object.keys(draft.attributes).length ? { ...f.attributes, ...draft.attributes } : f.attributes,
+        material: draft.material || f.material,
+        highlights: draft.bullets?.length && !(Array.isArray(f.highlights) ? f.highlights.length : String(f.highlights || '').trim()) ? draft.bullets.join('\n') : f.highlights,
       }));
       if (u) setUsage(u);
       setAi({ status: 'done', warnings: warnings || [], writtenBy });
@@ -344,6 +361,10 @@ export default function ProductForm({ productId, copyFromId }) {
       size: form.size || undefined,
       variantGroupId: form.variantGroupId || undefined,
       material: form.material ?? '',
+      productType: form.productType ?? '',
+      attributes: form.attributes || {},
+      mfgDate: form.mfgDate ?? '',
+      bestBefore: form.bestBefore ?? '',
       highlights: Array.isArray(form.highlights) ? form.highlights : String(form.highlights || '').split(/\r?\n/),
       // In display order. The server keeps URLs that are ours and uploads the rest.
       images: photos.map((p) => p.src),
@@ -565,6 +586,35 @@ export default function ProductForm({ productId, copyFromId }) {
           <CategoryPicker id="category" options={categories} value={form.category} onChange={setValue('category')} />
           <SuggestCategory parents={parents} />
         </Field>
+      </Card>
+
+      {/* 3b. THE CATEGORY'S FACTS (listing templates S2): what this kind of
+          thing must say - dropdowns from the marketplaces' own facet values.
+          The writer fills them from the photo; the seller corrects. */}
+      <Card
+        id="facts-card"
+        title="3b · Product facts"
+        foldOnPhone
+        summary={template ? `${Object.values(form.attributes || {}).filter((v) => v && String(v).length).length} of ${template.attributes.length} facts${form.productType ? ` · ${form.productType}` : ''}` : t('Choose a category first')}
+        lead={template ? `The facts shoppers filter on for ${template.label.toLowerCase()}. The AI fills them from the photo - check, do not retype.` : 'Pick the category above and its questions appear here.'}
+      >
+        <TemplateFacts
+          template={template}
+          productType={form.productType}
+          attributes={form.attributes || {}}
+          onChange={({ productType, attributes }) => setForm((f) => ({ ...f, productType, attributes }))}
+          t={t}
+        />
+        {template && template.legal?.some((k) => ['mfgDate', 'bestBefore'].includes(k)) && (
+          <div className="mt-5 grid gap-4 sm:grid-cols-2">
+            <Field id="mfgDate" label="Manufactured (month/year)" hint="As printed on the pack - the law asks e-commerce to show it for anything applied or consumed.">
+              <Input id="mfgDate" value={form.mfgDate ?? ''} onChange={set('mfgDate')} className="h-10" placeholder="08/2026" />
+            </Field>
+            <Field id="bestBefore" label="Best before / use by" hint="As printed - a date or “24 months from manufacture”.">
+              <Input id="bestBefore" value={form.bestBefore ?? ''} onChange={set('bestBefore')} className="h-10" placeholder="08/2028" />
+            </Field>
+          </div>
+        )}
       </Card>
 
       {/* 4. PRICING & INVENTORY */}

@@ -93,6 +93,24 @@ const CHECKS = [
     },
   },
   {
+    // Listing templates (config/listingTemplates, 22 Sep 2026): the facts a
+    // shopper filters on in THIS category - plating and stone, fabric and
+    // pattern, thread count. Ten points, because on Flipkart a listing missing
+    // them is filtered out before anyone sees its photo.
+    key: 'facts',
+    points: 10,
+    field: 'attributes',
+    text: 'Fill the product facts for this category (the required ones are marked) - shoppers filter on them',
+    ok: (p) => {
+      const { TEMPLATES, missingRequired } = require('../config/listingTemplates');
+      const t = TEMPLATES[p.templateKey] || TEMPLATES.general;
+      const required = t.attributes.filter((a) => a.required);
+      // A template with no required facts (general) still wants two answers - material and size, say.
+      if (!required.length) return Object.keys(p.attributes || {}).filter((k) => p.attributes[k] && String(p.attributes[k]).length).length >= 2;
+      return missingRequired(t, p.attributes || {}).length === 0;
+    },
+  },
+  {
     key: 'faqs',
     points: 5,
     field: 'faqs',
