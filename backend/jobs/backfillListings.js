@@ -110,4 +110,34 @@ const backfill = async ({ max = 25, pauseMs = 4000, mode = 'fill', deps = {} } =
   return { filled, failed, pending: Math.max(0, todo.length - filled - failed), sellersTold: perSeller.size };
 };
 
-module.exports = { backfill };
+/**
+ * Tags-only tidy (22 Sep 2026, no model): drop a template seed from a
+ * product's tags when it does not name that product - the first rewrite
+ * attached "kurti for women" to shirts and "power bank" to earbuds because
+ * the category's first seeds were added to everything. Keeps the seller's
+ * and the model's own words; removes only seeds that fail the same relevance
+ * rule the writer now applies.
+ */
+const tidyTags = async () => {
+  const { TEMPLATES } = require('../config/listingTemplates');
+  const seedSet = new Set(Object.values(TEMPLATES).flatMap((t) => t.seoSeeds || []).map((x) => x.toLowerCase()));
+  const skip = new Set(['women', 'girls', 'mens', 'set', 'with', 'wear', 'for']);
+  const products = await Product.find({ isActive: true, isDeleted: { $ne: true } }).select('name productType description tags category').populate('category', 'name').lean();
+  let changed = 0;
+  for (const p of products) {
+    const about = `${p.name} ${p.productType || ''} ${p.category?.name || ''} ${String(p.description || '').replace(/<[^>]+>/g, ' ')}`.toLowerCase();
+    const tokens = new Set(about.match(/[a-z]{4,}/g) || []);
+    const keep = (p.tags || []).filter((t) => {
+      const tag = String(t).toLowerCase();
+      if (!seedSet.has(tag)) return true; // the seller's or the model's own word
+      return tag.split(/\s+/).some((w) => w.length >= 4 && !skip.has(w) && tokens.has(w));
+    });
+    if (keep.length !== (p.tags || []).length) {
+      await Product.updateOne({ _id: p._id }, { $set: { tags: keep } });
+      changed += 1;
+    }
+  }
+  return { checked: products.length, changed };
+};
+
+module.exports = { backfill, tidyTags };
