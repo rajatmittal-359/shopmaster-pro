@@ -119,6 +119,85 @@ jobs:
           NEXT_TELEMETRY_DISABLED: '1'
         run: npm run build
 
+  # Five smoke tests over the REAL stack (22 Sep 2026; web/e2e/smoke.spec.js):
+  # a throwaway Mongo, the seed's three demo accounts and the house shop's
+  # catalogue, the API on :5000 and the built web on :3000, then Playwright on
+  # a 390 px phone. It is the only check that would notice a checkout that
+  # renders but cannot add to cart. Needs the two web jobs' work done first,
+  # so it waits for them; the deploy workflow waits for this whole workflow.
+  e2e:
+    name: e2e smoke (Playwright)
+    runs-on: ubuntu-latest
+    needs: [backend, web]
+    services:
+      mongo:
+        image: mongo:7
+        ports: ['27017:27017']
+    env:
+      MONGO_URI: mongodb://127.0.0.1:27017/shopmaster_e2e
+      JWT_SECRET: e2e-only-not-a-secret-0123456789abcdef
+      NODE_ENV: development
+      PORT: '5000'
+      FRONTEND_URL: http://localhost:3000
+      SITE_URL: http://localhost:3000
+      USE_EXTERNAL_CRON: 'true'
+      SEED_DEMO_PASSWORD: E2e-demo-pass-2026
+      SEED_ADMIN_EMAIL: admin@e2e.local
+      SEED_SELLER_EMAIL: seller@e2e.local
+      SEED_CUSTOMER_EMAIL: customer@e2e.local
+      NEXT_PUBLIC_API_URL: http://localhost:5000/api
+      NEXT_PUBLIC_SITE_URL: http://localhost:3000
+      API_INTERNAL_URL: http://localhost:5000/api
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            web/package-lock.json
+      - name: install
+        run: |
+          (cd backend && npm ci --no-audit --no-fund)
+          (cd web && npm ci --no-audit --no-fund)
+      - name: seed the throwaway database
+        working-directory: backend
+        run: node seed.js --minimal
+      - name: start the API
+        working-directory: backend
+        run: |
+          node server.js > ../api.log 2>&1 &
+          for i in $(seq 1 30); do curl -sf http://localhost:5000/api/health && break; sleep 2; done
+          curl -sf http://localhost:5000/api/health
+      - name: build and start the web
+        working-directory: web
+        run: |
+          npm run build
+          npx next start -p 3000 > ../web.log 2>&1 &
+          for i in $(seq 1 30); do curl -sf -o /dev/null http://localhost:3000/ && break; sleep 2; done
+          curl -sf -o /dev/null http://localhost:3000/
+      - name: playwright browsers
+        working-directory: web
+        run: npx playwright install --with-deps chromium
+      - name: smoke tests
+        working-directory: web
+        env:
+          CI: 'true'
+        run: npx playwright test
+      - name: logs on failure
+        if: failure()
+        run: |
+          echo "== api.log"; tail -60 api.log || true
+          echo "== web.log"; tail -60 web.log || true
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: playwright-report
+          path: web/test-results
+          retention-days: 7
+
 # THE GATE LIVES IN RENDER, NOT HERE.
 #
 # There was a deploy job here that called Render's deploy hook after the tests

@@ -78,3 +78,8 @@ private/
 
 # The one-word environment switch (scripts/run.js): local | prod. Never committed.
 ENV
+
+# Playwright
+web/test-results/
+web/playwright-report/
+.playwright-mcp/
