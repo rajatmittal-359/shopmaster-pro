@@ -61,7 +61,7 @@ const ping = (paths, { now = false } = {}) => {
     return flush();
   }
   if (!timer) {
-    timer = setTimeout(() => flush().catch(() => {}), BATCH_MS);
+    timer = setTimeout(() => flush().catch(require('./quiet').quiet('IndexNow flush')), BATCH_MS);
     if (timer.unref) timer.unref();
   }
   return Promise.resolve({ ok: true, queued: pending.size });

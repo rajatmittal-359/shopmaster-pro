@@ -95,7 +95,7 @@ async function snapshot({ live = true } = {}) {
       // for this provider, which for a balance means "last known".
       remainingUnits = pollen != null ? pollen : st?.lastBalance ?? null;
       if (pollen != null) {
-        AiProviderState.updateOne({ provider: name, period: 'all' }, { $set: { lastBalance: pollen } }, { upsert: true }).catch(() => {});
+        AiProviderState.updateOne({ provider: name, period: 'all' }, { $set: { lastBalance: pollen } }, { upsert: true }).catch(require('../quiet').quiet('AI provider state save'));
       }
     } else if (def.limit != null) remainingUnits = Math.max(0, def.limit - used);
 

@@ -356,7 +356,17 @@ const getDeliveryOptions = async (cartItems, address, isCOD) => {
   let standardArrival = null;
   let standardEta = standard.freeShipping ? `Free delivery, ${days}` : days;
   try {
-    const est = await require('./deliveryEstimate').estimateDelivery(address.zipCode, { dispatchDays: lead });
+    // One promise for the whole basket = the LATEST parcel (2.58): each seller's
+    // transit runs from their own pickup pincode (2.54); the house shop and
+    // anyone without one use the default. Amazon shows the latest date too
+    // when a basket splits into shipments.
+    const sellerIds = [...new Set(cartItems.map((item) => productOf(item).sellerId).filter(Boolean).map(String))];
+    const origins = await pickupPincodes(sellerIds);
+    const pins = [...new Set(sellerIds.map((id) => origins.get(id) || null))];
+    if (!pins.length) pins.push(null);
+    const ests = await Promise.all(pins.map((pin) => require('./deliveryEstimate').estimateDelivery(address.zipCode, { dispatchDays: lead, ...(pin ? { pickupPincode: pin } : {}) })));
+    const dated = ests.filter((e) => e?.serviceable && e.deliveryBy).sort((a, b) => (a.deliveryBy < b.deliveryBy ? 1 : -1));
+    const est = dated[0] || ests[0];
     if (est?.serviceable && est.deliveryBy) {
       standardArrival = new Date(`${est.deliveryBy}T23:59:59+05:30`);
       const dayText = standardArrival.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'Asia/Kolkata' });

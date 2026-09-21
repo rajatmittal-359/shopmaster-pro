@@ -58,7 +58,7 @@ const signedIn = async (user, req, res, message, extra = {}) => {
   // Known or not is decided BEFORE issue writes the new row (and possibly the device cookie).
   const known = await sessions.knownDevice(user._id, req).catch(() => true);
   const issued = await sessions.issue(user, req, res);
-  User.updateOne({ _id: user._id }, { $set: { lastLoginAt: new Date(), failedLogins: 0, lockUntil: null } }).catch(() => {});
+  User.updateOne({ _id: user._id }, { $set: { lastLoginAt: new Date(), failedLogins: 0, lockUntil: null } }).catch(require('../utils/quiet').quiet('last-login stamp'));
   // A device this account has not signed in from in 90 days gets a mail - the
   // one line that catches a stolen password before the order does.
   setImmediate(async () => {
@@ -855,7 +855,7 @@ exports.confirmEmailChange = async (req, res) => {
     user.isVerified = true;
     await user.save();
     sessions.record('email_changed', user._id, req, { from: old, to: r.target });
-    sendEmail({ to: old, subject: 'ShopMaster Pro - your sign-in email was changed', text: `The email on your ShopMaster Pro account was changed to ${r.target}. If this was not you, reply to this mail now.` }).catch(() => {});
+    sendEmail({ to: old, subject: 'ShopMaster Pro - your sign-in email was changed', text: `The email on your ShopMaster Pro account was changed to ${r.target}. If this was not you, reply to this mail now.` }).catch(require('../utils/quiet').quiet('email-changed mail to the old address'));
     await sessions.revokeAll(user, req, 'email_changed');
     return signedIn(user, req, res, `Your email is now ${r.target}. Every other device has been signed out.`);
   } catch (error) {

@@ -44,7 +44,7 @@ const remember = async (kind, userId, input, make) => {
   }
   const value = await make();
   if (value && value.ok !== false) {
-    AiCache.updateOne({ key }, { $set: { kind, value, createdAt: new Date() } }, { upsert: true }).catch(() => {});
+    AiCache.updateOne({ key }, { $set: { kind, value, createdAt: new Date() } }, { upsert: true }).catch(require('../quiet').quiet('AI cache store'));
   }
   return value;
 };

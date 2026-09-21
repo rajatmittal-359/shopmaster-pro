@@ -79,7 +79,7 @@ const retryQueued = async ({ now = new Date() } = {}) => {
       } else {
         failed += 1;
         order.refundLastError = String(describe(err)).slice(0, 300);
-        await order.save().catch(() => {});
+        await order.save().catch(require('./quiet').quiet(`refundLastError save ${order.orderNumber}`));
         console.error('refund retry failed for', order.orderNumber, '-', describe(err));
         await notifier.notifyAdmins({ category: 'orders', title: `Refund failed · ${order.orderNumber}`, body: String(describe(err)).slice(0, 300), url: `/admin/orders/${order._id}`, tag: `refund-failed-${order._id}` }).catch(() => {});
       }

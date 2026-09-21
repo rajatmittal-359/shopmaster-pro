@@ -66,12 +66,12 @@ const sendToUser = async (userId, note) => {
     try {
       await transport.send(s, payload);
       sent += 1;
-      PushSubscription.updateOne({ _id: s._id }, { $set: { lastSentAt: new Date() } }).catch(() => {});
+      PushSubscription.updateOne({ _id: s._id }, { $set: { lastSentAt: new Date() } }).catch(require('./quiet').quiet('push subscription cleanup'));
     } catch (err) {
       const code = err?.statusCode;
       if (code === 404 || code === 410) {
         pruned += 1;
-        await PushSubscription.deleteOne({ _id: s._id }).catch(() => {});
+        await PushSubscription.deleteOne({ _id: s._id }).catch(require('./quiet').quiet('push subscription cleanup'));
       } else {
         failed += 1;
         console.error(`Push to ${s.endpoint.slice(0, 40)}… failed:`, err?.message || err);

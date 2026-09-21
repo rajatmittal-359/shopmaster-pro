@@ -183,6 +183,18 @@ exports.googleProductFeed = async (req, res) => {
         // The brand Google shows is the SHOP, never the owner's name (utils/shopNames).
         const brand = p.brand || p.shop?.name;
         if (brand) parts.push(`<g:brand>${esc(brand)}</g:brand>`);
+        /*
+         * Marketplace feeds (21 Sep 2026, Google's "About marketplaces"): a
+         * multi-seller account REQUIRES external_seller_id on every item, or
+         * the item is disapproved; seller_name is what shoppers see. Sent only
+         * when the feed carries more than the house shop - the current
+         * standard account may hold one seller's offers, and Google's rule is
+         * that a marketplace converts to a Marketplace MCA first (OPS).
+         */
+        if (process.env.FEED_ALL_SELLERS === 'true' && p.shop?.id) {
+          parts.push(`<g:external_seller_id>${esc(p.shop.id)}</g:external_seller_id>`);
+          if (p.shop?.name) parts.push(`<g:seller_name>${esc(p.shop.name)}</g:seller_name>`);
+        }
         if (p.sku) parts.push(`<g:mpn>${esc(p.sku)}</g:mpn>`);
 
         /*

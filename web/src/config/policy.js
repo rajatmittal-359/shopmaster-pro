@@ -46,12 +46,14 @@ export const BUSINESS = {
   email: process.env.NEXT_PUBLIC_BUSINESS_EMAIL || 'hello@example.com',
   hours: 'Monday to Saturday, 10am - 7pm IST',
   /**
-   * The same business elsewhere on the web - Instagram, Justdial, the Google
-   * Business Profile. Google's Organization schema reads these as `sameAs`
-   * and uses them to join the site to the profiles it already trusts.
-   * Empty entries are dropped; fill in as Rajat sends the links.
+   * The PLATFORM's own profiles elsewhere on the web, for the Organization
+   * schema's `sameAs`. None yet - and deliberately no env fallback any more:
+   * until 21 Sep 2026 NEXT_PUBLIC_SAME_AS carried the house shop's Instagram,
+   * Justdial and Google Business Profile, which told anyone reading the
+   * markup which seller the operator owns (CLAUDE.md, rule one). The
+   * platform's links come from admin Settings -> Links, and only from there.
    */
-  sameAs: (process.env.NEXT_PUBLIC_SAME_AS || '').split(',').map((s) => s.trim()).filter(Boolean),
+  sameAs: [],
 };
 
 /**
