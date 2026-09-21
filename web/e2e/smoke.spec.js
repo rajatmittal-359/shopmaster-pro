@@ -19,9 +19,23 @@ const ACCOUNTS = {
   admin: { email: process.env.SEED_ADMIN_EMAIL || 'admin@example.com', password: process.env.SEED_ADMIN_PASSWORD || PASSWORD },
 };
 
+/**
+ * The built app hydrates AFTER `load`; a value typed before that lands in the
+ * DOM but never in React's state, and the form posts two empty fields (the
+ * first CI run: every sign-in "did nothing"). React marks a node it has
+ * hydrated with a __reactProps$ key, so the test waits for that key on the
+ * password field before it types.
+ */
+const hydrated = (page, selector) =>
+  page.waitForFunction((sel) => {
+    const el = document.querySelector(sel);
+    return !!el && Object.keys(el).some((k) => k.startsWith('__reactProps'));
+  }, selector, { timeout: 30_000 });
+
 async function signIn(page, who, next = '/') {
   const { email, password } = ACCOUNTS[who];
   await page.goto(`/login?next=${encodeURIComponent(next)}`);
+  await hydrated(page, '#password');
   await page.getByLabel(/email/i).fill(email);
   await page.locator('#password').fill(password);
   await page.getByRole('button', { name: /^sign in$/i }).click();
@@ -32,9 +46,12 @@ async function signIn(page, who, next = '/') {
   await Promise.race([
     page.waitForURL((url) => !url.pathname.startsWith('/login'), { timeout: 20_000 }),
     second.waitFor({ timeout: 20_000 }).then(() => { throw new Error('SECOND_STEP'); }),
-  ]).catch((e) => {
+  ]).catch(async (e) => {
     if (String(e.message).includes('SECOND_STEP')) test.skip(true, 'this account asks for the emailed code on a new device - run against a fresh seed');
-    throw e;
+    // Say what the form said, so a failure reads as a cause, not a timeout.
+    const said = await page.locator('[aria-live], [role="alert"]').allInnerTexts().catch(() => []);
+    throw new Error(`${who} could not sign in (${e.message.split('
+')[0]}); the form said: ${JSON.stringify(said)}`);
   });
 }
 
