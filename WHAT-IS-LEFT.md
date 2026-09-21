@@ -67,6 +67,8 @@ a page — the React app defined these in its services and no screen used them.
 
 | 2.64 | ~~**Web e2e smoke tests**~~ ✅ 22 Sep 02:30: `web/e2e/smoke.spec.js` - home renders (no horizontal scroll at 390), shop lists, **product → add to cart → checkout preview (COD)**, seller panel opens, admin panel opens. CI job `e2e` in tests.yml: Mongo service → `seed.js --minimal` → API → built web → Playwright; the deploy waits for the whole workflow, so a checkout that cannot add to cart never ships. On the laptop 3 pass and the two panel tests skip themselves when the dev accounts ask for the new-device code (a fresh seed has no sessions). | ✅ |
 
+| 2.65 | **Experience layer** (decided 21 Sep) — **E1 ✅ 22 Sep 04:50 (identity):** Fraunces display face for the storefront hero + section titles (next/font, variable, self-hosted; DESIGN.md updated), the jharokha **arch** as a shape motif on hero mosaic tiles (4:5, alternating with the square middle column), category tiles and the shop's empty state ("is being stocked"). Checked at 1440 and 390 on dev data. Photo rules + auto-clean default and the warm hero surface are left for E2. **E2** card & gallery (hover 2nd image, Quick add, cart drawer, gallery zoom) · **E3** motion · **E4** discovery - next. | E1 ✅ |
+
 ## 2b. Google visibility — the full list, decided 12 Sep 2026
 
 Rajat: *"Google pe product har factor me win kare… sab chahiye jo free me

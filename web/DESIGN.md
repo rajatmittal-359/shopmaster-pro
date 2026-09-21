@@ -38,9 +38,13 @@ colors:
   dark-glass-border: "rgba(255,255,255,0.10)"
 
 typography:
-  # Geist (next/font, self-hosted) everywhere. One family: a wordmark or a
-  # display face that waits on a webfont flashes on 4G, and most visitors are
-  # on 4G. Weight and size do the hierarchy, not a second family.
+  # Geist (next/font, self-hosted) for everything that works: body, panels,
+  # forms, tables. Since 22 Sep 2026 (E1) the STOREFRONT's hero h1 and section
+  # h2 use Fraunces (`.font-display`, next/font, variable, latin subset, swap) -
+  # self-hosted and inlined exactly like Geist, so the 4G-flash reason for one
+  # family does not apply. Nowhere else: a serif on a price table is noise.
+  # The jharokha arch (`.arch`: full-radius top, 4:5 photo) is the storefront's
+  # shape motif - hero tiles, category tiles, empty states.
   display:
     fontFamily: Geist
     fontSize: 48px          # sm:text-5xl on the home hero

@@ -191,15 +191,20 @@ export default async function ShopPage({ searchParams }) {
  * "clear everything", and ends with a way back into the catalogue.
  */
 function NoResults({ params, categoryName }) {
-  const applied = ['color', 'size', 'minRating', 'minPrice', 'maxPrice'].filter((k) => params[k]);
+  const applied = ['color', 'size', 'minRating', 'minPrice', 'maxPrice', ...Object.keys(params).filter((k) => k.startsWith('attr.'))].filter((k) => params[k]);
+  // No filter, no search, nothing listed: the shelf is being stocked, not broken.
+  const opening = !params.search && applied.length === 0;
 
   return (
-    <div className="rounded-xl border border-border p-8 text-center">
-      <p className="font-medium">
+    <div className="arch border border-border bg-muted/30 px-6 pt-14 pb-8 text-center">
+      <p className="font-display text-xl">
         {params.search
           ? `Nothing matched "${params.search}"`
-          : `Nothing here${categoryName ? ` in ${categoryName}` : ''} just now`}
+          : opening
+            ? `${categoryName || 'This shelf'} is being stocked`
+            : `Nothing here${categoryName ? ` in ${categoryName}` : ''} just now`}
       </p>
+      {opening && <p className="mt-2 text-sm text-muted-foreground">Sellers list new pieces every week. Browse the other categories, or save a search word and we will tell you when it lands.</p>}
 
       {applied.length > 0 ? (
         <>

@@ -40,7 +40,7 @@ export default function Hero({ products = [], copy = {} }) {
         <div>
           <p className="text-sm font-medium text-brand-ink">{copy.kicker || 'Made in Jaipur, sold across India'}</p>
 
-          <h1 className="mt-2 text-3xl leading-tight font-semibold tracking-tight text-balance sm:text-4xl lg:text-5xl">
+          <h1 className="font-display mt-2 text-3xl leading-[1.08] text-balance sm:text-4xl lg:text-5xl">
             {copy.title || 'A marketplace from Jaipur, delivered across India.'}
           </h1>
 

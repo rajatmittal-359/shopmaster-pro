@@ -18,7 +18,7 @@ const isLive = (s, now = Date.now()) => !s.until || new Date(s.until).getTime() 
 const Row = ({ title, href, hrefLabel, children }) => (
   <section className="mx-auto max-w-5xl px-4 py-8">
     <div className="flex items-baseline justify-between">
-      <h2 className="text-lg font-semibold">{title}</h2>
+      <h2 className="font-display text-xl sm:text-2xl">{title}</h2>
       {href && (
         <Link href={href} className="text-sm text-brand-ink hover:underline">
           {hrefLabel || 'See all'}
@@ -41,10 +41,10 @@ async function Categories({ section }) {
   const covers = await Promise.all(shown.map(async (cat) => (await getProducts({ category: cat.slug, limit: 1, sort: 'newest' }))?.products?.[0]?.images?.[0] || null));
   return (
     <section className="mx-auto max-w-5xl px-4 py-8">
-      <h2 className="text-lg font-semibold">{section.title}</h2>
+      <h2 className="font-display text-xl sm:text-2xl">{section.title}</h2>
       <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
         {shown.map((cat, i) => (
-          <Link key={cat._id} href={`/shop?category=${cat.slug}`} className="glow-hover group relative block aspect-[4/3] overflow-hidden rounded-xl border border-border bg-muted">
+          <Link key={cat._id} href={`/shop?category=${cat.slug}`} className="glow-hover group relative block aspect-[4/5] overflow-hidden arch border border-border bg-muted">
             {covers[i] && <Image src={covers[i]} alt="" fill sizes="(max-width: 640px) 50vw, 25vw" className="object-cover transition duration-500 group-hover:scale-105" />}
             <span className="absolute inset-x-0 bottom-0 bg-linear-to-t from-black/70 via-black/30 to-transparent p-3 pt-8 text-white">
               <span className="block font-medium">{cat.name}</span>
@@ -93,7 +93,7 @@ async function Sellers({ section }) {
   if (!shops.length) return null;
   return (
     <section className="mx-auto max-w-5xl px-4 py-8">
-      <h2 className="text-lg font-semibold">{section.title}</h2>
+      <h2 className="font-display text-xl sm:text-2xl">{section.title}</h2>
       {/* Etsy's "featured shops": the shop, where it is, three of its pieces - the row that recruits sellers as well as buyers. */}
       <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {shops.slice(0, 8).map(({ seller, products = [] }) => (

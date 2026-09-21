@@ -1,4 +1,4 @@
-import { Geist, Geist_Mono } from 'next/font/google';
+import { Geist, Geist_Mono, Fraunces } from 'next/font/google';
 import './globals.css';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
@@ -22,6 +22,26 @@ const geistSans = Geist({
 const geistMono = Geist_Mono({
   variable: '--font-geist-mono',
   subsets: ['latin'],
+});
+
+/*
+ * The display face (E1, 22 Sep 2026): Fraunces, for the storefront's hero and
+ * section titles only - the one place a marketplace earns its own voice
+ * (Etsy, Myntra's editorial, every premium jewellery site pairs a display
+ * serif with a working sans). Self-hosted by next/font with `display: swap`
+ * and one weight, so DESIGN.md's reason for a single family - a webfont
+ * flashing on 4G - does not apply: it is inlined and served like Geist is.
+ * Panels, forms and tables stay Geist.
+ */
+const fraunces = Fraunces({
+  variable: '--font-fraunces',
+  subsets: ['latin'],
+  // Variable font, one style: the optical-size and SOFT axes come along, the
+  // weight is set in CSS (.font-display). ~40 KB woff2, subset to latin.
+  weight: 'variable',
+  style: ['normal'],
+  axes: ['opsz', 'SOFT'],
+  display: 'swap',
 });
 
 /**
@@ -67,7 +87,7 @@ export default function RootLayout({ children }) {
     <html
       lang="en-IN"
       suppressHydrationWarning
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${fraunces.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col bg-background text-foreground">
         {/* scripts/run.js sets ENV_MODE when the laptop runs against production
