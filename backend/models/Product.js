@@ -367,6 +367,22 @@ const productSchema = new mongoose.Schema(
    * "About this item", Flipkart's "Highlights". Cleaned by utils/productDetails.
    */
   material: { type: String, trim: true, default: '', maxlength: 80 },
+  /*
+   * Category listing templates (config/listingTemplates, 21 Sep 2026). The
+   * product type in the category's own words ("Necklace Set", "Kurta Palazzo
+   * Set", "Bedsheet"), the template that decided the questions, and the
+   * answers - a flat map of attribute key → option or text, cleaned by
+   * cleanAttributes() on every write. Flipkart's facets are the option lists,
+   * so the same values drive the shop's filters and the Google feed.
+   */
+  productType: { type: String, trim: true, default: '', maxlength: 60 },
+  templateKey: { type: String, trim: true, default: 'general', maxlength: 30 },
+  attributes: { type: mongoose.Schema.Types.Mixed, default: {} },
+  /* Legal Metrology 2017 for anything consumed or applied (cosmetics, food): shown on the page as printed on the pack. */
+  /* What the backfill job filled from the photo (jobs/backfillListings), so the seller knows which facts to check. */
+  aiFilled: { at: { type: Date, default: null }, fields: { type: [String], default: [] } },
+  mfgDate: { type: String, trim: true, default: '', maxlength: 20 },
+  bestBefore: { type: String, trim: true, default: '', maxlength: 40 },
   highlights: {
     type: [{ type: String, trim: true, maxlength: 90 }],
     default: [],

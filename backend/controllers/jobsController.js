@@ -62,6 +62,8 @@ const JOBS = {
   // Monday 03:15 UTC: the weekly market brief per selling category
   // (utils/ai/marketBrief) - Search Console + our search box + Merchant
   // insights + one grounded search each; Ask ShopMaster reads it for free.
+  // One-off / occasional: fill product facts on listings that predate the category templates (jobs/backfillListings).
+  'backfill-listings': { run: () => require('../jobs/backfillListings').backfill(), requires: 'GEMINI_API_KEY' },
   'market-brief': { run: () => require('../utils/ai/marketBrief').buildBriefs(), requires: 'GEMINI_API_KEY' },
   /*
    * Plan 2.23: the assistant's fixed exam, kept as an EvalRun for the trend on

@@ -47,6 +47,9 @@ export async function generateMetadata({ params }) {
   };
 }
 
+/** Attribute key → label: the API sends the template's labels beside the values; else split the camelCase key. */
+const labelOf = (key, labels) => labels?.[key] || key.replace(/([A-Z])/g, ' $1').replace(/^./, (c) => c.toUpperCase());
+
 export default async function ProductPage({ params }) {
   const { slug } = await params;
   const product = await getProduct(slug);
@@ -82,14 +85,21 @@ export default async function ProductPage({ params }) {
   // Amazon's "Top highlights" table + "About this item" bullets, from the
   // fields the seller filled; an empty field is simply not a row.
   const weightText = product.weight ? (product.weight >= 1 ? `${Number(product.weight.toFixed(2))} kg` : `${Math.round(product.weight * 1000)} g`) : null;
+  // The category's own facts (config/listingTemplates via the API): labels
+  // come with the template, values are what the seller or the writer filled.
+  const templateFacts = Object.entries(product.attributes || {})
+    .filter(([, v]) => v && String(v).length)
+    .map(([k, v]) => [labelOf(k, product.templateLabels), Array.isArray(v) ? v.join(', ') : v]);
   const facts = [
+    ['Type', product.productType],
     ['Material', product.material],
     ['Colour', product.color],
     ['Size', product.size],
     ['Weight', weightText],
     ['Country of origin', product.countryOfOrigin || 'India'],
     ['Ready to ship in', product.processingDays ? `${product.processingDays} day${product.processingDays === 1 ? '' : 's'}` : null],
-  ].filter(([, v]) => v);
+    ...templateFacts,
+  ].filter(([, v]) => v && !['Material', 'Colour', 'Size'].includes(v));
   const bullets = (product.highlights || []).filter(Boolean);
 
   const crumbs = [

@@ -63,12 +63,41 @@ const RESPONSE_SCHEMA = {
   required: ['name', 'description', 'bullets', 'tags', 'color', 'gender', 'ageGroup', 'categoryName', 'isJewellery'],
 };
 
+/**
+ * The schema for ONE category (21 Sep 2026): the base fields plus the
+ * template's attributes as enums (a select can only be one of Flipkart's
+ * options) or strings, and the product type from the template's list. Gemini
+ * enforces the enums on its side, so the model cannot invent "Gold Toned
+ * Plating" - it picks "Gold Plated" or leaves it empty.
+ */
+const schemaFor = (template) => {
+  if (!template) return RESPONSE_SCHEMA;
+  const attributes = {};
+  for (const a of template.attributes) {
+    // Gemini refuses an empty string inside an enum; "unknown" is the omit-me value and is dropped by cleanAttributes.
+    if (a.type === 'select') attributes[a.key] = { type: 'string', enum: [...a.options, 'unknown'], description: `${a.label}; "unknown" when not visible or stated` };
+    else if (a.type === 'multi') attributes[a.key] = { type: 'array', items: { type: 'string', enum: a.options }, description: a.label };
+    else attributes[a.key] = { type: 'string', description: `${a.label}${a.hint ? ` - e.g. ${a.hint}` : ''}; empty when unknown` };
+  }
+  return {
+    ...RESPONSE_SCHEMA,
+    properties: {
+      ...RESPONSE_SCHEMA.properties,
+      productType: template.productTypes.length
+        ? { type: 'string', enum: [...template.productTypes, 'other'], description: 'What the item IS, in the words the category uses; "other" if none fits' }
+        : { type: 'string', description: 'What the item is, in two or three plain words ("Brass Diya", "Wooden Tray")' },
+      attributes: { type: 'object', properties: attributes, description: 'The facts a shopper filters on. Fill only what is visible or stated.' },
+    },
+    required: [...RESPONSE_SCHEMA.required, 'productType', 'attributes'],
+  };
+};
+
 const JEWELLERY_WORDS =
   /\b(jewell?ery|earring|necklace|ring|bangle|bracelet|anklet|pendant|chain|jhumka|maang ?tikka|mangalsutra|nath|nose ?pin|choker|kada|haar|tikka)\b/i;
 
 const looksLikeJewellery = (...texts) => texts.some((t) => JEWELLERY_WORDS.test(String(t || '')));
 
-const promptFor = ({ name, keywords, price, stock, categoryName, categoryOptions = [], hasImage }) => {
+const promptFor = ({ name, keywords, price, stock, categoryName, categoryOptions = [], hasImage, template = null, marketWords = [] }) => {
   const facts = [
     name ? `Seller's product name: ${name}` : null,
     keywords ? `Seller's keywords: ${keywords}` : null,
@@ -108,7 +137,27 @@ Fill in the listing. RULES, in order of importance:
 5. "color" is ONE primary colour in plain English. "gender" is who it is for; use "unisex" when it
    genuinely is. "size" only if a labelled size is visible or stated.
 
-6. The description is HTML using only <p>, <ul>, <li>, <strong>, <em>. No headings, no links, no styles.`;
+6. The description is HTML using only <p>, <ul>, <li>, <strong>, <em>. No headings, no links, no styles.${template ? templateRules(template, marketWords) : ''}`;
+};
+
+/**
+ * The category's own rules, appended to the prompt (config/listingTemplates):
+ * which facts to read off the photo, the bullet recipe, what must never be
+ * said, and the words buyers actually type (template seeds + this week's
+ * market brief) so the tags are search words, not synonyms of the title.
+ */
+const templateRules = (template, marketWords = []) => {
+  const facts = template.attributes.map((a) => `${a.label}${a.type !== 'text' ? ` (one of: ${a.options.join(' / ')})` : a.hint ? ` (e.g. ${a.hint})` : ''}`).join('; ');
+  const words = [...new Set([...(template.seoSeeds || []), ...marketWords])].slice(0, 20);
+  return `
+
+CATEGORY RULES - ${template.label}:
+7. "attributes" are the facts a shopper filters on. Read them off the photo and the facts: ${facts}. Leave an attribute EMPTY when it is not visible or stated - never guess.
+8. "productType" is what the item IS in the category's own words${template.productTypes.length ? ` (one of: ${template.productTypes.join(' / ')})` : ''}.
+9. The title will be BUILT from the attributes (facts left to right, most-searched first, no adjectives) - so put your effort into the attributes, the bullets and the description, not the title.
+10. Bullets follow this order: ${template.bullets.map((b, i) => `${i + 1}) ${b}`).join(' ')}.
+${template.neverClaim.length ? `11. NEVER say: ${template.neverClaim.join(', ')}.` : ''}${template.mustSay ? ` ALWAYS include ${template.mustSay}.` : ''}
+12. "tags" are search words as Indian shoppers type them (Hinglish welcome: "kurti", "jhumka", "bedsheet double bed"). Prefer these, in this order of importance, plus 3-5 specific to this item: ${words.join(', ') || '(none given)'}.`;
 };
 
 /**
@@ -130,10 +179,11 @@ const draftListing = async (input, deps = { generate }) => {
   }
 
   const hasImage = Boolean(input.imageUrl || input.imageDataUrl);
+  const template = input.template || null;
   const answer = await deps.generate(promptFor({ ...input, hasImage }), {
     imageUrl: input.imageUrl,
     imageDataUrl: input.imageDataUrl,
-    responseSchema: RESPONSE_SCHEMA,
+    responseSchema: schemaFor(template),
     temperature: 0.6,
     // Which road: Gemini first with nano behind it, or one of them by name.
     textModel: input.textModel || 'auto',
@@ -167,6 +217,31 @@ const draftListing = async (input, deps = { generate }) => {
   draft.gender = GENDERS.includes(draft.gender) ? draft.gender : 'unisex';
   draft.ageGroup = AGE_GROUPS.includes(draft.ageGroup) ? draft.ageGroup : 'adult';
   draft.categoryName = (input.categoryOptions || []).includes(draft.categoryName) ? draft.categoryName : '';
+
+  // The category template (config/listingTemplates): attributes snapped to
+  // the option lists, the product type from the list, the TITLE built from
+  // the formula - the model's own title stays only when the formula has
+  // nothing to say (no attributes came back).
+  if (template) {
+    const T = require('../../config/listingTemplates');
+    draft.attributes = T.cleanAttributes(template, draft.attributes);
+    const pt = clean(draft.productType);
+    draft.productType = template.productTypes.length ? (template.productTypes.find((x) => x.toLowerCase() === pt.toLowerCase()) || '') : pt.slice(0, 60);
+    const built = T.titleFrom(template, draft.attributes, { color: draft.color, productType: draft.productType, brand: input.brandForTitle || '', idealFor: draft.attributes.idealFor, netQuantity: input.netQuantity || '' });
+    if (built.split(' ').length >= 3) draft.name = built;
+    // Tags: the model's own first, then only those template / market seeds
+    // that share a real word with THIS item (a jhumka must not carry "ad
+    // necklace set"), plus the category-wide generic ones (first two seeds).
+    const about = `${draft.name} ${draft.productType} ${input.categoryName || ''} ${draft.description}`.toLowerCase();
+    const tokens = new Set(about.match(/[a-z]{4,}/g) || []);
+    const seeds = [...(template.seoSeeds || []), ...(input.marketWords || [])].map((t) => t.toLowerCase());
+    const generic = (template.seoSeeds || []).slice(0, 2).map((t) => t.toLowerCase());
+    const relevant = seeds.filter((t) => generic.includes(t) || t.split(/\s+/).some((w) => w.length >= 4 && tokens.has(w) && !['women', 'girls', 'set', 'with'].includes(w)));
+    draft.tags = [...new Set([...draft.tags, ...relevant])].slice(0, 15);
+  } else {
+    delete draft.attributes;
+    delete draft.productType;
+  }
 
   const jewellery = draft.isJewellery || looksLikeJewellery(input.name, input.keywords, input.categoryName, draft.name);
 
@@ -214,4 +289,4 @@ const draftListing = async (input, deps = { generate }) => {
   return { ok: true, draft, warnings, provider: answer.provider || 'gemini', model: answer.model || undefined };
 };
 
-module.exports = { draftListing, promptFor, RESPONSE_SCHEMA, looksLikeJewellery };
+module.exports = { draftListing, promptFor, schemaFor, RESPONSE_SCHEMA, looksLikeJewellery };

@@ -61,7 +61,7 @@ on:
         required: true
         default: reconcile
         type: choice
-        options: [reconcile, refunds, low-stock, growth-note, catalogue-sweep, cart-reminder, market-brief, vectors, eval]
+        options: [reconcile, refunds, low-stock, growth-note, catalogue-sweep, cart-reminder, market-brief, backfill-listings, vectors, eval]
 
 env:
   # The production API behind Caddy on the Lightsail box (cutover 20 Sep 2026).

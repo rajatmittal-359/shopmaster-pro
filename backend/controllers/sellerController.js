@@ -236,6 +236,10 @@ exports.addProduct = async (req, res) => {
       netQuantity,
       material,
       highlights,
+      productType,
+      attributes,
+      mfgDate,
+      bestBefore,
       hsn,
       gstRate,
 
@@ -301,6 +305,9 @@ exports.addProduct = async (req, res) => {
       ...(netQuantity !== undefined ? { netQuantity: String(netQuantity || '').trim().slice(0, 60) } : {}),
       ...(material !== undefined ? { material: require('../utils/productDetails').cleanMaterial(material) } : {}),
       ...(highlights !== undefined ? { highlights: require('../utils/productDetails').cleanHighlights(highlights) } : {}),
+      ...(productType !== undefined ? { productType: String(productType || '').trim().slice(0, 60) } : {}),
+      ...(mfgDate !== undefined ? { mfgDate: String(mfgDate || '').trim().slice(0, 20) } : {}),
+      ...(bestBefore !== undefined ? { bestBefore: String(bestBefore || '').trim().slice(0, 40) } : {}),
       // Tax facts for a registered seller's invoice (utils/invoice); ignored shapes become empty.
       ...(hsn !== undefined ? { hsn: cleanHsn(hsn) } : {}),
       ...(gstRate !== undefined ? { gstRate: cleanGstRate(gstRate) } : {}),
@@ -357,6 +364,8 @@ exports.addProduct = async (req, res) => {
       product.video = youtubeVideo(id);
     }
 
+    // Category listing template: the type of questions this category asks (config/listingTemplates).
+    await require('../utils/listingTemplate').applyAttributes(product, attributes);
     await product.save();
     indexNow.ping(indexNow.productPaths(product));
 
@@ -399,6 +408,10 @@ exports.updateProduct = async (req, res) => {
       netQuantity,
       material,
       highlights,
+      productType,
+      attributes,
+      mfgDate,
+      bestBefore,
       hsn,
       gstRate,
       returnMode,
@@ -461,6 +474,9 @@ exports.updateProduct = async (req, res) => {
     if (netQuantity !== undefined) product.netQuantity = String(netQuantity || '').trim().slice(0, 60);
     if (material !== undefined) product.material = require('../utils/productDetails').cleanMaterial(material);
     if (highlights !== undefined) product.highlights = require('../utils/productDetails').cleanHighlights(highlights);
+    if (productType !== undefined) product.productType = String(productType || '').trim().slice(0, 60);
+    if (mfgDate !== undefined) product.mfgDate = String(mfgDate || '').trim().slice(0, 20);
+    if (bestBefore !== undefined) product.bestBefore = String(bestBefore || '').trim().slice(0, 40);
     if (hsn !== undefined) product.hsn = cleanHsn(hsn);
     if (gstRate !== undefined) product.gstRate = cleanGstRate(gstRate);
     if (sku !== undefined) product.sku = sku;
@@ -537,6 +553,7 @@ exports.updateProduct = async (req, res) => {
       // stored clip stays as it is.
     }
 
+    await require('../utils/listingTemplate').applyAttributes(product, attributes);
     await product.save();
     indexNow.ping(indexNow.productPaths(product));
 

@@ -72,6 +72,26 @@ const isImageDataUrl = (s) =>
  *   the User flag - never from the token, same as every other authorisation
  *   decision here.
  */
+/**
+ * The category's listing template + this week's market words for the writer
+ * (config/listingTemplates, utils/ai/marketBrief). No category chosen yet =
+ * the general template; the model still names a productType and the seller
+ * picks the category, after which "Write it again" uses the right one.
+ */
+const escapeRe = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const templateAndWords = async (categoryId, categoryName) => {
+  const { templateForCategoryId } = require('../utils/listingTemplate');
+  const template = await templateForCategoryId(categoryId);
+  let marketWords = [];
+  try {
+    const MarketBrief = require('../models/MarketBrief');
+    const q = String(categoryName || '').toLowerCase();
+    const brief = q ? await MarketBrief.findOne({ 'category.name': new RegExp(escapeRe(q), 'i') }).select('words').lean() : null;
+    marketWords = (brief?.words || []).slice(0, 10).map((w) => w.word);
+  } catch { /* no brief yet */ }
+  return { template, marketWords };
+};
+
 const isExempt = async (req) => {
   const admin = req.user?.role === 'admin' || req.capabilities?.admin;
   const ownShop = Boolean(req.seller?.isPlatformOwned) || Boolean(req.seller?.aiUnlimited);
@@ -187,7 +207,8 @@ const writeListing = async (req, res) => {
 
     const { remember } = require('../utils/ai/aiCache');
     const photoKey = imageUrl || (imageDataUrl ? `${imageDataUrl.length}:${imageDataUrl.slice(-64)}` : '');
-    const result = await remember('listing', req.user._id, { name, keywords, price, cat: chosen?.name, photoKey, textModel }, () => draftListing({
+    const { template, marketWords } = await templateAndWords(chosen?._id, chosen?.name);
+    const result = await remember('listing', req.user._id, { name, keywords, price, cat: chosen?.name, photoKey, textModel, t: template.key, v: 2 }, () => draftListing({
       name,
       keywords,
       price,
@@ -197,6 +218,8 @@ const writeListing = async (req, res) => {
       imageDataUrl,
       brand: req.seller?.businessName,
       textModel,
+      template,
+      marketWords,
     }));
 
     if (!result.ok) return res.status(502).json({ message: result.reason });
@@ -259,6 +282,7 @@ const listingFromSpeech = async (req, res) => {
       .replace(/[\d,]+(?:\.\d+)?\s*(?:₹|rs\.?|rupees?|rupaye|रुपये|रुपए|piece|pieces|pcs|pc|nag|नग|पीस|units?|items?)/gi, ' ')
       .replace(/\s+/g, ' ')
       .trim();
+    const tw = await templateAndWords(chosen?._id, chosen?.name);
     const result = await draftListing({
       name: facts.name || undefined,
       keywords: words || transcript,
@@ -270,6 +294,8 @@ const listingFromSpeech = async (req, res) => {
       imageDataUrl,
       brand: req.seller?.businessName,
       textModel,
+      template: tw.template,
+      marketWords: tw.marketWords,
     });
 
     // Even when every prose model is out, the numbers the person said still land in the form.

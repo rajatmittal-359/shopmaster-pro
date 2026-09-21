@@ -463,7 +463,10 @@ exports.getProduct = async (req, res) => {
     // Fair Returns: the promise the page shows before anyone buys.
     const { effectiveReturnMode, MODE_LABEL } = require('../utils/returnPolicy');
     const returnMode = effectiveReturnMode(product, product.category);
-    res.json({ product: { ...withShopName, shop: { ...withShopName.shop, break: shopBreak }, returnMode, returnModeLabel: MODE_LABEL[returnMode] }, variants });
+    // The attribute labels beside the values, so the page prints "Base material", not "baseMaterial".
+    const { TEMPLATES } = require('../config/listingTemplates');
+    const templateLabels = Object.fromEntries((TEMPLATES[product.templateKey] || TEMPLATES.general).attributes.map((a) => [a.key, a.label]));
+    res.json({ product: { ...withShopName, shop: { ...withShopName.shop, break: shopBreak }, returnMode, returnModeLabel: MODE_LABEL[returnMode], templateLabels }, variants });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
