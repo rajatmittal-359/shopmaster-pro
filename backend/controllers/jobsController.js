@@ -59,6 +59,10 @@ const JOBS = {
   },
   // Daily 04:45 UTC: the bag left behind 20-48 h ago, once a week at most (jobs/cartReminder).
   'cart-reminder': { run: () => require('../jobs/cartReminder').remind() },
+  // Monday 03:15 UTC: the weekly market brief per selling category
+  // (utils/ai/marketBrief) - Search Console + our search box + Merchant
+  // insights + one grounded search each; Ask ShopMaster reads it for free.
+  'market-brief': { run: () => require('../utils/ai/marketBrief').buildBriefs(), requires: 'GEMINI_API_KEY' },
   /*
    * Plan 2.23: the assistant's fixed exam, kept as an EvalRun for the trend on
    * /admin/ask. Weekly, Sunday night after the re-index - eleven real answers

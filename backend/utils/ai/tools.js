@@ -333,6 +333,21 @@ const TOOLS = [
     },
   },
   {
+    name: 'marketBrief',
+    roles: ['seller', 'admin'],
+    description: "This week's market brief for a selling category (built every Monday from Search Console, the shop's own searches, Merchant Center insights and one grounded search): price band on Indian marketplaces, what is moving, the words buyers type, Google best sellers. Use FIRST for any question about prices to set, demand, trends or search words; call webSearch only for what the brief does not answer.",
+    parameters: { type: 'OBJECT', properties: { category: STR('Category name or slug; empty = every brief there is') }, required: [] },
+    run: async ({ category }) => {
+      const MarketBrief = require('../../models/MarketBrief');
+      const { briefToText } = require('./marketBrief');
+      const q = String(category || '').trim().toLowerCase();
+      const all = await MarketBrief.find({}).sort({ updatedAt: -1 }).limit(12).lean();
+      const hits = q ? all.filter((b) => b.category.slug.includes(q) || b.category.name.toLowerCase().includes(q)) : all;
+      if (!hits.length) return { briefs: [], note: all.length ? `no brief for "${category}" - briefs exist for: ${all.map((b) => b.category.name).join(', ')}` : 'no market brief yet - it is built every Monday morning once a category has products' };
+      return { briefs: hits.slice(0, 4).map((b) => ({ category: b.category.name, weekOf: b.weekOf, text: briefToText(b) })) };
+    },
+  },
+  {
     name: 'webSearch',
     roles: ['seller', 'customer', 'admin'],
     description: 'Search the web (Google) for facts outside ShopMaster: how Amazon/Flipkart/Meesho/Myntra handle something, Indian consumer law, courier practice, GST, current events - and market checks for a listing: what similar products list for on Amazon/Flipkart/Meesho/Myntra (a price band), the words buyers type for it, what is trending this season. Returns a sourced summary.',
@@ -356,7 +371,7 @@ const TOOLS = [
  * how to come back - but not plan growth. So: the read-only tools about
  * their own orders and the rulebook, nothing about listings or payouts.
  */
-const SUSPENDED_SELLER_TOOLS = ['getOrder', 'myRecentOrders', 'myPerformance', 'searchKnowledge', 'webSearch'];
+const SUSPENDED_SELLER_TOOLS = ['getOrder', 'myRecentOrders', 'myPerformance', 'searchKnowledge', 'webSearch', 'marketBrief'];
 const allowed = (t, role, user) => t.roles.includes(role) && !(role === 'seller' && user?.sellerStatus === 'suspended' && !SUSPENDED_SELLER_TOOLS.includes(t.name));
 
 const declarationsFor = (role, user = null) =>

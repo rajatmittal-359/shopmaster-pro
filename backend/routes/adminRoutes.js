@@ -76,6 +76,17 @@ router.patch(
 
 // Coupons. An admin may create either kind; a seller may only fund their own.
 const adminCtrl = require('../controllers/adminController');
+// This week's market briefs (utils/ai/marketBrief) - what the assistant reads; the admin may read it plainly too.
+router.get('/market-briefs', async (req, res) => {
+  try {
+    const MarketBrief = require('../models/MarketBrief');
+    const { briefToText } = require('../utils/ai/marketBrief');
+    const briefs = await MarketBrief.find({}).sort({ 'category.name': 1 }).lean();
+    res.json({ briefs: briefs.map((b) => ({ ...b, text: briefToText(b) })) });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
 router.get('/coupons', adminCtrl.listCoupons);
 router.post('/coupons', adminCtrl.createCoupon);
 router.patch('/coupons/:couponId/toggle', adminCtrl.toggleCoupon);

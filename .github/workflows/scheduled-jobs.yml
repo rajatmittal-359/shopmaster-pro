@@ -37,6 +37,9 @@ on:
     # Monday 03:35 UTC = 09:05 IST - the week's three things for every seller
     # (plan 2.25), five minutes after the low-stock alert so the two land together.
     - cron: '35 3 * * 1'
+    # Monday 03:15 UTC = 08:45 IST - the weekly market brief (utils/ai/marketBrief),
+    # before the growth note so Monday's three things can quote it.
+    - cron: '15 3 * * 1'
     # Thursday 03:35 UTC = 09:05 IST - the catalogue sweep (plan 2.25/2.32):
     # every live listing checked for the facts that cost sales, three per
     # seller under the same Growth switch, totals to the admin. No model.
@@ -58,7 +61,7 @@ on:
         required: true
         default: reconcile
         type: choice
-        options: [reconcile, refunds, low-stock, growth-note, catalogue-sweep, cart-reminder, vectors, eval]
+        options: [reconcile, refunds, low-stock, growth-note, catalogue-sweep, cart-reminder, market-brief, vectors, eval]
 
 env:
   # The production API behind Caddy on the Lightsail box (cutover 20 Sep 2026).
@@ -85,6 +88,8 @@ jobs:
             echo "name=catalogue-sweep" >> "$GITHUB_OUTPUT"
           elif [ "${{ github.event.schedule }}" = "45 4 * * *" ]; then
             echo "name=cart-reminder" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event.schedule }}" = "15 3 * * 1" ]; then
+            echo "name=market-brief" >> "$GITHUB_OUTPUT"
           elif [ "${{ github.event.schedule }}" = "0 22 * * 0" ]; then
             echo "name=vectors" >> "$GITHUB_OUTPUT"
           elif [ "${{ github.event.schedule }}" = "30 22 * * 0" ]; then
