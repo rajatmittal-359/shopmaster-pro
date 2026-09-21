@@ -12,11 +12,23 @@ const { sendError } = require('../utils/apiError');
  */
 const RULE_KEYS = Object.keys(RULES.defaults);
 
+/**
+ * Before S1 the home had one admin-set "featured strip" (title + /shop link +
+ * until). If no sections were ever saved, that strip becomes a collection
+ * section after the categories, so the page looks as it did the day before.
+ */
+const withLegacyStrip = (home) => {
+  if (Array.isArray(home.sections) && home.sections.length) return home.sections;
+  const { DEFAULT_SECTIONS } = require('../utils/homeSections');
+  if (!home.featuredTitle || !home.featuredHref) return DEFAULT_SECTIONS;
+  return [DEFAULT_SECTIONS[0], { type: 'collection', enabled: true, title: home.featuredTitle, href: home.featuredHref, slugs: [], until: home.featuredUntil || null }, ...DEFAULT_SECTIONS.slice(1)];
+};
+
 const publicView = (doc) => ({
   business: doc.business,
   links: Object.fromEntries(Object.entries(doc.links || {}).filter(([, v]) => v)),
   shop: doc.shop,
-  home: doc.home || {},
+  home: { ...(doc.home || {}), sections: require('../utils/homeSections').normaliseSections(withLegacyStrip(doc.home || {})) },
   announcement: doc.announcement && doc.announcement.enabled ? doc.announcement : { enabled: false },
   rulesVersion: doc.rules && doc.rules.version,
   updatedAt: doc.updatedAt,
@@ -35,7 +47,9 @@ exports.publicSettings = async (req, res) => {
 exports.getSettings = async (req, res) => {
   try {
     const doc = await PlatformSettings.current();
-    res.json({ settings: doc, defaults: { rules: RULES.defaults } });
+    // The admin editor sees the EFFECTIVE layout (legacy strip folded in), not the raw field.
+    const plain = doc.toObject ? doc.toObject() : doc;
+    res.json({ settings: { ...plain, home: { ...(plain.home || {}), sections: require('../utils/homeSections').normaliseSections(withLegacyStrip(plain.home || {})) } }, defaults: { rules: RULES.defaults }, sectionTypes: require('../utils/homeSections').TYPES });
   } catch (error) {
     sendError(res, error);
   }
@@ -56,6 +70,12 @@ exports.updateSettings = async (req, res) => {
     for (const block of ['business', 'links', 'shop', 'home', 'announcement']) {
       if (body[block] && typeof body[block] === 'object') {
         for (const [k, v] of Object.entries(body[block])) {
+          // The section list goes through its own gate (utils/homeSections).
+          if (block === 'home' && k === 'sections') {
+            doc.set('home.sections', Array.isArray(v) && v.length ? require('../utils/homeSections').normaliseSections(v) : []);
+            doc.markModified('home.sections');
+            continue;
+          }
           if (doc.schema.path(`${block}.${k}`)) doc.set(`${block}.${k}`, v);
         }
       }

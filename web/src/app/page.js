@@ -1,11 +1,9 @@
-import Link from 'next/link';
-import Image from 'next/image';
-import { getProducts, getCategories } from '@/lib/api';
+import { getProducts } from '@/lib/api';
 import { serialiseJsonLd } from '@/lib/jsonLd';
 import { POLICY, businessFrom } from '@/config/policy';
-import { featuredQuery } from '@/lib/homeFeatured';
 import { getSettings } from '@/lib/api';
 import Hero from '@/components/home/Hero';
+import Sections from '@/components/home/Sections';
 import ProductCard from '@/components/product/ProductCard';
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.shopmasterpro.in';
@@ -58,38 +56,17 @@ export default async function Home() {
   const home = settings?.home || {};
 
   /*
-   * The featured strip (19 Sep 2026): admin Settings → Home names a title and
-   * any /shop link they filtered themselves ("Diwali picks" →
-   * /shop?search=diya&sort=newest). A saved filter is what a "collection" is
-   * on Shopify; there is nothing else to build. It switches itself off after
-   * the date, so nobody has to remember Diwali is over.
+   * The page below the hero is an ordered list of sections the admin arranges
+   * in Settings → Home page (Option A S1, 21 Sep 2026; components/home/Sections
+   * draws them, backend/utils/homeSections is the contract). The hero still
+   * takes the newest pieces for its mosaic - that is a photograph, not a rule.
    */
-  const featuredParams = featuredQuery(home);
-
-  const [newest, categories, featured] = await Promise.all([
-    getProducts({ limit: 8, sort: 'newest' }),
-    getCategories(),
-    featuredParams ? getProducts({ ...featuredParams, limit: 8 }).catch(() => null) : null,
-  ]);
-  const picks = featured?.products || [];
-
+  const newest = await getProducts({ limit: 8, sort: 'newest' });
   const products = newest?.products || [];
-  // Only categories that actually have something in them. A tile leading to an
-  // empty grid is worse than one tile fewer.
-  const shown = categories.filter((c) => c.productCount > 0).slice(0, 8);
-
-  /*
-   * One photograph per category tile - the newest product in it. Categories
-   * carry no image of their own, and a tile that is a name in a box is a tile
-   * nobody looks at; a tile that is a photograph is the reason the eye stops.
-   * Eight small cached calls, in parallel, on the server.
-   */
-  const covers = await Promise.all(
-    shown.map(async (cat) => {
-      const res = await getProducts({ category: cat.slug, limit: 1, sort: 'newest' });
-      return res?.products?.[0]?.images?.[0] || null;
-    })
-  );
+  // An API that predates S1 sends no list: draw the built-in layout, never a blank page.
+  const sections = Array.isArray(home.sections) && home.sections.length
+    ? home.sections
+    : [{ type: 'hero', enabled: true }, { type: 'categories', enabled: true, title: 'Browse by category', slugs: [] }, { type: 'newest', enabled: true, title: 'Just added', min: 4 }];
 
   return (
     <>
@@ -100,70 +77,7 @@ export default async function Home() {
 
       <Hero products={products} copy={home} />
 
-      {picks.length > 0 && (
-        <section className="mx-auto max-w-5xl px-4 pt-10">
-          <div className="flex items-baseline justify-between">
-            <h2 className="text-lg font-semibold">{home.featuredTitle}</h2>
-            <Link href={home.featuredHref} className="text-sm text-brand-ink hover:underline">
-              See all
-            </Link>
-          </div>
-          <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
-            {picks.map((product) => (
-              <ProductCard key={product._id} product={product} />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {shown.length > 0 && (
-        <section className="mx-auto max-w-5xl px-4 py-10">
-          <h2 className="text-lg font-semibold">Browse by category</h2>
-          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {shown.map((cat, i) => (
-              <Link
-                key={cat._id}
-                href={`/shop?category=${cat.slug}`}
-                className="glow-hover group relative block aspect-[4/3] overflow-hidden rounded-xl border border-border bg-muted"
-              >
-                {covers[i] && (
-                  <Image
-                    src={covers[i]}
-                    alt=""
-                    fill
-                    sizes="(max-width: 640px) 50vw, 25vw"
-                    className="object-cover transition duration-500 group-hover:scale-105"
-                  />
-                )}
-                {/* The name sits on a gradient scrim over the bottom of the
-                    photo, so it reads on a light photo and a dark one alike. */}
-                <span className="absolute inset-x-0 bottom-0 bg-linear-to-t from-black/70 via-black/30 to-transparent p-3 pt-8 text-white">
-                  <span className="block font-medium">{cat.name}</span>
-                  <span className="block text-xs opacity-80">
-                    {cat.productCount} {cat.productCount === 1 ? 'item' : 'items'}
-                  </span>
-                </span>
-              </Link>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {products.length > 0 && (
-        <section className="mx-auto max-w-5xl px-4 pb-10">
-          <div className="flex items-baseline justify-between">
-            <h2 className="text-lg font-semibold">Just added</h2>
-            <Link href="/shop" className="text-sm text-brand-ink hover:underline">
-              See everything
-            </Link>
-          </div>
-          <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
-            {products.map((product) => (
-              <ProductCard key={product._id} product={product} />
-            ))}
-          </div>
-        </section>
-      )}
+      <Sections sections={sections} />
 
       {/*
         The shop behind the site, with the real address.

@@ -66,6 +66,11 @@ const red = (s) => `\x1b[41m\x1b[97m ${s} \x1b[0m`;
 const green = (s) => `\x1b[42m\x1b[30m ${s} \x1b[0m`;
 
 let extraEnv = {};
+if (mode === 'local' && target === 'web') {
+  // local means local: the laptop's API, whatever .env.local was last pointed
+  // at for a drill (it held the Render URL after the ₹1 test).
+  extraEnv = { NEXT_PUBLIC_API_URL: 'http://localhost:5000/api', NEXT_PUBLIC_SITE_URL: 'http://localhost:3000' };
+}
 if (mode === 'prod') {
   const prodFile = path.join(ROOT, 'private', 'api.env.prod');
   if (!fs.existsSync(prodFile)) {

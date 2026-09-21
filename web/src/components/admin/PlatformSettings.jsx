@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
+import HomeSections from '@/components/admin/HomeSections';
 import { authedFetch } from '@/lib/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -64,7 +65,7 @@ function Block({ title, lead, form, saved, onSave, busy, children, confirm }) {
 }
 
 /** A settings doc saved before the Home block existed has none; the form needs the keys. */
-const EMPTY_HOME = { kicker: '', title: '', lead: '', featuredTitle: '', featuredHref: '', featuredUntil: null };
+const EMPTY_HOME = { kicker: '', title: '', lead: '', featuredTitle: '', featuredHref: '', featuredUntil: null, sections: [] };
 const withHome = (settings) => ({ ...settings, home: { ...EMPTY_HOME, ...(settings.home || {}), featuredUntil: settings.home?.featuredUntil ? String(settings.home.featuredUntil).slice(0, 10) : '' } });
 
 export default function PlatformSettings() {
@@ -322,20 +323,14 @@ export default function PlatformSettings() {
                     </Field>
                   </div>
                 </Block>
-                <Block title="Featured strip" lead="A row of eight products above 'Just added'. Filter the shop the way you want it, copy the address bar, paste it here. It disappears by itself after the date." form={{ t: h.featuredTitle, l: h.featuredHref, u: h.featuredUntil }} saved={{ t: doc.home.featuredTitle, l: doc.home.featuredHref, u: doc.home.featuredUntil }} onSave={() => save('home')} busy={busy === 'home'}>
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <Field id="hFt" label="Title" hint="Empty = no strip">
-                      <Input id="hFt" value={h.featuredTitle} onChange={set('home', 'featuredTitle')} maxLength={60} placeholder="Diwali picks" />
-                    </Field>
-                    <Field id="hFu" label="Show until" hint="Empty = until you clear it">
-                      <Input id="hFu" type="date" value={h.featuredUntil || ''} onChange={set('home', 'featuredUntil')} />
-                    </Field>
-                    <div className="sm:col-span-2">
-                      <Field id="hFl" label="Shop link with filters" hint="Must start with /shop - for example /shop?search=diya&sort=newest or /shop?category=jewellery">
-                        <Input id="hFl" value={h.featuredHref} onChange={set('home', 'featuredHref')} placeholder="/shop?search=diya" />
-                      </Field>
-                    </div>
-                  </div>
+                {/*
+                 * Sections (Option A S1, 21 Sep 2026): the page below the hero
+                 * as a list the admin arranges - Shopify's theme editor,
+                 * Etsy's home modules. The old "featured strip" became the
+                 * first Product row; backend/utils/homeSections is the contract.
+                 */}
+                <Block title="Sections" lead="What the home page shows below the hero, top to bottom. Add, reorder, switch off. A section with nothing to show hides itself." form={h} saved={doc.home} onSave={() => save('home')} busy={busy === 'home'}>
+                  <HomeSections value={h.sections || []} onChange={(sections) => setForm({ ...form, home: { ...form.home, sections } })} />
                 </Block>
               </>
             )}

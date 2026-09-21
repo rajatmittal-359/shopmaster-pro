@@ -117,6 +117,14 @@ const settingsSchema = new mongoose.Schema(
       featuredTitle: { type: String, trim: true, maxlength: 60, default: '' },
       featuredHref: { type: String, trim: true, default: '', match: [/^$|^\/shop(\?[^\s]*)?$/, 'The featured link must be a /shop page on this site, filters included'] },
       featuredUntil: { type: Date, default: null },
+      /*
+       * The page as an ordered list of sections (Option A S1, 21 Sep 2026;
+       * utils/homeSections is the contract). Empty = the built-in layout. The
+       * three featured* fields above are the pre-S1 "featured strip"; when
+       * sections is empty they are read as one collection section, so nothing
+       * saved before S1 is lost.
+       */
+      sections: { type: [mongoose.Schema.Types.Mixed], default: [] },
     },
 
     announcement: {
