@@ -1,11 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import { apiBase } from '@/lib/api';
 import { setSession } from '@/lib/session';
+import { takeTotpPending } from '@/lib/googleSignIn';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
@@ -41,6 +43,17 @@ export default function LoginForm({ next = '/' }) {
 
   const set = (key) => (e) => setForm({ ...form, [key]: e.target.value });
 
+  // A Google sign-in that still needs the authenticator's code lands here:
+  // from the button beside this form (an event) or from One Tap on another
+  // page (sessionStorage, taken once).
+  useEffect(() => {
+    const show = (d) => { if (d?.pending) setState({ status: 'totp', message: d.message, pending: d.pending, recovery: false }); };
+    const onEvent = (e) => show(e.detail);
+    window.addEventListener('smp:totp', onEvent);
+    Promise.resolve(takeTotpPending()).then(show);
+    return () => window.removeEventListener('smp:totp', onEvent);
+  }, []);
+
   const submit = async (e) => {
     e.preventDefault();
     setState({ status: 'sending' });
@@ -60,6 +73,10 @@ export default function LoginForm({ next = '/' }) {
       }
       if (res.status === 202 && data.code === 'otp_required') {
         setState({ status: 'code', message: data.message, email: data.email || form.email });
+        return;
+      }
+      if (res.status === 202 && data.code === 'totp_required') {
+        setState({ status: 'totp', message: data.message, pending: data.pending, recovery: false });
         return;
       }
       if (!res.ok) throw new Error(data.message || 'Could not sign you in');
@@ -95,11 +112,78 @@ export default function LoginForm({ next = '/' }) {
     }
   };
 
+  // Two-step sign-in (22 Sep 2026): the authenticator's 6-digit code, or one
+  // of the recovery codes, against the five-minute pending token.
+  const finishWithTotp = async (e) => {
+    e.preventDefault();
+    setState((st) => ({ ...st, busy: true }));
+    try {
+      const res = await fetch(`${apiBase}/auth/login/totp`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pending: state.pending, code }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.status === 401 && data.code === 'totp_expired') {
+        setState({ status: 'idle' });
+        setCode('');
+        toast(data.message);
+        return;
+      }
+      if (!res.ok) throw new Error(data.message || 'That code did not work');
+      setSession({ role: data.role, user: data.user });
+      router.replace(next);
+      router.refresh();
+    } catch (err) {
+      setState((st) => ({ ...st, busy: false, error: err.message }));
+    }
+  };
+
   const resendCode = async () => {
     const res = await fetch(`${apiBase}/auth/login/code/resend`, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: state.email }) });
     const data = await res.json().catch(() => ({}));
     setState((st) => ({ ...st, error: null, note: data.message }));
   };
+
+  if (state.status === 'totp') {
+    const usingRecovery = state.recovery;
+    return (
+      <form onSubmit={finishWithTotp} className="space-y-4">
+        <p className="text-sm text-muted-foreground">{usingRecovery ? 'Enter one of the recovery codes you saved when you set up two-step sign-in. Each works once.' : state.message}</p>
+        <div>
+          <label htmlFor="login-totp" className="text-sm font-medium">
+            {usingRecovery ? 'Recovery code' : 'Code from your authenticator app'}
+          </label>
+          <Input
+            id="login-totp"
+            inputMode={usingRecovery ? 'text' : 'numeric'}
+            autoComplete={usingRecovery ? 'off' : 'one-time-code'}
+            autoCapitalize="characters"
+            autoFocus
+            required
+            value={code}
+            onChange={(e) => setCode(usingRecovery ? e.target.value.toUpperCase().slice(0, 9) : e.target.value.replace(/\D/g, '').slice(0, 6))}
+            className="mt-1 font-mono tracking-widest"
+          />
+        </div>
+        <Button type="submit" className="w-full" size="lg" disabled={state.busy || (usingRecovery ? code.replace(/[^A-Z0-9]/g, '').length !== 8 : code.length !== 6)}>
+          {state.busy ? 'Checking…' : 'Sign in'}
+        </Button>
+        <p aria-live="polite" className="min-h-5 text-sm">
+          {state.error && <span className="text-destructive">{state.error}</span>}
+        </p>
+        <div className="flex justify-between text-sm">
+          <Button type="button" variant="link" size="sm" className="px-0" onClick={() => { setCode(''); setState((st) => ({ ...st, recovery: !usingRecovery, error: null })); }}>
+            {usingRecovery ? 'Use the authenticator app' : 'Lost the phone? Use a recovery code'}
+          </Button>
+          <Button type="button" variant="link" size="sm" className="px-0" onClick={() => { setCode(''); setState({ status: 'idle' }); }}>
+            Back
+          </Button>
+        </div>
+      </form>
+    );
+  }
 
   if (state.status === 'code') {
     return (

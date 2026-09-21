@@ -123,7 +123,16 @@ app.get('/api/health', async (req, res) => {
 
 // Mount routes
 const { authLimiter, checkoutLimiter, aiLimiter } = require('./middlewares/rateLimits');
-app.use('/api/auth', authLimiter, authRoutes);
+/*
+ * The sign-in limiter counts GUESSES - a password, a code, a reset link -
+ * not the calls a signed-in page makes to know who it is. Until 22 Sep 2026
+ * it sat on all of /api/auth, so /me, /refresh and /sessions counted too and
+ * five reloads of the Account page in a quarter hour locked a person out of
+ * signing in (found on the two-step drill). Twenty guesses a quarter hour
+ * per address still stands, on the routes where a guess is possible.
+ */
+const GUESSABLE = /^\/(login|register|verify-otp|resend-otp|forgot-password|reset-password|google|reauth|change-password|2fa\/(verify|disable)|email\/confirm)(\/|$)/;
+app.use('/api/auth', (req, res, next) => (req.method !== 'GET' && GUESSABLE.test(req.path) ? authLimiter(req, res, next) : next()), authRoutes);
 app.use('/api/admin', adminRoutes);
 /*
  * A suspended seller may still ask the assistant (plan 2.24): about the

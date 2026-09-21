@@ -48,7 +48,13 @@ export default function GoogleButton({ next = '/' }) {
     const signIn = async (response) => {
       setState({ status: 'sending' });
       try {
-        await exchangeGoogleCredential(response.credential);
+        const data = await exchangeGoogleCredential(response.credential);
+        if (data.totpRequired) {
+          // The form beside this button shows the code step (it listens for this).
+          window.dispatchEvent(new CustomEvent('smp:totp', { detail: { pending: data.pending, message: data.message } }));
+          setState({ status: 'idle' });
+          return;
+        }
         router.replace(next);
         router.refresh();
       } catch (err) {

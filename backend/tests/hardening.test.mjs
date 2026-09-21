@@ -58,6 +58,14 @@ describe('rate limits', () => {
     expect(last.headers['retry-after']).toBeDefined();
   });
 
+  it('counts guesses only: the calls a signed-in page makes (/me, /refresh) never use up the allowance', async () => {
+    for (let i = 0; i < 25; i += 1) await request(app).get('/api/auth/me').set('X-Forwarded-For', '198.51.100.77');
+    for (let i = 0; i < 25; i += 1) await request(app).post('/api/auth/refresh').set('X-Forwarded-For', '198.51.100.77').set('X-Requested-With', 'fetch');
+    const res = await request(app).post('/api/auth/login').set('X-Forwarded-For', '198.51.100.77').send({ email: 'x@y.z', password: 'nope' });
+    expect(res.status).not.toBe(429);
+    expect(res.headers['ratelimit']).toMatch(/remaining=19/);
+  });
+
   it('is per address - a different visitor is not punished for a stranger\'s attempts', async () => {
     const res = await request(app)
       .post('/api/auth/login')

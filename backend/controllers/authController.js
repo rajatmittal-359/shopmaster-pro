@@ -73,6 +73,33 @@ const signedIn = async (user, req, res, message, extra = {}) => {
 };
 const sendEmail = require('../utils/sendEmail');
 const crypto = require('crypto');
+const jwt = require('jsonwebtoken');
+const totpUtil = require('../utils/auth/totp');
+
+/*
+ * Two-step sign-in with an authenticator app (22 Sep 2026). When the account
+ * has one, the password (or Google) earns a five-minute "pending" token, not
+ * a session; /auth/login/totp trades the token plus the 6-digit code for the
+ * session. The emailed new-device code is skipped for these accounts - the
+ * authenticator is the stronger second step, and two second steps is a
+ * sign-in nobody finishes. Shopify's staff two-step works the same way.
+ */
+const TOTP_PENDING_TTL_SECONDS = 5 * 60;
+const secondFactorOrSignIn = async (user, req, res, message) => {
+  if (!user.totp?.enabled) return signedIn(user, req, res, message);
+  const pending = jwt.sign({ userId: String(user._id), tv: user.tokenVersion || 0, purpose: 'totp' }, process.env.JWT_SECRET, { expiresIn: TOTP_PENDING_TTL_SECONDS });
+  sessions.record('login_totp_step', user._id, req);
+  return res.status(202).json({ message: 'Enter the 6-digit code from your authenticator app.', code: 'totp_required', pending, expiresIn: TOTP_PENDING_TTL_SECONDS });
+};
+const hashRecovery = (code) => crypto.createHash('sha256').update(String(code).toUpperCase().replace(/[^A-Z0-9]/g, '')).digest('hex');
+/** Eight codes like K7PM-3QRD: 8 characters from an alphabet without 0/O/1/I. */
+const newRecoveryCodes = () => {
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  return Array.from({ length: 8 }, () => {
+    const raw = Array.from(crypto.randomBytes(8), (b) => alphabet[b % alphabet.length]).join('');
+    return `${raw.slice(0, 4)}-${raw.slice(4)}`;
+  });
+};
 const { passwordResetEmail } = require('../utils/emailTemplates');
 
 // Register
@@ -339,7 +366,7 @@ exports.googleSignIn = async (req, res) => {
     if (user.isBlocked) {
       return res.status(403).json({ message: 'This account has been blocked. Write to us if you think that is a mistake.' });
     }
-    return signedIn(user, req, res, 'Signed in with Google');
+    return secondFactorOrSignIn(user, req, res, 'Signed in with Google');
   } catch (error) {
     console.error('GOOGLE SIGN-IN ERROR:', error.message);
     return res.status(500).json({ message: 'Could not sign you in just now' });
@@ -427,6 +454,8 @@ exports.login = async (req, res) => {
       });
     }
 
+    if (user.totp?.enabled) return secondFactorOrSignIn(user, req, res, 'Login successful');
+
     if (await needsSecondStep(user, req)) {
       const full = await User.findById(user._id).select('+oneTimeCode');
       const sent = await codes.sendCode(full, 'login');
@@ -454,7 +483,7 @@ exports.loginWithCode = async (req, res) => {
     const r = await codes.checkCode(user, 'login', otp);
     if (!r.ok) return res.status(400).json({ message: r.reason });
     if (user.isBlocked) return res.status(403).json({ message: 'This account has been blocked. Write to us if you think that is a mistake.' });
-    return signedIn(user, req, res, 'Login successful');
+    return secondFactorOrSignIn(user, req, res, 'Login successful');
   } catch (error) {
     return sendError(res, error);
   }
@@ -718,7 +747,28 @@ exports.deleteMe = async (req, res) => {
     user.password = require('crypto').randomBytes(24).toString('hex');
     user.isBlocked = true;
     user.blockedReason = 'Deleted by the user';
+    user.deletedAt = new Date();
+    user.totp = { enabled: false, secretEnc: '', pendingEnc: '', lastCounter: 0, recovery: [], enabledAt: null };
+    user.tokenVersion = (user.tokenVersion || 0) + 1;
     await user.save();
+    /*
+     * What is theirs alone goes now: the bag, the wishlist, the bell, the
+     * phone's push subscription, every session, and the addresses no order
+     * ever used. Addresses an order points at are part of that order's
+     * record (the invoice prints them) and stay a year - jobs/retention.
+     */
+    const Order = require('../models/Order');
+    const used = await Order.distinct('shippingAddressId', { userId: user._id });
+    await Promise.all([
+      require('../models/Session').deleteMany({ userId: user._id }),
+      require('../models/Cart').deleteMany({ userId: user._id }),
+      require('../models/Wishlist').deleteMany({ userId: user._id }),
+      require('../models/Notification').deleteMany({ userId: user._id }),
+      require('../models/PushSubscription').deleteMany({ userId: user._id }),
+      require('../models/Address').deleteMany({ userId: user._id, _id: { $nin: used } }),
+    ]);
+    sessions.record('account_deleted', user._id, req);
+    sessions.clearAuthCookies(res);
     res.json({ message: 'Your account has been deleted.' });
   } catch (error) {
     return sendError(res, error);
@@ -863,3 +913,143 @@ exports.confirmEmailChange = async (req, res) => {
   }
 };
 
+/*
+ * ---- Two-step sign-in (authenticator app) ------------------------------
+ * Setup: a fresh secret is sealed into totp.pendingEnc and shown once (QR +
+ * key). Verify: the first correct code moves it to secretEnc, turns the
+ * step on and hands out eight recovery codes, shown once. Login: pending
+ * token + code (or a recovery code) → session. Disable: a current code,
+ * behind step-up; refused for admins, whose second step is mandatory.
+ */
+
+const TOTP_EXPIRED = { message: 'That sign-in has expired. Start again with your password.', code: 'totp_expired' };
+
+/*
+ * A wrong code counts like a wrong password: ten in a row lock the account
+ * for fifteen minutes. A six-digit code has a million values and the window
+ * accepts three, so the per-IP limiter alone would leave a distributed guess
+ * a real chance; the lock closes it.
+ */
+const wrongCode = async (user, req) => {
+  sessions.record('totp_fail', user._id, req);
+  const failed = (user.failedLogins || 0) + 1;
+  const update = failed >= LOCK_AFTER ? { failedLogins: 0, lockUntil: new Date(Date.now() + LOCK_MINUTES * 60000) } : { failedLogins: failed };
+  if (failed >= LOCK_AFTER) sessions.record('locked', user._id, req, { attempts: failed, step: 'totp' });
+  await User.updateOne({ _id: user._id }, { $set: update });
+};
+
+/** The second step of a sign-in: the pending token and the authenticator's code (or a recovery code). */
+exports.loginWithTotp = async (req, res) => {
+  try {
+    const { pending, code } = req.body || {};
+    if (!pending || !code) return res.status(400).json({ message: 'Code required' });
+    let claims;
+    try {
+      claims = jwt.verify(String(pending), process.env.JWT_SECRET);
+    } catch {
+      return res.status(401).json(TOTP_EXPIRED);
+    }
+    if (claims.purpose !== 'totp') return res.status(401).json(TOTP_EXPIRED);
+    const user = await User.findById(claims.userId).select('+totp.secretEnc +totp.lastCounter +totp.recovery');
+    if (!user || !user.totp?.enabled || (user.tokenVersion || 0) !== (claims.tv || 0)) return res.status(401).json(TOTP_EXPIRED);
+    if (user.isBlocked) return res.status(403).json({ message: 'This account has been blocked. Write to us if you think that is a mistake.' });
+    if (user.lockUntil && user.lockUntil > new Date()) {
+      const mins = Math.max(1, Math.ceil((user.lockUntil - Date.now()) / 60000));
+      return res.status(429).json({ message: `Too many wrong attempts. Try again in ${mins} minute${mins > 1 ? 's' : ''}.`, code: 'locked' });
+    }
+
+    const given = String(code).replace(/\s+/g, '');
+    if (/^\d{6}$/.test(given)) {
+      const secret = totpUtil.openSecret(user.totp.secretEnc);
+      const out = {};
+      // Replay: a code that already signed in this window is refused.
+      if (!secret || !totpUtil.verifyTotp(secret, given, { out }) || out.counter <= (user.totp.lastCounter || 0)) {
+        await wrongCode(user, req);
+        return res.status(400).json({ message: 'That code is not right. Codes change every 30 seconds - try the current one.', code: 'totp_failed' });
+      }
+      await User.updateOne({ _id: user._id }, { $set: { 'totp.lastCounter': out.counter } });
+    } else {
+      const h = hashRecovery(given);
+      if (!(user.totp.recovery || []).includes(h)) {
+        await wrongCode(user, req);
+        return res.status(400).json({ message: 'That code is not right.', code: 'totp_failed' });
+      }
+      const left = user.totp.recovery.length - 1;
+      await User.updateOne({ _id: user._id }, { $pull: { 'totp.recovery': h } });
+      sessions.record('totp_recovery_used', user._id, req, { left });
+      setImmediate(() => require('../utils/notify').notify({ userId: user._id, role: user.role, category: 'account', title: 'A recovery code was used to sign in', body: `${left} recovery code${left === 1 ? '' : 's'} left. If this was not you, change your password now.`, url: '/account', tag: `recovery-${user._id}-${Date.now()}`, mail: { subject: 'ShopMaster Pro: a recovery code was used to sign in', text: `One of your two-step recovery codes was just used to sign in from ${sessions.describe(req.headers['user-agent'])} (${req.ip}). ${left} left. If this was not you, change your password at /account - that signs every device out.` } }).catch(() => {}));
+    }
+    return signedIn(user, req, res, 'Login successful');
+  } catch (error) {
+    return sendError(res, error);
+  }
+};
+
+/** Start enrolment: a new secret, sealed and parked in pendingEnc; the QR material goes back once. */
+exports.totpSetup = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    if (user.totp?.enabled) return res.status(409).json({ message: 'Two-step sign-in is already on. Turn it off first to set up a new phone.', code: 'totp_on' });
+    const secret = totpUtil.generateSecret();
+    await User.updateOne({ _id: user._id }, { $set: { 'totp.pendingEnc': totpUtil.sealSecret(secret) } });
+    return res.json({ secret, otpauth: totpUtil.otpauthUri({ secret, account: user.email }), issuer: 'ShopMaster Pro' });
+  } catch (error) {
+    return sendError(res, error);
+  }
+};
+
+/** Prove the phone has the secret: the first correct code turns the step on and issues recovery codes. */
+exports.totpVerify = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).select('+totp.pendingEnc');
+    if (user.totp?.enabled) return res.status(409).json({ message: 'Two-step sign-in is already on.', code: 'totp_on' });
+    const secret = totpUtil.openSecret(user.totp?.pendingEnc);
+    if (!secret) return res.status(400).json({ message: 'Start the setup first.', code: 'totp_no_setup' });
+    const out = {};
+    if (!totpUtil.verifyTotp(secret, req.body?.code, { out })) {
+      return res.status(400).json({ message: "That code is not right. Check the phone's clock is set automatically, then try the current code.", code: 'totp_failed' });
+    }
+    const recoveryCodes = newRecoveryCodes();
+    await User.updateOne({ _id: user._id }, {
+      $set: { 'totp.enabled': true, 'totp.secretEnc': totpUtil.sealSecret(secret), 'totp.pendingEnc': '', 'totp.lastCounter': out.counter, 'totp.recovery': recoveryCodes.map(hashRecovery), 'totp.enabledAt': new Date() },
+    });
+    sessions.record('totp_enabled', user._id, req);
+    setImmediate(() => require('../utils/notify').notify({ userId: user._id, role: user.role, category: 'account', title: 'Two-step sign-in is on', body: 'Every sign-in now asks for the code from your authenticator app.', url: '/account', tag: `totp-on-${user._id}`, mail: { subject: 'ShopMaster Pro: two-step sign-in is on', text: 'Two-step sign-in was just turned on for your account. Every sign-in now asks for the code from your authenticator app. Keep the recovery codes somewhere safe - they are the way back in if the phone is lost. If this was not you, change your password at /account.' } }).catch(() => {}));
+    return res.json({ message: 'Two-step sign-in is on.', recoveryCodes });
+  } catch (error) {
+    return sendError(res, error);
+  }
+};
+
+/** Turn the step off with a current code (behind step-up). Admins cannot: theirs is mandatory. */
+exports.totpDisable = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).select('+totp.secretEnc +totp.recovery');
+    if (!user.totp?.enabled) return res.status(400).json({ message: 'Two-step sign-in is not on.', code: 'totp_off' });
+    if (user.role === 'admin') return res.status(403).json({ message: 'Admin accounts keep two-step sign-in on. Moving to a new phone: sign in with a recovery code, then ask for new recovery codes.', code: 'totp_required_role' });
+    const given = String(req.body?.code || '').replace(/\s+/g, '');
+    const secret = totpUtil.openSecret(user.totp.secretEnc);
+    const ok = /^\d{6}$/.test(given) ? Boolean(secret && totpUtil.verifyTotp(secret, given)) : (user.totp.recovery || []).includes(hashRecovery(given));
+    if (!ok) return res.status(400).json({ message: 'That code is not right.', code: 'totp_failed' });
+    await User.updateOne({ _id: user._id }, { $set: { 'totp.enabled': false, 'totp.secretEnc': '', 'totp.pendingEnc': '', 'totp.lastCounter': 0, 'totp.recovery': [], 'totp.enabledAt': null } });
+    sessions.record('totp_disabled', user._id, req);
+    setImmediate(() => require('../utils/notify').notify({ userId: user._id, role: user.role, category: 'account', title: 'Two-step sign-in is off', body: 'Sign-ins no longer ask for an authenticator code. If this was not you, change your password now.', url: '/account', tag: `totp-off-${user._id}-${Date.now()}`, mail: { subject: 'ShopMaster Pro: two-step sign-in is off', text: 'Two-step sign-in was just turned off for your account. If this was not you, change your password at /account - that signs every device out.' } }).catch(() => {}));
+    return res.json({ message: 'Two-step sign-in is off.' });
+  } catch (error) {
+    return sendError(res, error);
+  }
+};
+
+/** Fresh recovery codes (behind step-up); the old ones stop working. */
+exports.totpRecoveryCodes = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    if (!user.totp?.enabled) return res.status(400).json({ message: 'Two-step sign-in is not on.', code: 'totp_off' });
+    const recoveryCodes = newRecoveryCodes();
+    await User.updateOne({ _id: user._id }, { $set: { 'totp.recovery': recoveryCodes.map(hashRecovery) } });
+    sessions.record('totp_recovery_reset', user._id, req);
+    return res.json({ message: 'New recovery codes. The old ones no longer work.', recoveryCodes });
+  } catch (error) {
+    return sendError(res, error);
+  }
+};

@@ -58,7 +58,15 @@ const JOBS = {
     requires: 'RAZORPAY_KEY_SECRET',
   },
   // Daily 04:45 UTC: the bag left behind 20-48 h ago, once a week at most (jobs/cartReminder).
-  'cart-reminder': { run: () => require('../jobs/cartReminder').remind() },
+  'cart-reminder': {
+    run: async () => {
+      const reminders = await require('../jobs/cartReminder').remind();
+      // Same daily beat: accounts deleted a year ago lose the last of their records' personal fields (jobs/retention).
+      const retention = await require('../jobs/retention').scrubDeletedAccounts().catch((e) => ({ error: e.message }));
+      return { reminders, retention };
+    },
+  },
+  retention: { run: () => require('../jobs/retention').scrubDeletedAccounts() },
   // Monday 03:15 UTC: the weekly market brief per selling category
   // (utils/ai/marketBrief) - Search Console + our search box + Merchant
   // insights + one grounded search each; Ask ShopMaster reads it for free.

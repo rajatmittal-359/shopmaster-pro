@@ -21,9 +21,29 @@ export const exchangeGoogleCredential = async (credential) => {
     body: JSON.stringify({ credential }),
   });
   const data = await res.json().catch(() => ({}));
+  // Two-step sign-in (22 Sep 2026): Google proved the person, the
+  // authenticator still has to. The caller sends them to the login form's
+  // code step; the pending token rides in sessionStorage for that hop.
+  if (res.status === 202 && data.code === 'totp_required') {
+    try { sessionStorage.setItem(TOTP_PENDING_KEY, JSON.stringify({ pending: data.pending, message: data.message })); } catch { /* private mode: the form asks for the password again */ }
+    return { totpRequired: true, pending: data.pending, message: data.message };
+  }
   if (!res.ok) throw new Error(data.message || 'Could not sign you in with Google');
   setSession({ role: data.role, user: data.user });
   return data;
+};
+
+/** Where a Google sign-in that still needs the authenticator's code parks its pending token for the login form. */
+export const TOTP_PENDING_KEY = 'smp_totp_pending';
+export const takeTotpPending = () => {
+  try {
+    const raw = sessionStorage.getItem(TOTP_PENDING_KEY);
+    if (!raw) return null;
+    sessionStorage.removeItem(TOTP_PENDING_KEY);
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
 };
 
 /** True once the GSI script has arrived. */

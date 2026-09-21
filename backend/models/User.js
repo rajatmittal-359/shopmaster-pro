@@ -103,6 +103,16 @@
          */
         isBlocked: { type: Boolean, default: false },
         blockedReason: { type: String, default: null },
+        /*
+         * Delete my account (DPDP, 22 Sep 2026): the person's own fields go at
+         * once; the order, invoice and payout records they appear in are kept
+         * one year (DPDP Rules 2025: erase when the purpose is served, and the
+         * commerce/tax records stay a year), then jobs/retention scrubs the
+         * name, phone and street off those records too. `scrubbedAt` marks
+         * that second step.
+         */
+        deletedAt: { type: Date, default: null },
+        scrubbedAt: { type: Date, default: null },
 
         /*
          * Sessions (utils/auth/session, 19 Sep 2026). tokenVersion is stamped
@@ -140,6 +150,24 @@
         aiLimitsLikeSeller: {
         type: Boolean,
         default: false
+        },
+        /*
+         * Two-step sign-in with an authenticator app (utils/auth/totp, 22 Sep
+         * 2026). The secret is stored encrypted (AES-256-GCM, key derived from
+         * JWT_SECRET) and never selected by default; `lastCounter` refuses a
+         * replay of the same 30 s code; `enabled` false = enrolment started
+         * but not proven with a first code. Mandatory for admins, optional for
+         * sellers.
+         */
+        totp: {
+        enabled: { type: Boolean, default: false },
+        secretEnc: { type: String, default: '', select: false },
+        // The secret of an enrolment that has not shown its first code yet.
+        pendingEnc: { type: String, default: '', select: false },
+        lastCounter: { type: Number, default: 0, select: false },
+        // Eight one-use recovery codes, SHA-256 hashed - the way back in when the phone is lost.
+        recovery: { type: [String], default: [], select: false },
+        enabledAt: { type: Date, default: null },
         },
         isVerified: {
         type: Boolean,

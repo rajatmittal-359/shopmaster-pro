@@ -1,4 +1,5 @@
 import AdminGuard from "@/components/admin/AdminGuard";
+import TwoStepRequired from "@/components/admin/TwoStepRequired";
 import Tour from "@/components/panel/Tour";
 import PanelShell from "@/components/panel/PanelShell";
 import PanelIdentity from "@/components/panel/PanelIdentity";
@@ -74,6 +75,7 @@ export default function AdminLayout({ children }) {
   return (
     <PanelShell title="Admin" groups={GROUPS} countsUrl="/admin/nav-counts" identity={<PanelIdentity kind="admin" />}>
       <AdminGuard>
+        <TwoStepRequired />
         {children}
         <Tour
           id="admin"

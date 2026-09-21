@@ -13,6 +13,7 @@ import NotForThisAccount from '@/components/common/NotForThisAccount';
 import NotificationPrefs from '@/components/common/NotificationPrefs';
 import AccountStanding from '@/components/account/AccountStanding';
 import Devices from '@/components/account/Devices';
+import TwoStep from '@/components/account/TwoStep';
 import { useReauth } from '@/components/common/Reauth';
 
 /**
@@ -204,10 +205,11 @@ export default function AccountView() {
       </Section>
 
       {/* Order updates: confirmed, shipped, delivered, refunds - where they also go (plan 2.30). */}
+      <TwoStep role={role} />
       <Devices />
       <NotificationPrefs title="Order updates" lead="The bell has every update. Choose what also comes to your phone or email." />
 
-      <Section title="Delete my account" lead="Your name, email and sign-in are removed. Orders and reviews stay as records, no longer tied to you by name. This cannot be undone.">
+      <Section title="Delete my account" lead="Your name, email, sign-in, saved addresses, bag and wishlist are removed now. Orders and invoices stay as records for one year, as the law requires, then lose your details too. This cannot be undone.">
         <Button variant="outline" className="text-destructive" onClick={() => setAsking(true)} disabled={busy === 'delete'}>
           Delete my account
         </Button>

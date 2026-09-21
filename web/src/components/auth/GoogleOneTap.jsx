@@ -51,6 +51,10 @@ export default function GoogleOneTap() {
       ensureGsi(async (response) => {
         try {
           const data = await exchangeGoogleCredential(response.credential);
+          if (data.totpRequired) {
+            router.push(`/login?next=${encodeURIComponent(window.location.pathname)}`);
+            return;
+          }
           toast.success(`Signed in as ${data.user?.name || data.user?.email || 'you'}`);
           router.refresh();
         } catch (err) {

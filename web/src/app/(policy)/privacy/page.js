@@ -109,9 +109,11 @@ export default async function PrivacyPage() {
 
       <Section title="How long we keep it">
         <p>
-          Order records are kept for as long as the law requires business records
-          to be kept. Ask us to close your account and we will delete what we are
-          not required to keep.
+          Delete your account yourself under Account, or ask us to. Your name,
+          email, sign-in, saved addresses, bag and wishlist go at once. Orders
+          and invoices are business records and stay for one year after that,
+          as the law requires; then the phone number and street on them are
+          removed too.
         </p>
       </Section>
 

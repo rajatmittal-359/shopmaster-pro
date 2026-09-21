@@ -77,6 +77,13 @@ router.post('/reauth/code', authMiddleware, auth.reauthCode);
 // The second step after a correct password on a device the account has not used (seller/admin).
 router.post('/login/code', auth.loginWithCode);
 router.post('/login/code/resend', auth.resendLoginCode);
+// Two-step sign-in with an authenticator app (22 Sep 2026): the code after the password.
+router.post('/login/totp', auth.loginWithTotp);
+const recent = require('../middlewares/requireRecentAuth');
+router.post('/2fa/setup', authMiddleware, recent, auth.totpSetup);
+router.post('/2fa/verify', authMiddleware, auth.totpVerify);
+router.post('/2fa/disable', authMiddleware, recent, auth.totpDisable);
+router.post('/2fa/recovery-codes', authMiddleware, recent, auth.totpRecoveryCodes);
 // Changing the sign-in email: step-up first, then a code to the new address.
 router.post('/email/request', authMiddleware, require('../middlewares/requireRecentAuth'), auth.requestEmailChange);
 router.post('/email/confirm', authMiddleware, auth.confirmEmailChange);
