@@ -158,6 +158,8 @@ export default function ProductForm({ productId, copyFromId }) {
   const [state, setState] = useState({ status: 'loading' });
   const [keywords, setKeywords] = useState('');
   const [faqBusy, setFaqBusy] = useState(false);
+  // Market check (21 Sep 2026): { status, data?, message? } - advice beside the price, never applied by itself.
+  const [market, setMarket] = useState({ status: 'idle' });
   // Which model writes: 'auto' (Gemini, nano behind it), 'gemini', 'nano'. The
   // same rule as the photo tools - the seller always sees who is doing the work.
   const [textModel, setTextModel] = useState('auto');
@@ -586,6 +588,69 @@ export default function ProductForm({ productId, copyFromId }) {
           <Field id="stock" label="How many">
             <Input id="stock" required inputMode="numeric" value={form.stock} onChange={set('stock')} className="h-10" />
           </Field>
+        </div>
+
+        {/* Market check: what products like this list for on Amazon/Flipkart/
+            Meesho right now, and the words buyers type - one Google-grounded
+            call, cached a day. Meesho's price recommendation, from the outside
+            world instead of our own sales. Advice: the seller knows the
+            material and the margin. */}
+        <div className="mt-4 rounded-lg border border-dashed p-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-sm">
+              <span className="font-medium">{t('Market check')}</span>
+              <span className="text-muted-foreground"> · {t('what similar products sell for on Amazon, Flipkart and Meesho, and the words buyers type')}</span>
+            </p>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={!form.name || String(form.name).trim().length < 4 || market.status === 'loading'}
+              onClick={async () => {
+                setMarket({ status: 'loading' });
+                try {
+                  const data = await authedFetch('/seller/ai/market', { method: 'POST', body: { name: form.name, categoryName: categories.find((c) => c._id === form.category)?.label, material: form.material, color: form.color, price: form.price } });
+                  setMarket({ status: 'done', data });
+                } catch (e) {
+                  setMarket({ status: 'error', message: e.message });
+                }
+              }}
+            >
+              {market.status === 'loading' ? <><Loader2 className="size-3.5 animate-spin" /> {t('Searching…')}</> : <><Sparkles className="size-3.5" /> {t('Check the market')}</>}
+            </Button>
+          </div>
+          {market.status === 'error' && <p className="mt-2 text-sm text-destructive">{market.message}</p>}
+          {market.status === 'done' && market.data && (
+            <div className="mt-3 space-y-2 text-sm">
+              {market.data.band ? (
+                <p>
+                  {t('Similar items list at')} <strong>₹{market.data.band.low.toLocaleString('en-IN')} – ₹{market.data.band.high.toLocaleString('en-IN')}</strong>
+                  {market.data.band.typical ? <> · {t('most around')} ₹{market.data.band.typical.toLocaleString('en-IN')}</> : null}
+                  {market.data.sources?.length ? <span className="text-muted-foreground"> ({market.data.sources.join(', ')})</span> : null}
+                  {market.data.position === 'above' && <span className="ml-2 rounded bg-amber-500/15 px-1.5 py-0.5 text-xs text-amber-800 dark:text-amber-200">{t('your price is above this band')}</span>}
+                  {market.data.position === 'below' && <span className="ml-2 rounded bg-emerald-500/15 px-1.5 py-0.5 text-xs text-emerald-800 dark:text-emerald-200">{t('your price is below this band')}</span>}
+                  {market.data.position === 'inside' && <span className="ml-2 rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">{t('your price sits inside it')}</span>}
+                </p>
+              ) : (
+                <p className="text-muted-foreground">{t('Nothing comparable found - try a plainer title (what it is, in the words a buyer would use).')}</p>
+              )}
+              {market.data.note && <p className="text-muted-foreground">{market.data.note}</p>}
+              {market.data.words?.length > 0 && (
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="text-muted-foreground">{t('Buyers type:')}</span>
+                  {market.data.words.map((w) => {
+                    const have = (form.tags || []).map((x) => String(x).toLowerCase()).includes(w);
+                    return (
+                      <button key={w} type="button" disabled={have} onClick={() => setForm((f) => ({ ...f, tags: [...new Set([...(f.tags || []), w])] }))} className={`rounded-full border px-2 py-0.5 text-xs ${have ? 'border-emerald-500/40 text-emerald-700 dark:text-emerald-300' : 'hover:border-primary'}`} title={have ? t('Already in your search words') : t('Add to search words')}>
+                        {have ? '✓ ' : '+ '}{w}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+              <p className="text-xs text-muted-foreground">{market.data.cached ? t("From an earlier check today.") : t('Checked just now.')} {t('A guide, not a rule - you know the material and the margin.')}</p>
+            </div>
+          )}
         </div>
 
         <div className="grid gap-5 sm:grid-cols-3">

@@ -105,6 +105,7 @@ router.post('/ai/listing', requireApprovedSeller, ai.writeListing);
 router.post('/ai/listing-from-speech', requireApprovedSeller, ai.listingFromSpeech);
 router.post('/ai/refine', requireApprovedSeller, ai.refineText);
 router.post('/ai/keywords', requireApprovedSeller, ai.suggestKeywords);
+router.post('/ai/market', requireApprovedSeller, ai.marketCheck);
 router.post('/ai/faqs', requireApprovedSeller, ai.draftFaqs);
 // The Google coach's shop-level list for Grow (plan 2.32)
 router.get('/google/readiness', requireApprovedSeller, async (req, res) => {

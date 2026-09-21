@@ -647,6 +647,50 @@ Answer with ONE JSON object: {"keywords": ["..."], "titleTip": "one short senten
  * Three questions a shopper asks before buying, answered from the facts and
  * the rulebook - never a claim the facts do not support (plan 2.32).
  */
+/**
+ * POST /seller/ai/market  { name, categoryName, material, color, price }
+ * Market check (utils/ai/marketCheck): one Google-grounded call, cached a day
+ * per title, returning a price band + sites + the words buyers type. Counts
+ * as one text draft against the day's allowance; advice only.
+ */
+const marketCheck = async (req, res) => {
+  try {
+    const exempt = await isExempt(req);
+    const usage = await usageFor(req.user._id, exempt);
+    if (!exempt && usage.remaining.texts === 0) {
+      return res.status(429).json({ message: `You have used today's ${CAPS.textsPerSellerPerDay} AI drafts. It resets at midnight.`, usage });
+    }
+    const { name, categoryName, material, color, price } = req.body || {};
+    if (!name || String(name).trim().length < 4) return res.status(400).json({ message: 'Give the product a title first.' });
+    const { marketPrompt, parseMarketCheck } = require('../utils/ai/marketCheck');
+    const { remember } = require('../utils/ai/aiCache');
+    const input = { name: String(name).trim().slice(0, 150), categoryName, material, color };
+    const result = await remember('market', 'shared', input, async () => {
+      // Grounded, and NOT in JSON mode: the search tool and responseSchema do
+      // not combine on the Gemini API, so the JSON is asked for in the prompt
+      // and cut out of the text.
+      let r = await require('../utils/gemini').generate(marketPrompt(input), { grounded: true, textModel: 'gemini', temperature: 0.2, attempts: 1 });
+      if (!r.ok) {
+        // Gemini's grounding is out for the day: Groq's compound-mini carries
+        // its own web search (same road as the assistant's webSearch tool).
+        const g = await require('../utils/ai/groq').groqPlain([{ role: 'user', parts: [{ text: marketPrompt(input) }] }], { model: 'groq/compound-mini', temperature: 0.2 });
+        if (!g.ok) return { ok: false, reason: `${r.reason.slice(0, 60)}; ${g.reason.slice(0, 60)}` };
+        r = { ok: true, text: g.text, provider: 'groq-compound' };
+      }
+      const m = String(r.text || '').match(/\{[\s\S]*\}/);
+      let raw = null;
+      try { raw = m ? JSON.parse(m[0]) : null; } catch { raw = null; }
+      if (!raw) return { ok: false, reason: 'The search came back without a readable answer - try again in a minute.' };
+      return { ok: true, raw, provider: r.provider, checkedAt: new Date().toISOString() };
+    });
+    if (!result.ok) return res.status(502).json({ message: result.reason });
+    if (!result.cached) await AiUsage.record(req.user._id, { kind: 'text', provider: result.provider || 'gemini' });
+    res.json({ ...parseMarketCheck(result.raw, price), checkedAt: result.checkedAt, cached: Boolean(result.cached), usage: await usageFor(req.user._id, exempt) });
+  } catch (error) {
+    sendError(res, error);
+  }
+};
+
 const draftFaqs = async (req, res) => {
   try {
     const exempt = await isExempt(req.user._id);
@@ -745,4 +789,4 @@ const adminRoads = async (req, res) => {
   }
 };
 
-module.exports = { adminRoads, draftFaqs, getUsage, getCatalog, setLimits, writeListing, listingFromSpeech, refineText, suggestKeywords, makeImage, attachToProduct, listDrafts, adminUsage, CAPS, ownImage };
+module.exports = { adminRoads, draftFaqs, marketCheck, getUsage, getCatalog, setLimits, writeListing, listingFromSpeech, refineText, suggestKeywords, makeImage, attachToProduct, listDrafts, adminUsage, CAPS, ownImage };
