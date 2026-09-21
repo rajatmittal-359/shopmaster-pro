@@ -168,18 +168,24 @@ jobs:
       - name: start the API
         working-directory: backend
         run: |
-          node server.js > ../api.log 2>&1 &
-          for i in $(seq 1 30); do curl -sf http://localhost:5000/api/health && break; sleep 2; done
-          curl -sf http://localhost:5000/api/health
+          (node server.js > ../api.log 2>&1 &)
+          for i in $(seq 1 30); do curl -sf http://127.0.0.1:5000/api/health && break; sleep 2; done
+          curl -sf http://127.0.0.1:5000/api/health || { echo "== api.log"; cat ../api.log; exit 1; }
       - name: build and start the web
         working-directory: web
         run: |
-          npm run build
+          npm run build 2>&1 | tail -40
           # output: standalone (the production image runs this exact server) - `next start` refuses it.
+          ls .next/standalone >/dev/null
           cp -r .next/static .next/standalone/.next/static && cp -r public .next/standalone/public
-          PORT=3000 HOSTNAME=127.0.0.1 node .next/standalone/server.js > ../web.log 2>&1 &
-          for i in $(seq 1 30); do curl -sf -o /dev/null http://localhost:3000/ && break; sleep 2; done
-          curl -sf -o /dev/null http://localhost:3000/
+          (PORT=3000 HOSTNAME=127.0.0.1 node .next/standalone/server.js > ../web.log 2>&1 &)
+          ok=0
+          for i in $(seq 1 45); do
+            if curl -sf -o /dev/null http://127.0.0.1:3000/; then ok=1; break; fi
+            sleep 2
+          done
+          echo "== web.log"; cat ../web.log || true
+          [ "$ok" = 1 ] || { echo "::error::the web did not answer on :3000 in 90 s"; exit 1; }
       - name: playwright browsers
         working-directory: web
         run: npx playwright install --with-deps chromium
