@@ -314,6 +314,26 @@ exports.suggest = async (req, res) => {
 };
 
 /**
+ * ✅ GET a handful of products by id, in the order asked (PUBLIC)
+ *  URL: /api/public/products/by-ids?ids=a,b,c   (at most 12)
+ *
+ *  For "Recently viewed" (E4, 22 Sep 2026): the browser remembers the ids,
+ *  this returns the cards - live listings only, hidden sellers and empty
+ *  stock left out, so a strip never shows what cannot be bought.
+ */
+exports.byIds = async (req, res) => {
+  try {
+    const ids = String(req.query.ids || '').split(',').map((x) => x.trim()).filter((x) => mongoose.isValidObjectId(x)).slice(0, 12);
+    if (!ids.length) return res.json({ products: [] });
+    const base = await withoutHiddenSellers({ _id: { $in: ids }, isActive: true, isDeleted: { $ne: true }, stock: { $gt: 0 } });
+    const found = await Product.find(base).populate('category', 'name slug').lean();
+    return res.json({ products: inSearchOrder(found, ids) });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+/**
  * ✅ GET the filter panel's own data (PUBLIC)
  *  URL: /api/public/products/filters
  *

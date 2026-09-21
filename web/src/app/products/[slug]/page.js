@@ -14,6 +14,8 @@ import ProductCard from '@/components/product/ProductCard';
 import Stars from '@/components/product/Stars';
 import ReviewForm from '@/components/product/ReviewForm';
 import SizePicker from '@/components/product/SizePicker';
+import RecordView from '@/components/product/RecordView';
+import RecentlyViewed from '@/components/home/RecentlyViewed';
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.shopmasterpro.in';
 
@@ -80,7 +82,17 @@ export default async function ProductPage({ params }) {
     // carries their 24 newest pieces; four of them, minus this one.
     product.shop?.id ? getSeller(product.shop.id).catch(() => null) : null,
   ]);
-  const fromShop = (shop?.products || []).filter((p) => String(p._id) !== String(product._id)).slice(0, 4);
+  /*
+   * "Complete the look" (E4, 22 Sep 2026): the shop's other pieces, the ones
+   * from a DIFFERENT category first - the earrings beside the necklace, the
+   * dupatta beside the kurti - then the rest. Myntra's "Complete the look"
+   * and Amazon's "Buy it with" are this, at our size: one shop's range.
+   */
+  const ownCategory = String(product.category?._id || product.category || '');
+  const others = (shop?.products || []).filter((p) => String(p._id) !== String(product._id));
+  const otherCategory = others.filter((p) => String(p.category?._id || p.category || '') !== ownCategory);
+  const fromShop = [...otherCategory, ...others.filter((p) => !otherCategory.includes(p))].slice(0, 4);
+  const completesLook = otherCategory.length >= 2;
   // Highlights (21 Sep 2026): what the shopper reads before the description -
   // Amazon's "Top highlights" table + "About this item" bullets, from the
   // fields the seller filled; an empty field is simply not a row.
@@ -454,7 +466,7 @@ export default async function ProductPage({ params }) {
       {fromShop.length > 0 && (
         <section className="mt-12">
           <h2 className="text-lg font-semibold">
-            More from{' '}
+            {completesLook ? 'Complete the look, from ' : 'More from '}
             <Link href={`/sellers/${product.shop.id}`} className="text-brand-ink hover:underline">{product.shop?.name || 'this shop'}</Link>
           </h2>
           <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
@@ -477,6 +489,8 @@ export default async function ProductPage({ params }) {
           </div>
         </section>
       )}
+      <RecentlyViewed exclude={product._id} />
+      <RecordView id={String(product._id)} />
     </div>
   );
 }

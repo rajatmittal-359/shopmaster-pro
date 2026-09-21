@@ -3,6 +3,7 @@ import { serialiseJsonLd } from '@/lib/jsonLd';
 import { POLICY, businessFrom } from '@/config/policy';
 import { getSettings } from '@/lib/api';
 import Hero from '@/components/home/Hero';
+import RecentlyViewed from '@/components/home/RecentlyViewed';
 import Sections from '@/components/home/Sections';
 import ProductCard from '@/components/product/ProductCard';
 
@@ -78,6 +79,11 @@ export default async function Home() {
       <Hero products={products} copy={home} />
 
       <Sections sections={sections} />
+
+      {/* E4: the strip this browser earned - nothing until it has opened two products. */}
+      <div className="mx-auto max-w-5xl px-4 pb-8">
+        <RecentlyViewed />
+      </div>
 
       {/*
         The shop behind the site, with the real address.

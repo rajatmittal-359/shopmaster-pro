@@ -23,6 +23,7 @@ router.get('/categories/:id/template', async (req, res) => {
 router.get('/categories/tree', ctl.categoryTree);
 router.get('/', ctl.listProducts);
 router.get('/suggest', ctl.suggest);
+router.get('/by-ids', ctl.byIds);
 router.get('/filters', ctl.filters);
 router.get('/:productId/similar', ctl.similarProducts);
 router.get('/:productId', ctl.getProduct);
