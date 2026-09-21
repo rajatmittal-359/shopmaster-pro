@@ -21,13 +21,24 @@ const { cleanAttributes, missingRequired } = require('../config/listingTemplates
 
 const pause = (ms) => new Promise((ok) => setTimeout(ok, ms));
 
-const backfill = async ({ max = 25, pauseMs = 4000, deps = {} } = {}) => {
-  const todo = await Product.find({
-    isActive: true,
-    isDeleted: { $ne: true },
-    $or: [{ attributes: { $exists: false } }, { attributes: {} }, { attributes: null }],
-  })
-    .select('name description images category sellerId material highlights tags productType')
+/**
+ * Two modes (22 Sep 2026):
+ *   fill     only what is empty (the default; the seller's words stay theirs)
+ *   rewrite  everything the writer produces - title (marketplace formula),
+ *            description, highlights, material, attributes, product type,
+ *            tags - because the first listings were typed in a hurry (Rajat:
+ *            "jaldi jaldi me aadha-adhura daala, sab sahi kar do"). Price,
+ *            stock, photos, category, SKU, weight are never touched. What was
+ *            there before is kept in `aiFilled.before`, so a seller can put
+ *            their own title back with one click.
+ */
+const backfill = async ({ max = 25, pauseMs = 4000, mode = 'fill', deps = {} } = {}) => {
+  const rewrite = mode === 'rewrite';
+  const filter = { isActive: true, isDeleted: { $ne: true } };
+  if (!rewrite) filter.$or = [{ attributes: { $exists: false } }, { attributes: {} }, { attributes: null }];
+  else filter['aiFilled.mode'] = { $ne: 'rewrite' };
+  const todo = await Product.find(filter)
+    .select('name description images category sellerId material highlights tags productType color')
     .populate('category', 'name')
     .limit(max)
     .lean();
@@ -58,14 +69,21 @@ const backfill = async ({ max = 25, pauseMs = 4000, deps = {} } = {}) => {
       continue;
     }
     const d = r.draft;
-    const set = { templateKey: template.key, 'aiFilled.at': new Date(), 'aiFilled.fields': [] };
+    const set = { templateKey: template.key, 'aiFilled.at': new Date(), 'aiFilled.mode': mode, 'aiFilled.fields': [] };
     const attrs = cleanAttributes(template, d.attributes);
     if (Object.keys(attrs).length) { set.attributes = attrs; set['aiFilled.fields'].push('attributes'); }
-    if (!p.productType && d.productType) { set.productType = d.productType; set['aiFilled.fields'].push('productType'); }
-    if (!p.material && d.material) { set.material = d.material.slice(0, 80); set['aiFilled.fields'].push('material'); }
-    if (!(p.highlights || []).length && (d.bullets || []).length) { set.highlights = d.bullets.slice(0, 5).map((b) => b.slice(0, 90)); set['aiFilled.fields'].push('highlights'); }
-    const newTags = [...new Set([...(p.tags || []), ...(d.tags || [])])].slice(0, 20);
-    if (newTags.length > (p.tags || []).length) { set.tags = newTags; set['aiFilled.fields'].push('tags'); }
+    if ((rewrite || !p.productType) && d.productType) { set.productType = d.productType; set['aiFilled.fields'].push('productType'); }
+    if ((rewrite || !p.material) && d.material) { set.material = d.material.slice(0, 80); set['aiFilled.fields'].push('material'); }
+    if ((rewrite || !(p.highlights || []).length) && (d.bullets || []).length) { set.highlights = d.bullets.slice(0, 5).map((b) => b.slice(0, 90)); set['aiFilled.fields'].push('highlights'); }
+    const newTags = [...new Set([...(d.tags || []), ...(p.tags || [])])].slice(0, 20);
+    if (newTags.length > (p.tags || []).length || rewrite) { set.tags = newTags; set['aiFilled.fields'].push('tags'); }
+    if (rewrite) {
+      // The seller's own words are kept beside the new ones, never lost.
+      set['aiFilled.before'] = { name: p.name, description: p.description || '', highlights: p.highlights || [] };
+      if (d.name && d.name.split(' ').length >= 3) { set.name = d.name.slice(0, 120); set['aiFilled.fields'].push('name'); }
+      if (d.description && d.description.length > 40) { set.description = d.description; set['aiFilled.fields'].push('description'); }
+      if (d.color && !p.color) set.color = d.color.slice(0, 60);
+    }
     // A product whose category yields no attributes still gets its templateKey, so it is not retried forever.
     if (!set.attributes) set.attributes = {};
     await Product.updateOne({ _id: p._id }, { $set: set });
@@ -82,7 +100,9 @@ const backfill = async ({ max = 25, pauseMs = 4000, deps = {} } = {}) => {
     const seller = await Seller.findOne({ userId: sellerId }).select('userId').lean().catch(() => null);
     if (!seller) continue;
     const needs = items.filter((i) => i.missing.length);
-    const body = `${items.length} listing${items.length === 1 ? '' : 's'} now carry their product facts (material, type, occasion and more), written from the photos.${needs.length ? ` ${needs.length} still need a fact only you know - open them under Products.` : ''} Check the facts once; a wrong fact becomes a return.`;
+    const body = rewrite
+      ? `${items.length} listing${items.length === 1 ? '' : 's'} were rewritten to marketplace standard - title, description, highlights and product facts, from the photos. Your earlier words are kept with each product - ask and they come back. Read each one once: a wrong fact becomes a return.${needs.length ? ` ${needs.length} still need a fact only you know.` : ''}`
+      : `${items.length} listing${items.length === 1 ? '' : 's'} now carry their product facts (material, type, occasion and more), written from the photos.${needs.length ? ` ${needs.length} still need a fact only you know - open them under Products.` : ''} Check the facts once; a wrong fact becomes a return.`;
     await notify({ userId: sellerId, role: 'seller', category: 'catalogue', title: `Product facts filled on ${items.length} listing${items.length === 1 ? '' : 's'}`, body, url: '/seller/products', tag: `backfill-${sellerId}-${Date.now()}` }).catch(() => {});
   }
 

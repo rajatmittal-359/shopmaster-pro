@@ -380,7 +380,7 @@ const productSchema = new mongoose.Schema(
   attributes: { type: mongoose.Schema.Types.Mixed, default: {} },
   /* Legal Metrology 2017 for anything consumed or applied (cosmetics, food): shown on the page as printed on the pack. */
   /* What the backfill job filled from the photo (jobs/backfillListings), so the seller knows which facts to check. */
-  aiFilled: { at: { type: Date, default: null }, fields: { type: [String], default: [] } },
+  aiFilled: { at: { type: Date, default: null }, mode: { type: String, default: '' }, fields: { type: [String], default: [] }, before: { name: String, description: String, highlights: [String] } },
   mfgDate: { type: String, trim: true, default: '', maxlength: 20 },
   bestBefore: { type: String, trim: true, default: '', maxlength: 40 },
   highlights: {

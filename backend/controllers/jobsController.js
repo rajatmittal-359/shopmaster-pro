@@ -63,7 +63,7 @@ const JOBS = {
   // (utils/ai/marketBrief) - Search Console + our search box + Merchant
   // insights + one grounded search each; Ask ShopMaster reads it for free.
   // One-off / occasional: fill product facts on listings that predate the category templates (jobs/backfillListings).
-  'backfill-listings': { run: () => require('../jobs/backfillListings').backfill(), requires: 'GEMINI_API_KEY' },
+  'backfill-listings': { run: (q = {}) => require('../jobs/backfillListings').backfill({ mode: q.mode === 'rewrite' ? 'rewrite' : 'fill', max: Number(q.max) || 25 }), requires: 'GEMINI_API_KEY', detached: true },
   'market-brief': { run: () => require('../utils/ai/marketBrief').buildBriefs(), requires: 'GEMINI_API_KEY' },
   /*
    * Plan 2.23: the assistant's fixed exam, kept as an EvalRun for the trend on
@@ -137,8 +137,19 @@ exports.runJob = async (req, res) => {
   }
 
   const startedAt = Date.now();
+  // A long job (minutes of model calls) answers at once and finishes on its
+  // own; the proxy would otherwise cut the request and the caller would never
+  // learn how it went. Its result goes to the log, and its effects are visible
+  // where it worked (the products, the briefs).
+  if (job.detached || req.query.detach === '1') {
+    Promise.resolve()
+      .then(() => job.run(req.query))
+      .then((result) => console.log(`JOB ${req.params.name} finished in ${Date.now() - startedAt}ms -`, JSON.stringify(result)))
+      .catch((error) => console.error(`JOB ${req.params.name} FAILED:`, error.message));
+    return res.status(202).json({ success: true, job: req.params.name, started: true, note: 'running in the background; the log carries the result' });
+  }
   try {
-    const result = await job.run();
+    const result = await job.run(req.query);
     const ms = Date.now() - startedAt;
 
     // Logged as well as returned: the caller sees it now, the log keeps it.
