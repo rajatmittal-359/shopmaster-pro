@@ -28,14 +28,19 @@ describe('schemaFor', () => {
 
 describe('draftListing with a template', () => {
   const good = {
-    name: 'ignored by the formula', description: '<p>An imitation jewellery set for weddings.</p>', bullets: ['Necklace with earrings', 'Gold plated brass with kundan'],
+    name: 'Kundan Set', description: '<p>An imitation jewellery set for weddings.</p>', bullets: ['Necklace with earrings', 'Gold plated brass with kundan'],
     tags: ['kundan set'], color: 'Maroon', material: 'Brass', gender: 'women', ageGroup: 'adult', size: '', categoryName: 'Bridal Jewellery Sets', isJewellery: true,
     productType: 'Necklace Set', attributes: { baseMaterial: 'brass', plating: 'gold plated', stoneType: 'Kundan', occasion: ['Wedding'], closure: 'Adjustable Thread (Dori)', nonsense: 'x' },
   };
-  it('cleans attributes to the template, builds the title from the formula, seeds tags, keeps the honest description', async () => {
+  it('keeps a good model title written to the formula; strips "(AD)" from titles', async () => {
+    const r = await draftListing({ name: 'ad set', categoryName: 'Bridal Jewellery Sets', categoryOptions: CATS, template: TEMPLATES.jewellery }, answering({ ...good, name: 'Alloy Silver Plated American Diamond (AD) Multicolor Bridal Set' }));
+    expect(r.draft.name).toBe('Alloy Silver Plated American Diamond Multicolor Bridal Set');
+  });
+  it('cleans attributes to the template, builds the title from the formula when the model title is unusable, seeds tags', async () => {
     const r = await draftListing({ name: 'kundan set', categoryName: 'Bridal Jewellery Sets', categoryOptions: CATS, template: TEMPLATES.jewellery }, answering(good));
     expect(r.ok).toBe(true);
     expect(r.draft.attributes).toEqual({ baseMaterial: 'Brass', plating: 'Gold Plated', stoneType: 'Kundan', occasion: ['Wedding'], closure: 'Adjustable Thread (Dori)' });
+    // A two-word model title is unusable, so the formula-built title takes over.
     expect(r.draft.name).toBe('Brass Gold Plated Kundan Maroon Necklace Set');
     expect(r.draft.productType).toBe('Necklace Set');
     expect(r.draft.tags).toContain('kundan set');

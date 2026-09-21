@@ -36,9 +36,9 @@ const backfill = async ({ max = 25, pauseMs = 4000, mode = 'fill', deps = {} } =
   const rewrite = mode === 'rewrite';
   const filter = { isActive: true, isDeleted: { $ne: true } };
   if (!rewrite) filter.$or = [{ attributes: { $exists: false } }, { attributes: {} }, { attributes: null }];
-  else filter['aiFilled.mode'] = { $ne: 'rewrite' };
+  else if (!deps.again) filter['aiFilled.mode'] = { $ne: 'rewrite' };
   const todo = await Product.find(filter)
-    .select('name description images category sellerId material highlights tags productType color')
+    .select('name description images category sellerId material highlights tags productType color aiFilled')
     .populate('category', 'name')
     .limit(max)
     .lean();
@@ -79,7 +79,8 @@ const backfill = async ({ max = 25, pauseMs = 4000, mode = 'fill', deps = {} } =
     if (newTags.length > (p.tags || []).length || rewrite) { set.tags = newTags; set['aiFilled.fields'].push('tags'); }
     if (rewrite) {
       // The seller's own words are kept beside the new ones, never lost.
-      set['aiFilled.before'] = { name: p.name, description: p.description || '', highlights: p.highlights || [] };
+      // The seller's ORIGINAL words, kept once: a second rewrite must not replace them with the first rewrite's.
+      if (!p.aiFilled?.before?.name) set['aiFilled.before'] = { name: p.name, description: p.description || '', highlights: p.highlights || [] };
       if (d.name && d.name.split(' ').length >= 3) { set.name = d.name.slice(0, 120); set['aiFilled.fields'].push('name'); }
       if (d.description && d.description.length > 40) { set.description = d.description; set['aiFilled.fields'].push('description'); }
       if (d.color && !p.color) set.color = d.color.slice(0, 60);

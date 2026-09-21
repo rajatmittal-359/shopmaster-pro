@@ -63,7 +63,7 @@ const JOBS = {
   // (utils/ai/marketBrief) - Search Console + our search box + Merchant
   // insights + one grounded search each; Ask ShopMaster reads it for free.
   // One-off / occasional: fill product facts on listings that predate the category templates (jobs/backfillListings).
-  'backfill-listings': { run: (q = {}) => require('../jobs/backfillListings').backfill({ mode: q.mode === 'rewrite' ? 'rewrite' : 'fill', max: Number(q.max) || 25 }), requires: 'GEMINI_API_KEY', detached: true },
+  'backfill-listings': { run: (q = {}) => require('../jobs/backfillListings').backfill({ mode: q.mode === 'rewrite' ? 'rewrite' : 'fill', max: Number(q.max) || 25, deps: { again: q.again === '1' } }), requires: 'GEMINI_API_KEY', detached: true },
   'market-brief': { run: () => require('../utils/ai/marketBrief').buildBriefs(), requires: 'GEMINI_API_KEY' },
   /*
    * Plan 2.23: the assistant's fixed exam, kept as an EvalRun for the trend on

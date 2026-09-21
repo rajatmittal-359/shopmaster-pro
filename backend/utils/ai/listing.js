@@ -154,7 +154,7 @@ const templateRules = (template, marketWords = []) => {
 CATEGORY RULES - ${template.label}:
 7. "attributes" are the facts a shopper filters on. Read them off the photo and the facts: ${facts}. Leave an attribute EMPTY when it is not visible or stated - never guess.
 8. "productType" is what the item IS in the category's own words${template.productTypes.length ? ` (one of: ${template.productTypes.join(' / ')})` : ''}.
-9. The title will be BUILT from the attributes (facts left to right, most-searched first, no adjectives) - so put your effort into the attributes, the bullets and the description, not the title.
+9. TITLE FORMULA (Flipkart/Amazon style): facts left to right, most-searched first, 6-12 words, no adjectives like "beautiful", no price, no shop name, no word more than twice. Keep the product noun and the colour. Examples of the shape: "Women Pure Cotton Printed Kurta Palazzo Dupatta Set", "Men Grey Cotton Blend Cargo Jogger Trousers", "Cotton Double Flat 144 TC Jaipuri Print Bedsheet with 2 Pillow Covers", "Brass Gold-plated Kundan Maroon Necklace Set", "20000 mAh 35W USB-C Fast Charging Power Bank".
 10. Bullets follow this order: ${template.bullets.map((b, i) => `${i + 1}) ${b}`).join(' ')}.
 ${template.neverClaim.length ? `11. NEVER say: ${template.neverClaim.join(', ')}.` : ''}${template.mustSay ? ` ALWAYS include ${template.mustSay}.` : ''}
 12. "tags" are search words as Indian shoppers type them (Hinglish welcome: "kurti", "jhumka", "bedsheet double bed"). Prefer these, in this order of importance, plus 3-5 specific to this item: ${words.join(', ') || '(none given)'}.`;
@@ -227,8 +227,18 @@ const draftListing = async (input, deps = { generate }) => {
     draft.attributes = T.cleanAttributes(template, draft.attributes);
     const pt = clean(draft.productType);
     draft.productType = template.productTypes.length ? (template.productTypes.find((x) => x.toLowerCase() === pt.toLowerCase()) || '') : pt.slice(0, 60);
+    // The TITLE (22 Sep, after the first rewrite run): the model's own title,
+    // written to the formula in the prompt, wins - it keeps the product noun
+    // and the colour ("Grey Cargo Jogger Trousers"). The formula-built title
+    // replaces it only when the model's is unusable (too short, or a word
+    // said three times, or a banned claim). The first run did the reverse and
+    // turned "Men's Grey Cargo Jogger Trousers" into "Men Solid Trousers".
     const built = T.titleFrom(template, draft.attributes, { color: draft.color, productType: draft.productType, brand: input.brandForTitle || '', idealFor: draft.attributes.idealFor, netQuantity: input.netQuantity || '' });
-    if (built.split(' ').length >= 3) draft.name = built;
+    const words = draft.name.toLowerCase().match(/[a-z0-9]+/g) || [];
+    const repeated = [...new Set(words)].some((w) => w.length > 2 && words.filter((x) => x === w).length > 2);
+    const usable = words.length >= 4 && draft.name.length <= 150 && !repeated;
+    if (!usable && built.split(' ').length >= 4) draft.name = built;
+    draft.name = draft.name.replace(/\s*\((AD|CZ)\)/g, '').replace(/\s+/g, ' ').trim();
     // Tags: the model's own first, then only those template / market seeds
     // that share a real word with THIS item (a jhumka must not carry "ad
     // necklace set"), plus the category-wide generic ones (first two seeds).

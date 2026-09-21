@@ -53,7 +53,7 @@ const TEMPLATES = {
       sel('collection', 'Style', ['Ethnic', 'Traditional', 'Contemporary', 'Fusion', 'Bridal', 'Office', 'Minimal', 'Boho', 'Vintage']),
       sel('closure', 'Closure', ['Adjustable Thread (Dori)', 'Hook', 'Lobster Clasp', 'Push Back', 'Screw Back', 'Slip-on', 'Toggle', 'None']),
       text('setContents', 'What is in the set', { hint: '1 Necklace + 2 Earrings + 1 Maang Tikka', max: 80 }),
-      text('length', 'Length / size', { hint: 'Necklace 16 in · adjustable up to 18 in · bangle size 2.6', max: 60 }),
+      text('length', 'Length / size', { hint: 'Necklace 16 in, adjustable to 18 in; bangle size 2.6', max: 60 }),
       text('careInstructions', 'Care', { hint: 'Keep away from water and perfume; store in the box', max: 200 }),
     ],
     title: ['baseMaterial', 'plating', 'stoneType', '$color', '$productType'],
@@ -136,13 +136,13 @@ const TEMPLATES = {
   electronics: {
     key: 'electronics',
     label: 'Electronics & accessories',
-    productTypes: ['Earbuds', 'Headphones', 'Speaker', 'Power Bank', 'Charger', 'Cable', 'Mouse', 'Keyboard', 'Smartwatch', 'Phone Case', 'Screen Guard', 'Trimmer', 'Mixer Grinder', 'Kettle', 'Iron', 'Fan', 'Bulb', 'Tripod'],
+    productTypes: ['Earbuds', 'Headphones', 'Speaker', 'Power Bank', 'Charger', 'Cable', 'Mouse', 'Keyboard', 'Smartwatch', 'Phone Case', 'Screen Guard', 'Trimmer', 'Mixer Grinder', 'Multi Cooker', 'Electric Cooker', 'Induction Cooktop', 'Kettle', 'Iron', 'Fan', 'Bulb', 'Tripod', 'Other'],
     attributes: [
       text('model', 'Model / variant', { max: 60 }),
-      text('compatibility', 'Compatible with', { hint: 'Android & iOS · Type-C phones', max: 120 }),
-      text('capacity', 'Capacity / power', { hint: '20000 mAh · 35W · 500W', max: 60 }),
+      text('compatibility', 'Compatible with', { hint: 'Type-C phones; Windows and Mac', max: 120 }),
+      text('capacity', 'Capacity / power', { hint: '20000 mAh; 35W; 500W', max: 60 }),
       sel('connectivity', 'Connectivity', ['Bluetooth 5.3', 'Bluetooth 5.0', 'Wired', 'USB-C', 'Micro USB', 'Wi-Fi', '2.4 GHz wireless', 'Not applicable']),
-      text('battery', 'Battery / playtime', { hint: '40 h with case · 10 h per charge', max: 80 }),
+      text('battery', 'Battery / playtime', { hint: '40 h with case; 10 h per charge', max: 80 }),
       text('inTheBox', 'What is in the box', { hint: 'Earbuds, case, Type-C cable, manual', max: 120, required: true }),
       text('warranty', 'Warranty', { hint: '1 year manufacturer warranty', max: 80, required: true }),
       text('bisNumber', 'BIS registration (R-number)', { hint: 'As printed on the pack / device, for CRS categories', max: 40 }),
@@ -212,7 +212,8 @@ const templateFor = (category) => {
 const norm = (s) => String(s || '').trim().toLowerCase().replace(/\s+/g, ' ');
 const snap = (options, value) => {
   const v = norm(value);
-  if (!v || v === 'unknown' || v === 'other' || v === 'not applicable' && !options.includes('Not applicable')) return null;
+  // The omit-me values: the model says them when a fact does not apply or is not visible; nothing is stored.
+  if (!v || v === 'unknown' || v === 'other' || v === 'not applicable' || v === 'none stated' || v === 'not stated') return null;
   return options.find((o) => norm(o) === v) || options.find((o) => norm(o).startsWith(v) || v.startsWith(norm(o))) || null;
 };
 
