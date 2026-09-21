@@ -4,7 +4,7 @@
 # WHY
 #   Atlas M0 keeps no backups - that starts at M10. `backend/backupDb.js` is
 #   the only copy of orders, payouts, sellers and reviews outside Atlas, and
-#   "Rajat remembers to run it" is not a schedule. This runs it every Sunday
+#   "Rajat remembers to run it" is not a schedule. This runs it every night
 #   and keeps the export for 90 days.
 #
 # WHY IT RUNS ON THE BOX, NOT ON THE RUNNER
@@ -41,12 +41,15 @@
 #
 # COST
 #   Nothing: Actions minutes and artifact storage are free on public repos.
-name: weekly backup
+name: daily backup
 
 on:
   schedule:
-    # Sunday 21:00 UTC = 02:30 IST Monday, an hour before the re-index job.
-    - cron: '0 21 * * 0'
+    # Daily 21:00 UTC = 02:30 IST (22 Sep 2026: weekly → daily. A commerce
+    # site's recovery point is a day at most; the M0 cluster has no backups of
+    # its own, so this export IS the backup). 90-day retention → ~90 artifacts
+    # of a few hundred KB; still free on a public repository.
+    - cron: '0 21 * * *'
   workflow_dispatch:
 
 jobs:
