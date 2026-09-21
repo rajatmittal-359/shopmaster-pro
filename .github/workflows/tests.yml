@@ -141,6 +141,10 @@ jobs:
       SITE_URL: http://localhost:3000
       USE_EXTERNAL_CRON: 'true'
       SEED_DEMO_PASSWORD: E2e-demo-pass-2026
+      # The three owner accounts take their own keys (seed.js ACCOUNTS); the same value keeps the spec simple.
+      SEED_ADMIN_PASSWORD: E2e-demo-pass-2026
+      SEED_SELLER_PASSWORD: E2e-demo-pass-2026
+      SEED_CUSTOMER_PASSWORD: E2e-demo-pass-2026
       SEED_ADMIN_EMAIL: admin@e2e.local
       SEED_SELLER_EMAIL: seller@e2e.local
       SEED_CUSTOMER_EMAIL: customer@e2e.local
