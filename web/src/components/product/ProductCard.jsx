@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { priceOf } from '@/lib/pricing';
-import QuickAdd from '@/components/product/QuickAdd';
+import CardActions from '@/components/product/CardActions';
 import Stars from '@/components/product/Stars';
 
 /**
@@ -21,8 +21,9 @@ import Stars from '@/components/product/Stars';
  *     the scale - which answers the first question without a click;
  *   - a rating line when there are reviews (Amazon and Flipkart never leave
  *     it off a card; a card without it reads as unsold);
- *   - the quick-add "+" on the photo (QuickAdd).
- * The whole card is still one link; the button sits beside it, not inside.
+ *   - Add to cart + Buy now under the price (CardActions; Rajat 22 Sep:
+ *     "bahar bhi" - the hover "+" was invisible on a phone).
+ * The whole card is still one link; the buttons sit beside it, not inside.
  */
 export default function ProductCard({ product, sizes = '(max-width: 768px) 50vw, 25vw' }) {
   const { price, was, percentOff } = priceOf(product);
@@ -32,8 +33,8 @@ export default function ProductCard({ product, sizes = '(max-width: 768px) 50vw,
   const reviews = Number(product.totalReviews) || 0;
 
   return (
-    <div className="glow-hover group relative overflow-hidden rounded-xl border border-border bg-card">
-      <Link href={href} className="block focus-visible:outline-none">
+    <div className="glow-hover group relative flex h-full flex-col overflow-hidden rounded-xl border border-border bg-card">
+      <Link href={href} className="block flex-1 focus-visible:outline-none">
         <div className="relative aspect-square bg-muted">
           {image ? (
             <Image
@@ -78,14 +79,9 @@ export default function ProductCard({ product, sizes = '(max-width: 768px) 50vw,
         </div>
       </Link>
 
-      {/* An overlay the size of the square photo: the button sits on the photo's corner whatever the text height. */}
-      {available > 0 && image ? (
-        <div className="pointer-events-none absolute inset-x-0 top-0 aspect-square">
-          <div className="pointer-events-auto absolute bottom-2 right-2 z-10">
-            <QuickAdd productId={product._id} name={product.name} price={price} href={href} />
-          </div>
-        </div>
-      ) : null}
+      <div className="mt-auto px-3 pb-3">
+        <CardActions productId={product._id} name={product.name} price={price} href={href} inStock={available > 0} />
+      </div>
     </div>
   );
 }
