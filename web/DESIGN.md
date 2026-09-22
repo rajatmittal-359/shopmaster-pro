@@ -43,8 +43,10 @@ typography:
   # h2 use Fraunces (`.font-display`, next/font, variable, latin subset, swap) -
   # self-hosted and inlined exactly like Geist, so the 4G-flash reason for one
   # family does not apply. Nowhere else: a serif on a price table is noise.
-  # The jharokha arch (`.arch`: full-radius top, 4:5 photo) is the storefront's
-  # shape motif - hero tiles, category tiles, empty states.
+  # The jharokha arch (`.arch`: full-radius top) is kept SMALL - the shop's
+  # empty state only. Rajat, 22 Sep 08:31: on the hero and category tiles it
+  # did not look right ("achhe nahi lag rahe"); product tiles are rounded
+  # squares (2xl) and category tiles rounded 4:3 again. Don't put it back on cards.
   display:
     fontFamily: Geist
     fontSize: 48px          # sm:text-5xl on the home hero

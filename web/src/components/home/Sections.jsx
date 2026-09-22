@@ -45,7 +45,7 @@ async function Categories({ section }) {
       <h2 className="font-display text-xl sm:text-2xl">{section.title}</h2>
       <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
         {shown.map((cat, i) => (
-          <Link key={cat._id} href={`/shop?category=${cat.slug}`} className="glow-hover group relative block aspect-[4/5] overflow-hidden arch border border-border bg-muted">
+          <Link key={cat._id} href={`/shop?category=${cat.slug}`} className="glow-hover group relative block aspect-[4/3] overflow-hidden rounded-xl border border-border bg-muted">
             {covers[i] && <Image src={covers[i]} alt="" fill sizes="(max-width: 640px) 50vw, 25vw" className="object-cover transition duration-500 group-hover:scale-105" />}
             <span className="absolute inset-x-0 bottom-0 bg-linear-to-t from-black/70 via-black/30 to-transparent p-3 pt-8 text-white">
               <span className="block font-medium">{cat.name}</span>

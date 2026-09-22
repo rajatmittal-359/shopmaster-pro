@@ -168,14 +168,14 @@ function Preview({ sections, cats, sellers, products, heroTitle }) {
         <div className="rounded-lg bg-primary/15 p-2">
           <p className="text-[0.5rem] uppercase tracking-wide text-brand-ink">ShopMaster Pro</p>
           <p className="font-display text-[0.7rem] leading-tight">{heroTitle || 'Everything from sellers across India'}</p>
-          <div className="mt-1.5 grid grid-cols-3 gap-1">{[0, 1, 2].map((i) => <div key={i} className={`h-8 bg-primary/25 ${i !== 1 ? 'arch' : 'rounded'}`} />)}</div>
+          <div className="mt-1.5 grid grid-cols-3 gap-1">{[0, 1, 2].map((i) => <div key={i} className="h-8 rounded bg-primary/25" />)}</div>
         </div>
         {sections.filter((s) => s.type !== 'hero').map((s, i) => (
           <div key={`${s.type}-${i}`} className={`rounded-lg border border-dashed border-border p-1.5 ${s.enabled === false ? 'opacity-30' : ''}`}>
             <p className="mb-1 truncate text-[0.6rem] font-medium">{s.title || labelOf(s.type)}</p>
             {s.type === 'categories' && (
               <div className="grid grid-cols-2 gap-1">
-                {(s.slugs?.length ? s.slugs : [...cats].sort((a, b) => b.count - a.count).slice(0, 4).map((c) => c.slug)).slice(0, 4).map((slug) => <Tile key={slug} className="arch flex aspect-[4/5] items-end p-1">{catName(slug)}</Tile>)}
+                {(s.slugs?.length ? s.slugs : [...cats].sort((a, b) => b.count - a.count).slice(0, 4).map((c) => c.slug)).slice(0, 4).map((slug) => <Tile key={slug} className="flex aspect-[4/3] items-end p-1">{catName(slug)}</Tile>)}
               </div>
             )}
             {(s.type === 'collection' || s.type === 'newest') && (

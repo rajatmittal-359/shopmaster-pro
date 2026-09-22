@@ -32,7 +32,7 @@ export default function ProductMosaic({ products = [], className = '', priority 
         <Link
           key={product._id}
           href={`/products/${product.slug || product._id}`}
-          className={`glow-hover relative block aspect-[4/5] overflow-hidden bg-muted ring-1 ring-white/10 ${i % 3 === 1 ? 'translate-y-6 rounded-2xl' : 'arch'}`}
+          className={`glow-hover relative block aspect-square overflow-hidden rounded-2xl bg-muted ring-1 ring-white/10 ${i % 3 === 1 ? 'translate-y-6' : ''}`}
         >
           <Image
             src={product.images[0]}
