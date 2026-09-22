@@ -487,21 +487,32 @@ const productSchema = new mongoose.Schema(
  */
 // Async, and throwing rather than calling next - the same shape as the slug
 // hook below it. Mongoose gives async middleware no `next` to call.
+/*
+ * `invalidate`, not `throw` (22 Sep 2026). Throwing a plain Error out of a
+ * hook produces a plain Error, which utils/apiError can only read as a 500 -
+ * so a seller who priced above the MRP was shown "500 Server Error" and the
+ * mistake was reported to Sentry as a server fault (found in the Sentry feed,
+ * one real seller, 20 Sep). `invalidate` makes it a ValidationError on the
+ * field it is about: the API answers 400, the form shows the line under the
+ * right box, and nothing reaches Sentry.
+ */
 productSchema.pre('validate', async function pricesMustBeHonest() {
   if (this.mrp && this.price > this.mrp) {
-    throw new Error(
+    this.invalidate(
+      'price',
       'The selling price cannot be above the MRP - MRP is the legal maximum, not a comparison price'
     );
   }
 
   if (this.salePrice != null && this.salePrice !== 0) {
     if (this.salePrice >= this.price) {
-      throw new Error(
+      this.invalidate(
+        'salePrice',
         'A sale price has to be lower than the normal price, or it is not a sale'
       );
     }
     if (this.saleEndsAt && this.saleStartsAt && this.saleEndsAt <= this.saleStartsAt) {
-      throw new Error('The sale has to end after it starts');
+      this.invalidate('saleEndsAt', 'The sale has to end after it starts');
     }
   }
 });

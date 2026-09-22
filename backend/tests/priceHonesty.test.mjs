@@ -77,6 +77,35 @@ describe('MRP as a legal maximum', () => {
   });
 });
 
+/*
+ * Found in Sentry on 22 Sep 2026: a real seller priced above the MRP and got
+ * **500 Server Error**, and the failure was reported as a server fault. The
+ * rules below are the seller's mistake, not ours: they must arrive as a
+ * ValidationError, which utils/apiError turns into a 400 with the message on
+ * the field - and which is never sent to Sentry.
+ */
+describe('a broken price rule is the seller’s 400, not our 500', () => {
+  const { describeError } = require('../utils/apiError');
+
+  it('raises a ValidationError on the field, so the API answers 400', async () => {
+    const err = await base({ price: 1200, mrp: 1000 });
+    expect(err?.name).toBe('ValidationError');
+    expect(Object.keys(err.errors || {})).toContain('price');
+    const { status, body } = describeError(err);
+    expect(status).toBe(400);
+    expect(body.message).toMatch(/cannot be above the MRP/i);
+  });
+
+  it('does the same for a sale price that is not a sale, and for a backwards window', async () => {
+    const sale = await base({ price: 900, mrp: 1000, salePrice: 950 });
+    expect(sale?.name).toBe('ValidationError');
+    expect(describeError(sale).status).toBe(400);
+    const window = await base({ price: 900, mrp: 1000, salePrice: 500, saleStartsAt: new Date('2026-10-10'), saleEndsAt: new Date('2026-10-01') });
+    expect(window?.name).toBe('ValidationError');
+    expect(describeError(window).status).toBe(400);
+  });
+});
+
 describe('a sale price that means something', () => {
   it('accepts one below the normal price', async () => {
     expect(await base({ price: 1000, salePrice: 800 })).toBeNull();
