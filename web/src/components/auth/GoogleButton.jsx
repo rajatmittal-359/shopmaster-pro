@@ -119,8 +119,14 @@ export default function GoogleButton({ next = '/' }) {
       <Script src="https://accounts.google.com/gsi/client" strategy="afterInteractive" />
 
       {/* Google draws into this. The wrapper is full width so the button can be
-          measured against it, and centres whatever Google actually produces. */}
-      <div ref={holder} className="flex w-full justify-center" />
+          measured against it, and centres whatever Google actually produces.
+          `colorScheme: light` (22 Sep 2026): next-themes puts color-scheme:dark
+          on <html>; Google's iframe is a light-scheme document, and a browser
+          paints an OPAQUE WHITE canvas behind an iframe whose scheme differs
+          from its embedder's - the white box around "Continue as Rajat" in
+          dark mode. Matching the schemes here keeps the iframe transparent;
+          the button itself is still drawn in Google's filled_black. */}
+      <div ref={holder} className="flex w-full justify-center" style={{ colorScheme: 'light' }} />
 
       <p aria-live="polite" className="min-h-5 text-center text-sm">
         {state.status === 'sending' && (
