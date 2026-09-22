@@ -89,30 +89,45 @@ const plain = (html) =>
 
 const rfc3339 = (d) => new Date(d).toISOString().replace(/\.\d{3}Z$/, 'Z');
 
+/** The third-party sellers' feed: same builder, the other audience. */
+exports.googleSellersFeed = (req, res) => {
+  req.feedAudience = 'sellers';
+  return exports.googleProductFeed(req, res);
+};
+
 exports.googleProductFeed = async (req, res) => {
   try {
     const SHIPPING = await representativeShipping();
     /*
-     * WHOSE products go to Google.
+     * WHOSE products go to Google - one feed per sub-account (23 Sep 2026).
      *
-     *   The Merchant Center account is named after the shop that owns it, and
-     *   Google expects the account, the website and the products to tell the
-     *   same story. Feeding another seller's goods under an account called
-     *   a shop name is the kind of mismatch that gets an account
-     *   suspended for misrepresentation - and right now the other sellers in
-     *   this database are seeded test data, which must not reach Google's
-     *   review queue at all.
+     *   Google's marketplace rules (support.google.com/merchants/answer/14228975):
+     *   a sub-account may hold only ONE seller's offers, except the
+     *   multi-seller type, which holds many and requires `external_seller_id`
+     *   on every item. The structure Google recommends for a marketplace that
+     *   also sells its own goods is exactly ours:
      *
-     *   So by default only the platform's own shop is fed. The day real
-     *   third-party sellers join, set FEED_ALL_SELLERS=true and rename the
-     *   Merchant Center account to the marketplace rather than the shop.
+     *     marketplace-owned (1P)  →  the house shop, one per MCA
+     *     multi-seller            →  every third-party seller together
+     *
+     *   So this controller serves TWO feeds from one query, and the Merchant
+     *   Center holds one data source per sub-account:
+     *
+     *     /api/feed/google.xml          → the house shop only      (1P account)
+     *     /api/feed/google-sellers.xml  → every other seller       (multi-seller account)
+     *
+     *   Mixing them - which the old FEED_ALL_SELLERS flag would have done -
+     *   puts another seller's goods inside the 1P account, and that is the
+     *   misrepresentation suspension. The flag is gone; `audience` decides.
      */
+    const audience = req.feedAudience === 'sellers' ? 'sellers' : 'own';
     const filter = await require('../utils/hiddenSellers').withoutHiddenSellers({ isActive: true, isDeleted: { $ne: true } });
 
-    if (process.env.FEED_ALL_SELLERS !== 'true') {
+    {
       const Seller = require('../models/Seller');
       const own = await Seller.find({ isPlatformOwned: true }).select('userId').lean();
-      filter.sellerId = { $in: own.map((s) => s.userId) };
+      const ids = own.map((s) => s.userId);
+      filter.sellerId = audience === 'sellers' ? { $nin: ids } : { $in: ids };
     }
 
     const products = await withShop(
@@ -220,9 +235,14 @@ exports.googleProductFeed = async (req, res) => {
          * standard account may hold one seller's offers, and Google's rule is
          * that a marketplace converts to a Marketplace MCA first (OPS).
          */
-        if (process.env.FEED_ALL_SELLERS === 'true' && p.shop?.id) {
+        /*
+         * Multi-seller accounts REQUIRE external_seller_id on every item or
+         * the item is disapproved; the same page says the seller NAME is not
+         * displayed for this account type, so it is not sent. The 1P feed
+         * carries neither - there is only one seller in that account.
+         */
+        if (audience === 'sellers' && p.shop?.id) {
           parts.push(`<g:external_seller_id>${esc(p.shop.id)}</g:external_seller_id>`);
-          if (p.shop?.name) parts.push(`<g:seller_name>${esc(p.shop.name)}</g:seller_name>`);
         }
         if (p.sku) parts.push(`<g:mpn>${esc(p.sku)}</g:mpn>`);
 
@@ -289,11 +309,13 @@ exports.googlePromotionsFeed = async (req, res) => {
     const Coupon = require('../models/Coupon');
     const Seller = require('../models/Seller');
     const { eligible, tsv } = require('../utils/promotionsFeed');
-    let sellerIds = null;
-    if (process.env.FEED_ALL_SELLERS !== 'true') {
-      const own = await Seller.find({ isPlatformOwned: true }).select('userId').lean();
-      sellerIds = new Set(own.map((s) => String(s.userId)));
-    }
+    /*
+     * The promotions add-on lives on the 1P sub-account, so this file carries
+     * the house shop's coupons only. A third-party seller's coupon would have
+     * to be submitted in that seller's own sub-account (23 Sep 2026).
+     */
+    const own = await Seller.find({ isPlatformOwned: true }).select('userId').lean();
+    const sellerIds = new Set(own.map((s) => String(s.userId)));
     const coupons = await Coupon.find({ isActive: true }).lean();
     const body = tsv(eligible(coupons, { sellerIds }));
     res.set('Content-Type', 'text/tab-separated-values; charset=utf-8');

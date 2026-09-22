@@ -221,6 +221,9 @@ app.use('/api/pincode', require('./routes/pincodeRoutes'));
  * nothing about sellers, orders or margins goes near it.
  */
 app.get('/api/feed/google.xml', require('./controllers/feedController').googleProductFeed);
+// The multi-seller sub-account's own data source: every seller except the house shop,
+// each item carrying external_seller_id (Google's marketplace structure, 23 Sep 2026).
+app.get('/api/feed/google-sellers.xml', require('./controllers/feedController').googleSellersFeed);
 app.get('/api/feed/promotions.txt', require('./controllers/feedController').googlePromotionsFeed);
 
 /*
