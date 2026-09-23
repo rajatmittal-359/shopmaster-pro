@@ -138,10 +138,16 @@ function Field({ id, label, hint, aside, children, className = '' }) {
 /*
  * Every section folds (15 Sep 2026 - plan 2.39): the header keeps a one-line
  * SUMMARY of what is filled, so a folded form still reads at a glance and a
- * phone does not scroll five screens. Essential sections open; optional ones
- * (Q&A) start folded with their summary. The choice is remembered per section.
+ * phone does not scroll five screens.
+ *
+ * ALL of them start CLOSED, on the phone and on the laptop alike (Rajat, 23
+ * Sep 2026: "all the 7 cards chevron should be closed, I will open it myself").
+ * The form is then one readable list of what a listing needs - seven lines
+ * with their summaries - instead of a wall that has to be scrolled past. A
+ * section the seller opens is remembered per section, and the score panel's
+ * "Fix" link still opens the section it points at.
  */
-function Card({ id, title, lead, aside, summary, defaultOpen = true, foldOnPhone = false, badge, children }) {
+function Card({ id, title, lead, aside, summary, defaultOpen = false, foldOnPhone = false, badge, children }) {
   const t = useT();
   const key = id || String(title).toLowerCase().replace(/[^a-z0-9]+/g, '-');
   return (
