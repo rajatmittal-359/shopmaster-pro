@@ -151,8 +151,8 @@ export default function SellerDashboard() {
           answer is kept on the account, not in this browser. */}
       <PushToggle
         compact
-        off={(settings.promptsOff || []).includes('push')}
-        onOff={() => authedFetch('/seller/prompts/off', { method: 'POST', body: { key: 'push' } }).catch(() => {})}
+        off={(capabilities?.promptsOff || []).includes('push')}
+        onOff={() => authedFetch('/auth/prompts/off', { method: 'POST', body: { key: 'push' } }).catch(() => {})}
       />
 
       <div className="grid grid-cols-3 gap-3 sm:gap-4">

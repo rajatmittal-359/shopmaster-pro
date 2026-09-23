@@ -48,6 +48,9 @@ const capabilitiesFor = async (user, { includeSeller = true } = {}) => {
   }
 
   const admin = user.role === 'admin';
+  // What this person has already waved away (the push nudge, a finished tour).
+  // It rides with capabilities because every panel reads those on load anyway.
+  const promptsOff = Array.isArray(user.promptsOff) ? user.promptsOff : [];
 
   /*
    * An admin is not a shopper here, and letting the platform's own account buy
@@ -57,7 +60,7 @@ const capabilitiesFor = async (user, { includeSeller = true } = {}) => {
   const customer = !admin;
 
   if (!includeSeller) {
-    return { customer, seller: false, admin, sellerStatus: null, sellerApproved: null };
+    return { customer, seller: false, admin, sellerStatus: null, sellerApproved: null, promptsOff };
   }
 
   /*
@@ -68,7 +71,7 @@ const capabilitiesFor = async (user, { includeSeller = true } = {}) => {
    * themselves.
    */
   if (user.role === 'seller') {
-    return { customer, seller: true, admin, sellerStatus: null, sellerApproved: null };
+    return { customer, seller: true, admin, sellerStatus: null, sellerApproved: null, promptsOff };
   }
 
   /*
@@ -81,7 +84,7 @@ const capabilitiesFor = async (user, { includeSeller = true } = {}) => {
    * grant, and every other route would be failing at that moment anyway.
    */
   if (mongoose.connection.readyState !== 1) {
-    return { customer, seller: false, admin, sellerStatus: null, sellerApproved: null };
+    return { customer, seller: false, admin, sellerStatus: null, sellerApproved: null, promptsOff };
   }
 
   const sellerDoc = await Seller.findOne({ userId: user._id })
@@ -100,6 +103,7 @@ const capabilitiesFor = async (user, { includeSeller = true } = {}) => {
     admin,
     sellerStatus: sellerDoc?.status || null,
     sellerApproved: Boolean(sellerDoc?.isApproved),
+    promptsOff,
   };
 };
 

@@ -2,6 +2,8 @@
 
 import { useEffect, useLayoutEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { authedFetch } from '@/lib/client';
+import { useSession } from '@/lib/session';
 
 /**
  * First-visit coach marks - three at most, "Next / Got it", never twice.
@@ -10,27 +12,39 @@ import { Button } from '@/components/ui/button';
  * time: where orders land, where products live, where the money is. That is
  * the whole idea. Each step points at a real element (by `data-tour`), the
  * page dims behind it, the card says one sentence. Dismissed or finished, it
- * is remembered per role in localStorage and never returns; a role that has
- * not been seen (admin vs seller) gets its own.
+ * never returns; a role that has not been seen (admin vs seller) gets its own.
+ *
+ * WHERE "SEEN" IS KEPT (24 Sep 2026)
+ *   On the ACCOUNT (`promptsOff`, via /auth/me), not in this browser. It was
+ *   localStorage alone, which is the same fault the notification nudge had:
+ *   open the panel from a link inside another app, in a private tab, or on a
+ *   second phone, and the coach marks start over on a person who has already
+ *   done this. localStorage stays as the instant answer while /auth/me is in
+ *   flight, so a returning seller does not see a flash of the first step.
  *
  * Steps whose element is not on the current page are skipped, so the tour
  * works from any first page, not only Home.
  */
 export default function Tour({ id, steps }) {
   const key = `smp_tour_${id}`;
+  const promptKey = `tour_${id}`;
+  const { capabilities } = useSession();
   const [index, setIndex] = useState(-1);
   const [box, setBox] = useState(null);
 
-  // Start once, after paint, only if never seen.
+  // Start once, after paint, only if this person has never finished it.
+  // `capabilities` is null until /auth/me answers - waiting is the point.
+  const seenOnAccount = capabilities ? (capabilities.promptsOff || []).includes(promptKey) : null;
   useEffect(() => {
-    let seen = true;
+    if (seenOnAccount !== false) return undefined;
+    let seenHere = true;
     try {
-      seen = localStorage.getItem(key) === '1';
+      seenHere = localStorage.getItem(key) === '1';
     } catch {}
-    if (seen) return undefined;
+    if (seenHere) return undefined;
     const t = setTimeout(() => setIndex(0), 600);
     return () => clearTimeout(t);
-  }, [key]);
+  }, [key, seenOnAccount]);
 
   const visible = steps.filter((s) => typeof document !== 'undefined' && document.querySelector(`[data-tour="${s.target}"]`));
   const step = index >= 0 ? visible[index] : null;
@@ -58,6 +72,9 @@ export default function Tour({ id, steps }) {
     try {
       localStorage.setItem(key, '1');
     } catch {}
+    // And on the account, so the next browser knows too. A failed save only
+    // costs this person the tour once more; it is not worth an error message.
+    authedFetch('/auth/prompts/off', { method: 'POST', body: { key: promptKey } }).catch(() => {});
     setBox(null);
     setIndex(-1);
   };

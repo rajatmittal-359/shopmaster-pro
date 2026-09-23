@@ -45,6 +45,9 @@ router.post('/reset-password', resetPassword);
 const account = require('../controllers/authController');
 router.patch('/me', authMiddleware, account.updateMe);
 router.post('/change-password', authMiddleware, account.changePassword);
+// A nudge waved away, or a first-visit tour finished: kept with the person, so
+// another browser or another phone does not ask all over again.
+router.post('/prompts/off', authMiddleware, account.dismissPrompt);
 router.delete('/me', authMiddleware, require('../middlewares/requireRecentAuth'), account.deleteMe);
 
 router.get('/me', authMiddleware, async (req, res) => {

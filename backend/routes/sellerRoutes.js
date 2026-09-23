@@ -126,8 +126,6 @@ router.get('/ai/drafts', requireApprovedSeller, ai.listDrafts);
 router.get('/settings', sellerCtrl.getSettings);
 router.post('/agreement/accept', sellerCtrl.acceptAgreement);
 router.patch('/settings', sellerCtrl.updateSettings);
-// "Not now" on a Home nudge, remembered for the account rather than the browser.
-router.post('/prompts/off', sellerCtrl.dismissPrompt);
 
 // A seller's own earnings, settlement history and the account they are paid into.
 const {

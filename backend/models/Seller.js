@@ -214,19 +214,6 @@ const sellerSchema = new mongoose.Schema(
       default: false
     },
 
-    /**
-     * Prompts this shop has already answered with "not now" (24 Sep 2026).
-     *
-     * The panel's nudges - "turn on notifications" today, whatever comes next -
-     * used to remember the refusal in the browser, which forgets it the moment
-     * the panel is opened from inside another app or on a second phone. A shop
-     * that has said no has said no, so the answer lives with the account.
-     * Values are short keys the API whitelists; nothing here is user text.
-     */
-    promptsOff: {
-      type: [String],
-      default: []
-    },
 
     /**
      * The shop on a break - Etsy's Vacation Mode (utils/vacation, 19 Sep

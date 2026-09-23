@@ -685,6 +685,39 @@ exports.resetPassword = async (req, res) => {
 
 // ------------------------------------------------------------ the account
 /**
+ * "Not now", and "I have seen the tour" - remembered for the person (24 Sep
+ * 2026).
+ *
+ * Rajat, on his phone: "kae baar not now kar diya, everytime i open fir se
+ * dikh jata hai". These answers lived in localStorage, which is empty again
+ * whenever the panel is opened from a link inside another app, in a private
+ * tab, or on a second phone - so the panel kept asking a question it had
+ * already been answered, and the first-visit coach marks would have started
+ * over just as often.
+ *
+ * One key from a short list. The panel cannot invent keys, so this never
+ * becomes a junk drawer of client state on the account.
+ */
+const PROMPTS = ['push', 'tour_seller', 'tour_admin'];
+
+exports.dismissPrompt = async (req, res) => {
+  try {
+    const key = String(req.body?.key || '').trim();
+    if (!PROMPTS.includes(key)) return res.status(400).json({ message: 'Unknown prompt' });
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      { $addToSet: { promptsOff: key } },
+      { new: true },
+    ).select('promptsOff');
+    if (!user) return res.status(404).json({ message: 'Account not found' });
+    return res.json({ promptsOff: user.promptsOff || [] });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: 'Server error' });
+  }
+};
+
+/**
  * The three things every marketplace's Account page lets a person do and
  * ours did not: change their name, change their password, leave.
  */

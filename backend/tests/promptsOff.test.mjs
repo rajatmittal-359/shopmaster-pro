@@ -11,8 +11,9 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { createRequire } from 'module';
 
 const require = createRequire(import.meta.url);
-const Seller = require('../models/Seller');
-const { dismissPrompt, getSettings } = require('../controllers/sellerController');
+const User = require('../models/User');
+const { dismissPrompt } = require('../controllers/authController');
+const { capabilitiesFor } = require('../utils/capabilities');
 const { chainableQuery } = require('./helpers/testDouble.mjs');
 
 const USER = '6a93cf88fbb4f39f4a6d5618';
@@ -28,7 +29,7 @@ describe('a nudge the seller has waved away', () => {
 
   it('is written to the account, not left to the browser', async () => {
     let update = null;
-    vi.spyOn(Seller, 'findOneAndUpdate').mockImplementation((filter, u) => {
+    vi.spyOn(User, 'findByIdAndUpdate').mockImplementation((id, u) => {
       update = u;
       return chainableQuery({ promptsOff: ['push'] });
     });
@@ -39,10 +40,15 @@ describe('a nudge the seller has waved away', () => {
     expect(update).toEqual({ $addToSet: { promptsOff: 'push' } });
   });
 
-  it(`comes back with the seller's settings, which is where the panel reads it`, async () => {
-    vi.spyOn(Seller, 'findOne').mockResolvedValue({ businessName: 'Charming Jewels', promptsOff: ['push'], agreement: {} });
-    const res = await call(getSettings);
-    expect(res.body.settings.promptsOff).toEqual(['push']);
+  it('comes back with capabilities, which every panel reads on load', async () => {
+    const caps = await capabilitiesFor({ _id: USER, role: 'seller', promptsOff: ['push', 'tour_seller'] });
+    expect(caps.promptsOff).toEqual(['push', 'tour_seller']);
+  });
+
+  it('covers the admin and the first-visit tours, not only the seller nudge', async () => {
+    vi.spyOn(User, 'findByIdAndUpdate').mockImplementation(() => chainableQuery({ promptsOff: ['tour_admin'] }));
+    // The admin has no Seller record, which is why this lives on the user.
+    expect((await call(dismissPrompt, { key: 'tour_admin' })).code).toBe(200);
   });
 
   it('only takes keys the API knows - the panel cannot invent state to store', async () => {
@@ -51,7 +57,7 @@ describe('a nudge the seller has waved away', () => {
   });
 
   it('says so plainly when there is no shop behind the login', async () => {
-    vi.spyOn(Seller, 'findOneAndUpdate').mockImplementation(() => chainableQuery(null));
+    vi.spyOn(User, 'findByIdAndUpdate').mockImplementation(() => chainableQuery(null));
     const res = await call(dismissPrompt, { key: 'push' });
     expect(res.code).toBe(404);
   });

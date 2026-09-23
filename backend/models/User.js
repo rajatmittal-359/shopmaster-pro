@@ -115,6 +115,23 @@
         scrubbedAt: { type: Date, default: null },
 
         /*
+         * Nudges this person has answered with "not now", and the first-visit
+         * tours they have finished (24 Sep 2026).
+         *
+         * It used to be a note in localStorage, which is empty again the
+         * moment the panel is opened from a link inside another app, in a
+         * private tab, or on a second phone - so Rajat was asked to turn on
+         * notifications every single time he opened Home, and the coach marks
+         * would have started over just as often. A person who has answered has
+         * answered, so the answer belongs to the account.
+         *
+         * It is on the USER rather than the Seller because the admin and the
+         * shopper are shown these too, and neither has a Seller record. Values
+         * are short keys the API whitelists; nothing here is anybody's text.
+         */
+        promptsOff: { type: [String], default: [] },
+
+        /*
          * Sessions (utils/auth/session, 19 Sep 2026). tokenVersion is stamped
          * into every access token; bumping it ends every session at once
          * ("log out everywhere", password change, reset). failedLogins and

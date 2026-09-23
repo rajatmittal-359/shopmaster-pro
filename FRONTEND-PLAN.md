@@ -2529,9 +2529,21 @@ Grow header strip, and the admin Trust queue's return rows.
 **The nag that would not die.** The refusal was a seven-day note in
 `localStorage` - which is empty again the moment the panel is opened from a
 link inside another app, in a private tab, or on a second phone. It now lives
-on the account (`Seller.promptsOff`, `POST /seller/prompts/off`), and saying
-"Not now" means never again on Home; Settings still has the full control.
-Proved by wiping browser storage and reloading: the card stayed gone.
+on the account (`User.promptsOff`, `POST /auth/prompts/off`, carried back with
+`capabilities` on `/auth/me`), and saying "Not now" means never again on Home;
+Settings still has the full control. Proved by wiping browser storage and
+reloading: the card stayed gone.
+
+**And the first-visit tour, which had the same fault.** Rajat, right after:
+*"seller admin wagerha first time aate hai to guide wale ... vo yaad rehte hai
+kya"*. It did - in localStorage only, so the coach marks would have started
+over on the same person in another browser. `Tour` now reads the same
+`promptsOff` (keys `tour_seller`, `tour_admin`) and writes to it on "Got it"
+or "Skip"; localStorage stays as the instant answer while `/auth/me` is in
+flight, so a returning seller never sees a flash of step one. It sits on the
+**User**, not the Seller, because the admin has no Seller record - one place
+for every "this person has already answered" flag. Proved the same way: tour
+finished, browser storage wiped, reload - it did not start again.
 
 **Found while sweeping (the same screenshot's question, "aur kahi ho rahi
 ho").** An audit run at 360px over the seller panel and the storefront - any
