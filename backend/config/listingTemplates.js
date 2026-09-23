@@ -49,6 +49,13 @@ const sel = (key, label, options, extra = {}) => ({ key, label, type: 'select', 
 const multi = (key, label, options, extra = {}) => ({ key, label, type: 'multi', options, max: 3, ...extra });
 const text = (key, label, extra = {}) => ({ key, label, type: 'text', max: 120, ...extra });
 
+/**
+ * Words that mean "and nothing else" (24 Sep 2026). They appear in several
+ * lists, and in every one of them they cannot share the answer with a named
+ * value. The seller form knows the same set.
+ */
+const EXCLUSIVE = new Set(['None', 'All', 'Not applicable', 'Not stated', 'Unisex']);
+
 const OCCASION = ['Casual', 'Daily Wear', 'Office', 'Party', 'Festive', 'Wedding', 'Traditional', 'Gifting'];
 const IDEAL_FOR = ['Women', 'Men', 'Girls', 'Boys', 'Kids', 'Unisex', 'Couples'];
 
@@ -133,7 +140,13 @@ const TEMPLATES = {
       multi('skinType', 'Skin / hair type', ['All', 'Dry', 'Oily', 'Combination', 'Sensitive', 'Normal', 'Curly', 'Frizzy', 'Not applicable']),
       text('shade', 'Shade / variant', { hint: 'Ruby Red 04', max: 60 }),
       multi('concern', 'Concern', ['Hydration', 'Acne', 'Pigmentation', 'Anti-ageing', 'Sun protection', 'Hair fall', 'Dandruff', 'Tan', 'Dullness', 'Long wear']),
-      multi('preference', 'Preference', ['Vegan', 'Cruelty-free', 'Paraben-free', 'Sulphate-free', 'Fragrance-free', 'Ayurvedic', 'Dermatologically tested']),
+      /*
+       * Not a taxonomy - a list of independent claims (24 Sep 2026). A cream
+       * can honestly be vegan AND cruelty-free AND paraben-free AND
+       * sulphate-free, and capping that at three would make the form force a
+       * seller to leave a true thing out. `max` is the whole list.
+       */
+      multi('preference', 'Preference', ['Vegan', 'Cruelty-free', 'Paraben-free', 'Sulphate-free', 'Fragrance-free', 'Ayurvedic', 'Dermatologically tested'], { max: 7 }),
       text('ingredients', 'Key ingredients', { hint: 'As printed on the pack', max: 300, required: true }),
       text('shelfLife', 'Shelf life / best before', { hint: '24 months from manufacture', max: 60, required: true }),
       text('howToUse', 'How to use', { max: 200 }),
@@ -241,10 +254,17 @@ const cleanAttributes = (template, raw) => {
       const hit = snap(a.options, Array.isArray(v) ? v[0] : v);
       if (hit) out[a.key] = hit;
     } else if (a.type === 'multi') {
-      const list = (Array.isArray(v) ? v : String(v).split(/[,/]/)).map((x) => snap(a.options, x)).filter(Boolean);
+      let list = (Array.isArray(v) ? v : String(v).split(/[,/]/)).map((x) => snap(a.options, x)).filter(Boolean);
       // A value saved as one string before this field became multi ("Kundan")
       // arrives here as a single-item array and keeps working.
-      if (list.length) out[a.key] = [...new Set(list)].slice(0, a.max || 3);
+      list = [...new Set(list)];
+      // "None" beside "Kundan" is not two facts, it is a contradiction - and a
+      // shopper filtering on either one is misled. The form stops it; this
+      // stops it for the AI writer and for anything posting straight to the
+      // API. The named fact wins: "None" only survives alone.
+      const named = list.filter((x) => !EXCLUSIVE.has(x));
+      if (named.length !== list.length) list = named.length ? named : list.slice(-1);
+      if (list.length) out[a.key] = list.slice(0, a.max || 3);
     } else {
       const s = String(v).trim().slice(0, a.max || 120);
       if (s) out[a.key] = s;
@@ -288,4 +308,4 @@ const titleFrom = (template, attributes = {}, product = {}) => {
   return title.slice(0, 150);
 };
 
-module.exports = { TEMPLATES, BY_TOP_CATEGORY, BY_SUBCATEGORY, templateFor, cleanAttributes, missingRequired, titleFrom };
+module.exports = { TEMPLATES, BY_TOP_CATEGORY, BY_SUBCATEGORY, EXCLUSIVE, templateFor, cleanAttributes, missingRequired, titleFrom };

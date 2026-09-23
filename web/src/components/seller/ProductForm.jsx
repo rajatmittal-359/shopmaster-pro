@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Picker } from '@/components/ui/picker';
 import MediaManager from '@/components/seller/MediaManager';
 import VideoSlot from '@/components/seller/VideoSlot';
 import RichTextEditor from '@/components/seller/RichTextEditor';
@@ -101,6 +102,20 @@ const EMPTY = {
 /** The GST slabs a product can carry - only a registered shop sees the field. */
 const GST_RATES = ['0', '0.25', '1.5', '3', '5', '12', '18', '28'];
 const GST_ITEMS = { none: 'Not set', ...Object.fromEntries(GST_RATES.map((r) => [r, `${r}%`])) };
+
+/*
+ * Colours a shop here actually sells in (24 Sep 2026). Google asks for plain
+ * colour words a shopper would use - "Rose Gold", not "RG-04" - and takes one
+ * primary plus up to two secondary, so this is a starting list, not a closed
+ * one: anything the seller types is kept as typed.
+ */
+const COLOURS = [
+  'Gold', 'Rose Gold', 'Silver', 'Oxidised Silver', 'Antique Gold', 'Bronze', 'Copper',
+  'White', 'Off White', 'Cream', 'Beige', 'Black', 'Grey', 'Brown', 'Tan',
+  'Red', 'Maroon', 'Rani Pink', 'Pink', 'Peach', 'Orange', 'Rust', 'Mustard', 'Yellow',
+  'Green', 'Bottle Green', 'Mehendi', 'Teal', 'Blue', 'Navy Blue', 'Sky Blue', 'Firozi',
+  'Purple', 'Wine', 'Lavender', 'Multicolour',
+];
 
 const GENDERS = { female: 'Women', male: 'Men', unisex: 'Anyone' };
 const AGES = { adult: 'Adult', kids: 'Kids', toddler: 'Toddler', infant: 'Infant', newborn: 'Newborn' };
@@ -813,8 +828,22 @@ export default function ProductForm({ productId, copyFromId }) {
             downstream changes; the hint teaches the slash, and the shop's
             filter matches each part on its own.
           */}
-          <Field id="color" label="Colour" hint={t('Up to three, most important first, separated by a slash - "Rose Gold/Green". One is usually enough.')}>
-            <Input id="color" value={form.color ?? ''} onChange={set('color')} placeholder="Rose Gold" className="h-10" />
+          <Field id="color" label="Colour" hint={t('Up to three, the main one first. Not in the list? Type it.')}>
+            {/* The seller picks; the slash is ours to write (24 Sep 2026).
+                Asking a shop owner to type "Rose Gold/Green" was asking for a
+                comma, and a comma is not Google's separator - nor the one our
+                own colour filter splits on, so the item fell out of both. */}
+            <Picker
+              id="color"
+              multiple
+              allowCustom
+              max={3}
+              options={COLOURS}
+              value={(form.color ?? '').split('/').map((s) => s.trim()).filter(Boolean)}
+              onChange={(list) => setForm((f) => ({ ...f, color: list.join('/') }))}
+              placeholder={t('Rose Gold')}
+              customHint={t('or type your own')}
+            />
           </Field>
           <Field
             id="size"
@@ -901,17 +930,24 @@ export default function ProductForm({ productId, copyFromId }) {
           <Field
             id="tags"
             label="Search words"
-            hint="What people type to find this - the shop's own search and Google both read them. Commas between."
+            hint="What people type to find this - the shop's own search and Google both read them. One at a time, Enter after each."
             className="sm:col-span-2"
           >
-            <Input
+            {/* Shopify admin's tags field: type, Enter, it becomes a chip with
+                its own × (24 Sep 2026). It was one long comma-string, which on
+                a phone meant editing the middle of a line of text to remove
+                one word. The "Buyers type:" suggestions above add to the same
+                list. */}
+            <Picker
               id="tags"
-              value={(form.tags || []).join(', ')}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, tags: e.target.value.split(',').map((t) => t.trim().toLowerCase()).filter(Boolean) }))
-              }
-              placeholder="kundan choker, bridal choker, green stone choker"
-              className="h-10"
+              multiple
+              allowCustom
+              max={12}
+              options={form.tags || []}
+              value={form.tags || []}
+              onChange={(list) => setForm((f) => ({ ...f, tags: list.map((x) => String(x).toLowerCase()) }))}
+              placeholder={t('kundan choker')}
+              customHint={t('type a word and press Enter')}
             />
           </Field>
         </div>

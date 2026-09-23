@@ -55,6 +55,26 @@ describe('which facts may hold more than one value', () => {
     expect(attrs.stoneType).toEqual(['Kundan', 'Pearl', 'Meenakari']);
   });
 
+  /*
+   * 24 Sep 2026, with the one Picker: the control can no longer let a seller
+   * tick "None" beside "Kundan", but the AI writer and the API can still try.
+   */
+  it('a word that means "and nothing else" cannot sit beside a named fact', () => {
+    const attrs = cleanAttributes(TEMPLATES.jewellery, { stoneType: ['None', 'Kundan'] });
+    expect(attrs.stoneType).toEqual(['Kundan']);
+    // Alone, it is a real answer: plain brass with no stones.
+    expect(cleanAttributes(TEMPLATES.jewellery, { stoneType: ['None'] }).stoneType).toEqual(['None']);
+    // "Unisex" is the same shape of word in a different list.
+    expect(cleanAttributes(TEMPLATES.jewellery, { idealFor: ['Unisex', 'Women'] }).idealFor).toEqual(['Women']);
+  });
+
+  it('claims that are independent are not capped at three', () => {
+    const all = ['Vegan', 'Cruelty-free', 'Paraben-free', 'Sulphate-free', 'Fragrance-free'];
+    // A cream can honestly be all of these; three was the cap for facts Google
+    // slashes together, and this is not one of them.
+    expect(cleanAttributes(TEMPLATES.beauty, { preference: all }).preference).toEqual(all);
+  });
+
   it('a value saved before the field became multi still loads', () => {
     const attrs = cleanAttributes(TEMPLATES.apparel, { fabric: 'Pure Cotton', pattern: 'Printed' });
     expect(attrs.fabric).toEqual(['Pure Cotton']);

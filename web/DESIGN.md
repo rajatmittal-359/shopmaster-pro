@@ -303,6 +303,22 @@ grouped under the parent. Rich text for descriptions with four buttons (bold,
 italic, bullets, numbers) and everything scrubbed to the nine tags the server
 accepts. A sticky save bar at the bottom of long forms.
 
+**Which control for which question** (24 Sep 2026 - the rule, so no page
+invents a fifth way to ask the same thing):
+
+| The question | The control |
+|---|---|
+| Choose from a list - one or several, long or short, ours or the seller's own | `ui/picker` (`Picker`): a field you type into, a dropdown that filters, a tick against what is chosen, chosen values as removable chips. `multiple`, `max`, `allowCustom` are the only dials |
+| Exactly one of 2-5, all worth reading | Radio cards (the return promise) |
+| One on/off that applies when the form is saved | A checkbox, never a switch |
+| One on/off that applies the moment it is touched | A switch (settings only - NN/g: a toggle must take effect immediately) |
+| Short, fixed, single, no searching needed (Made for, Age, GST) | `ui/select` |
+
+"None", "All", "Not applicable", "Not stated" and "Unisex" are **exclusive**
+wherever they appear: choosing one clears the rest, and the backend enforces
+the same in `cleanAttributes`. A cap (`max`) greys the unchosen rows rather
+than hiding them.
+
 ### Navigation
 
 Storefront: a frosted 56px header with the mark, the search field visible (not

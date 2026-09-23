@@ -265,6 +265,7 @@ Assistant gaps found in the same pass (problem taxonomy in the chat of 13 Sep): 
 - A 3D / motion-led home concept (raised 20 Sep, launch day, home empty of products). Gate: no reference marketplace at our stage does it (Amazon/Flipkart/Myntra/Meesho heroes are photo + offer); it costs on a mid-range phone on mobile data and adds no trust. What the empty home actually needs is the first 20-30 real listings with clean photos. Revisit only after the catalogue exists, via `imagegen-frontend-web` references and a Lighthouse budget.
 - The `/sell` recruitment page rebuilt with `taste-skill`'s dials against `web/DESIGN.md`; a brand board from `brandkit`.
 - Re-run the logged-out marketplace navigation research that a session limit cut off (plan §15).
+- The admin's own long dropdowns (Coupons, Categories, Assist logs) could take the seller form's `ui/picker` too (24 Sep). Not done on purpose: it is Rajat's weekend screen on a laptop with a keyboard, so nothing is being lost today.
 
 ## 6. Live drill — what only the real world can answer
 

@@ -2477,3 +2477,37 @@ Shopify's session extension, Auth0/Supabase refresh-rotation defaults.
 - The old React app keeps working on header tokens until it is deleted;
   the sign-in body still carries `token` for it.
 
+### 4.52 One control for every "choose from a list" (24 Sep 2026)
+
+Rajat, reading the product form: *"multi-select input with dropdown search
+using multiple checkbox full component -> one ui component used for many?
+clean and clear?"*
+
+**What was there.** Four ways to ask the same kind of question: a native
+`<select>` for 21 product types, nineteen fabric chips in a row, a text box
+that asked the seller to type `Rose Gold/Green` with a slash, and search words
+as one long comma-separated string. Two of those produced data our own code
+could not read - the colour filter splits on `/`, and so does Google, so a
+comma-typed colour fell out of both the shop's filter and the feed.
+
+**The references.** Amazon Seller Central and Flipkart's listing form answer a
+long attribute list the same way: type-to-filter, a tick against what is
+chosen, chosen values as chips in the field. Shopify admin's tags field is the
+same control with values you invent. NN/g's control table
+(nngroup.com/articles/toggle-switch-guidelines) decided the rest: radio for
+mutually exclusive, checkbox for independent-and-applied-on-save, a switch
+only where the change takes effect immediately - which is why "I pay the
+delivery" stays a checkbox.
+
+**Built.** `web/src/components/ui/picker.jsx` on Base UI's Combobox, with three
+dials: `multiple`, `max`, `allowCustom`. It now answers the category template's
+facts (select and multi), "What is it?", Colour (max 3, joined with `/` by us,
+not by the seller) and Search words (chips, Enter to add). `DESIGN.md` records
+which control answers which question.
+
+**Two things the browser found.** Enter inside the field submitted the whole
+form (the picker now cancels the default); and "None" could sit beside
+"Kundan" - now exclusive in the control *and* in `cleanAttributes`, because the
+AI writer and the API reach the same field. `preference` (Vegan, Cruelty-free,
+Paraben-free…) is no longer capped at three: those are independent claims, not
+a taxonomy Google slashes together.

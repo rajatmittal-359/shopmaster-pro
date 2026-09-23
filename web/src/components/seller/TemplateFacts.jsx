@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Input } from '@/components/ui/input';
+import { Picker } from '@/components/ui/picker';
 import { authedFetch } from '@/lib/client';
 
 /**
@@ -38,18 +39,21 @@ export default function TemplateFacts({ template, productType, attributes = {}, 
   return (
     <div className="space-y-4">
       {template.productTypes?.length > 0 && (
-        <label className="block text-sm">
-          <span className="font-medium">{t('What is it?')}</span>
-          <select
+        <div className="text-sm">
+          <label htmlFor="productType" className="font-medium">{t('What is it?')}</label>
+          {/* Twenty-one kinds of garment in a native dropdown was a scroll;
+              the same Picker as every other question here, and typing three
+              letters gets there (24 Sep 2026). */}
+          <Picker
+            id="productType"
+            options={template.productTypes}
             value={productType || ''}
-            onChange={(e) => onChange({ productType: e.target.value, attributes })}
-            className="mt-1 h-10 w-full rounded-md border border-border bg-background px-3 text-sm"
-          >
-            <option value="">{t('Choose…')}</option>
-            {template.productTypes.map((p) => <option key={p} value={p}>{p}</option>)}
-          </select>
+            onChange={(v) => onChange({ productType: v, attributes })}
+            placeholder={t('Choose…')}
+            className="mt-1"
+          />
           <span className="mt-1 block text-xs text-muted-foreground">{t('In the words a shopper uses. The title is built around it.')}</span>
-        </label>
+        </div>
       )}
 
       <div className="grid gap-4 sm:grid-cols-2">
@@ -58,13 +62,10 @@ export default function TemplateFacts({ template, productType, attributes = {}, 
           const label = <span className="font-medium">{a.label}{a.required && <span className="text-destructive"> *</span>}</span>;
           if (a.type === 'select') {
             return (
-              <label key={a.key} className="block text-sm">
-                {label}
-                <select value={value || ''} onChange={(e) => set(a.key, e.target.value)} className="mt-1 h-10 w-full rounded-md border border-border bg-background px-3 text-sm">
-                  <option value="">{t('Not stated')}</option>
-                  {a.options.map((o) => <option key={o} value={o}>{o}</option>)}
-                </select>
-              </label>
+              <div key={a.key} className="text-sm">
+                <label htmlFor={`fact-${a.key}`}>{label}</label>
+                <Picker id={`fact-${a.key}`} options={a.options} value={value || ''} onChange={(v) => set(a.key, v)} placeholder={t('Not stated')} className="mt-1" />
+              </div>
             );
           }
           if (a.type === 'multi') {
@@ -72,29 +73,24 @@ export default function TemplateFacts({ template, productType, attributes = {}, 
              * More than one answer is often the true one - Kundan AND pearls,
              * printed AND embroidered, dry AND sensitive skin (23 Sep 2026).
              * The cap is the attribute's own `max` (3, Google's ceiling for
-             * colour/material/pattern): past it the untouched chips go quiet
-             * rather than vanishing, so the seller can see what they did not
-             * pick and swap instead of hunting for a missing option.
+             * colour/material/pattern); `exclusive` words like "None" stand
+             * alone. Nineteen fabrics as nineteen chips was a wall on a phone,
+             * so this is the same Picker as every other question: the list
+             * opens whole, and typing narrows it (24 Sep 2026).
              */
-            const chosen = Array.isArray(value) ? value : [];
-            const max = a.max || 3;
-            const full = chosen.length >= max;
             return (
               <div key={a.key} className="text-sm sm:col-span-2">
-                <span className="flex flex-wrap items-baseline gap-x-2">
-                  {label}
-                  <span className="text-xs text-muted-foreground">{chosen.length}/{max}{full ? ` · ${t('remove one to pick another')}` : ''}</span>
-                </span>
-                <div className="mt-1 flex flex-wrap gap-1.5">
-                  {a.options.map((o) => {
-                    const on = chosen.includes(o);
-                    return (
-                      <button key={o} type="button" disabled={!on && full} onClick={() => set(a.key, on ? chosen.filter((x) => x !== o) : [...chosen, o])} aria-pressed={on} className={`disabled:opacity-40 rounded-full border px-2.5 py-1 text-xs transition ${on ? 'border-primary bg-primary/10 font-medium' : 'border-border hover:border-primary'}`}>
-                        {o}
-                      </button>
-                    );
-                  })}
-                </div>
+                <label htmlFor={`fact-${a.key}`}>{label}</label>
+                <Picker
+                  id={`fact-${a.key}`}
+                  multiple
+                  options={a.options}
+                  value={Array.isArray(value) ? value : value ? [value] : []}
+                  onChange={(v) => set(a.key, v)}
+                  max={a.max || 3}
+                  placeholder={t('Choose or type…')}
+                  className="mt-1"
+                />
               </div>
             );
           }
