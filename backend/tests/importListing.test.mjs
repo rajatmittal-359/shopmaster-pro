@@ -126,6 +126,59 @@ describe('the import itself', () => {
     expect(asked).toEqual([]);
   });
 
+  it('will not fetch a photo whose address is not on the public internet', async () => {
+    // Caught by the commit's security review: the page URL was guarded and the
+    // picture URLs were not, and those come out of somebody else's HTML.
+    const dns = require('dns').promises;
+    vi.spyOn(dns, 'lookup').mockResolvedValue([{ address: '169.254.169.254', family: 4 }]);
+    const asked = [];
+    global.fetch = vi.fn(async (u) => {
+      asked.push(u);
+      return { ok: true, headers: { get: () => 'image/jpeg' }, arrayBuffer: async () => new ArrayBuffer(50_000) };
+    });
+    const out = await importListing({
+      url: 'https://www.amazon.in/x/dp/B0G57J7ZGK',
+      userId: 'u1',
+      deps: {
+        fetchPage: async () => ({ ...page, images: ['https://cloud-metadata.example/photo.jpg'] }),
+        generate: async (prompt) =>
+          /Which of these URLs/.test(prompt) ? { ok: true, text: JSON.stringify({ images: ['https://cloud-metadata.example/photo.jpg'] }) } : facts,
+        uploadImage: async () => ({ url: 'nope' }),
+      },
+    });
+    expect(out.ok).toBe(true);
+    expect(out.draft.images).toEqual([]);
+    expect(asked).toEqual([]);
+    vi.restoreAllMocks();
+  });
+
+  it('does not follow a redirect from a public address to a private one', async () => {
+    const dns = require('dns').promises;
+    vi.spyOn(dns, 'lookup').mockResolvedValue([{ address: '142.250.183.4', family: 4 }]);
+    let uploaded = 0;
+    global.fetch = vi.fn(async () => ({ ok: false, status: 302, headers: { get: () => null } }));
+    const out = await importListing({
+      url: 'https://www.amazon.in/x/dp/B0G57J7ZGK',
+      userId: 'u1',
+      deps: {
+        fetchPage: async () => page,
+        generate: async (prompt) =>
+          /Which of these URLs/.test(prompt)
+            ? { ok: true, text: JSON.stringify({ images: ['https://m.media-amazon.com/images/I/41k+81er+aL._SL1200_.jpg'] }) }
+            : facts,
+        uploadImage: async () => {
+          uploaded += 1;
+          return { url: 'nope' };
+        },
+      },
+    });
+    expect(out.draft.images).toEqual([]);
+    expect(uploaded).toBe(0);
+    // `redirect: 'manual'` is what makes the guard's answer final.
+    expect(global.fetch.mock.calls[0][1].redirect).toBe('manual');
+    vi.restoreAllMocks();
+  });
+
   it('says plainly when the page could not be read', async () => {
     const out = await importListing({
       url: 'https://example.com/x',

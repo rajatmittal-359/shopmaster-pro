@@ -1,4 +1,5 @@
 const { fetchPage } = require('../research');
+const { safeUrl } = require('../research/guard');
 const { generate } = require('../gemini');
 const { uploadImage } = require('../cloudinary');
 const { templateFor } = require('../../config/listingTemplates');
@@ -203,15 +204,47 @@ const importListing = async ({ url, userId, category = null, deps = {} }) => {
   if (candidates.length) {
     const pick = await write(imagesPrompt(j.name, candidates), { responseSchema: IMAGES_SCHEMA, temperature: 0 });
     chosen = asJson(pick)?.images || [];
-    // A model that will not choose is no reason to import a listing with no
-    // pictures: the candidates are already filtered to product photographs.
+    /*
+     * A model that will not choose is no reason to import a listing with no
+     * pictures. This is no wider a door than `picked`: both lists come from
+     * the same page, and every address in either is put through `safeUrl`
+     * before the server fetches it.
+     */
     if (!chosen.length) chosen = candidates.slice(0, 5);
   }
   const picked = chosen.filter((u) => candidates.includes(u)).slice(0, 5);
+
+  /*
+   * EVERY PHOTOGRAPH GOES THROUGH THE SAME DOOR AS THE PAGE (24 Sep 2026,
+   * caught by the commit's security review).
+   *
+   * The page URL was guarded and these were not, which left the hole the guard
+   * exists to close: the addresses come out of somebody else's HTML, so a page
+   * the seller was tricked into pasting could carry
+   * `<img src="https://name-that-resolves-to-169.254.169.254/...">` and the
+   * server would fetch it. Nothing comes back to the seller - it is only kept
+   * if it is an image - but a blind knock on the cloud's metadata service or
+   * the private network is exactly what SSRF is.
+   *
+   * So: `safeUrl` on each one, and redirects are NOT followed - a public
+   * address that answers 302 to a private one would walk straight past a check
+   * done only on the first hop.
+   */
   const images = [];
-  for (const src of picked) {
+  for (const raw of picked) {
+    let src;
     try {
-      const res = await fetch(src, { headers: { accept: 'image/*' } });
+      src = (await safeUrl(raw)).toString();
+    } catch {
+      continue; // not a public address: not a photograph we will fetch
+    }
+    try {
+      const res = await fetch(src, {
+        headers: { accept: 'image/*' },
+        redirect: 'manual',
+        signal: AbortSignal.timeout(15_000),
+      });
+      if (res.status >= 300 && res.status < 400) continue;
       if (!res.ok) continue;
       const type = (res.headers.get('content-type') || '').split(';')[0];
       if (!/^image\//.test(type)) continue;
