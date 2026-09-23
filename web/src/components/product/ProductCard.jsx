@@ -24,8 +24,16 @@ import Stars from '@/components/product/Stars';
  *   - Add to cart + Buy now under the price (CardActions; Rajat 22 Sep:
  *     "bahar bhi" - the hover "+" was invisible on a phone).
  * The whole card is still one link; the buttons sit beside it, not inside.
+ *
+ * `actions` turns those buttons off (23 Sep 2026). On a PRODUCT page the
+ * buy box already says Add to cart / Buy now for the thing being read, and a
+ * second pair on the strip below it reads as the same buttons twice - Rajat
+ * saw exactly that on his phone. Amazon, Flipkart and Myntra all keep their
+ * "you may also like" cards plain: photo, name, price. So the strips under a
+ * product pass actions={false}; browse grids (shop, home, a shop's page,
+ * saved) keep them.
  */
-export default function ProductCard({ product, sizes = '(max-width: 768px) 50vw, 25vw' }) {
+export default function ProductCard({ product, sizes = '(max-width: 768px) 50vw, 25vw', actions = true }) {
   const { price, was, percentOff } = priceOf(product);
   const [image, second] = product.images || [];
   const href = `/products/${product.slug || product._id}`;
@@ -79,9 +87,11 @@ export default function ProductCard({ product, sizes = '(max-width: 768px) 50vw,
         </div>
       </Link>
 
-      <div className="mt-auto px-3 pb-3">
-        <CardActions productId={product._id} name={product.name} price={price} href={href} inStock={available > 0} />
-      </div>
+      {actions && (
+        <div className="mt-auto px-3 pb-3">
+          <CardActions productId={product._id} name={product.name} price={price} href={href} inStock={available > 0} />
+        </div>
+      )}
     </div>
   );
 }

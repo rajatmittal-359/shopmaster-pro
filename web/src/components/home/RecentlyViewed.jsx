@@ -12,7 +12,7 @@ import ProductCard from '@/components/product/ProductCard';
  * two cards, so a first visit never sees an empty heading. `exclude` keeps
  * the product being read off its own strip.
  */
-export default function RecentlyViewed({ exclude = null, title = 'Recently viewed', limit = 8 }) {
+export default function RecentlyViewed({ exclude = null, title = 'Recently viewed', limit = 8, actions = true }) {
   const [products, setProducts] = useState([]);
 
   useEffect(() => {
@@ -32,7 +32,7 @@ export default function RecentlyViewed({ exclude = null, title = 'Recently viewe
     <section className="mt-12" aria-labelledby="recently-viewed">
       <h2 id="recently-viewed" className="font-display text-lg font-semibold">{title}</h2>
       <div className="stagger mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
-        {products.slice(0, limit).map((p) => <ProductCard key={p._id} product={p} />)}
+        {products.slice(0, limit).map((p) => <ProductCard key={p._id} product={p} actions={actions} />)}
       </div>
     </section>
   );

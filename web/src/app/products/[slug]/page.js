@@ -457,7 +457,7 @@ export default async function ProductPage({ params }) {
           <p className="mt-1 text-sm text-muted-foreground">Pieces close to this one - style, material, occasion.</p>
           <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
             {similar.slice(0, 8).map((p) => (
-              <ProductCard key={p._id} product={p} />
+              <ProductCard key={p._id} product={p} actions={false} />
             ))}
           </div>
         </section>
@@ -471,7 +471,7 @@ export default async function ProductPage({ params }) {
           </h2>
           <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
             {fromShop.map((p) => (
-              <ProductCard key={p._id} product={p} />
+              <ProductCard key={p._id} product={p} actions={false} />
             ))}
           </div>
         </section>
@@ -484,12 +484,12 @@ export default async function ProductPage({ params }) {
           </h2>
           <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
             {related.map((p) => (
-              <ProductCard key={p._id} product={p} />
+              <ProductCard key={p._id} product={p} actions={false} />
             ))}
           </div>
         </section>
       )}
-      <RecentlyViewed exclude={product._id} />
+      <RecentlyViewed exclude={product._id} actions={false} />
       <RecordView id={String(product._id)} />
     </div>
   );
