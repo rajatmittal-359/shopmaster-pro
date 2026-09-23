@@ -193,18 +193,18 @@ function Lightbox({ src, alt, count, index, onStep, onClose }) {
 
   return (
     <div role="dialog" aria-modal="true" aria-label={alt} className="fixed inset-0 z-[70] flex items-center justify-center bg-black" onClick={onClose}>
-      <button type="button" onClick={onClose} aria-label="Close" className="absolute right-3 top-3 z-10 grid size-10 place-items-center rounded-full bg-white/10 text-white hover:bg-white/20">
+      <button type="button" onClick={onClose} aria-label="Close" className="absolute right-3 top-3 z-10 grid size-10 place-items-center rounded-full bg-black/55 text-white ring-1 ring-white/25 hover:bg-black/75">
         <X className="size-5" aria-hidden />
       </button>
       {count > 1 && (
         <>
-          <button type="button" onClick={(e) => { e.stopPropagation(); onStep(-1); }} aria-label="Previous photograph" className="absolute left-2 top-1/2 z-10 grid size-11 -translate-y-1/2 place-items-center rounded-full bg-white/10 text-white hover:bg-white/20">
+          <button type="button" onClick={(e) => { e.stopPropagation(); onStep(-1); }} aria-label="Previous photograph" className="absolute left-2 top-1/2 z-10 grid size-11 -translate-y-1/2 place-items-center rounded-full bg-black/55 text-white ring-1 ring-white/25 hover:bg-black/75">
             <ChevronLeft className="size-6" aria-hidden />
           </button>
-          <button type="button" onClick={(e) => { e.stopPropagation(); onStep(1); }} aria-label="Next photograph" className="absolute right-2 top-1/2 z-10 grid size-11 -translate-y-1/2 place-items-center rounded-full bg-white/10 text-white hover:bg-white/20">
+          <button type="button" onClick={(e) => { e.stopPropagation(); onStep(1); }} aria-label="Next photograph" className="absolute right-2 top-1/2 z-10 grid size-11 -translate-y-1/2 place-items-center rounded-full bg-black/55 text-white ring-1 ring-white/25 hover:bg-black/75">
             <ChevronRight className="size-6" aria-hidden />
           </button>
-          <p className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-white/10 px-3 py-1 text-xs text-white">{index + 1} / {count}</p>
+          <p className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-black/55 px-3 py-1 text-xs text-white ring-1 ring-white/20">{index + 1} / {count}</p>
         </>
       )}
       {/* eslint-disable-next-line @next/next/no-img-element -- full-resolution original, no resizing wanted here */}

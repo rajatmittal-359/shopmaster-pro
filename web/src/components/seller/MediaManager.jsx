@@ -14,6 +14,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ImagePlus,
+  ZoomIn,
   Cpu,
 } from "lucide-react";
 import { authedFetch } from "@/lib/client";
@@ -446,16 +447,29 @@ export default function MediaManager({
               className="group"
             >
               <div className="relative aspect-square overflow-hidden rounded-lg border bg-muted">
-                {/* The tile IS the preview button (Shopify's media grid, Etsy's
-                    photo row): one tap shows the photograph big, so a seller
-                    can check focus and framing before listing. No extra
-                    button - the whole thumbnail is the target. */}
+                {/* The tile is the preview button (Shopify's media grid,
+                    Etsy's photo row): one tap shows the photograph big, so a
+                    seller can check focus and framing before listing.
+
+                    IT SITS UNDER THE CONTROLS, NOT OVER THEM (23 Sep 2026).
+                    Rajat: "cross ko select kar raha hu still photo open ho
+                    rahi hai". This target had a z-index and the × did not, so
+                    an invisible sheet lay ON TOP of the × and swallowed every
+                    tap meant for it - on the phone and on the laptop alike.
+                    The order is now said out loud: picture 1, controls 2, the
+                    working spinner 3. */}
                 <button
                   type="button"
                   onClick={() => setViewing(i)}
                   aria-label={`See photo ${i + 1} large`}
-                  className="absolute inset-0 z-[1] cursor-zoom-in"
-                />
+                  className="group/zoom absolute inset-0 z-[1] cursor-zoom-in"
+                >
+                  {/* Says the picture is clickable, and only to a pointer -
+                      on a phone it would be one more thing on a small tile. */}
+                  <span className="pointer-events-none absolute left-1/2 top-1/2 hidden -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-black/55 p-1.5 text-white opacity-0 transition group-hover/zoom:opacity-100 md:grid">
+                    <ZoomIn className="size-4" aria-hidden />
+                  </span>
+                </button>
                 <Image
                   src={photo.src}
                   alt=""
@@ -465,7 +479,7 @@ export default function MediaManager({
                   sizes="140px"
                 />
                 <span
-                  className={`absolute top-1 left-1 rounded px-1.5 py-0.5 text-[10px] font-medium ${
+                  className={`pointer-events-none absolute top-1 left-1 z-[2] rounded px-1.5 py-0.5 text-[10px] font-medium ${
                     i === 0
                       ? "bg-primary text-primary-foreground"
                       : "bg-black/55 text-white"
@@ -474,21 +488,24 @@ export default function MediaManager({
                   {i === 0 ? "Main" : i + 1}
                 </span>
                 {busy?.index === i && (
-                  <span className="absolute inset-0 flex items-center justify-center bg-black/40 text-white">
+                  <span className="absolute inset-0 z-[3] flex items-center justify-center bg-black/40 text-white">
                     <Loader2 className="size-5 animate-spin" />
                   </span>
                 )}
                 {/* The × on the corner (Shopify's media grid, Amazon's image
                     manager): always there on touch, on hover with a pointer.
-                    Rajat, 21 Sep: "upar bhi kahin dikhna chahiye". Same Undo. */}
+                    Rajat, 21 Sep: "upar bhi kahin dikhna chahiye". Same Undo.
+                    It sits ABOVE the open-the-photo target, and `after` grows
+                    its touch area to the 44px a thumb needs without growing
+                    the circle you see. */}
                 {!busy && (
                   <button
                     type="button"
                     onClick={() => remove(i)}
                     aria-label={`Remove photo ${i + 1}`}
-                    className="absolute top-1 right-1 flex size-6 items-center justify-center rounded-full bg-black/60 text-white opacity-100 transition hover:bg-black/80 md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100"
+                    className="absolute top-1 right-1 z-[2] flex size-7 items-center justify-center rounded-full bg-black/60 text-white opacity-100 transition after:absolute after:-inset-2 after:content-[''] hover:bg-black/80 md:size-6 md:opacity-0 md:after:hidden md:group-hover:opacity-100 md:focus-visible:opacity-100"
                   >
-                    <X className="size-3.5" />
+                    <X className="size-4 md:size-3.5" />
                   </button>
                 )}
               </div>
@@ -807,18 +824,18 @@ function PhotoViewer({ photos, index, onClose, onStep }) {
 
   return (
     <div role="dialog" aria-modal="true" aria-label="Photo" className="fixed inset-0 z-[70] flex items-center justify-center bg-black" onClick={onClose}>
-      <button type="button" onClick={onClose} aria-label="Close" className="absolute right-3 top-3 z-10 grid size-10 place-items-center rounded-full bg-white/10 text-white hover:bg-white/20">
+      <button type="button" onClick={onClose} aria-label="Close" className="absolute right-3 top-3 z-10 grid size-10 place-items-center rounded-full bg-black/55 text-white ring-1 ring-white/25 hover:bg-black/75">
         <X className="size-5" aria-hidden />
       </button>
       {photos.length > 1 && (
         <>
-          <button type="button" onClick={(e) => { e.stopPropagation(); onStep(-1); }} aria-label="Previous photo" className="absolute left-2 top-1/2 z-10 grid size-11 -translate-y-1/2 place-items-center rounded-full bg-white/10 text-white hover:bg-white/20">
+          <button type="button" onClick={(e) => { e.stopPropagation(); onStep(-1); }} aria-label="Previous photo" className="absolute left-2 top-1/2 z-10 grid size-11 -translate-y-1/2 place-items-center rounded-full bg-black/55 text-white ring-1 ring-white/25 hover:bg-black/75">
             <ChevronLeft className="size-6" aria-hidden />
           </button>
-          <button type="button" onClick={(e) => { e.stopPropagation(); onStep(1); }} aria-label="Next photo" className="absolute right-2 top-1/2 z-10 grid size-11 -translate-y-1/2 place-items-center rounded-full bg-white/10 text-white hover:bg-white/20">
+          <button type="button" onClick={(e) => { e.stopPropagation(); onStep(1); }} aria-label="Next photo" className="absolute right-2 top-1/2 z-10 grid size-11 -translate-y-1/2 place-items-center rounded-full bg-black/55 text-white ring-1 ring-white/25 hover:bg-black/75">
             <ChevronRight className="size-6" aria-hidden />
           </button>
-          <p className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-white/10 px-3 py-1 text-xs text-white">{index + 1} / {photos.length}{index === 0 ? ' \u00b7 main photo' : ''}</p>
+          <p className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-black/55 px-3 py-1 text-xs text-white ring-1 ring-white/20">{index + 1} / {photos.length}{index === 0 ? ' \u00b7 main photo' : ''}</p>
         </>
       )}
       {/* eslint-disable-next-line @next/next/no-img-element -- the seller's own file, shown at its own size */}
