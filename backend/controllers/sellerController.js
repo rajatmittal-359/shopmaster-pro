@@ -1832,6 +1832,8 @@ exports.getSettings = async (req, res) => {
         links: seller.links || {},
         showLocation: Boolean(seller.showLocation),
         vacation: seller.vacation || { on: false, until: null, note: '' },
+        // Which of Home's nudges this shop has already waved away.
+        promptsOff: seller.promptsOff || [],
 
         /*
          * Shown, not editable. A seller seeing what the platform charges them
@@ -1994,6 +1996,28 @@ const applyShopSettings = async (seller, body = {}, opts = {}) => {
   return { changed, aboutHeld };
 };
 exports.applyShopSettings = applyShopSettings;
+
+/*
+ * "Not now", remembered (24 Sep 2026). One key from a short list - the panel
+ * cannot invent new ones, so this never becomes a junk drawer of client state.
+ */
+const PROMPTS = ['push'];
+
+exports.dismissPrompt = async (req, res) => {
+  try {
+    const key = String(req.body?.key || '').trim();
+    if (!PROMPTS.includes(key)) return res.status(400).json({ success: false, message: 'Unknown prompt' });
+    const seller = await Seller.findOneAndUpdate(
+      { userId: req.user._id },
+      { $addToSet: { promptsOff: key } },
+      { new: true },
+    ).select('promptsOff');
+    if (!seller) return res.status(404).json({ success: false, message: 'Seller profile not found' });
+    return res.json({ success: true, promptsOff: seller.promptsOff || [] });
+  } catch (error) {
+    return sendError(res, error);
+  }
+};
 
 exports.updateSettings = async (req, res) => {
   try {

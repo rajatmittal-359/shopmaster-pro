@@ -119,9 +119,12 @@ export function LogoMark({ className = '', ...props }) {
  */
 export default function Logo({ className = '', markClassName = '' }) {
   return (
-    <span className={`inline-flex items-center gap-2.5 ${className}`}>
+    // A little tighter and a little smaller on a phone (24 Sep 2026): at 360px
+    // the header's three groups wanted more room than the row had, and the
+    // name is not worth a page that scrolls sideways.
+    <span className={`inline-flex items-center gap-2 sm:gap-2.5 ${className}`}>
       <TileMark size={64} priority className={`h-8 w-8 shrink-0 ${markClassName}`} />
-      <span className="text-[17px] font-semibold leading-none tracking-tight">
+      <span className="text-[15px] font-semibold leading-none tracking-tight sm:text-[17px]">
         ShopMaster
         <span className="ml-1 font-medium text-brand-ink">Pro</span>
       </span>

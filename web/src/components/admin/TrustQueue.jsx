@@ -57,8 +57,10 @@ export default function TrustQueue() {
       {data.heldReturns.length > 0 && (
         <PanelCard title={`Returns waiting for you (${data.heldReturns.length})`} lead="Big amounts, or customers whose returns need a yes. Approve books the pickup; refuse writes the reason on the order.">
           <ul className="divide-y text-sm">
+            {/* Two buttons and a sentence cannot share a phone's width:
+                stacked below `sm`, one line above it (24 Sep 2026). */}
             {data.heldReturns.map((r) => (
-              <li key={`${r.orderId}-${r.sellerId}`} className="flex flex-wrap items-center gap-3 py-3">
+              <li key={`${r.orderId}-${r.sellerId}`} className="flex flex-col gap-2 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
                 <div className="min-w-0 flex-1">
                   <p className="font-medium">{r.orderNumber} · {money(r.amount)} · {r.customer?.name}</p>
                   <p className="text-muted-foreground">{String(r.kind || '').replace(/_/g, ' ')} · “{r.reason}” · {when(r.requestedAt)}{r.tagIntact ? ' · tag confirmed' : ''}{r.evidence.length ? ` · ${r.evidence.length} photo(s)` : ''}</p>

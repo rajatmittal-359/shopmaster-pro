@@ -48,7 +48,13 @@ export default function AgreementBanner() {
   };
 
   return (
-    <div className="mb-6 flex flex-wrap items-center gap-3 rounded-xl border border-primary/30 bg-primary/5 p-4 text-sm">
+    /*
+     * Stacked on a phone (24 Sep 2026). `flex-wrap` with a `flex-1 min-w-0`
+     * paragraph does not wrap - the text shrinks instead, and this notice was
+     * a 107px column of single words beside the button. Prose and a button
+     * need a breakpoint.
+     */
+    <div className="mb-6 flex flex-col gap-3 rounded-xl border border-primary/30 bg-primary/5 p-4 text-sm sm:flex-row sm:items-center">
       <p className="min-w-0 flex-1">
         <strong>{state.version ? `The Seller Agreement changed (v${state.currentVersion}).` : `Please read the Seller Agreement (v${state.currentVersion}).`}</strong>{' '}
         It sets out dispatch times, cancellation charges, returns, disputes, payouts and commission — the rules
@@ -58,7 +64,7 @@ export default function AgreementBanner() {
         </Link>
         .
       </p>
-      <Button size="sm" onClick={accept} disabled={busy}>
+      <Button size="sm" className="shrink-0 self-start sm:self-auto" onClick={accept} disabled={busy}>
         {busy ? 'Saving…' : 'I have read it and agree'}
       </Button>
     </div>

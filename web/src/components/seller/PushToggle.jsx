@@ -13,13 +13,22 @@ import { usePush } from '@/lib/push';
  *
  * Reference: Meesho Supplier and Shopify both ask once, on Home, in one
  * sentence with one button, and never nag again. So:
- *   compact  - one row on the seller Home, shown only while OFF (dismissable
- *              for a week); gone once ON
+ *   compact  - one row on the seller Home, shown only while OFF; gone for good
+ *              once the seller says "Not now", and gone once it is ON
  *   full     - the card on Settings: state, test button, turn off
+ *
+ * WHERE "NOT NOW" IS REMEMBERED (24 Sep 2026)
+ *   On the ACCOUNT, not in this browser. Rajat: "kae baar not now kar diya,
+ *   everytime i open fir se dikh jata hai". It was a seven-day note in
+ *   localStorage, which is empty again the moment the panel is opened from a
+ *   link inside another app, in a private tab, or from a second phone - so the
+ *   shop kept being asked something it had already answered. The server now
+ *   holds the answer (`promptsOff`), and localStorage only makes the row
+ *   disappear on the spot, before the save lands.
  */
-const DISMISS_KEY = 'smp.push.dismissedUntil';
+const DISMISS_KEY = 'smp.push.off';
 
-export default function PushToggle({ compact = false }) {
+export default function PushToggle({ compact = false, off = false, onOff }) {
   const t = useT();
   const { state, busy, error, enable, disable, test } = usePush();
   const [dismissed, setDismissed] = useState(true);
@@ -30,13 +39,13 @@ export default function PushToggle({ compact = false }) {
     Promise.resolve().then(() => {
       if (cancelled) return;
       if (!compact) return setDismissed(false);
-      let until = 0;
+      let local = false;
       try {
-        until = Number(localStorage.getItem(DISMISS_KEY) || 0);
+        local = localStorage.getItem(DISMISS_KEY) === '1';
       } catch {
         /* private mode */
       }
-      setDismissed(until > Date.now());
+      setDismissed(local);
     });
     return () => {
       cancelled = true;
@@ -54,15 +63,21 @@ export default function PushToggle({ compact = false }) {
   };
   const dismiss = () => {
     try {
-      localStorage.setItem(DISMISS_KEY, String(Date.now() + 7 * 24 * 3600 * 1000));
+      localStorage.setItem(DISMISS_KEY, '1');
     } catch {
       /* ignore */
     }
     setDismissed(true);
+    // Answered once, for the account. If the save fails the row is still gone
+    // for this browser - it is a nag, not a setting worth an error message.
+    onOff?.();
+    toast(t('We will not ask again.'), {
+      description: t('Settings → Phone notifications turns it on whenever you want.'),
+    });
   };
 
   if (state === 'checking') return null;
-  if (compact && (dismissed || state === 'on' || state === 'unsupported')) return null;
+  if (compact && (off || dismissed || state === 'on' || state === 'unsupported')) return null;
 
   const copy = {
     off: { icon: Bell, title: t('Get a buzz when an order comes in'), lead: t('New order · return · dispute - on this phone the same second. No app.') },
@@ -87,15 +102,24 @@ export default function PushToggle({ compact = false }) {
   );
 
   if (compact) {
+    /*
+     * Stacked on a phone, one line on a laptop (24 Sep 2026). It was a single
+     * wrapping row: the buttons would not give up their width, the sentence
+     * had `flex-1 min-w-0` so it shrank instead of pushing them down, and on a
+     * 360px screen the whole message was a 13-pixel column reading one word a
+     * line. A text block beside buttons needs a breakpoint, not flex-wrap.
+     */
     return (
-      <div className="flex flex-wrap items-center gap-3 rounded-xl border border-brand-ink/30 bg-brand-ink/5 px-4 py-3 text-sm">
-        <Icon className="h-5 w-5 shrink-0 text-brand-ink" aria-hidden />
-        <div className="min-w-0 flex-1">
-          <p className="font-medium">{copy.title}</p>
-          <p className="text-muted-foreground">{copy.lead}</p>
-          {error && <p className="mt-1 text-destructive">{error}</p>}
+      <div className="flex flex-col gap-3 rounded-xl border border-brand-ink/30 bg-brand-ink/5 px-4 py-3 text-sm sm:flex-row sm:items-center">
+        <div className="flex min-w-0 flex-1 items-start gap-3">
+          <Icon className="mt-0.5 h-5 w-5 shrink-0 text-brand-ink" aria-hidden />
+          <div className="min-w-0">
+            <p className="font-medium">{copy.title}</p>
+            <p className="text-muted-foreground">{copy.lead}</p>
+            {error && <p className="mt-1 text-destructive">{error}</p>}
+          </div>
         </div>
-        {actions}
+        <div className="shrink-0 sm:ml-auto">{actions}</div>
       </div>
     );
   }

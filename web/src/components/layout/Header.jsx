@@ -35,8 +35,11 @@ export default async function Header() {
   return (
     <header className="glass sticky top-0 z-40 border-b">
       <AnnouncementBar />
-      <div className="mx-auto flex h-14 max-w-5xl items-center justify-between gap-4 px-4">
-        <div className="flex items-center gap-1">
+      <div className="mx-auto flex h-14 max-w-5xl items-center justify-between gap-2 px-3 sm:gap-4 sm:px-4">
+        {/* The mark gives way, the controls never do (24 Sep 2026). At 360px
+            the three groups wanted 371px of a 313px row, so the whole page
+            scrolled sideways - the same fault the panel header had. */}
+        <div className="flex min-w-0 shrink items-center gap-1 overflow-hidden">
           {/* Only on a phone. On a wide screen the category bar below is
               already open, and hiding it there would be exactly the mistake
               the research warns about. */}
@@ -60,7 +63,7 @@ export default async function Header() {
             "Shop" went - the category strip below IS the shop - and "Contact"
             moved into the account menu as Help, where every marketplace keeps
             it. Fewer words in the bar, and the two icons everyone recognises. */}
-        <nav className="flex items-center gap-4 text-sm">
+        <nav className="flex shrink-0 items-center gap-3 text-sm sm:gap-4">
           <RoleSwitch className="hidden sm:flex" />
           {/* The heart lives in HeaderAccount since 21 Sep, where it carries its count. */}
           <HeaderAccount />

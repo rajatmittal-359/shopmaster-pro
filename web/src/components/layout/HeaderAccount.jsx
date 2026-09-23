@@ -94,7 +94,13 @@ export default function HeaderAccount({ showCart = true }) {
         </Link>
       )}
       {showCart && (
-        <Link href="/cart" data-cart-target aria-label={counts.cart ? `Cart (${counts.cart})` : 'Cart'} className="relative inline-flex text-muted-foreground hover:text-brand-ink">
+        /* Not on a phone, where the bottom bar already carries Bag with the
+           same count (24 Sep 2026). Two chromes showing the same destination
+           at the same time is how the header ran out of room - at 360px the
+           brand name was being cut in half to make space for a duplicate.
+           Above `md` the bottom bar is gone and the cart comes back. The
+           fly-to-cart animation aims at whichever target is visible. */
+        <Link href="/cart" data-cart-target aria-label={counts.cart ? `Cart (${counts.cart})` : 'Cart'} className="relative hidden text-muted-foreground hover:text-brand-ink md:inline-flex">
           <ShoppingBag className="size-5" />
           <CountBadge n={counts.cart} />
         </Link>

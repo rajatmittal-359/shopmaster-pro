@@ -114,13 +114,15 @@ export default function Grow() {
 
   return (
     <div className="space-y-6">
-      {/* THE SCORE AND THE ONE NEXT THING */}
-      <div className="flex flex-wrap items-center gap-5 rounded-xl border bg-card p-5">
+      {/* THE SCORE AND THE ONE NEXT THING. The ring and the sentence keep the
+          first line; the button drops below on a phone (24 Sep 2026) - as one
+          wrapping row the sentence shrank to a 115px column instead. */}
+      <div className="flex flex-wrap items-center gap-4 rounded-xl border bg-card p-5 sm:gap-5">
         <div className="relative">
           <Ring value={data.score} />
           <span className="absolute inset-0 grid place-items-center text-sm font-semibold tabular-nums">{data.score}</span>
         </div>
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-1 basis-40">
           <p className="font-semibold">
             {t('{done} of {total} steps done', { done: data.done, total: data.total })}
           </p>

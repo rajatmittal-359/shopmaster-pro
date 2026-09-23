@@ -2511,3 +2511,36 @@ form (the picker now cancels the default); and "None" could sit beside
 AI writer and the API reach the same field. `preference` (Vegan, Cruelty-free,
 Paraben-free…) is no longer capped at three: those are independent claims, not
 a taxonomy Google slashes together.
+
+### 4.53 Two bugs from a phone screenshot: a 13-pixel sentence, and a "Not now" nobody remembered (24 Sep 2026)
+
+Rajat, with a screenshot of the seller Home: *"ye card hai jisme get a buzz
+wala ... responsive nhi hai kya"* and *"kae baar not now kar diya, everytime i
+open fir se dekh jata hai. aese hi aur bhi galtiyan dekh lena."*
+
+**The squeeze.** `flex flex-wrap items-center` with a `flex-1 min-w-0`
+paragraph and buttons beside it does not wrap: flex shrinks the paragraph
+first, so on a 360px screen the notification card's message was a **13px
+column reading one word a line**. Prose next to buttons needs a breakpoint
+(`flex-col … sm:flex-row`), not `flex-wrap`. Fixed in `PushToggle` (compact),
+`AgreementBanner` (a 107px column of the same kind, on every panel page), the
+Grow header strip, and the admin Trust queue's return rows.
+
+**The nag that would not die.** The refusal was a seven-day note in
+`localStorage` - which is empty again the moment the panel is opened from a
+link inside another app, in a private tab, or on a second phone. It now lives
+on the account (`Seller.promptsOff`, `POST /seller/prompts/off`), and saying
+"Not now" means never again on Home; Settings still has the full control.
+Proved by wiping browser storage and reloading: the card stayed gone.
+
+**Found while sweeping (the same screenshot's question, "aur kahi ho rahi
+ho").** An audit run at 360px over the seller panel and the storefront - any
+prose block under 190px tall enough to be wrapping, plus anything wider than
+the viewport - turned up one more: the **storefront header scrolled the whole
+page sideways by 42px**. Three groups wanted 371px of a 313px row. The mark now
+gives way before the controls do, the wordmark is a shade smaller on a phone,
+and the header no longer repeats the **Bag** that the bottom bar already
+carries below `md` (the same destination in two chromes at once was what ran
+the row out of room; the fly-to-cart animation aims at whichever target is
+visible). Everything else measured clean: orders, products, payments,
+settings, issues, home, shop, a product page, cart, account - overflow 0.

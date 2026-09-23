@@ -319,6 +319,18 @@ wherever they appear: choosing one clears the rest, and the backend enforces
 the same in `cleanAttributes`. A cap (`max`) greys the unchosen rows rather
 than hiding them.
 
+**Prose beside buttons stacks on a phone.** `flex-wrap` does not wrap a row
+whose text has `flex-1 min-w-0` - it shrinks the text instead, to a column of
+single words. Use `flex flex-col gap-3 sm:flex-row sm:items-center`, and
+`shrink-0` on the buttons. Same rule for a banner, a card or a list row.
+
+**A "not now" is remembered on the account, never only in the browser.**
+localStorage is empty again in another app's browser, a private tab or a
+second phone, and a nudge that returns after it was answered is a bug.
+
+**No destination appears in two chromes at once.** Below `md` the bottom bar
+carries Home · Shop · Saved · Bag · You, so the header does not repeat them.
+
 ### Navigation
 
 Storefront: a frosted 56px header with the mark, the search field visible (not

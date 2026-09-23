@@ -146,8 +146,14 @@ export default function SellerDashboard() {
 
       <NextUp waiting={waiting} pickupSet={pickupSet} bankSet={bankSet} lowStock={lowStock} productsTotal={productsTotal} />
 
-      {/* Once, in one line: the phone buzzes on a new order (plan 2.26). Gone when on. */}
-      <PushToggle compact />
+      {/* Once, in one line: the phone buzzes on a new order (plan 2.26). Gone
+          when on, and gone for good once the seller says "not now" - that
+          answer is kept on the account, not in this browser. */}
+      <PushToggle
+        compact
+        off={(settings.promptsOff || []).includes('push')}
+        onOff={() => authedFetch('/seller/prompts/off', { method: 'POST', body: { key: 'push' } }).catch(() => {})}
+      />
 
       <div className="grid grid-cols-3 gap-3 sm:gap-4">
         {cards.map(({ icon: Icon, label, value, href, note }) => (
