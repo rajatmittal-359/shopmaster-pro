@@ -196,9 +196,26 @@ const generate = async (prompt, opts = {}) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ parts }],
-          // Google Search grounding when asked for (opts.grounded): the model
-          // may search and cite; the free tier allows a modest daily number.
-          ...(opts.grounded ? { tools: [{ google_search: {} }] } : {}),
+          /*
+           * Two tools, both free on the free tier, both optional:
+           *   grounded    Google Search - the model may search and cite. The
+           *               answer to "what is the market doing".
+           *   urlContext  the model fetches the URLs named in the prompt (up
+           *               to 20) and reads them. Proved on 24 Sep 2026: it
+           *               read a Meesho product page and returned the title,
+           *               the price and the fabric correctly, for nothing.
+           *               It cannot get into amazon.in, and it never returns
+           *               the page's image URLs - that is where Firecrawl
+           *               starts (utils/research).
+           */
+          ...(opts.grounded || opts.urlContext
+            ? {
+                tools: [
+                  ...(opts.grounded ? [{ google_search: {} }] : []),
+                  ...(opts.urlContext ? [{ url_context: {} }] : []),
+                ],
+              }
+            : {}),
           ...(opts.system ? { systemInstruction: { parts: [{ text: opts.system }] } } : {}),
           generationConfig: {
             ...(opts.responseSchema

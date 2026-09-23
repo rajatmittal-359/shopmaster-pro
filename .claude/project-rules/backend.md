@@ -78,3 +78,14 @@ WHY block above the behaviour; `FRONTEND-PLAN.md` §4 if the interface changed, 
   Password reset and change already do it.
 - One-time codes: `utils/auth/oneTimeCode.sendCode(user, purpose, {to})` / `checkCode(user, purpose, code)` with purposes `login | stepup | email_change`; the user must be loaded with `.select('+oneTimeCode')`. Never store a code in plain text; never add SMS without a decision (it costs per message).
 - Sign-up refuses throwaway domains (`utils/auth/disposableDomains.isDisposable`); the same check guards an email change.
+
+## Reading the outside web (24 Sep 2026)
+`utils/research` is the only door. The route, cheapest first: our own database
+and the Google APIs → Gemini grounded search (no address in hand) → Gemini
+`url_context`, free, for an address we were handed → **Firecrawl, one credit**,
+only when that page keeps Google out (amazon.in) or the photographs are the
+point. Every read is SSRF-guarded (`utils/research/guard`), cached a day,
+capped at `RESEARCH_DAILY_CAP` reads a day for the whole platform, refused when
+the month's credits are near their end, and counted in `AiUsage.research`.
+Never scrape our own site, never crawl a whole one, never a search-results
+page.

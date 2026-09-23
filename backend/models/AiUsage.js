@@ -28,6 +28,10 @@ const aiUsageSchema = new mongoose.Schema(
     texts: { type: Number, default: 0 },
     images: { type: Number, default: 0 },
     premiumImages: { type: Number, default: 0 },
+    // Pages read from the outside web with Firecrawl (utils/research). The
+    // month's allowance is one pool for the whole platform, so the cap that
+    // matters is the global row's.
+    research: { type: Number, default: 0 },
 
     // Which provider actually answered, for the admin's "where did it go".
     byProvider: { type: Map, of: Number, default: {} },

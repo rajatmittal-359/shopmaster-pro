@@ -107,6 +107,9 @@ router.post('/ai/refine', requireApprovedSeller, ai.refineText);
 router.post('/ai/keywords', requireApprovedSeller, ai.suggestKeywords);
 router.post('/ai/market', requireApprovedSeller, ai.marketCheck);
 router.post('/ai/faqs', requireApprovedSeller, ai.draftFaqs);
+// The seller's own listing from another marketplace, read once and handed to
+// the form as a draft (utils/ai/importListing). Approved sellers only.
+router.post('/ai/import', requireApprovedSeller, ai.importFromUrl);
 // The Google coach's shop-level list for Grow (plan 2.32)
 router.get('/google/readiness', requireApprovedSeller, async (req, res) => {
   try {

@@ -175,6 +175,7 @@ function Card({ id, title, lead, aside, summary, defaultOpen = false, foldOnPhon
 export default function ProductForm({ productId, copyFromId }) {
   const t = useT();
   const router = useRouter();
+  const [importing, setImporting] = useState({ url: '', busy: false, error: '' });
   const [form, setForm] = useState(EMPTY);
   const [photos, setPhotos] = useState([]); // [{ src, kind: 'existing' | 'new' }], in display order
   // One optional clip: keep / replace / remove, said exactly once on save (see VideoSlot).
@@ -435,6 +436,72 @@ export default function ProductForm({ productId, copyFromId }) {
           and your item code. For a new colour: change the colour, swap the photos, keep the size. All of
           them are shown together on one page - colours as photos, sizes as buttons.
         </p>
+      )}
+
+      {/*
+        BRING YOUR OWN LISTING (24 Sep 2026). A shop joining us already sells
+        somewhere; retyping thirty listings is why a new seller signs up and
+        never lists. Meesho and Glowroad both recruit with this button. One
+        link at a time, the seller's own, and nothing is saved - it fills the
+        form, the seller reads it and presses Save like any other listing.
+      */}
+      {!productId && !copyFromId && (
+        <div className="rounded-xl border border-brand-ink/30 bg-brand-ink/5 p-4">
+          <p className="text-sm font-medium">{t('Already selling this somewhere else?')}</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            {t('Paste the link to your own listing on Meesho, Amazon, Flipkart or Instagram. The photos and the facts come across; you check them and save.')}
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <Input
+              value={importing.url}
+              onChange={(e) => setImporting((i) => ({ ...i, url: e.target.value, error: '' }))}
+              placeholder="https://www.meesho.com/…"
+              className="h-10 min-w-56 flex-1"
+              aria-label={t('Link to your listing')}
+            />
+            <Button
+              type="button"
+              disabled={importing.busy || !importing.url.trim()}
+              onClick={async () => {
+                setImporting((i) => ({ ...i, busy: true, error: '' }));
+                try {
+                  const r = await authedFetch('/seller/ai/import', {
+                    method: 'POST',
+                    body: { url: importing.url.trim(), categoryId: form.category || undefined },
+                  });
+                  const d = r.draft || {};
+                  setForm((f) => ({
+                    ...f,
+                    name: d.name || f.name,
+                    description: d.description || f.description,
+                    price: d.price ?? f.price,
+                    mrp: d.mrp ?? f.mrp,
+                    color: d.color || f.color,
+                    size: d.size || f.size,
+                    material: d.material || f.material,
+                    productType: d.productType || f.productType,
+                    highlights: d.highlights?.length ? d.highlights : f.highlights,
+                    attributes: { ...(f.attributes || {}), ...(d.attributes || {}) },
+                  }));
+                  if (d.images?.length) setPhotos((old) => [...old, ...d.images.map((src) => ({ src, kind: 'existing' }))].slice(0, 5));
+                  setImporting({ url: '', busy: false, error: '' });
+                  toast.success(t('Brought across - read it, fix the price, then save.'), {
+                    description: t('{n} photos and the facts it could find. Nothing is saved yet.', { n: d.images?.length || 0 }),
+                  });
+                } catch (err) {
+                  setImporting((i) => ({ ...i, busy: false, error: err.message }));
+                }
+              }}
+            >
+              {importing.busy ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
+              {importing.busy ? t('Reading…') : t('Bring it in')}
+            </Button>
+          </div>
+          {importing.error && <p className="mt-2 text-sm text-destructive">{importing.error}</p>}
+          <p className="mt-2 text-[0.7rem] text-muted-foreground">
+            {t('Only your own listings. The photos are copied to your shop, so they must be yours.')}
+          </p>
+        </div>
       )}
 
       {/* THE SCORE. Live, from the form; the three biggest fixes on top, each a

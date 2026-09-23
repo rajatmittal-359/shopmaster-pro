@@ -815,4 +815,35 @@ const adminRoads = async (req, res) => {
   }
 };
 
-module.exports = { adminRoads, draftFaqs, marketCheck, getUsage, getCatalog, setLimits, writeListing, listingFromSpeech, refineText, suggestKeywords, makeImage, attachToProduct, listDrafts, adminUsage, CAPS, ownImage };
+/**
+ * A listing the seller already has somewhere else (24 Sep 2026).
+ *
+ * One link, by hand, by an approved seller: the page is read, the fields come
+ * back as a DRAFT for the form, and nothing is saved until the seller presses
+ * Save like any other listing. It counts against the same daily text
+ * allowance, and against the platform's daily web-reading cap
+ * (utils/research), because the month's pages are one shared pool.
+ */
+const importFromUrl = async (req, res) => {
+  try {
+    const exempt = await isExempt(req);
+    const usage = await usageFor(req.user._id, exempt);
+    if (!exempt && usage.remaining.texts === 0) {
+      return res.status(429).json({ message: `You have used today's ${CAPS.textsPerSellerPerDay} AI drafts. It resets at midnight.`, usage });
+    }
+    const { url, categoryId } = req.body || {};
+    if (!url) return res.status(400).json({ message: 'Paste the link to your listing.' });
+
+    const category = categoryId ? await Category.findById(categoryId).populate('parent', 'name').lean() : null;
+    const { importListing } = require('../utils/ai/importListing');
+    const out = await importListing({ url: String(url).trim(), userId: req.user._id, category });
+    if (!out.ok) return res.status(422).json({ message: out.reason });
+
+    await AiUsage.record(req.user._id, { kind: 'text', provider: 'import' });
+    return res.json({ draft: out.draft, via: out.via, usage: await usageFor(req.user._id, exempt) });
+  } catch (error) {
+    sendError(res, error);
+  }
+};
+
+module.exports = { adminRoads, draftFaqs, marketCheck, importFromUrl, getUsage, getCatalog, setLimits, writeListing, listingFromSpeech, refineText, suggestKeywords, makeImage, attachToProduct, listDrafts, adminUsage, CAPS, ownImage };

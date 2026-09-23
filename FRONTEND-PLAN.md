@@ -2556,3 +2556,53 @@ carries below `md` (the same destination in two chromes at once was what ran
 the row out of room; the fly-to-cart animation aims at whichever target is
 visible). Everything else measured clean: orders, products, payments,
 settings, issues, home, shop, a product page, cart, account - overflow 0.
+
+### 4.54 Reading the outside web: where it is worth it, and where it is not (24 Sep 2026)
+
+Rajat gave the project its own Firecrawl key (his personal account, free plan,
+1,000 credits a month) and asked the right question: *"kaha sach me use hai,
+kaha pe faltu hai"* - faltu meaning any job another AI here already does as
+well or better.
+
+**Four measurements decided it, not opinion.** Gemini's `url_context` tool is
+free and good: it read a Meesho product page and returned the title, the price
+(₹217) and the fabric, correctly. It could not open amazon.in at all
+(`URL_RETRIEVAL_STATUS_ERROR`), and asked for the product's photographs it
+returned an empty list - it reads text, it does not hand back image URLs.
+Firecrawl got the same Amazon page in six seconds with 92 images and the price,
+for one credit. Twice during the tests Gemini's free tier answered 429/503.
+
+**So the rule, written into `utils/research`:** a question about us goes to the
+database, Search Console and Merchant Center; a question about the market with
+no address goes to Gemini's grounded search; an address we were handed goes to
+Gemini first (free); and Firecrawl runs only when that page keeps Google out or
+when the photographs are the point.
+
+**Where it is switched on:** the import below; and next, the category recipe
+(facet options *and* a photo recipe per category - the `SCENES` table in
+`imageGen` is fifteen hand-written lines today), the weekly brief's reality
+leg, and a `readWeb` tool for the assistant.
+
+**Where it is deliberately NOT:** the listing writer (the product is in front
+of the seller), keywords (Search Console's real queries beat any page), the
+Google coach (Google's own API is authoritative), the catalogue sweep (every
+check there is a fact about a document - it is model-free on purpose),
+moderation, evals, the knowledge base, and "where do we rank" (Search Console
+again, and scraping a SERP is against Google's terms).
+
+**Built: "Already selling this somewhere else?"** A field at the top of a new
+listing. The seller pastes the link to their own listing on Meesho, Amazon,
+Flipkart or Instagram; the page is read once, the facts and up to five
+photographs come back as a DRAFT in the form, the pictures re-hosted on our
+Cloudinary rather than hot-linked. Nothing is saved until the seller presses
+Save, and every gate (honest price, required facts, photo rules) still applies.
+Measured on the two real pages: Meesho gave name, ₹217, Khadi Cotton, five
+highlights and four photographs; Amazon gave name, ₹357, MRP ₹1,400, Green,
+Brass, five highlights and five photographs, in nine seconds.
+
+Three things the build had to learn, each from a failure in front of the
+browser: `includeTags: ['img']` keeps only the images and throws the price
+away; the first 6,000 characters are the menu on Meesho, so the first rupee
+sign is the anchor; and one big question (facts + attribute enums + choose five
+URLs from forty) is too much for the free lite model - split in two, both
+answers came back.

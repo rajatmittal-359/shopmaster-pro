@@ -71,3 +71,4 @@ The three project skills live in `~/.claude/skills/{frontend,backend,database}`
 - Bash heredocs eat backslashes on this machine; write files with the Write tool or python.
 - AI image quotas are real money-shaped: Cloudflare 10k neurons/day (the only daily free edit source), Pollinations has **no** daily grant, HF ≈3 edits/month. Test with mocks; heavy models 2–3 real calls a day at most.
 - Gemini text: `gemini-3.5-flash` pinned with retry; image generation needs billing (his card is refused by Google Cloud).
+- Reading the outside web (`backend/utils/research`): Gemini `url_context` is FREE and reads most pages - **Firecrawl only** when the page blocks Google (amazon.in does) or when the photographs are needed. Key is Rajat's personal account: 1,000 credits/month, resets the 26th; 25 reads a day, cached, counted in `AiUsage.research`.
