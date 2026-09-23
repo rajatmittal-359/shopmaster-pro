@@ -345,14 +345,25 @@ export default function ProductForm({ productId, copyFromId }) {
     }
   };
 
-  const submit = async (e) => {
+  /*
+   * Two ways out of this form (23 Sep 2026, Rajat: Mummy fills a listing
+   * between customers). "Save for later" keeps whatever is typed and puts it
+   * nowhere near the site; "List it" is the old button with all its checks.
+   * Words, not a status dropdown - the seller is told what happens, not asked
+   * to understand a state machine.
+   */
+  const submit = async (e, asDraft = false) => {
     e.preventDefault();
-    if (photos.length === 0) return setState({ status: 'error', message: 'Add at least one photograph.' });
-    if (!form.category) return setState({ status: 'error', message: 'Choose a category.' });
+    if (asDraft && !String(form.name || '').trim()) {
+      return setState({ status: 'error', message: 'Give it a name first - that is all a draft needs.' });
+    }
+    if (!asDraft && photos.length === 0) return setState({ status: 'error', message: 'Add at least one photograph.' });
+    if (!asDraft && !form.category) return setState({ status: 'error', message: 'Choose a category.' });
     setState({ status: 'saving' });
 
     const body = {
       ...form,
+      status: asDraft ? 'draft' : 'active',
       returnMode: form.returnMode || null,
       faqs: (form.faqs || []).filter((x) => x && x.q && x.a),
       price: Number(form.price),
@@ -975,6 +986,9 @@ export default function ProductForm({ productId, copyFromId }) {
       </Card>
 
       <div className="sticky bottom-0 z-10 -mx-1 flex items-center gap-3 border-t bg-background/95 px-1 py-3 backdrop-blur">
+        <Button type="button" variant="outline" size="lg" disabled={state.status === 'saving'} onClick={(e) => submit(e, true)}>
+          {t('Save for later')}
+        </Button>
         <Button type="submit" disabled={state.status === 'saving'} size="lg">
           {state.status === 'saving' ? t('Saving…') : productId ? t('Save changes') : t('List it')}
         </Button>

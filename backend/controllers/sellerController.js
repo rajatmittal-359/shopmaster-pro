@@ -263,17 +263,28 @@ exports.addProduct = async (req, res) => {
       returnMode,
     } = req.body;
 
-    const categoryError = await validateLeafCategory(category);
-    if (categoryError) {
-      return res.status(400).json({ message: categoryError });
+    /*
+     * "Save for later" (23 Sep 2026): a draft skips every gate below, because
+     * a half-filled listing is exactly what it is for. It is saved with
+     * `isActive: false` as well, so nothing on the storefront, in search, the
+     * feed or the sitemap can see it. Pressing "List it" later runs all of
+     * this properly.
+     */
+    const draft = req.body.status === 'draft';
+
+    if (!draft) {
+      const categoryError = await validateLeafCategory(category);
+      if (categoryError) {
+        return res.status(400).json({ message: categoryError });
+      }
+      const modeError = await returnModeError(returnMode, category);
+      if (modeError) return res.status(400).json({ message: modeError });
+      // A typo in the HSN is refused, not silently blanked; a registered shop must give both.
+      const taxError = taxFactsError({ hsn, gstRate }, await isGstRegistered(req.user.id));
+      if (taxError) return res.status(400).json({ message: taxError });
     }
-    const modeError = await returnModeError(returnMode, category);
-    if (modeError) return res.status(400).json({ message: modeError });
-    // A typo in the HSN is refused, not silently blanked; a registered shop must give both.
-    const taxError = taxFactsError({ hsn, gstRate }, await isGstRegistered(req.user.id));
-    if (taxError) return res.status(400).json({ message: taxError });
     const processing = require('../utils/dispatch').cleanProcessingDays(processingDays);
-    if (processing.error) return res.status(400).json({ message: processing.error });
+    if (!draft && processing.error) return res.status(400).json({ message: processing.error });
 
     const product = new Product({
       name,
@@ -293,7 +304,8 @@ exports.addProduct = async (req, res) => {
       saleEndsAt: saleEndsAt || null,
 
       sellerId: req.user._id,
-      isActive: true,
+      status: draft ? 'draft' : 'active',
+      isActive: !draft,
       brand,
       sku,
       mrp,
@@ -432,9 +444,22 @@ exports.updateProduct = async (req, res) => {
       });
     }
 
+    /*
+     * Drafts (23 Sep 2026). While a listing is still a draft the gates below
+     * stay shut - a seller filling it in two sittings must be able to save a
+     * half-finished thing. `status` in the body says what this save means:
+     *   'draft'  → keep it saved and off the site
+     *   'active' → this is "List it": every rule runs, and it goes live
+     * A product that is already listed and sends no status is edited as before.
+     */
+    const wants = req.body?.status === 'draft' ? 'draft' : req.body?.status === 'active' ? 'active' : null;
+    const staysDraft = (wants || product.status) === 'draft';
+
     // Tax facts as they will stand after this edit - the untouched half read from the product.
-    const taxError = taxFactsError({ hsn: hsn === undefined ? product.hsn : hsn, gstRate: gstRate === undefined ? product.gstRate : gstRate }, await isGstRegistered(req.user.id));
-    if (taxError) return res.status(400).json({ message: taxError });
+    if (!staysDraft) {
+      const taxError = taxFactsError({ hsn: hsn === undefined ? product.hsn : hsn, gstRate: gstRate === undefined ? product.gstRate : gstRate }, await isGstRegistered(req.user.id));
+      if (taxError) return res.status(400).json({ message: taxError });
+    }
 
     if (category) {
       const categoryError = await validateLeafCategory(category);
@@ -459,7 +484,11 @@ exports.updateProduct = async (req, res) => {
       product.returnMode = returnMode || null;
     }
     if (req.body?.faqs !== undefined) product.faqs = sanitiseFaqs(req.body.faqs);
-    if (isActive !== undefined) product.isActive = isActive;
+    if (wants) {
+      product.status = wants;
+      // Listing it turns it on; saving it as a draft keeps it off the site.
+      product.isActive = wants === 'active';
+    } else if (isActive !== undefined) product.isActive = isActive;
     if (typeof lowStockThreshold === 'number') {
   product.lowStockThreshold = lowStockThreshold;
 };

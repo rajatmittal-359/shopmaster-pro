@@ -148,6 +148,7 @@ export default function MediaManager({
   onError,
   base = "/seller",
 }) {
+  const [viewing, setViewing] = useState(null); // index of the photo shown big
   const t = useT();
   const inputRef = useRef(null);
   const [catalog, setCatalog] = useState(null); // { models } from /ai/catalog
@@ -380,6 +381,14 @@ export default function MediaManager({
           )}
         </div>
       )}
+      {viewing != null && photos[viewing] && (
+        <PhotoViewer
+          photos={photos}
+          index={viewing}
+          onClose={() => setViewing(null)}
+          onStep={(d) => setViewing((i) => (i + d + photos.length) % photos.length)}
+        />
+      )}
       <input
         ref={inputRef}
         type="file"
@@ -437,6 +446,16 @@ export default function MediaManager({
               className="group"
             >
               <div className="relative aspect-square overflow-hidden rounded-lg border bg-muted">
+                {/* The tile IS the preview button (Shopify's media grid, Etsy's
+                    photo row): one tap shows the photograph big, so a seller
+                    can check focus and framing before listing. No extra
+                    button - the whole thumbnail is the target. */}
+                <button
+                  type="button"
+                  onClick={() => setViewing(i)}
+                  aria-label={`See photo ${i + 1} large`}
+                  className="absolute inset-0 z-[1] cursor-zoom-in"
+                />
                 <Image
                   src={photo.src}
                   alt=""
@@ -766,6 +785,44 @@ export default function MediaManager({
           });
         }}
       />
+    </div>
+  );
+}
+
+/**
+ * The photograph, big (23 Sep 2026). Black behind, arrows when there is more
+ * than one, Escape closes - the same shape as the storefront's own gallery
+ * lightbox, so a seller checking their work sees what a shopper will see.
+ */
+function PhotoViewer({ photos, index, onClose, onStep }) {
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === 'Escape') onClose();
+      if (e.key === 'ArrowRight') onStep(1);
+      if (e.key === 'ArrowLeft') onStep(-1);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose, onStep]);
+
+  return (
+    <div role="dialog" aria-modal="true" aria-label="Photo" className="fixed inset-0 z-[70] flex items-center justify-center bg-black" onClick={onClose}>
+      <button type="button" onClick={onClose} aria-label="Close" className="absolute right-3 top-3 z-10 grid size-10 place-items-center rounded-full bg-white/10 text-white hover:bg-white/20">
+        <X className="size-5" aria-hidden />
+      </button>
+      {photos.length > 1 && (
+        <>
+          <button type="button" onClick={(e) => { e.stopPropagation(); onStep(-1); }} aria-label="Previous photo" className="absolute left-2 top-1/2 z-10 grid size-11 -translate-y-1/2 place-items-center rounded-full bg-white/10 text-white hover:bg-white/20">
+            <ChevronLeft className="size-6" aria-hidden />
+          </button>
+          <button type="button" onClick={(e) => { e.stopPropagation(); onStep(1); }} aria-label="Next photo" className="absolute right-2 top-1/2 z-10 grid size-11 -translate-y-1/2 place-items-center rounded-full bg-white/10 text-white hover:bg-white/20">
+            <ChevronRight className="size-6" aria-hidden />
+          </button>
+          <p className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-white/10 px-3 py-1 text-xs text-white">{index + 1} / {photos.length}{index === 0 ? ' \u00b7 main photo' : ''}</p>
+        </>
+      )}
+      {/* eslint-disable-next-line @next/next/no-img-element -- the seller's own file, shown at its own size */}
+      <img src={photos[index].src} alt="" className="max-h-full max-w-full select-none object-contain" onClick={(e) => e.stopPropagation()} draggable={false} />
     </div>
   );
 }

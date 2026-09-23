@@ -14,6 +14,11 @@ const slugify = (name = '') =>
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
 
+/** A draft needs only a name; everything else is required once it is listed. */
+function notWhileDraft() {
+  return this.status !== 'draft';
+}
+
 const productSchema = new mongoose.Schema(
   {
     sellerId: {
@@ -69,7 +74,7 @@ const productSchema = new mongoose.Schema(
      */
     description: {
       type: String,
-      required: [true, 'Product description is required'],
+      required: [notWhileDraft, 'Product description is required'],
       trim: true,
       minlength: [10, 'Description must be at least 10 characters'],
       maxlength: [1000, 'Description cannot exceed 1000 characters'],
@@ -82,16 +87,16 @@ const productSchema = new mongoose.Schema(
     category: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Category',
-      required: [true, 'Category is required'],
+      required: [notWhileDraft, 'Category is required'],
     },
     price: {
       type: Number,
-      required: [true, 'Price is required'],
+      required: [notWhileDraft, 'Price is required'],
       min: [0, 'Price cannot be negative'],
     },
     stock: {
       type: Number,
-      required: [true, 'Stock is required'],
+      required: [notWhileDraft, 'Stock is required'],
       min: [0, 'Stock cannot be negative'],
       // Units on a shelf come in whole numbers. Half a ring is not a thing
       // that can be reserved, sold, or shipped, and stock - reserved stops
@@ -214,6 +219,36 @@ const productSchema = new mongoose.Schema(
     isActive: {
       type: Boolean,
       default: true,
+    },
+
+    /**
+     * Saved, but not listed yet (23 Sep 2026).
+     *
+     * WHY
+     *   Until now a seller had two ends of a stick: finish the whole form and
+     *   press "List it", or lose the lot. Mummy fills a listing between
+     *   customers; half of it at four o'clock and the rest at seven is the
+     *   normal way this shop works. Every marketplace has the same answer -
+     *   Shopify's product status is Active or **Draft** (a draft reaches no
+     *   sales channel), Etsy has "Save as draft", Amazon has "complete your
+     *   drafts", Flipkart calls a listing that never went to QC a draft.
+     *
+     * HOW IT IS KEPT SAFE
+     *   A draft is ALSO `isActive: false`, so every query that already asks
+     *   "is this on sale?" leaves it out - the storefront, search, the Google
+     *   feed, the sitemap, suggestions. `status` only says WHY it is not on
+     *   sale: 'draft' = never finished, 'active' = a real listing (which the
+     *   seller may still have switched off with isActive).
+     *
+     *   The fields a finished listing must have are required only when the
+     *   status is 'active'; a draft needs a name and nothing else, or "save
+     *   for later" would refuse the very thing it exists for.
+     */
+    status: {
+      type: String,
+      enum: ['draft', 'active'],
+      default: 'active',
+      index: true,
     },
 
     /**
@@ -497,6 +532,8 @@ const productSchema = new mongoose.Schema(
  * right box, and nothing reaches Sentry.
  */
 productSchema.pre('validate', async function pricesMustBeHonest() {
+  // A draft is allowed to be half-thought-through; the rules bite when it is listed.
+  if (this.status === 'draft') return;
   if (this.mrp && this.price > this.mrp) {
     this.invalidate(
       'price',

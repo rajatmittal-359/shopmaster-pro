@@ -49,17 +49,27 @@ const money = (n) => `₹${Number(n || 0).toLocaleString('en-IN')}`;
 
 const sellable = (p) => Math.max(0, (p.stock || 0) - (p.reserved || 0));
 
+/*
+ * A draft (23 Sep 2026) is a listing saved half-finished with "Save for
+ * later". It is never on the site, so it must not be counted as Hidden - a
+ * seller reading "Hidden" would go looking for the switch that put it there.
+ * It gets its own tab and its own word.
+ */
+const isDraft = (p) => p.status === 'draft';
+
 const TABS = [
   { id: 'all', label: 'All', test: () => true },
-  { id: 'live', label: 'Live', test: (p) => p.isActive && sellable(p) > 0 },
-  { id: 'out', label: 'Out of stock', test: (p) => p.isActive && sellable(p) === 0 },
-  { id: 'hidden', label: 'Hidden', test: (p) => !p.isActive },
+  { id: 'live', label: 'Live', test: (p) => !isDraft(p) && p.isActive && sellable(p) > 0 },
+  { id: 'out', label: 'Out of stock', test: (p) => !isDraft(p) && p.isActive && sellable(p) === 0 },
+  { id: 'draft', label: 'Draft', test: isDraft },
+  { id: 'hidden', label: 'Hidden', test: (p) => !isDraft(p) && !p.isActive },
 ];
 
 const EMPTY = {
   all: 'Nothing listed yet.',
   live: 'Nothing is live right now.',
   out: 'Nothing is out of stock.',
+  draft: 'No half-finished listings.',
   hidden: 'Nothing is hidden from the shop.',
 };
 
@@ -83,6 +93,8 @@ function Readiness({ product }) {
 
 function StatusBadge({ product }) {
   const t = useT();
+  // Said in words, not in jargon: a draft is simply not on the site yet.
+  if (isDraft(product)) return <Badge variant="outline" className="border-amber-400/60 text-amber-700 dark:text-amber-300">{t('Draft · not on the site')}</Badge>;
   if (!product.isActive) return <Badge variant="outline">{t('Hidden')}</Badge>;
   const left = sellable(product);
   if (left === 0) return <Badge variant="destructive">{t('Out of stock')}</Badge>;

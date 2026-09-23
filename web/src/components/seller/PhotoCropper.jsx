@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { RotateCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 /**
@@ -35,6 +36,7 @@ export default function PhotoCropper({ src, open, onCancel, onDone }) {
   const [ready, setReady] = useState(false);
   const [zoom, setZoom] = useState(1); // 1 = the image's shorter side fills the frame
   const [offset, setOffset] = useState({ x: 0, y: 0 }); // in canvas px, from centred
+  const [turn, setTurn] = useState(0); // degrees, 0 / 90 / 180 / 270
   const drag = useRef(null);
 
   const SIZE = 360;
@@ -58,12 +60,26 @@ export default function PhotoCropper({ src, open, onCancel, onDone }) {
     };
   }, [open, src]);
 
-  /** Draw the current view onto any square canvas of side `s`. */
+  /**
+   * Draw the current view onto any square canvas of side `s`.
+   *
+   * Rotation (23 Sep 2026): a phone photograph often arrives on its side, and
+   * Shopify's own media editor answers that with one Rotate button. Here the
+   * canvas is turned about its centre before the photograph is drawn, so the
+   * preview and the saved crop are the same thing - one tap, 90 degrees, four
+   * taps back to where it was.
+   */
   const paint = (ctx, s) => {
     const img = imgRef.current;
     if (!img) return;
     ctx.fillStyle = '#fff';
     ctx.fillRect(0, 0, s, s);
+    ctx.save();
+    if (turn) {
+      ctx.translate(s / 2, s / 2);
+      ctx.rotate((turn * Math.PI) / 180);
+      ctx.translate(-s / 2, -s / 2);
+    }
     const base = s / Math.min(img.naturalWidth, img.naturalHeight); // shorter side fills
     const scale = base * zoom;
     const w = img.naturalWidth * scale;
@@ -72,6 +88,7 @@ export default function PhotoCropper({ src, open, onCancel, onDone }) {
     const x = (s - w) / 2 + offset.x * k;
     const y = (s - h) / 2 + offset.y * k;
     ctx.drawImage(img, x, y, w, h);
+    ctx.restore();
   };
 
   useEffect(() => {
@@ -79,7 +96,7 @@ export default function PhotoCropper({ src, open, onCancel, onDone }) {
     if (!c || !ready) return;
     paint(c.getContext('2d'), SIZE);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, zoom, offset]);
+  }, [ready, zoom, offset, turn]);
 
   const onPointerDown = (e) => {
     drag.current = { x: e.clientX - offset.x, y: e.clientY - offset.y };
@@ -142,7 +159,7 @@ export default function PhotoCropper({ src, open, onCancel, onDone }) {
             )}
           </div>
 
-          <label className="mt-3 flex items-center gap-3 text-sm">
+          <div className="mt-3 flex items-center gap-3 text-sm">
             <span className="w-12 text-muted-foreground">Zoom</span>
             <input
               type="range"
@@ -152,8 +169,15 @@ export default function PhotoCropper({ src, open, onCancel, onDone }) {
               value={zoom}
               onChange={(e) => setZoom(Number(e.target.value))}
               className="flex-1 accent-primary"
+              aria-label="Zoom"
             />
-          </label>
+            {/* One button, 90 degrees a tap - the answer to a photo that came
+                off the phone on its side (Shopify's media editor has the same). */}
+            <Button type="button" variant="outline" size="sm" onClick={() => setTurn((d) => (d + 90) % 360)}>
+              <RotateCw className="size-4" aria-hidden />
+              Rotate
+            </Button>
+          </div>
         </div>
 
         <div className="flex justify-end gap-2">
