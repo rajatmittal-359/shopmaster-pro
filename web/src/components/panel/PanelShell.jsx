@@ -47,7 +47,10 @@ export default function PanelShell({ title, groups, countsUrl = null, identity =
     <div className="min-h-dvh bg-muted/30 print:bg-white">
       {/* THE PANEL'S OWN BAR */}
       <header className="glass sticky top-0 z-40 border-b print:hidden">
-        <div className="mx-auto flex h-14 max-w-7xl items-center gap-3 px-4">
+        {/* gap-2 and a shrinkable logo on a phone: at 360 px the row used to
+            push the icon group 7 px past the edge, which is a page that scrolls
+            sideways (checklist: no horizontal scroll at 390). */}
+        <div className="mx-auto flex h-14 max-w-7xl items-center gap-2 px-3 sm:gap-3 sm:px-4">
           {/* Phone: the drawer */}
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger
@@ -76,14 +79,14 @@ export default function PanelShell({ title, groups, countsUrl = null, identity =
             </SheetContent>
           </Sheet>
 
-          <Link href={title === 'Admin' ? '/admin' : '/seller'} className="flex items-center gap-2.5" aria-label={`${title} home`}>
+          <Link href={title === 'Admin' ? '/admin' : '/seller'} className="flex min-w-0 shrink items-center gap-2.5 overflow-hidden" aria-label={`${title} home`}>
             <Logo />
           </Link>
           <span className="hidden rounded-md bg-primary/10 px-2 py-0.5 text-xs font-medium text-brand-ink sm:inline">
             {title}
           </span>
 
-          <div className="ml-auto flex items-center gap-1 text-sm">
+          <div className="ml-auto flex shrink-0 items-center gap-1 text-sm">
             {/* The same switch the storefront header carries: Shopping |
                 Selling | Admin, the current one lit. Replaces "View shop". */}
             <div className="hidden items-center gap-1 md:flex">

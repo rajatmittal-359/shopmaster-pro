@@ -99,12 +99,18 @@ export default function PhotoCropper({ src, open, onCancel, onDone }) {
   }, [ready, zoom, offset, turn]);
 
   const onPointerDown = (e) => {
-    drag.current = { x: e.clientX - offset.x, y: e.clientY - offset.y };
+    // The canvas may be drawn smaller than its 360 px resolution on a phone,
+    // so a finger moving 10 screen pixels must move the photograph 10 * k
+    // canvas pixels - otherwise dragging feels slow on a small screen.
+    const rect = e.currentTarget.getBoundingClientRect();
+    const k = SIZE / (rect.width || SIZE);
+    drag.current = { x: e.clientX - offset.x / k, y: e.clientY - offset.y / k, k };
     e.currentTarget.setPointerCapture(e.pointerId);
   };
   const onPointerMove = (e) => {
     if (!drag.current) return;
-    setOffset({ x: e.clientX - drag.current.x, y: e.clientY - drag.current.y });
+    const { x, y, k } = drag.current;
+    setOffset({ x: (e.clientX - x) * k, y: (e.clientY - y) * k });
   };
   const onPointerUp = () => {
     drag.current = null;
@@ -134,8 +140,16 @@ export default function PhotoCropper({ src, open, onCancel, onDone }) {
           </DialogDescription>
         </DialogHeader>
 
-        <div className="mx-auto">
-          <div className="relative" style={{ width: SIZE, height: SIZE }}>
+        {/*
+          Fluid on a phone (23 Sep 2026). The box was a fixed 360 px, which is
+          wider than the dialog on a 360 px screen: everything to its right -
+          including the Rotate button - was pushed off the edge, and Rajat's
+          phone showed a cropper with no controls. The canvas keeps its 360 px
+          drawing resolution (the crop maths is in those units); only the box
+          it is painted into is now fluid, and the drag is scaled to match.
+        */}
+        <div className="mx-auto w-full" style={{ maxWidth: SIZE }}>
+          <div className="relative aspect-square w-full">
             <canvas
               ref={canvasRef}
               width={SIZE}
@@ -144,13 +158,13 @@ export default function PhotoCropper({ src, open, onCancel, onDone }) {
               onPointerMove={onPointerMove}
               onPointerUp={onPointerUp}
               onPointerCancel={onPointerUp}
-              className="touch-none cursor-grab rounded-lg border active:cursor-grabbing"
+              className="h-full w-full touch-none cursor-grab rounded-lg border active:cursor-grabbing"
             />
             {/* The 85% guide. Decorative - pointer-events off so dragging works through it. */}
             <div
               aria-hidden="true"
               className="pointer-events-none absolute rounded-sm border border-dashed border-primary/70"
-              style={{ inset: `${SIZE * 0.075}px` }}
+              style={{ inset: '7.5%' }}
             />
             {!ready && (
               <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-muted text-sm text-muted-foreground">
@@ -159,7 +173,7 @@ export default function PhotoCropper({ src, open, onCancel, onDone }) {
             )}
           </div>
 
-          <div className="mt-3 flex items-center gap-3 text-sm">
+          <div className="mt-3 flex flex-wrap items-center gap-3 text-sm">
             <span className="w-12 text-muted-foreground">Zoom</span>
             <input
               type="range"
@@ -168,7 +182,7 @@ export default function PhotoCropper({ src, open, onCancel, onDone }) {
               step="0.01"
               value={zoom}
               onChange={(e) => setZoom(Number(e.target.value))}
-              className="flex-1 accent-primary"
+              className="min-w-32 flex-1 accent-primary"
               aria-label="Zoom"
             />
             {/* One button, 90 degrees a tap - the answer to a photo that came
