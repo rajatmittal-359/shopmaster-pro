@@ -33,7 +33,20 @@
  */
 
 const sel = (key, label, options, extra = {}) => ({ key, label, type: 'select', options, ...extra });
-const multi = (key, label, options, extra = {}) => ({ key, label, type: 'multi', options, ...extra });
+/*
+ * `multi` (23 Sep 2026): a fact that is honestly more than one value - a piece
+ * with Kundan AND pearls, a kurti that is printed AND embroidered, a cream for
+ * dry AND sensitive skin. Before this, the form made the seller pick one and
+ * the rest of the truth was lost to search, the filters and the feed.
+ *
+ * `max` is 3 by default because that is Google's own ceiling for the
+ * attributes these map to: colour and material take "one primary followed by
+ * up to 2 secondary, separated by a slash"
+ * (support.google.com/merchants/answer/6324487 and /6324410). Facts that never
+ * reach the feed may take a couple more, but a list of six tick marks is a
+ * seller ticking everything, which is the same as saying nothing.
+ */
+const multi = (key, label, options, extra = {}) => ({ key, label, type: 'multi', options, max: 3, ...extra });
 const text = (key, label, extra = {}) => ({ key, label, type: 'text', max: 120, ...extra });
 
 const OCCASION = ['Casual', 'Daily Wear', 'Office', 'Party', 'Festive', 'Wedding', 'Traditional', 'Gifting'];
@@ -47,10 +60,10 @@ const TEMPLATES = {
     attributes: [
       sel('baseMaterial', 'Base material', ['Alloy', 'Brass', 'Copper', 'German Silver', 'Stainless Steel', 'Lac', 'Resin', 'Thread', 'Beads', 'Fabric'], { required: true }),
       sel('plating', 'Plating / finish', ['Gold Plated', 'Rose Gold Plated', 'Silver Plated', 'Rhodium Plated', 'Oxidised', 'Antique Gold', 'Matte Gold', 'Meenakari', 'None'], { required: true }),
-      sel('stoneType', 'Stone / work', ['American Diamond (AD)', 'Cubic Zirconia (CZ)', 'Kundan', 'Polki', 'Pearl', 'Meenakari', 'Crystal', 'Glass', 'Beads', 'Thewa', 'Temple', 'Mirror', 'None'], { required: true }),
+      multi('stoneType', 'Stone / work', ['American Diamond (AD)', 'Cubic Zirconia (CZ)', 'Kundan', 'Polki', 'Pearl', 'Meenakari', 'Crystal', 'Glass', 'Beads', 'Thewa', 'Temple', 'Mirror', 'None'], { required: true }),
       multi('occasion', 'Occasion', OCCASION),
-      sel('idealFor', 'Ideal for', IDEAL_FOR),
-      sel('collection', 'Style', ['Ethnic', 'Traditional', 'Contemporary', 'Fusion', 'Bridal', 'Office', 'Minimal', 'Boho', 'Vintage']),
+      multi('idealFor', 'Ideal for', IDEAL_FOR),
+      multi('collection', 'Style', ['Ethnic', 'Traditional', 'Contemporary', 'Fusion', 'Bridal', 'Office', 'Minimal', 'Boho', 'Vintage']),
       sel('closure', 'Closure', ['Adjustable Thread (Dori)', 'Hook', 'Lobster Clasp', 'Push Back', 'Screw Back', 'Slip-on', 'Toggle', 'None']),
       text('setContents', 'What is in the set', { hint: '1 Necklace + 2 Earrings + 1 Maang Tikka', max: 80 }),
       text('length', 'Length / size', { hint: 'Necklace 16 in, adjustable to 18 in; bangle size 2.6', max: 60 }),
@@ -70,14 +83,14 @@ const TEMPLATES = {
     label: 'Clothing',
     productTypes: ['Kurta', 'Kurti', 'Kurta Set', 'Kurta Palazzo Set', 'Anarkali', 'Saree', 'Lehenga', 'Dress', 'Top', 'Shirt', 'T-Shirt', 'Jeans', 'Trousers', 'Co-ord Set', 'Dupatta', 'Blouse', 'Nightwear', 'Jacket', 'Sherwani', 'Nehru Jacket', 'Sweater'],
     attributes: [
-      sel('fabric', 'Fabric', ['Pure Cotton', 'Cotton Blend', 'Rayon', 'Viscose Rayon', 'Silk', 'Silk Blend', 'Georgette', 'Chiffon', 'Linen', 'Khadi', 'Polyester', 'Crepe', 'Chanderi', 'Muslin', 'Denim', 'Wool', 'Net', 'Organza', 'Velvet'], { required: true }),
-      sel('pattern', 'Pattern', ['Solid', 'Printed', 'Embroidered', 'Floral', 'Geometric', 'Striped', 'Checked', 'Tie-Dye', 'Block Print', 'Bandhani', 'Leheriya', 'Ikat', 'Embellished', 'Abstract', 'Animal Print'], { required: true }),
+      multi('fabric', 'Fabric', ['Pure Cotton', 'Cotton Blend', 'Rayon', 'Viscose Rayon', 'Silk', 'Silk Blend', 'Georgette', 'Chiffon', 'Linen', 'Khadi', 'Polyester', 'Crepe', 'Chanderi', 'Muslin', 'Denim', 'Wool', 'Net', 'Organza', 'Velvet'], { required: true }),
+      multi('pattern', 'Pattern', ['Solid', 'Printed', 'Embroidered', 'Floral', 'Geometric', 'Striped', 'Checked', 'Tie-Dye', 'Block Print', 'Bandhani', 'Leheriya', 'Ikat', 'Embellished', 'Abstract', 'Animal Print'], { required: true }),
       sel('sleeve', 'Sleeve', ['Sleeveless', 'Cap Sleeve', 'Half Sleeve', '3/4 Sleeve', 'Full Sleeve', 'Raglan Sleeve', 'Not applicable']),
       sel('neck', 'Neck', ['Round Neck', 'V Neck', 'Square Neck', 'Boat Neck', 'Collared', 'Mandarin Collar', 'Keyhole Neck', 'Sweetheart Neck', 'Not applicable']),
       sel('length', 'Length', ['Short', 'Medium', 'Long', 'Knee Length', 'Ankle Length', 'Floor Length', 'Not applicable']),
       sel('fit', 'Fit', ['Regular', 'Slim', 'Relaxed', 'Straight', 'A-Line', 'Flared', 'Oversized']),
       multi('occasion', 'Occasion', OCCASION),
-      sel('idealFor', 'Ideal for', ['Women', 'Men', 'Girls', 'Boys', 'Unisex', 'Plus Size']),
+      multi('idealFor', 'Ideal for', ['Women', 'Men', 'Girls', 'Boys', 'Unisex', 'Plus Size']),
       text('setContents', 'What is in the set', { hint: 'Kurta + Palazzo + Dupatta', max: 80 }),
       text('careInstructions', 'Wash care', { hint: 'Gentle machine wash cold, dry in shade', max: 200 }),
     ],
@@ -94,11 +107,11 @@ const TEMPLATES = {
     label: 'Bedsheets, curtains & linen',
     productTypes: ['Bedsheet', 'Fitted Bedsheet', 'Bed Cover', 'Dohar', 'Quilt', 'Comforter', 'Blanket', 'Pillow Cover', 'Cushion Cover', 'Curtain', 'Table Cover', 'Towel', 'Bath Mat', 'Diwan Set'],
     attributes: [
-      sel('material', 'Material', ['Cotton', 'Pure Cotton', 'Cotton Blend', 'Microfiber', 'Polyester', 'Polycotton', 'Satin', 'Silk', 'Linen', 'Velvet', 'Jute'], { required: true }),
+      multi('material', 'Material', ['Cotton', 'Pure Cotton', 'Cotton Blend', 'Microfiber', 'Polyester', 'Polycotton', 'Satin', 'Silk', 'Linen', 'Velvet', 'Jute'], { required: true }),
       sel('size', 'Size', ['Single', 'Double', 'Queen', 'King', 'Super King', 'Standard', 'Custom'], { required: true }),
       sel('type', 'Type', ['Flat', 'Fitted', 'Elastic Fitted', 'Not applicable']),
       sel('threadCount', 'Thread count', ['104 TC', '120 TC', '144 TC', '160 TC', '180 TC', '186 TC', '200 TC', '210 TC', '220 TC', '250 TC', '300 TC', '400 TC', 'Not stated']),
-      sel('pattern', 'Pattern', ['Solid', 'Printed', 'Floral', 'Jaipuri Prints', 'Sanganeri Print', 'Block Print', 'Geometric', 'Striped', 'Checked', 'Abstract', 'Kids / Cartoon']),
+      multi('pattern', 'Pattern', ['Solid', 'Printed', 'Floral', 'Jaipuri Prints', 'Sanganeri Print', 'Block Print', 'Geometric', 'Striped', 'Checked', 'Abstract', 'Kids / Cartoon']),
       text('dimensions', 'Dimensions', { hint: '90 x 108 in (228 x 274 cm)', max: 60 }),
       text('setContents', 'What is in the pack', { hint: '1 Bedsheet with 2 Pillow Covers', max: 80, required: true }),
       text('careInstructions', 'Wash care', { hint: 'Machine wash cold, do not bleach', max: 200 }),
@@ -117,7 +130,7 @@ const TEMPLATES = {
     productTypes: ['Lipstick', 'Kajal', 'Foundation', 'Compact', 'Face Wash', 'Face Cream', 'Serum', 'Sunscreen', 'Shampoo', 'Hair Oil', 'Perfume', 'Deodorant', 'Body Lotion', 'Soap', 'Mehndi', 'Nail Polish', 'Beauty Tool'],
     attributes: [
       sel('formulation', 'Formulation', ['Cream', 'Gel', 'Liquid', 'Powder', 'Stick', 'Oil', 'Serum', 'Spray', 'Bar', 'Sheet', 'Balm', 'Not applicable']),
-      sel('skinType', 'Skin / hair type', ['All', 'Dry', 'Oily', 'Combination', 'Sensitive', 'Normal', 'Curly', 'Frizzy', 'Not applicable']),
+      multi('skinType', 'Skin / hair type', ['All', 'Dry', 'Oily', 'Combination', 'Sensitive', 'Normal', 'Curly', 'Frizzy', 'Not applicable']),
       text('shade', 'Shade / variant', { hint: 'Ruby Red 04', max: 60 }),
       multi('concern', 'Concern', ['Hydration', 'Acne', 'Pigmentation', 'Anti-ageing', 'Sun protection', 'Hair fall', 'Dandruff', 'Tan', 'Dullness', 'Long wear']),
       multi('preference', 'Preference', ['Vegan', 'Cruelty-free', 'Paraben-free', 'Sulphate-free', 'Fragrance-free', 'Ayurvedic', 'Dermatologically tested']),
@@ -229,7 +242,9 @@ const cleanAttributes = (template, raw) => {
       if (hit) out[a.key] = hit;
     } else if (a.type === 'multi') {
       const list = (Array.isArray(v) ? v : String(v).split(/[,/]/)).map((x) => snap(a.options, x)).filter(Boolean);
-      if (list.length) out[a.key] = [...new Set(list)].slice(0, 6);
+      // A value saved as one string before this field became multi ("Kundan")
+      // arrives here as a single-item array and keeps working.
+      if (list.length) out[a.key] = [...new Set(list)].slice(0, a.max || 3);
     } else {
       const s = String(v).trim().slice(0, a.max || 120);
       if (s) out[a.key] = s;

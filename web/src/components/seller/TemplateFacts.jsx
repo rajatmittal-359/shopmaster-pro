@@ -68,15 +68,28 @@ export default function TemplateFacts({ template, productType, attributes = {}, 
             );
           }
           if (a.type === 'multi') {
+            /*
+             * More than one answer is often the true one - Kundan AND pearls,
+             * printed AND embroidered, dry AND sensitive skin (23 Sep 2026).
+             * The cap is the attribute's own `max` (3, Google's ceiling for
+             * colour/material/pattern): past it the untouched chips go quiet
+             * rather than vanishing, so the seller can see what they did not
+             * pick and swap instead of hunting for a missing option.
+             */
             const chosen = Array.isArray(value) ? value : [];
+            const max = a.max || 3;
+            const full = chosen.length >= max;
             return (
               <div key={a.key} className="text-sm sm:col-span-2">
-                {label}
+                <span className="flex flex-wrap items-baseline gap-x-2">
+                  {label}
+                  <span className="text-xs text-muted-foreground">{chosen.length}/{max}{full ? ` · ${t('remove one to pick another')}` : ''}</span>
+                </span>
                 <div className="mt-1 flex flex-wrap gap-1.5">
                   {a.options.map((o) => {
                     const on = chosen.includes(o);
                     return (
-                      <button key={o} type="button" onClick={() => set(a.key, on ? chosen.filter((x) => x !== o) : [...chosen, o])} aria-pressed={on} className={`rounded-full border px-2.5 py-1 text-xs transition ${on ? 'border-primary bg-primary/10 font-medium' : 'border-border hover:border-primary'}`}>
+                      <button key={o} type="button" disabled={!on && full} onClick={() => set(a.key, on ? chosen.filter((x) => x !== o) : [...chosen, o])} aria-pressed={on} className={`disabled:opacity-40 rounded-full border px-2.5 py-1 text-xs transition ${on ? 'border-primary bg-primary/10 font-medium' : 'border-border hover:border-primary'}`}>
                         {o}
                       </button>
                     );

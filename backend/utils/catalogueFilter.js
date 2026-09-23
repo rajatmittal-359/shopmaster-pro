@@ -106,10 +106,15 @@ async function buildCatalogueFilter({ category, search, minPrice, maxPrice, colo
     // real multi-select); one colour stays the single anchored regex the
     // tests pin down, so the two shapes never drift apart.
     const wanted = String(color).split(',').map((c) => c.trim()).filter(Boolean);
-    filter.color =
-      wanted.length > 1
-        ? { $in: wanted.map((c) => new RegExp(`^${escapeRegex(c)}$`, 'i')) }
-        : { $regex: `^${escapeRegex(wanted[0] || '')}$`, $options: 'i' };
+    /*
+     * A product may now hold up to three colours in Google's own shape -
+     * "Red/Green/Black", one primary and two secondary (answer/6324487). So a
+     * shopper asking for Red must match the whole field OR any slash-separated
+     * part of it, while "Gold" still must not drag in "Rose Gold": the part is
+     * anchored between the string's ends and the slashes around it.
+     */
+    const one = (c) => new RegExp(`(^|/)${escapeRegex(c)}(/|$)`, 'i');
+    filter.color = wanted.length > 1 ? { $in: wanted.map(one) } : one(wanted[0] || '');
   }
 
   /*

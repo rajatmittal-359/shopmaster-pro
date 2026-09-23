@@ -415,10 +415,17 @@ exports.filters = async (req, res) => {
     }
 
     const [colors, sizes, priceRange, ratings] = await Promise.all([
+      // A colour field can hold "Red/Green/Black" (Google's shape), so the
+      // panel lists each colour on its own - otherwise the slash pair would
+      // sit in the list as a third colour nobody searches for.
       Product.aggregate([
         { $match: forColours.filter },
         { $match: { color: { $nin: [null, ''] } } },
-        { $group: { _id: '$color', count: { $sum: 1 } } },
+        { $set: { colorList: { $split: [{ $trim: { input: '$color' } }, '/'] } } },
+        { $unwind: '$colorList' },
+        { $set: { colorList: { $trim: { input: '$colorList' } } } },
+        { $match: { colorList: { $nin: [null, ''] } } },
+        { $group: { _id: '$colorList', count: { $sum: 1 } } },
         { $sort: { count: -1, _id: 1 } },
       ]),
       Product.aggregate([

@@ -39,14 +39,24 @@ const filterFor = async (query) => {
 };
 
 describe('colour', () => {
+  /*
+   * 23 Sep 2026: colour may now hold up to three values in Google's shape,
+   * "Rose Gold/Green" (answer/6324487), so the filter matches the whole field
+   * OR any slash-separated part of it - and is a RegExp rather than the old
+   * { $regex } pair. The promise it always made is unchanged: whole values
+   * only, never a substring.
+   */
   it('matches the whole value, so Gold does not include Rose Gold', async () => {
     const filter = await filterFor({ color: 'Gold' });
-    const re = new RegExp(filter.color.$regex, filter.color.$options);
+    const re = filter.color;
 
     expect(re.test('Gold')).toBe(true);
     expect(re.test('gold')).toBe(true);
     expect(re.test('Rose Gold')).toBe(false);
     expect(re.test('Gold Plated')).toBe(false);
+    // the new part: one of several colours on the same product
+    expect(re.test('Gold/Green')).toBe(true);
+    expect(re.test('Green/Gold')).toBe(true);
   });
 
   it('takes several colours at once, each still whole-word', async () => {
@@ -59,7 +69,7 @@ describe('colour', () => {
 
   it('treats a colour with regex characters as text', async () => {
     const filter = await filterFor({ color: 'Rose (Gold)' });
-    const re = new RegExp(filter.color.$regex, filter.color.$options);
+    const re = filter.color;
 
     expect(re.test('Rose (Gold)')).toBe(true);
     expect(re.test('Rose Gold')).toBe(false);
@@ -67,7 +77,7 @@ describe('colour', () => {
 
   it('cannot be turned into a wildcard', async () => {
     const filter = await filterFor({ color: '.*' });
-    const re = new RegExp(filter.color.$regex, filter.color.$options);
+    const re = filter.color;
 
     expect(re.test('Silver')).toBe(false);
     expect(re.test('.*')).toBe(true);

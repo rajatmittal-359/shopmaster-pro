@@ -39,7 +39,7 @@ describe('draftListing with a template', () => {
   it('cleans attributes to the template, builds the title from the formula when the model title is unusable, seeds tags', async () => {
     const r = await draftListing({ name: 'kundan set', categoryName: 'Bridal Jewellery Sets', categoryOptions: CATS, template: TEMPLATES.jewellery }, answering(good));
     expect(r.ok).toBe(true);
-    expect(r.draft.attributes).toEqual({ baseMaterial: 'Brass', plating: 'Gold Plated', stoneType: 'Kundan', occasion: ['Wedding'], closure: 'Adjustable Thread (Dori)' });
+    expect(r.draft.attributes).toEqual({ baseMaterial: 'Brass', plating: 'Gold Plated', stoneType: ['Kundan'], occasion: ['Wedding'], closure: 'Adjustable Thread (Dori)' });
     // A two-word model title is unusable, so the formula-built title takes over.
     expect(r.draft.name).toBe('Brass Gold Plated Kundan Maroon Necklace Set');
     expect(r.draft.productType).toBe('Necklace Set');

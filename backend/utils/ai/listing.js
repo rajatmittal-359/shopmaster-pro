@@ -76,7 +76,7 @@ const schemaFor = (template) => {
   for (const a of template.attributes) {
     // Gemini refuses an empty string inside an enum; "unknown" is the omit-me value and is dropped by cleanAttributes.
     if (a.type === 'select') attributes[a.key] = { type: 'string', enum: [...a.options, 'unknown'], description: `${a.label}; "unknown" when not visible or stated` };
-    else if (a.type === 'multi') attributes[a.key] = { type: 'array', items: { type: 'string', enum: a.options }, description: a.label };
+    else if (a.type === 'multi') attributes[a.key] = { type: 'array', items: { type: 'string', enum: a.options }, maxItems: a.max || 3, description: `${a.label} - every value that is TRUE of this piece, at most ${a.max || 3}; an empty list when none is visible` };
     else attributes[a.key] = { type: 'string', description: `${a.label}${a.hint ? ` - e.g. ${a.hint}` : ''}; empty when unknown` };
   }
   return {

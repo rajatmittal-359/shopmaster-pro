@@ -788,7 +788,15 @@ export default function ProductForm({ productId, copyFromId }) {
         lead="Colour, who it is for and age group put it on Google Shopping for free."
       >
         <div className="grid gap-5 sm:grid-cols-2">
-          <Field id="color" label="Colour">
+          {/*
+            Colour takes up to THREE, in Google's own shape: one primary and up
+            to two secondary joined by a slash - "Red/Green/Black"
+            (support.google.com/merchants/answer/6324487; a comma makes Google
+            keep only the first). The field stays one string, so nothing
+            downstream changes; the hint teaches the slash, and the shop's
+            filter matches each part on its own.
+          */}
+          <Field id="color" label="Colour" hint={t('Up to three, most important first, separated by a slash - "Rose Gold/Green". One is usually enough.')}>
             <Input id="color" value={form.color ?? ''} onChange={set('color')} placeholder="Rose Gold" className="h-10" />
           </Field>
           <Field

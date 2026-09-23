@@ -54,12 +54,28 @@ const feedAttributeLines = (p) => {
   const { TEMPLATES } = require('../config/listingTemplates');
   const t = TEMPLATES[p.templateKey] || TEMPLATES.general;
   const attrs = p.attributes || {};
-  const first = (keys) => keys.map((k) => attrs[k]).map((v) => (Array.isArray(v) ? v[0] : v)).find((v) => v && String(v).trim());
+  /*
+   * Google takes up to THREE values on colour, material and pattern - one
+   * primary and two secondary, joined by a SLASH, never a comma ("only one
+   * colour will be applied" if you use commas): answer/6324487, /6324410.
+   * So a multi field goes out whole rather than losing everything after the
+   * first tick.
+   */
+  const slashed = (keys, limit = 3) => {
+    // The key list is a FALLBACK chain (jewellery: base material, else
+    // plating) - only the first key that has something is used. What changed
+    // is what happens inside it: a multi field's own values go out together,
+    // slash-joined, instead of losing everything after the first.
+    const key = keys.find((k) => (Array.isArray(attrs[k]) ? attrs[k].length : attrs[k] && String(attrs[k]).trim()));
+    if (!key) return '';
+    const values = Array.isArray(attrs[key]) ? attrs[key] : [attrs[key]];
+    return [...new Set(values.filter((v) => v && String(v).trim()).map((v) => String(v).trim()))].slice(0, limit).join('/');
+  };
   const labelOf = (k) => (t.attributes.find((a) => a.key === k) || {}).label || k;
   const lines = [];
-  const material = first(t.feed?.material || []) || p.material;
+  const material = slashed(t.feed?.material || []) || p.material;
   if (material) lines.push(`<g:material>${esc(String(material).slice(0, 200))}</g:material>`);
-  const pattern = first(t.feed?.pattern || []);
+  const pattern = slashed(t.feed?.pattern || []);
   if (pattern) lines.push(`<g:pattern>${esc(String(pattern).slice(0, 100))}</g:pattern>`);
   for (const k of t.feed?.product_detail || []) {
     const v = attrs[k];

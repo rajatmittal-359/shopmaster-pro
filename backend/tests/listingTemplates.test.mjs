@@ -37,7 +37,8 @@ describe('cleanAttributes', () => {
     const t = T.TEMPLATES.jewellery;
     const out = T.cleanAttributes(t, { plating: 'gold plated', stoneType: 'American Diamond (AD)', baseMaterial: 'brass', occasion: ['Wedding', 'Festive', 'Nonsense'], nonsense: 'x', careInstructions: 'x'.repeat(300) });
     expect(out.plating).toBe('Gold Plated');
-    expect(out.stoneType).toBe('American Diamond (AD)');
+    // 23 Sep 2026: Stone / work is multi - a piece can be Kundan AND pearl - so one value arrives as a one-item list.
+    expect(out.stoneType).toEqual(['American Diamond (AD)']);
     expect(out.baseMaterial).toBe('Brass');
     expect(out.occasion).toEqual(['Wedding', 'Festive']);
     expect(out.nonsense).toBeUndefined();
