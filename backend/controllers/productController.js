@@ -476,13 +476,33 @@ exports.getProduct = async (req, res) => {
 
     // Accept either the SEO slug or the raw ObjectId, so links shared before
     // slugs existed keep working. Slug is tried first: it is the canonical form.
-    const product = await Product.findOne(
+    const POPULATE = ['category', 'name slug description ancestors'];
+    let product = await Product.findOne(
       mongoose.isValidObjectId(productId)
         ? { $or: [{ slug: productId }, { _id: productId }] }
         : { slug: productId }
     )
-      .populate('category', 'name slug description ancestors')
+      .populate(...POPULATE)
       .populate('sellerId', 'name');
+
+    /*
+     * THE RENAMED PRODUCT (24 Sep 2026, from a Search Console mail).
+     *
+     * A slug is "the name, then six characters of the id", and it is rebuilt
+     * every time the name changes - so editing a title silently breaks the URL
+     * Google, WhatsApp and the customer's bookmark already have. Those six
+     * characters never change, so they are enough to find the product and send
+     * the visitor to its current address; the web app turns this into a 308.
+     *
+     * The regex is a scan, which is fine because it only runs when the exact
+     * slug missed - a handful of times a day at most, on a catalogue this size.
+     */
+    const stale = !product && !mongoose.isValidObjectId(productId) && /-([0-9a-f]{6})$/i.exec(String(productId));
+    if (stale) {
+      product = await Product.findOne({ slug: { $regex: `-${stale[1]}$`, $options: 'i' } })
+        .populate(...POPULATE)
+        .populate('sellerId', 'name');
+    }
 
     // A suspended seller's page is gone the same minute as their listings; a
     // shop on a break keeps its page and says when it is back (utils/vacation).

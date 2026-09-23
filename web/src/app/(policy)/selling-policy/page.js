@@ -26,6 +26,9 @@ import { getSellerRules } from '@/lib/api';
 export const metadata = {
   title: 'Seller Agreement',
   description: 'The rules for selling on ShopMaster Pro: approval, listings, dispatch, cancellations, returns, disputes, payouts and commission.',
+  // Same miss as /how-we-rank: no canonical meant "the home page is the real
+  // one", and a shop reading the rules before it applies could not find them.
+  alternates: { canonical: '/selling-policy' },
 };
 
 export default async function SellingPolicyPage() {

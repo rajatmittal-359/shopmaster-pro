@@ -25,6 +25,7 @@ const require = createRequire(import.meta.url);
 
 const Product = require('../models/Product');
 const Category = require('../models/Category');
+const Seller = require('../models/Seller');
 const { buildSitemap } = require('../utils/buildSitemap');
 const { sitemap } = require('../controllers/sitemapController');
 
@@ -44,13 +45,18 @@ const PRODUCTS = [
   { _id: 'p1', slug: 'antique-gold-temple-necklace', updatedAt: new Date('2026-09-05') },
 ];
 
+// A shop page is a URL too (24 Sep 2026): the name, the city and the reviews.
+const SHOPS = [{ _id: 's1', userId: 'u1', updatedAt: new Date('2026-09-20') }];
+
 beforeEach(() => {
   originals.productFind = Product.find;
   originals.categoryFind = Category.find;
   originals.browsable = Category.getBrowsableIds;
+  originals.sellerFind = Seller.find;
 
   Product.find = vi.fn(() => chain(PRODUCTS));
   Category.find = vi.fn(() => chain(CATEGORIES));
+  Seller.find = vi.fn(() => chain(SHOPS));
   Category.getBrowsableIds = vi.fn(async () => ['c1', 'c2']);
 });
 
@@ -58,16 +64,22 @@ afterEach(() => {
   Product.find = originals.productFind;
   Category.find = originals.categoryFind;
   Category.getBrowsableIds = originals.browsable;
+  Seller.find = originals.sellerFind;
 });
 
 describe('what goes into the sitemap', () => {
-  it('lists the home page, the shop, every browsable category and every live product', async () => {
+  it('lists the home page, the shop, every browsable category, every live product and every shop page', async () => {
     const { xml, counts } = await buildSitemap();
 
-    expect(counts).toMatchObject({ static: 2, categories: 2, products: 1, total: 5 });
+    expect(counts).toMatchObject({ static: 13, categories: 2, products: 1, shops: 1, total: 17 });
     expect(xml).toContain('<loc>https://www.shopmasterpro.in/</loc>');
     expect(xml).toContain('<loc>https://www.shopmasterpro.in/shop</loc>');
     expect(xml).toContain('/products/antique-gold-temple-necklace');
+    // The shop page, and the pages that answer "can I trust this place?" -
+    // both were reachable only by crawling, which is how /how-we-rank ended up
+    // outside the index (24 Sep 2026).
+    expect(xml).toContain('<loc>https://www.shopmasterpro.in/sellers/u1</loc>');
+    expect(xml).toContain('<loc>https://www.shopmasterpro.in/how-we-rank</loc>');
   });
 
   it('never offers Google a page it cannot use', async () => {
@@ -99,7 +111,7 @@ describe('what goes into the sitemap', () => {
     const { xml } = await buildSitemap();
 
     const locs = [...xml.matchAll(/<loc>(.*?)<\/loc>/g)].map((m) => m[1]);
-    expect(locs.length).toBe(5);
+    expect(locs.length).toBe(17);
     for (const loc of locs) {
       expect(loc.startsWith('https://www.shopmasterpro.in')).toBe(true);
     }

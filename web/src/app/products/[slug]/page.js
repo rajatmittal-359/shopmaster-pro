@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, permanentRedirect } from 'next/navigation';
 import { getProduct, getReviews, getRelated, getSimilar, getSeller } from '@/lib/api';
 import { priceOf } from '@/lib/pricing';
 import { serialiseJsonLd } from '@/lib/jsonLd';
@@ -22,11 +22,25 @@ const SITE = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.shopmasterpro.in';
 /** Description text is stored as light HTML; the tags are stripped for meta. */
 const plain = (html) => String(html || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
 
+/*
+ * METADATA IS WHERE THE STATUS IS STILL OURS TO SET (24 Sep 2026).
+ *
+ * This segment has a loading boundary, so by the time the page component runs
+ * the shell has streamed and the response is committed to 200 - a notFound()
+ * there renders the not-found screen under a 200, which is the soft 404 Google
+ * wrote to us about. generateMetadata runs BEFORE any of that, so both answers
+ * a wrong URL can need are given here:
+ *
+ *   the product was renamed  ->  308 to the address it has now. A slug is the
+ *                               name plus six characters of the id, so every
+ *                               edited title broke the link Google had.
+ *   there is no such product ->  a real 404.
+ */
 export async function generateMetadata({ params }) {
   const { slug } = await params;
   const product = await getProduct(slug);
 
-  if (!product) return { title: 'Product not found' };
+  if (!product) notFound();
 
   const { price } = priceOf(product);
   const path = `/products/${product.slug || product._id}`;
@@ -66,6 +80,13 @@ export default async function ProductPage({ params }) {
    * treat those as soft 404s.
    */
   if (!product) notFound();
+  /*
+   * One address per product. The old one still finds it - the API matches on
+   * the six id characters at the end of the slug - and this sends the visitor,
+   * and Google, to the name it has now. Without the loading boundary above,
+   * this happens before anything streams, so it is a real 308.
+   */
+  if (product.slug && product.slug !== slug) permanentRedirect(`/products/${product.slug}`);
 
   const { price, was, percentOff, wasIsMrp } = priceOf(product);
   const available = Math.max(0, (product.stock || 0) - (product.reserved || 0));

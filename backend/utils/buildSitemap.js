@@ -30,9 +30,26 @@ const Category = require('../models/Category');
 const siteUrl = () =>
   (process.env.SITE_URL || 'https://www.shopmasterpro.in').replace(/\/$/, '');
 
+/*
+ * The pages that are not the catalogue (24 Sep 2026). They were reachable from
+ * the footer and nowhere else, so Google found them slowly and treated them as
+ * an afterthought - including /how-we-rank, which is the ranking promise the
+ * law asks us to publish and the page a doubting seller actually searches for.
+ */
 const STATIC_ROUTES = [
   { loc: '/', priority: '1.00', changefreq: 'daily' },
   { loc: '/shop', priority: '0.90', changefreq: 'daily' },
+  { loc: '/sell', priority: '0.70', changefreq: 'monthly' },
+  { loc: '/how-we-rank', priority: '0.60', changefreq: 'monthly' },
+  { loc: '/selling-policy', priority: '0.50', changefreq: 'monthly' },
+  { loc: '/pricing', priority: '0.50', changefreq: 'monthly' },
+  { loc: '/help', priority: '0.50', changefreq: 'monthly' },
+  { loc: '/contact', priority: '0.50', changefreq: 'monthly' },
+  { loc: '/shipping-policy', priority: '0.40', changefreq: 'monthly' },
+  { loc: '/refund-policy', priority: '0.40', changefreq: 'monthly' },
+  { loc: '/terms', priority: '0.30', changefreq: 'monthly' },
+  { loc: '/privacy', priority: '0.30', changefreq: 'monthly' },
+  { loc: '/compliance', priority: '0.30', changefreq: 'monthly' },
 ];
 
 const escapeXml = (s = '') =>
@@ -94,7 +111,34 @@ const buildSitemap = async () => {
     lastmod: p.updatedAt,
   }));
 
-  entries.push(...categoryEntries, ...productEntries);
+  /*
+   * The shops themselves (24 Sep 2026). A shop page carries the name, the city
+   * and the reviews - it is the Jaipur trust story in one URL - and Google
+   * could only reach it by crawling a product page first. Approved shops only,
+   * and never one the platform is hiding; a suspended shop's page is gone.
+   */
+  // The hidden-seller helper filters on `sellerId`; here the same people are
+  // the documents themselves, keyed by `userId`, so the ids are applied by hand.
+  const hidden = await require('./hiddenSellers').hiddenSellerIds();
+  const shops = await require('../models/Seller')
+    .find({
+      isApproved: true,
+      status: { $ne: 'suspended' },
+      ...(hidden.length ? { userId: { $nin: hidden } } : {}),
+    })
+    .select('userId updatedAt')
+    .lean();
+
+  const shopEntries = shops
+    .filter((sh) => sh.userId)
+    .map((sh) => ({
+      loc: `/sellers/${sh.userId}`,
+      priority: '0.60',
+      changefreq: 'weekly',
+      lastmod: sh.updatedAt,
+    }));
+
+  entries.push(...categoryEntries, ...productEntries, ...shopEntries);
 
   const xml = [
     '<?xml version="1.0" encoding="UTF-8"?>',
@@ -110,6 +154,7 @@ const buildSitemap = async () => {
       static: STATIC_ROUTES.length,
       categories: categoryEntries.length,
       products: productEntries.length,
+      shops: shopEntries.length,
       total: entries.length,
     },
   };

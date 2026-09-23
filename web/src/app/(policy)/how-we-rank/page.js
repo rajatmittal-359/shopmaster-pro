@@ -4,6 +4,14 @@ import Section from '@/components/policy/Section';
 export const metadata = {
   title: 'How products are ranked',
   description: 'The factors that decide the order of products and shops on ShopMaster Pro, in plain words.',
+  /*
+   * Without this the root layout's default applies and the page tells Google
+   * the HOME page is the canonical one - which is an instruction not to index
+   * this page at all (24 Sep 2026, from a Search Console mail). Of all the
+   * pages to lose, the ranking promise is the worst: rule 5(3)(e) asks for it
+   * to be published, and a sceptical seller is exactly who searches for it.
+   */
+  alternates: { canonical: '/how-we-rank' },
 };
 
 /*
