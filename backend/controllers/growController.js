@@ -280,8 +280,23 @@ exports.sellerGrow = async (req, res) => {
         .slice(0, 30)
         .map((p) => ({
           name: p.name,
-          price: p.price,
+          // WhatsApp's own "Add item" form: Price is the struck-out one and
+          // Sale Price is what is charged, so an MRP above our price maps to
+          // Price=mrp / Sale=price. Without an MRP there is only one number,
+          // and inventing a struck-out price to make a discount look bigger
+          // is the thing Legal Metrology and Google both call out.
+          price: p.mrp && p.mrp > p.price ? p.mrp : p.price,
+          salePrice: p.mrp && p.mrp > p.price ? p.price : null,
           sku: p.sku || '',
+          // Required on that form, and we already hold it (Consumer
+          // Protection E-Commerce Rules 6(5) made us).
+          origin: p.countryOfOrigin || 'India',
+          // Plain text: the form takes 5000 characters and no HTML.
+          description: String(p.description || '')
+            .replace(/<[^>]*>/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim()
+            .slice(0, 600),
           photos: (p.images || []).length,
           url: `${process.env.FRONTEND_URL || 'https://www.shopmasterpro.in'}/products/${p.slug || p._id}`,
         })),

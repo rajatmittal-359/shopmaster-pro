@@ -3140,7 +3140,24 @@ protection the platform exists to give.
 Only live, in-stock, photographed products are listed - a catalogue offering
 something sold out costs more than a short one.
 
-**Corrected within the hour, from Rajat's own screen.** The menu paths were
+**Corrected twice within the hour, from Rajat's own screen** - which is the
+argument for him sending screenshots rather than me reading a blog about the
+app. First the menu, then the form itself.
+
+The "Add item" form turned out to have a field I had not covered at all and
+one I had guessed wrong about. **Country of Origin is REQUIRED** - we already
+hold it (`countryOfOrigin`, which the E-Commerce Rules made us collect), so
+the panel now says which value to choose. **Sale Price** is a second field:
+WhatsApp's Price is the struck-out one and Sale Price is what is charged, so
+an MRP above our price maps to Price=mrp / Sale=price, and a product without
+an MRP leaves Sale Price empty - inventing a struck-out price to make a
+discount look bigger is the thing Legal Metrology and Google both punish.
+**Item name allows 150 characters**, which settled a guess: I had been cutting
+names at 42 on a theory about phone screens, and they now go across whole, the
+same words the customer searched for. Description (5000) and Item code are
+copy buttons too, and sold-out items get "Hide this item" rather than delete.
+
+**Also corrected from the menu screenshot.** The menu paths were
 written from the old app: WhatsApp Business in September 2026 has a **Tools**
 tab, not Settings → Business tools, and **Labels no longer exist - they are
 "Lists"**. Instructions that send a seller to a menu that is not there are

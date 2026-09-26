@@ -35,15 +35,18 @@ import { useT } from '@/lib/i18n';
 const rupees = (n) => `₹${Number(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
 
 /*
- * WhatsApp shows a catalogue name on a phone, where a title written for
- * Google is cut off mid-word. The site keeps the long one; this trims to the
- * part a person reads, on a word boundary.
+ * WhatsApp's "Add item" form allows 150 characters for the name - Rajat's
+ * screenshot of it settled a guess I had made at 42. Our titles fit, so the
+ * name goes across whole: the same words the customer sees on the site and
+ * the same words they searched for. Only a genuinely over-long one is cut,
+ * and then on a word boundary.
  */
-const shortName = (name, max = 42) => {
+const NAME_MAX = 150;
+const fitName = (name) => {
   const n = String(name || '').trim();
-  if (n.length <= max) return n;
-  const cut = n.slice(0, max);
-  return cut.slice(0, cut.lastIndexOf(' ') > 20 ? cut.lastIndexOf(' ') : max).trim();
+  if (n.length <= NAME_MAX) return n;
+  const cut = n.slice(0, NAME_MAX);
+  return cut.slice(0, cut.lastIndexOf(' ')).trim();
 };
 
 const copy = async (text, what = 'Copied') => {
@@ -183,21 +186,42 @@ ${url}` },
                 <li key={p.url} className="py-3">
                   <div className="flex flex-wrap items-baseline gap-x-2">
                     <span className="text-xs font-medium text-muted-foreground">{i + 1}</span>
-                    <span className="font-medium">{shortName(p.name)}</span>
-                    <span className="text-sm text-muted-foreground">{rupees(p.price)}</span>
-                    {p.sku && <span className="text-xs text-muted-foreground">· {t('code')} {p.sku}</span>}
-                    {!p.sku && <span className="text-xs text-muted-foreground">· {t('no code yet')}</span>}
+                    <span className="font-medium">{fitName(p.name)}</span>
+                    <span className="text-sm text-muted-foreground">
+                      {rupees(p.price)}
+                      {p.salePrice ? ` → ${rupees(p.salePrice)}` : ''}
+                    </span>
+                    {p.sku ? (
+                      <span className="text-xs text-muted-foreground">· {t('code')} {p.sku}</span>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">· {t('no code yet')}</span>
+                    )}
                   </div>
-                  <div className="mt-1.5 flex flex-wrap gap-2">
-                    <Button size="sm" variant="outline" onClick={() => copy(shortName(p.name), t('Name copied'))}>
+                  <div className="mt-1.5 flex flex-wrap gap-1.5">
+                    <Button size="sm" variant="outline" onClick={() => copy(fitName(p.name), t('Name copied'))}>
                       <Copy className="size-3.5" aria-hidden /> {t('Name')}
                     </Button>
                     <Button size="sm" variant="outline" onClick={() => copy(String(p.price), t('Price copied'))}>
                       <Copy className="size-3.5" aria-hidden /> {t('Price')}
                     </Button>
+                    {p.salePrice && (
+                      <Button size="sm" variant="outline" onClick={() => copy(String(p.salePrice), t('Sale price copied'))}>
+                        <Copy className="size-3.5" aria-hidden /> {t('Sale price')}
+                      </Button>
+                    )}
+                    {p.description && (
+                      <Button size="sm" variant="outline" onClick={() => copy(p.description, t('Description copied'))}>
+                        <Copy className="size-3.5" aria-hidden /> {t('Description')}
+                      </Button>
+                    )}
                     <Button size="sm" variant="outline" onClick={() => copy(p.url, t('Link copied'))}>
                       <Copy className="size-3.5" aria-hidden /> {t('Link')}
                     </Button>
+                    {p.sku && (
+                      <Button size="sm" variant="outline" onClick={() => copy(p.sku, t('Item code copied'))}>
+                        <Copy className="size-3.5" aria-hidden /> {t('Item code')}
+                      </Button>
+                    )}
                     <Button size="sm" variant="ghost" render={<a href={p.url} target="_blank" rel="noopener noreferrer" />} nativeButton={false}>
                       <ExternalLink className="size-3.5" aria-hidden /> {t('photos')}
                     </Button>
@@ -205,9 +229,17 @@ ${url}` },
                 </li>
               ))}
             </ol>
-            <p className="mt-4 text-xs text-muted-foreground">
-              {t('{n} items. Only live products with a photo and stock are here - a catalogue that offers something sold out costs more than a short one.', { n: items.length })}
-            </p>
+            <div className="mt-4 space-y-1 text-xs text-muted-foreground">
+              <p>
+                {t('Country of Origin is REQUIRED on that form - choose')} <b>{items[0]?.origin || 'India'}</b>{t(' for all of these.')}
+              </p>
+              <p>{t('Price is the struck-out one and Sale Price is what you charge. Where only one number is shown above, leave Sale Price empty.')}</p>
+              <p>{t('Item name allows 150 characters, so nothing above is cut. Description allows 5000 - the copy button gives you the first part of the one on your product page.')}</p>
+              <p>{t('When something sells out, use "Hide this item" rather than deleting it - the photos and the link come straight back.')}</p>
+              <p>
+                {t('{n} items. Only live products with a photo and stock are here - a catalogue that offers something sold out costs more than a short one.', { n: items.length })}
+              </p>
+            </div>
           </>
         )}
       </PanelCard>
