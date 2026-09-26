@@ -163,9 +163,17 @@ export default function Grow() {
           { key: 'guide', label: t('Guide & routine') },
         ]}
       >
+        {/*
+          `min-w-0` on both columns below: a grid item's default
+          `min-width: auto` refuses to shrink below its content's min-content
+          width, and a 60-character shop URL sets that floor at 495px.
+          `break-words` does not help - overflow-wrap changes how text WRAPS,
+          not what the browser counts as the minimum. Found at 390px on
+          27 Sep, when the WhatsApp tab put long links on this page.
+        */}
         {(tab) => (
           <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
-            <div className="space-y-6">
+            <div className="min-w-0 space-y-6">
               {tab === 'whatsapp' && <WhatsAppKit data={data} />}
               {tab === 'do' && (
                 <>
@@ -334,7 +342,7 @@ export default function Grow() {
               {tab === 'guide' && (
                 <>
                   <PanelCard title={t('The review message')} lead={t('Send after delivery, on WhatsApp, with the product link. Change the words to yours.')}>
-                    <p className="rounded-lg bg-muted/50 p-3 text-sm whitespace-pre-line">{REVIEW_MESSAGE(data.businessName || 'our shop', data.shopUrl)}</p>
+                    <p className="rounded-lg bg-muted/50 p-3 text-sm whitespace-pre-line break-words">{REVIEW_MESSAGE(data.businessName || 'our shop', data.shopUrl)}</p>
                     <Button size="sm" variant="outline" className="mt-2" onClick={() => copy(REVIEW_MESSAGE(data.businessName || 'our shop', data.shopUrl))}>
                       {t('Copy message')}
                     </Button>
@@ -350,7 +358,7 @@ export default function Grow() {
                 </>
               )}
             </div>
-            <div className="space-y-6">
+            <div className="min-w-0 space-y-6">
                   <PanelCard title={t('Already done for you')} lead={t("The platform's side. Nothing to set up.")}>
                     <ul className="space-y-3">
                       {AUTOMATIC.map(([head, d]) => (

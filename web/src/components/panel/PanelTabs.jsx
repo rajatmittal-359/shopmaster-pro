@@ -57,8 +57,19 @@ function TabsInner({ tabs, defaultTab, children, param = 'tab' }) {
     return () => clearTimeout(timer);
   }, [current, tabs, search, param, select]);
 
+  /*
+   * `min-w-0` is load-bearing (27 Sep 2026). The panel shell lays its pages
+   * out as flex items, and a flex item's default `min-width: auto` refuses to
+   * shrink below its content's minimum. The tab strip's minimum is the sum of
+   * its tabs, because each is `shrink-0 whitespace-nowrap` - so `overflow-x-auto`
+   * never got the chance to scroll: instead the whole PAGE grew to fit the
+   * tabs, and every card inside it went with it.
+   *
+   * It stayed hidden while there were five tabs; the sixth (WhatsApp) pushed
+   * a 390px phone to 453px and gave the whole page a sideways scroll.
+   */
   return (
-    <div>
+    <div className="min-w-0">
       <div role="tablist" aria-label="Sections" className="-mx-4 flex gap-1 overflow-x-auto border-b px-4 sm:mx-0 sm:px-0">
         {tabs.map((t) => {
           const active = t.key === current;

@@ -3196,3 +3196,38 @@ whole catalogue at once but needs the WhatsApp account linked to a Meta
 Business account first. For the six items the house shop has live, typing them
 in is quicker than the linking. The panel says so rather than leaving the
 seller to find out.
+
+### 4.67 The phone check, and the bug it had been hiding (27 Sep 2026)
+
+Everything built through the night had been looked at on a 1440px laptop.
+Mummy uses a phone, so the last job before dawn was 390px across ten seller
+pages. One of them overflowed - and chasing it found a latent bug older than
+anything built tonight.
+
+**What went wrong, in layers.**
+1. The WhatsApp tab pushed a 390px phone out to 453px. The first guess -
+   long shop URLs not wrapping - was wrong: a plain `<h2>` was 453px too, so
+   the *container* was wide, not the content.
+2. `PanelShell` lays its pages out as **flex items**, and a flex item's
+   default `min-width: auto` will not shrink below its content's minimum. The
+   tab strip's minimum is the sum of its tabs, because each is `shrink-0
+   whitespace-nowrap`. So `overflow-x-auto` never got its chance: instead of
+   the strip scrolling, the whole page grew. **It had been latent since the
+   tabs were built on 15 Sep** - five tabs fitted, and the sixth did not.
+   `min-w-0` on the PanelTabs root.
+3. That exposed the next layer. Grid items have the same `min-width: auto`
+   rule, and a 60-character shop URL set the floor at 495px. Worth writing
+   down because it is the part that is easy to get wrong: **`break-words`
+   does not fix this.** Overflow-wrap changes how text *wraps*; it does not
+   change what the browser counts as the element's minimum width. `min-w-0`
+   on both grid columns does, and only then does `break-words` get to work.
+4. With the page finally able to shrink, the **Guide** tab revealed its own
+   overflow, from the review message's long link. Pre-existing, invisible
+   until now, fixed with the same pair.
+
+**Ten pages verified at 390px** - all six Grow tabs, the listing report, the
+product form, All products and Orders: no horizontal scroll on any.
+
+The lesson worth keeping: a page that will not shrink usually is not the
+fault of the thing you just added. `min-width: auto` on flex and grid items
+is the default, and it is almost never what a responsive layout wants.

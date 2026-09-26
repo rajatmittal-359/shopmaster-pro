@@ -80,7 +80,10 @@ function CopyRow({ label, value, hint, multiline }) {
           <Copy className="size-3.5" aria-hidden /> copy
         </button>
       </div>
-      <p className={`mt-1 rounded-lg bg-muted/50 p-2.5 text-sm ${multiline ? 'whitespace-pre-line' : 'break-all'}`}>{value}</p>
+      {/* A 60-character shop URL has no break opportunity of its own, and at
+          390px it pushed this whole card past the viewport. `break-words`
+          only breaks what cannot otherwise fit, so prose is untouched. */}
+      <p className={`mt-1 rounded-lg bg-muted/50 p-2.5 text-sm ${multiline ? 'whitespace-pre-line break-words' : 'break-all'}`}>{value}</p>
       {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
     </div>
   );
@@ -309,7 +312,7 @@ ${url}` },
                   <Copy className="size-3.5" aria-hidden /> copy
                 </button>
               </div>
-              <p className="mt-1 whitespace-pre-line rounded-lg bg-muted/50 p-2.5 text-sm">{q.text}</p>
+              <p className="mt-1 whitespace-pre-line rounded-lg bg-muted/50 p-2.5 text-sm break-words">{q.text}</p>
             </div>
           ))}
         </div>
