@@ -60,15 +60,45 @@ const identity = (u) => {
   return u.replace(/([?&])width=\d+/i, '').replace(/\._[A-Z0-9,_]+_\./i, '.');
 };
 
-/** Plausible, full-size, one entry per photograph, best first. */
-const productImages = (images = []) => {
+/**
+ * Plausible, full-size, one entry per photograph, in page order.
+ *
+ * ONLY FROM THE TOP OF THE PAGE (26 Sep 2026). Rajat's first real import
+ * brought five photographs and two of them were a different COLOUR of the
+ * same necklace - Amazon lists every variant's thumbnail further down the
+ * page, and a seller would have published colours they do not stock. The
+ * gallery of the item you are actually looking at is always at the top; the
+ * colour strip, "customers also bought" and the rest come after. There is no
+ * tag to test for - the markup changes between fetches, one scrape had a
+ * "Colour:" heading and the next had none - but the ORDER does not change.
+ */
+/*
+ * WHERE THE WINDOW ENDS. First try: the first 40% of the page - which is
+ * Amazon-shaped and threw away every Meesho photograph, because Meesho's menu
+ * alone is 6,000 characters and its gallery sits further in. The honest
+ * landmark is the PRICE: a gallery and a buy box live together on every
+ * marketplace page, and the variant strip, "customers also bought" and the
+ * footer come after. So the window is "up to a little past the price", and
+ * the 40% rule is only the fallback for a page with no price at all.
+ */
+const AFTER_PRICE = 6000;
+const GALLERY_SHARE = 0.4;
+
+const productImages = (images = [], markdown = '') => {
+  const priceAt = markdown ? markdown.indexOf('₹') : -1;
+  const cut = !markdown
+    ? Infinity
+    : priceAt > 0
+      ? priceAt + AFTER_PRICE
+      : Math.max(4000, Math.floor(markdown.length * GALLERY_SHARE));
   const seen = new Map();
   for (const raw of images) {
     if (!PLAUSIBLE(raw)) continue;
+    if (markdown && markdown.indexOf(raw) > cut) continue;
     const id = identity(raw);
     if (!seen.has(id)) seen.set(id, bigVersion(raw));
   }
-  return [...seen.values()].slice(0, 12);
+  return [...seen.values()].slice(0, 8);
 };
 
 /**
@@ -153,7 +183,7 @@ ${page}`;
 
 const imagesPrompt = (name, candidates) => `Which of these URLs are photographs of "${name}"? Reply with JSON only: {"images": [up to 5 urls, main photo first]}.
 
-Leave out logos, icons, banners, payment badges and other products. Copy the URLs exactly as written.
+They are in the order they appear on the page, so the earliest are the item’s own gallery. Leave out logos, icons, banners, payment badges, videos, and any picture that is plainly a DIFFERENT COLOUR OR VARIANT of the product rather than the one described. Fewer and right beats five and wrong. Copy the URLs exactly as written.
 
 ${candidates.map((u, i) => `${i + 1}. ${u}`).join('\n')}`;
 
@@ -169,11 +199,45 @@ const importListing = async ({ url, userId, category = null, deps = {} }) => {
   const write = deps.generate || generate;
   const upload = deps.uploadImage || uploadImage;
 
-  const page = await read(url, { userId });
+  /*
+   * IS THIS EVEN THE PAGE WE ASKED FOR? (26 Sep 2026)
+   *
+   * Rajat's second live import came back as "Trending duck toy". Amazon had
+   * answered the product URL with its own HOME page - title "Online Shopping
+   * site in India", no Atasi, no price - and the model dutifully described
+   * whatever it found there. A wrong listing filled into the form silently is
+   * worse than an honest failure, so the page has to prove it is the right
+   * one before anybody reads it.
+   *
+   * The proof is the id in the address: Amazon's /dp/<ASIN>, Meesho's /p/<id>.
+   * The page must contain it. When the address carries no id, the fallback is
+   * weaker but still catches the home page: its title is a shop's front door,
+   * not a product's.
+   */
+  const idInUrl = (/\/dp\/([A-Z0-9]{10})/i.exec(url) || /\/p\/([a-z0-9]{4,})/i.exec(url) || [])[1] || '';
+  const FRONT_DOOR = /^(online shopping|amazon\.in|meesho|flipkart|myntra)[^|]*$/i;
+  const isTheProduct = (p) => {
+    const text = `${p.title || ''} ${p.markdown || ''}`;
+    if (idInUrl) return text.toLowerCase().includes(idInUrl.toLowerCase());
+    return !FRONT_DOOR.test(String(p.title || '').trim());
+  };
+
+  let page = await read(url, { userId });
+  if (page.ok && !isTheProduct(page)) {
+    // Not the page we asked for: forget what was cached, and knock again
+    // through a real browser (five credits, only on this second try).
+    page = await read(url, { userId, fresh: true, stealth: true });
+  }
   if (!page.ok) return { ok: false, reason: page.reason };
+  if (!isTheProduct(page)) {
+    return {
+      ok: false,
+      reason: 'That shop sent us its home page instead of the product - it does that when it is busy. Try again in a minute, or paste the link again.',
+    };
+  }
 
   const template = templateFor(category);
-  const candidates = productImages(page.images);
+  const candidates = productImages(page.images, page.markdown || '');
 
   /** `generate` hands back text; with a schema that text is the JSON. */
   const asJson = (answer) => {
@@ -210,7 +274,7 @@ const importListing = async ({ url, userId, category = null, deps = {} }) => {
      * the same page, and every address in either is put through `safeUrl`
      * before the server fetches it.
      */
-    if (!chosen.length) chosen = candidates.slice(0, 5);
+    if (!chosen.length) chosen = candidates.slice(0, 3);
   }
   const picked = chosen.filter((u) => candidates.includes(u)).slice(0, 5);
 

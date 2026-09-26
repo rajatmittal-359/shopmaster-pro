@@ -59,7 +59,9 @@ describe('the import itself', () => {
   const page = {
     ok: true,
     title: 'Rubans Jhumka Earrings',
-    markdown: 'Rubans Jhumka Earrings Oxidised\n\n₹357.00 with 75 percent savings\n\nM.R.P.: ₹1,400.00\n\nMaterial: Brass. Colour: Green.',
+    // Carries its own ASIN, as a real product page does - that is what proves
+    // to the importer that this is the page the seller asked for.
+    markdown: 'Rubans Jhumka Earrings Oxidised\n\n₹357.00 with 75 percent savings\n\nM.R.P.: ₹1,400.00\n\nMaterial: Brass. Colour: Green.\n\nASIN B0G57J7ZGK',
     images: [AMAZON_THUMB],
   };
   const facts = {
@@ -187,5 +189,64 @@ describe('the import itself', () => {
     });
     expect(out.ok).toBe(false);
     expect(out.reason).toMatch(/allowance/);
+  });
+});
+
+describe('the page has to be the page we asked for', () => {
+  /*
+   * 26 Sep 2026, live: Amazon answered a product URL with its own home page
+   * and the import came back as "Trending duck toy". A wrong listing filled
+   * into the form silently is worse than an honest failure.
+   */
+  const frontDoor = {
+    ok: true,
+    title: 'Online Shopping site in India: Shop Online for Mobiles, Books, Watches, Shoes and More - Amazon.in',
+    markdown: 'Fresh - Prime Video - Todays Deals - Trending duck toy ₹199',
+    images: [],
+  };
+
+  it('refuses the shop front door instead of describing it', async () => {
+    let reads = 0;
+    const out = await importListing({
+      url: 'https://www.amazon.in/Atasi-International/dp/B0CVV1799Z',
+      userId: 'u1',
+      deps: {
+        fetchPage: async () => {
+          reads += 1;
+          return frontDoor;
+        },
+        generate: async () => ({ ok: true, text: JSON.stringify({ name: 'Trending duck toy' }) }),
+      },
+    });
+    expect(out.ok).toBe(false);
+    expect(out.reason).toMatch(/home page/i);
+    // It tries twice - the second time without the cache - before giving up.
+    expect(reads).toBe(2);
+  });
+
+  it('accepts a page that carries the id from the address', async () => {
+    const out = await importListing({
+      url: 'https://www.amazon.in/Atasi-International/dp/B0CVV1799Z',
+      userId: 'u1',
+      deps: {
+        fetchPage: async () => ({ ok: true, title: 'Buy Atasi International…', markdown: 'Atasi International … B0CVV1799Z … ₹299', images: [] }),
+        generate: async () => ({ ok: true, text: JSON.stringify({ name: 'Atasi International Necklace Set', price: 299 }) }),
+      },
+    });
+    expect(out.ok).toBe(true);
+    expect(out.draft.price).toBe(299);
+  });
+});
+
+describe('which part of the page the photographs may come from', () => {
+  it('takes the gallery beside the price, not the colour strip below it', () => {
+    const NL = String.fromCharCode(10);
+    const gallery = 'https://m.media-amazon.com/images/I/aaaaaaaaaa._SS40_.jpg';
+    const variant = 'https://m.media-amazon.com/images/I/zzzzzzzzzz._SS40_.jpg';
+    // price early, gallery beside it, the other colour ten thousand characters later
+    const page = `head ![](${gallery}) ₹299 M.R.P. ₹1,999${NL}${'filler '.repeat(2000)}Colour: ![](${variant})`;
+    const picked = productImages([gallery, variant], page);
+    expect(picked).toHaveLength(1);
+    expect(picked[0]).toContain('aaaaaaaaaa');
   });
 });

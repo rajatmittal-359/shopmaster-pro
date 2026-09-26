@@ -2606,3 +2606,54 @@ away; the first 6,000 characters are the menu on Meesho, so the first rupee
 sign is the anchor; and one big question (facts + attribute enums + choose five
 URLs from forty) is too much for the free lite model - split in two, both
 answers came back.
+
+### 4.55 Two things a real import taught in ten minutes (26 Sep 2026)
+
+Rajat imported two Amazon listings on the live site. Both worked; both showed
+something the local tests could not.
+
+**The photographs were of the wrong colour.** Five came across and two were a
+different variant of the same necklace - Amazon lists every variant's
+thumbnail further down the page. The window is now anchored on the PRICE, not
+on a percentage of the page: a gallery and a buy box live together, and the
+colour strip, "customers also bought" and the footer come after. The first
+attempt (first 40% of the page) was Amazon-shaped and threw away every Meesho
+photograph, because Meesho's menu alone is 6,000 characters.
+
+**The second import came back as "Trending duck toy".** Amazon had answered
+the product URL with its own home page - title "Online Shopping site in
+India", no Atasi, no price - and the model described what it found. A wrong
+listing filled in silently is worse than an honest failure, so the page now
+has to prove it is the one that was asked for: the id from the address
+(Amazon's `/dp/<ASIN>`, Meesho's `/p/<id>`) must appear in what came back. If
+it does not, the cached copy is thrown away and the page is fetched once more
+through a real browser (Firecrawl's stealth proxy, five credits, never the
+first attempt); if it still is not the right page, the seller is told to try
+again in a minute. Amazon does this when it is busy - it served us the product
+page happily an hour earlier.
+
+**On variants**, which Rajat spotted himself by diffing two URLs: on Amazon
+each colour is its own ASIN and its own address, so one link is one variant,
+which is exactly how a listing here is one product. Nothing to change. What
+could be built later is the offer that follows from it - "this shop has nine
+more colours of this, bring them in as sizes/colours of one listing?" - which
+is our `variantGroupId` road. Parked in WHAT-IS-LEFT §4.
+
+### 4.56 Nobody loses a half-filled form (26 Sep 2026)
+
+Rajat: *"cancel ya back karte waqt ekdum se ho jata hai, kuch puchhna nahi
+hota - seller ne itni info bhari aur galti se back ho gaya to uski mehnat
+bekar."* True, and on a phone the back GESTURE is the likely accident.
+
+Three guards, one dialog. A signature of the form (fields, photo sources,
+video intent) is taken when the page settles and compared on every render -
+cheap, because the photographs' base64 is cut to 64 characters. While it
+differs: `beforeunload` covers the tab being closed, reloaded or taken off the
+site; a sentinel history entry catches the in-app Back, which `beforeunload`
+never sees; and Cancel asks instead of leaving.
+
+The dialog offers three answers, and the first is the kind one - **Save for
+later**, the draft road that already exists - then "Leave without saving" and
+"Keep editing". Shopify's admin and Amazon's listing form both ask before
+leaving; neither offers to save it for you, which is the one thing we can do
+better.

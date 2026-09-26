@@ -56,10 +56,19 @@ const call = async (path, body) => {
  * @param {string} url  already through `safeUrl`
  * @returns {Promise<{markdown: string, title: string, images: string[]}>}
  */
-const scrape = async (url) => {
+const scrape = async (url, { stealth = false } = {}) => {
   const data = await call('/scrape', {
     url,
     formats: ['markdown'],
+    /*
+     * The second knock, when the first was answered by a bot wall (26 Sep
+     * 2026: Amazon started returning its own home page for product URLs after
+     * a few reads). A stealth fetch is a real browser behind a residential
+     * address - it costs FIVE credits instead of one, so it is never the
+     * first attempt and the caller only asks for it after a page came back
+     * that was plainly not the one requested.
+     */
+    ...(stealth ? { proxy: 'stealth' } : {}),
     /*
      * The WHOLE main column, not a filtered slice. An early version asked for
      * `includeTags: ['img']` thinking it would keep the pictures - it kept

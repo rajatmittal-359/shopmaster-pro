@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Sparkles, Loader2, Cpu } from 'lucide-react';
 import { authedFetch } from '@/lib/client';
@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Picker } from '@/components/ui/picker';
 import MediaManager from '@/components/seller/MediaManager';
 import VideoSlot from '@/components/seller/VideoSlot';
@@ -176,6 +177,20 @@ export default function ProductForm({ productId, copyFromId }) {
   const t = useT();
   const router = useRouter();
   const [importing, setImporting] = useState({ url: '', busy: false, error: '' });
+  /*
+   * WORK IS NOT THROWN AWAY WITHOUT ASKING (26 Sep 2026).
+   *
+   * Rajat: "cancel ya back karte waqt ekdum se ho jata hai, kuch puchhna nahi
+   * hota - seller ne itni info bhari aur galti se back ho gaya to mehnat bekar".
+   * He is right, and on a phone the back GESTURE is the likely accident, not
+   * the button. So: a snapshot of the form as it was loaded, a comparison
+   * against it, and three ways out of the dialog - keep it as a draft, throw
+   * it away, or carry on. Shopify's admin and Amazon's listing form both ask;
+   * neither offers to save it for you, which is the one thing we can do
+   * better because "Save for later" already exists.
+   */
+  const [leaving, setLeaving] = useState(null); // null | 'cancel' | 'back'
+  const loadedSnapshot = useRef(null);
   const [form, setForm] = useState(EMPTY);
   const [photos, setPhotos] = useState([]); // [{ src, kind: 'existing' | 'new' }], in display order
   // One optional clip: keep / replace / remove, said exactly once on save (see VideoSlot).
@@ -359,6 +374,64 @@ export default function ProductForm({ productId, copyFromId }) {
     } catch (err) {
       setAi({ status: 'error', message: err.message });
     }
+  };
+
+  /*
+   * IS THERE ANYTHING TO LOSE?
+   *
+   * A signature rather than a deep compare: the photographs can be megabytes
+   * of base64, and stringifying those on every render to answer a yes/no
+   * question would cost more than the question is worth.
+   */
+  const signature = JSON.stringify({
+    f: form,
+    p: photos.map((x) => String(x.src).slice(0, 64)),
+    v: Boolean(video.next || video.removed),
+  });
+  useEffect(() => {
+    // The first settled render after loading is "how it was given to us".
+    if (loadedSnapshot.current === null && state.status !== 'loading') loadedSnapshot.current = signature;
+  }, [signature, state.status]);
+  // A save navigates away by itself, so there is no 'saved' state to test for.
+  const dirty = loadedSnapshot.current !== null && signature !== loadedSnapshot.current;
+
+  /*
+   * The browser's own question, for the tab being closed, reloaded, or taken
+   * somewhere outside the app. The wording is the browser's; we only say that
+   * there is something to lose.
+   */
+  useEffect(() => {
+    if (!dirty) return undefined;
+    const ask = (e) => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', ask);
+    return () => window.removeEventListener('beforeunload', ask);
+  }, [dirty]);
+
+  /*
+   * And the one that actually happens on a phone: the BACK gesture. It never
+   * reaches `beforeunload` - it is a move inside the app - so a sentinel entry
+   * is pushed while there is work to lose, and the first Back lands on it
+   * instead of leaving the form. The dialog then decides what happens.
+   */
+  useEffect(() => {
+    if (!dirty) return undefined;
+    window.history.pushState(null, '', window.location.href);
+    const onPop = () => {
+      window.history.pushState(null, '', window.location.href);
+      setLeaving('back');
+    };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, [dirty]);
+
+  /** Leaving for real: the guard is off, so no dialog on the way out. */
+  const leaveNow = () => {
+    loadedSnapshot.current = signature;
+    setLeaving(null);
+    setTimeout(() => router.push('/seller/products'), 0);
   };
 
   /*
@@ -1088,6 +1161,38 @@ export default function ProductForm({ productId, copyFromId }) {
         />
       </Card>
 
+      {/* The question itself. Three answers, and the first one is the kind one:
+          the draft road already exists, so nobody has to choose between
+          "finish it now" and "lose it". */}
+      <Dialog open={leaving !== null} onOpenChange={(open) => !open && setLeaving(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t('Leave without saving?')}</DialogTitle>
+            <DialogDescription>
+              {t('What you have filled in is not saved yet. Keep it as a draft and finish it whenever you like - drafts are never on the site.')}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-col gap-2 sm:flex-row">
+            <Button
+              type="button"
+              disabled={state.status === 'saving'}
+              onClick={async (e) => {
+                await submit(e, true);
+                setLeaving(null);
+              }}
+            >
+              {state.status === 'saving' ? t('Saving…') : t('Save for later')}
+            </Button>
+            <Button type="button" variant="outline" onClick={leaveNow}>
+              {t('Leave without saving')}
+            </Button>
+            <Button type="button" variant="ghost" onClick={() => setLeaving(null)}>
+              {t('Keep editing')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <div className="sticky bottom-0 z-10 -mx-1 flex flex-wrap items-center gap-3 border-t bg-background/95 px-1 py-3 backdrop-blur">
         <Button type="button" variant="outline" size="lg" disabled={state.status === 'saving'} onClick={(e) => submit(e, true)}>
           {t('Save for later')}
@@ -1095,7 +1200,7 @@ export default function ProductForm({ productId, copyFromId }) {
         <Button type="submit" disabled={state.status === 'saving'} size="lg">
           {state.status === 'saving' ? t('Saving…') : productId ? t('Save changes') : t('List it')}
         </Button>
-        <Button type="button" onClick={() => router.push('/seller/products')} variant="ghost">
+        <Button type="button" onClick={() => (dirty ? setLeaving('cancel') : router.push('/seller/products'))} variant="ghost">
           Cancel
         </Button>
         <p aria-live="polite" className="text-sm">

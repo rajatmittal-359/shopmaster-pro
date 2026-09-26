@@ -1,6 +1,6 @@
 const { safeUrl } = require('./guard');
 const firecrawl = require('./firecrawl');
-const { remember } = require('../ai/aiCache');
+const { remember, keyOf, AiCache } = require('../ai/aiCache');
 const { generate } = require('../gemini');
 const AiUsage = require('../../models/AiUsage');
 
@@ -101,7 +101,7 @@ const readWithFirecrawl = async (url, opts = {}) => {
     return { ok: false, reason: 'The month’s web-reading allowance is nearly finished. It resets on the 26th.' };
   }
   try {
-    const page = await firecrawl.scrape(url);
+    const page = await firecrawl.scrape(url, { stealth: Boolean(opts.stealth) });
     await recordRead(opts.userId, 'firecrawl');
     return { ok: true, ...page };
   } catch (err) {
@@ -117,6 +117,15 @@ const readWithFirecrawl = async (url, opts = {}) => {
  */
 const fetchPage = async (rawUrl, opts = {}) => {
   const url = (await safeUrl(rawUrl)).toString();
+  /*
+   * `fresh` throws away yesterday's answer first. The caller asks for it when
+   * what came back was not the page it asked for - Amazon answers a product
+   * URL with its own home page often enough that caching that would serve the
+   * wrong thing all day (26 Sep 2026).
+   */
+  if (opts.fresh) {
+    await AiCache.deleteOne({ key: keyOf('research:page', String(opts.userId || 'system'), { url }) }).catch(() => {});
+  }
   return remember('research:page', opts.userId || 'system', { url }, () => readWithFirecrawl(url, opts));
 };
 
