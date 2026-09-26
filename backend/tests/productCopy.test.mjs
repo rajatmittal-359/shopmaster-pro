@@ -36,9 +36,17 @@ const {
 } = require('../utils/productCopy');
 
 describe('what the model is told', () => {
+  /*
+   * `category` is the POPULATED document, carrying its parent - which is the
+   * shape draftProductDescriptions.js sends. It matters: the prompt's rules
+   * now come from the category's listing template, and the templates are keyed
+   * on the TOP category. A product sits in "Necklaces & Pendants"; only the
+   * parent says "Jewellery". Pass a bare name and the template resolves to
+   * `general`, which is pinned by its own test below.
+   */
   const product = {
     name: 'Antique Gold Temple Necklace',
-    category: 'Necklaces & Pendants',
+    category: { name: 'Necklaces & Pendants', parentCategory: { name: 'Jewellery' } },
     price: 6800,
     weight: 0.16,
     brand: 'Meera Jewels',
@@ -65,8 +73,14 @@ describe('what the model is told', () => {
     expect(promptFor(product)).toContain('6800');
   });
 
-  it('says plainly that the shop sells imitation jewellery', () => {
-    expect(promptFor(product)).toMatch(/IMITATION/);
+  it('tells the model to say plainly that this is imitation jewellery', () => {
+    /*
+     * Case-insensitive since 26 Sep 2026. The prompt used to shout
+     * "sells IMITATION jewellery" in its opening line, for every product in
+     * the shop. That line is gone - the rule now comes from the jewellery
+     * template's own `mustSay`, in ordinary case, and only for jewellery.
+     */
+    expect(promptFor(product)).toMatch(/imitation/i);
   });
 });
 

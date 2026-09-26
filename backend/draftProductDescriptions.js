@@ -17,6 +17,7 @@
  *   node draftProductDescriptions.js --revert        put the originals back
  *   node draftProductDescriptions.js --limit 3       just the first few, for a look
  *   node draftProductDescriptions.js --all           include products that already have real copy
+ *   node draftProductDescriptions.js --wrong         only the ones whose copy contradicts the product
  *
  * WHAT IT SKIPS
  *   Anything already carrying a description that is not the boilerplate. A
@@ -31,6 +32,7 @@ require('dotenv').config();
 const Product = require('./models/Product');
 require('./models/Category');
 const { draftDescription } = require('./utils/productCopy');
+const { templateFor } = require('./config/listingTemplates');
 const { DEFAULT_MODEL } = require('./utils/gemini');
 
 const args = process.argv.slice(2);
@@ -41,6 +43,7 @@ const valueOf = (flag, fallback) => {
 };
 
 const APPLY = has('--apply');
+const WRONG = has('--wrong');
 // --apply on its own used to DRAFT AGAIN and then write - so a draft run followed
 // by an apply run paid Gemini twice, and on 12 Sep 2026 the second pass hit the
 // daily quota after one product. Now --apply reads the file the draft run
@@ -127,12 +130,38 @@ const run = async () => {
   console.log(APPLY ? 'Mode: APPLY - this writes to the database\n' : 'Mode: draft only - nothing is written to the database\n');
 
   const products = await Product.find({ isDeleted: { $ne: true } })
-    .populate('category', 'name')
+    /*
+     * The PARENT is populated too, and it is not decoration. Products sit in
+     * sub-categories - Rings, Earrings, Skincare - and the listing templates
+     * are keyed on the top category. Without the parent every product resolves
+     * to `general`, and jewellery quietly loses the rule that makes it say it
+     * is imitation. With it: 19 jewellery, 15 apparel, 6 electronics, 4 beauty.
+     */
+    .populate({ path: 'category', select: 'name parentCategory', populate: { path: 'parentCategory', select: 'name' } })
     .select('name description price brand category')
     .sort({ createdAt: 1 })
     .lean();
 
-  const targets = products.filter((p) => ALL || !isRealCopy(p.description));
+  /*
+   * --wrong: the copy contradicts the product.
+   *
+   * Found 26 Sep 2026. The prompt used to open "you are writing for an Indian
+   * online JEWELLERY shop" and to order the model to state that the product is
+   * imitation jewellery - for everything. So the catalogue ended up with a
+   * Laptop Backpack, a 65W charger, over-ear headphones and a Banarasi silk
+   * saree all announcing they were imitation jewellery, on the live site.
+   *
+   * Those products have "real copy", so the ordinary run skips them and --all
+   * would redraft all 53 including the ones that are fine. This picks exactly
+   * the contradictions: the description makes a claim that this product's own
+   * template does not ask for.
+   */
+  const contradicts = (p) => {
+    const template = templateFor(p.category);
+    return /imitation\s+(and\s+fashion\s+)?jewell/i.test(p.description || '') && template.key !== 'jewellery';
+  };
+
+  const targets = products.filter((p) => (WRONG ? contradicts(p) : ALL || !isRealCopy(p.description)));
   const chosen = LIMIT > 0 ? targets.slice(0, LIMIT) : targets;
 
   console.log(`${products.length} products, ${targets.length} without real copy, drafting ${chosen.length}\n`);
@@ -145,7 +174,9 @@ const run = async () => {
 
     const result = await draftDescription({
       name: p.name,
-      category: p.category?.name,
+      // the whole category, not just its name: the writer needs the parent to
+      // find the right template
+      category: p.category,
       price: p.price,
       brand: p.brand,
     });

@@ -1,5 +1,8 @@
 const { generate } = require('./gemini');
 const { checkDescriptionHtml } = require('./safeHtml');
+// What each category may and may not claim. The writer reads its rules from
+// here rather than assuming the shop sells one kind of thing.
+const { templateFor } = require('../config/listingTemplates');
 
 /**
  * Writing a product description that is worth indexing and is not a lie.
@@ -77,17 +80,38 @@ const promptFor = (product) => {
    * PRICE stays. It is what tells the model whether it is describing an
    * everyday stud or a bridal set, and it never appears in the output.
    */
+  /*
+   * The category decides the rules, and it is looked up rather than assumed.
+   *
+   * Until 26 Sep 2026 this prompt opened "You are writing for an Indian online
+   * JEWELLERY shop" and rule 3 ordered the model to state that the product is
+   * imitation jewellery - for everything. A draft run over the live catalogue
+   * produced "this product is imitation jewellery" on a Chikankari kurta and
+   * on a brass diya set, and sixteen products were one `--apply` away from
+   * carrying it. The model was obeying; the prompt was wrong.
+   *
+   * `config/listingTemplates.js` already holds what each category may and may
+   * not claim, so this reads from there. `mustSay` exists for jewellery alone;
+   * `neverClaim` differs per category.
+   */
+  const categoryName = typeof product.category === 'object' ? product.category?.name : product.category;
+  const template = product.template || templateFor(typeof product.category === 'object' ? product.category : { name: categoryName });
+
   const facts = [
     `Product name: ${product.name}`,
-    product.category ? `Category: ${product.category}` : null,
+    categoryName ? `Category: ${categoryName}` : null,
     `Price: INR ${product.price}`,
   ]
     .filter(Boolean)
     .join('\n');
 
-  return `You are writing the product description for an Indian online jewellery
-shop. The shop is in Jaipur, Rajasthan and sells IMITATION jewellery - fashion
-jewellery, artificial jewellery - not precious metal.
+  /*
+   * The frame never names a category - CLAUDE.md: the site sells anything.
+   * Jaipur stays, because the city is the trust story and not a product type.
+   */
+  return `You are writing the product description for an Indian online
+marketplace based in Jaipur, Rajasthan. This particular product is in the
+"${template.label}" part of the catalogue.
 
 Here is everything that is actually known about this product. It is a complete
 list:
@@ -98,29 +122,33 @@ Write a description of 90 to 140 words in simple English, as HTML.
 
 RULES, in order of importance:
 
-1. Invent NOTHING. Do not mention matching pieces, closures, stone counts,
-   chain lengths, adjustability, packaging, guarantees or anything else that
-   is not in the facts above or plainly implied by the product's own name. If
-   you are not sure, leave it out. A promise the parcel does not keep becomes a
-   return.
+1. Invent NOTHING. Do not mention measurements, materials, contents, what is
+   in the box, compatibility, certification, guarantees, matching pieces or
+   anything else that is not in the facts above or plainly implied by the
+   product's own name. If you are not sure, leave it out. A promise the parcel
+   does not keep becomes a return.
 
-2. Never suggest the metal or stones are real. No carat or purity claims, no
-   "hallmarked", no "sterling silver", no "genuine" or "natural" stones. Words
-   like "gold-toned", "silver-toned", "antique finish", "oxidised finish",
-   "stone-studded" are correct and are what you should use.
+2. Claim NONE of the following about this product, in any wording:
+${(template.neverClaim || []).map((c) => `   - ${c}`).join('\n') || '   - anything the facts above do not support'}
+${
+  template.key === 'jewellery'
+    ? `   Words like "gold-toned", "silver-toned", "antique finish", "oxidised
+   finish", "stone-studded" are correct and are what you should use.`
+    : ''
+}
+${template.mustSay ? `3. Include ${template.mustSay}.\n` : ''}
+${template.mustSay ? '4' : '3'}. Say WHEN and WHY somebody would use it - the occasion or the everyday
+   moment, and what it goes with. Write for an Indian reader, and choose
+   language that genuinely fits THIS product: an outfit belongs at a wedding
+   or a festival, a kitchen or decor piece belongs in a home and at Diwali, a
+   cable or a gadget belongs in a bag, a car or a desk. Do not force an
+   occasion onto something that has none. This is the part people search for.
 
-3. Include one short sentence stating plainly that this is imitation jewellery.
+${template.mustSay ? '5' : '4'}. End with one line of practical care or use advice, but only if it is
+   genuinely useful for this kind of product. Do not invent a care ritual for
+   something that needs none.
 
-4. Say WHEN somebody would wear it - the occasion, and what it goes with.
-   Indian context: saree, lehenga, kurta, salwar suit, sangeet, mehendi,
-   wedding, festival, office, daily wear. Choose what genuinely suits this
-   piece and this price. This is the part people search for.
-
-5. End with one line of care advice appropriate to imitation jewellery -
-   keeping it away from perfume and water, wiping it dry, storing it in a
-   pouch.
-
-6. Do not mention the price, any discount, delivery, the shop's name, or how
+${template.mustSay ? '6' : '5'}. Do not mention the price, any discount, delivery, the shop's name, or how
    much the item weighs.
 
 FORMAT: two or three <p> paragraphs. You may use <strong> for emphasis. No

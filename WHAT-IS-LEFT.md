@@ -46,7 +46,7 @@ a page — the React app defined these in its services and no screen used them.
 
 | # | What | Decided where | Blocked on |
 |---|---|---|---|
-| 2.6 | **14 seeded products still share the old description** (was 35; 21 done 12 Sep). Next day with quota: `node draftProductDescriptions.js` then `--apply` (apply now reads the file, no second Gemini pass). None reach the feed | OPS backlog | Gemini daily quota |
+| 2.6 | ~~**Seeded products sharing the old description**~~ ✅ 26 Sep 2026 - all 53 products now carry copy of their own. The run also uncovered 2.72, which was the bigger problem. | ✅ |
 | 2.9 | ~~**Sentry**~~ ✅ 13 Sep — org `shopmaster-pro`, project `shopmaster-backend`, `utils/monitoring.js`; captures 5xx from `sendError`, the error middleware and cron jobs; bodies/headers stripped. Test error received. ~~Left: `SENTRY_DSN` on Render~~ ✅ 26 Sep 2026 - present in `/srv/shopmaster/env/api.env` on the Lightsail box (Render is gone). Still open: a separate Sentry project for `web/` | Plan §7b | Render env var |
 | 2.12 | ~~`seedMessy.js`~~ ✅ 13 Sep — 12 ugly cases added to the dev DB (NDR ×2 attempts, NPR, open dispute with POD, resolved dispute + refund, seller cancel with ₹50 penalty, return in transit, replacement due, 3 coupons incl. expired, payout with deduction, suspended partner seller, 0-stock + photo-less product, Leh address). **First catch: a suspended seller's products stayed on the storefront** → `utils/hiddenSellers.js`, applied to list/suggest/product page/feed/sitemap. Walked 13 Sep: **seller** dashboard/orders/payments (3 fixes: bank flag, payout deduction line, GST) · **admin** orders (dispute with POD draws right) · **customer** order page (2 fixes: passed ETA now reads *Running late*; replacement `due` no longer claims *on its way*). Still to eyeball in the browser: seller Orders tabs with NDR/NPR/penalty rows, customer order pages as Abha/Priya | this list | — |
 
@@ -72,6 +72,12 @@ a page — the React app defined these in its services and no screen used them.
 | 2.67 | ~~**Delete my account, the DPDP way**~~ ✅ 22 Sep 05:00 - `deletedAt`; sessions, bag, wishlist, bell, push and the addresses no order used go at once, every device signed out; the addresses on orders stay a year (the invoice prints them), then `jobs/retention` (daily beat with the bag reminder, or job `retention`) scrubs phone/street/landmark and a seller's bank account/IFSC/holder/PAN, `scrubbedAt` stamped. Privacy page and the Account lead say exactly that. 2 tests. | ✅ |
 
 | 2.69 | **Client/server validation parity is no longer checked (26 Sep 2026).** `formValidation.test.mjs` used to import the React app's own `validateRegister/Address/Product` and assert that every rule the browser enforces the database enforces too - imported, never copied, so a drift could not hide. `frontend/` was deleted on 26 Sep and `web/` has no shared validation module to import in its place: the Next forms validate inline. The block was removed to unblock CI (the two suites had been failing since the deletion, so **every deploy since had been skipped** - found 26 Sep when the new mark did not reach the live site). What to do: lift the rules into `web/src/lib/validate.js`, have the forms use it, and restore the parity block against that. Until then a rule can pass in the browser and be refused by the server with no visible reason. | this list | ☐ |
+
+| 2.70 | ~~**Crawlers were walking the shop's filter combinations**~~ ✅ 26 Sep 2026. Found in the box's own Caddy log, not in any dashboard: Googlebot and GPTBot fetching `/shop?color=Teal,Maroon,Grey,Khaki,Blue,Silver` and on and on, plus Next's `?_rsc=` prefetch payloads by the hundred. Six filters that each take several values is a near-infinite URL space, and Search Console says **2 pages indexed** - every request spent on a colour permutation is one not spent on a product. The pages were already `noindex, follow` with a canonical to the clean URL, so nothing was indexed wrongly; noindex does not stop the crawl, it only stops the result. `web/src/app/robots.js` now blocks the six filters, the `attr.*` template facets, `search` and `_rsc`, and **deliberately leaves `category` and `page` crawlable** - those are how the catalogue is discovered. 6 tests in `backend/tests/robots.test.mjs`, and the allow side is tested harder than the disallow side because over-blocking is the way this fix goes wrong. | ✅ |
+
+| 2.71 | **A deploy serves 502s to whoever is mid-request, including Googlebot.** Same Caddy log, same minute as the icon deploy: `dial tcp 172.18.0.3:3000: connect: connection refused`, then `lookup web on 127.0.0.11:53: server misbehaving`. Caddy holds the old container's IP while `release.sh` recreates `web`, so for a few seconds every request 502s - and the requests that caught it were **Googlebot's**. Repeated 502s on a crawl are an indexing risk, not just an ugly log. `release.sh` already waits for both health checks, so the containers are fine; the gap is Caddy's own upstream resolution. Fix: give Caddy a dynamic upstream (`reverse_proxy { dynamic a { name web port 3000 refresh 1s } }`) or a short `lb_try_duration` so it retries through the swap instead of failing. **Needs a box step** (`deploy/Caddyfile` + reload), so not done unattended while Rajat was out. | this list | ☐ |
+
+| 2.72 | ~~**The description writer called everything jewellery**~~ ✅ 26 Sep 2026. `utils/productCopy.js` opened its prompt with *"You are writing for an Indian online JEWELLERY shop... sells IMITATION jewellery"* and rule 3 ordered the model to say so - for every product, whatever it was. Left over from when the shop sold only jewellery, and against the rule in CLAUDE.md that nothing in the frame may name a category. **Live effect: 19 products were on the site announcing they were imitation jewellery, including a Laptop Backpack 25L, a 65W GaN charger, Wireless Over-Ear Headphones, a Banarasi Silk Saree and Leather Formal Derby shoes.** Caught by reading the drafts before `--apply`, not by a test. Fix: the prompt now reads its rules from `config/listingTemplates.js` - `mustSay` (jewellery only), each category's own `neverClaim`, and occasion language that fits the product; the frame says "marketplace in Jaipur" and names no category. The draft script populates `category.parentCategory`, without which every product resolved to `general` and jewellery would have quietly LOST its required line. New `--wrong` flag redrafts only the contradictions instead of all 53. 11 tests on the prompt itself (no quota, no flake). Catalogue after: 53 products, 0 boilerplate, 19 claiming imitation jewellery and all 19 genuinely jewellery, 0 jewellery missing it. | ✅ |
 
 ## 2b. Google visibility — the full list, decided 12 Sep 2026
 
@@ -172,6 +178,33 @@ synonyms collection (jhumka/jhumki/झुमका), Gemini query → filters.
 
 - ~~**GST-registered seller's tax invoice**~~ **built 15 Sep** (`utils/invoice.js`, plan §4.43) - the day a registered seller is approved the system is already right, and nobody unregistered is asked for anything. Research 15 Sep: on a marketplace the SELLER is the supplier and must issue the GST invoice (GSTIN, HSN, tax rate, CGST/SGST per line); the platform's PDF is a customer copy generated on the seller's behalf (Amazon does exactly this). An UNregistered seller may issue only a plain invoice/cash memo - not a 'Bill of Supply' (Rule 49 is for registered composition/exempt suppliers), so the customer bill is titled **Invoice**, per seller, 'Sold by <legal name> · GSTIN or Not registered under GST', issued by ShopMaster Pro on the seller's behalf. Built: every seller has an invoice series (`Seller.invoiceSeq/invoicePrefix` → `MJ/26-27/00042`, Rule 46 shape, issued once when the order is confirmed - COD at placement, prepaid when payment lands - lazily on first open of the bill if that failed; `Order.invoices[]`); `Product.hsn/gstRate` (form shows them to a registered shop only) stamped on every line; a registered seller's document is a **Tax Invoice** with HSN, taxable value, CGST+SGST or IGST by place of supply (delivery state vs GSTIN state), tax taken OUT of the inclusive price; the seller sees their number on the order page. **Left for the day a GST seller actually needs it:** credit note on a return/cancellation (Rule 53), and a monthly CSV of their invoices for GSTR-1. Sources: cleartax GST on online sellers; taxguru Rule 46/49; caclubindia unregistered supplier invoice.
 
+
+- **The product form's shape: 7-8 chevron cards, and whether a stepper or tabs beats them (Rajat, 26 Sep 2026).**
+  *"inme 7-8 cards chevron wale thode noisy feel dete hai... step 1 to step 7,8 aur add ka soch rahe ho to edit ka bhi dekh lena... kya pata ye wali UI/UX jo mai bata raha hu isse bhi badiya UI mil jae."*
+
+  **Not a taste question, and not decided.** Rajat has asked for the full
+  method before a yes: web research on what the real merchant tools do +
+  reading our own form + the business goal + reasoning, and the answer may
+  well be something better than either a stepper or tabs.
+
+  What the answer has to respect, and what makes this harder than it looks:
+  - **Add and edit are the same component and must not diverge.** A stepper is
+    natural for a first listing and wrong for "change the price" - a seller
+    editing one field should not walk seven steps. Shopify and Amazon both
+    solve this, differently.
+  - The form is already long because the **category templates (2.62)** inject
+    per-category questions into "3b · Product facts". Whatever shape is
+    chosen has to hold a variable number of fields.
+  - The **listing score** and the AI writer read across sections, so a shape
+    that hides sections has to keep the score honest and reachable.
+  - Mummy fills this **on a phone in Hindi**. Anything that needs precision
+    tapping or a wide screen loses.
+  - The **same shape probably belongs elsewhere** - Rajat's own point: the
+    admin's long screens and Settings could inherit it if it is good.
+
+  Deliverable before any building: 2-3 named options, each with the market
+  reference it comes from and what it costs us, and one recommendation.
+  **Nothing is built until Rajat picks a letter.**
 
 ### 3a. The 13 Sep night list — sidebars and the next features
 
