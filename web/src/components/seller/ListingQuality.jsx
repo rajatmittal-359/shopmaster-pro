@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { Check, ExternalLink, Loader2, Plus, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { authedFetch } from '@/lib/client';
@@ -113,8 +114,11 @@ export default function ListingQuality({ form, photos, productId, categoryLabel,
    *                  move, so nobody has to relearn where it is.
    *   part="preview" the Google result preview, inside 2 · Words, under the
    *                  description it previews.
-   *   (Google's own verdicts have no part of their own: they ride inside
-   *   the bar's "All {n}" panel, which the seller opens deliberately.)
+   *   Google's own VERDICTS are not here at all any more. They were a
+   *   paragraph in the form, and Rajat could not read it - "faltu keede
+   *   makode chal rahe hain". They now live on the listing's own report page
+   *   (components/seller/GoogleStatus), rewritten as three one-line answers;
+   *   the bar links to it.
    *
    * WHY THERE IS NO "8 · GOOGLE" CARD ANY MORE (27 Sep 2026)
    *   Rajat: "if something isn't a product filling step then why even it is
@@ -209,64 +213,6 @@ export default function ListingQuality({ form, photos, productId, categoryLabel,
     );
   }
 
-  /*
-   * WHAT GOOGLE HAS ACTUALLY DONE - AND WHY IT HAS NO BOX OF ITS OWN.
-   *
-   * This first went in as its own strip under the health bar. Rajat looked at
-   * it once: "faltu noisy nahi karna UI ko - only if user wants, with a
-   * button". He is right, and it is the same finding as 15 Sep: five things
-   * before the form read as noise. A listing is usually fine, so a permanent
-   * row saying so earns nothing and costs attention every single time.
-   *
-   * So it lives inside the panel the seller opens deliberately - the bar's
-   * "All {n}" - and adds no chrome at all until then. The fuller home for it
-   * is the per-product report page (WHAT-IS-LEFT 3b).
-   */
-  const googleVerdicts =
-    productId && google ? (
-      <div className="mt-3 border-t pt-3 text-sm">
-        <p className="font-medium">{t('Google, right now')}</p>
-            <ul className="mt-1 space-y-1">
-              <li className="flex flex-wrap gap-x-2">
-                <span className="text-muted-foreground">Indexed:</span>
-                {google.index.indexed === true && <span className="text-emerald-700 dark:text-emerald-300">yes{google.index.lastCrawl ? ` · last crawled ${new Date(google.index.lastCrawl).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}` : ''}</span>}
-                {google.index.indexed === false && <span>not yet{google.index.state ? ` · ${google.index.state}` : ''}. Google finds new pages within a few weeks; a complete listing is indexed sooner.</span>}
-                {google.index.indexed === null && <span className="text-muted-foreground">unknown{google.index.reason ? ` (${google.index.reason})` : ''}</span>}
-              </li>
-              <li className="flex flex-wrap gap-x-2">
-                <span className="text-muted-foreground">Google Shopping:</span>
-                {google.merchant.status === 'approved' && <span className="text-emerald-700 dark:text-emerald-300">approved</span>}
-                {google.merchant.status === 'disapproved' && <span className="text-destructive">disapproved</span>}
-                {!['approved', 'disapproved'].includes(google.merchant.status) && <span className="text-muted-foreground">{google.merchant.status}</span>}
-                {/* The lalach line: what Google actually did with the listing. */}
-                {google.shopping && (
-                  <span className="text-muted-foreground">
-                    · shown <strong className="font-medium text-foreground">{google.shopping.impressions.toLocaleString('en-IN')}×</strong> in Shopping, {google.shopping.clicks} click{google.shopping.clicks === 1 ? '' : 's'} (28 days)
-                  </span>
-                )}
-                {!google.shopping && google.merchant.status === 'approved' && <span className="text-xs text-muted-foreground">· no Shopping impressions yet</span>}
-              </li>
-              {google.merchant.issues?.map((i) => (
-                <li key={i.code} className="rounded-lg bg-destructive/10 p-2 text-xs text-destructive">
-                  {i.text}{i.detail ? ` - ${i.detail}` : ''}{' '}
-                  {i.help && (
-                    <a href={i.help} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-0.5 underline">
-                      how to fix <ExternalLink className="size-3" />
-                    </a>
-                  )}
-                </li>
-              ))}
-              {google.queries.length > 0 && (
-                <li>
-                  <span className="text-muted-foreground">People typed:</span>{' '}
-                  {google.queries.slice(0, 5).map((q) => `“${q.query}” (${q.impressions}× shown, position ${q.position})`).join(' · ')}
-                </li>
-              )}
-              {google.queries.length === 0 && <li className="text-xs text-muted-foreground">Not shown in any Google search in the last 28 days. The score above is how that changes.</li>}
-            </ul>
-      </div>
-    ) : null;
-
   return (
     <section className="rounded-xl border bg-card px-4 py-3 sm:px-5" aria-label={t('Listing health')}>
       <div className="flex items-center gap-4">
@@ -293,15 +239,13 @@ export default function ListingQuality({ form, photos, productId, categoryLabel,
             <p className="mt-1 text-sm text-muted-foreground">{t('Nothing left to fix. Save it.')}</p>
           )}
         </div>
-        {(fixes.length > 1 || googleVerdicts) && (
+        {fixes.length > 1 && (
           <button type="button" onClick={() => setAllOpen((v) => !v)} aria-expanded={allOpen} className="shrink-0 rounded-md border px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground">
             {allOpen ? t('Hide') : t('All {n}', { n: fixes.length })}
           </button>
         )}
       </div>
-      {allOpen && (
-        <>
-      {fixes.length > 0 && (
+      {allOpen && fixes.length > 0 && (
         <ul className="mt-3 grid gap-1 border-t pt-3 text-sm sm:grid-cols-2">
           {fixes.map((f) => (
             <li key={f.key}>
@@ -313,8 +257,15 @@ export default function ListingQuality({ form, photos, productId, categoryLabel,
           ))}
         </ul>
       )}
-      {googleVerdicts}
-        </>
+      {/* The way to everything this bar cannot hold: what the listing sold,
+          how often it was opened, and what Google did with it. A score is a
+          prediction; the report is the result (plan §4.62). */}
+      {productId && (
+        <div className="mt-3 border-t pt-2">
+          <Link href={`/seller/products/${productId}/report`} className="text-xs font-medium text-brand-ink hover:underline">
+            {t('See how this listing is doing →')}
+          </Link>
+        </div>
       )}
     </section>
   );

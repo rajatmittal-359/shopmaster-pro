@@ -27,5 +27,8 @@ router.get('/by-ids', ctl.byIds);
 router.get('/filters', ctl.filters);
 router.get('/:productId/similar', ctl.similarProducts);
 router.get('/:productId', ctl.getProduct);
+// The view beacon: unauthenticated, writes one counter, and is rate limited
+// because anything unauthenticated that writes will eventually be poked at.
+router.post('/:productId/view', require('../middlewares/rateLimits').viewLimiter, ctl.countProductView);
 
 module.exports = router;

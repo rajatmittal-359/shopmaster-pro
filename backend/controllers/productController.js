@@ -593,3 +593,14 @@ exports.similarProducts = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+/**
+ * One opening of a product page, reported by the page itself. 204 always -
+ * a shopper must never learn whether they were counted, and a beacon that
+ * can fail loudly is a beacon that breaks a page. See utils/productViews for
+ * why this is not counted inside getProduct.
+ */
+exports.countProductView = async (req, res) => {
+  res.status(204).end();
+  require('../utils/productViews').countView(req.params.productId, req);
+};

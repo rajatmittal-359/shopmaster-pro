@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { ExternalLink, Eye, EyeOff, ImagePlus, MoreHorizontal, Pencil, Plus, Search } from 'lucide-react';
+import { ChartNoAxesColumn, ExternalLink, Eye, EyeOff, ImagePlus, MoreHorizontal, Pencil, Plus, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { authedFetch } from '@/lib/client';
 import { Badge } from '@/components/ui/badge';
@@ -325,6 +325,13 @@ export default function ProductTable() {
                       <MoreHorizontal className="size-4" />
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-52">
+                      {/* What happened to this listing - sold, opened, Google.
+                          The edit page is for the facts; this is the result
+                          (plan §4.62). */}
+                      <DropdownMenuItem render={<Link href={`/seller/products/${product._id}/report`} />}>
+                        <ChartNoAxesColumn className="size-4" />
+                        {t('How it is doing')}
+                      </DropdownMenuItem>
                       {/* Clothing and shoes need a row per size - Google requires
                           `size` and disapproves without it. This copies the style
                           so only the size and the count are typed. */}

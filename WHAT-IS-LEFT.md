@@ -333,7 +333,16 @@ the row in All products. Edit stays the place for exact product info; the
 report page holds everything about it. One backend aggregation endpoint, plus
 the view counter.
 
-**Not started.** Needs Rajat's go-ahead on the view counter going in first.
+**BUILT 27 Sep 2026** (Rajat: *"hnn dekh lo bana lo"*). `/seller/products/[id]/report`
+carries sold · earned · page opened · stock left, the score with every fix as
+a link into the editor, the Google preview, and the rewritten Google status.
+The view counter went in first, as a browser beacon rather than a server-side
+increment - the server-side version counted cache misses, not visitors. Plan
+§4.62.
+
+**Still open on this page**, none of it blocking: a trend line for views now
+that the rows are per day; "where the visit came from" (Etsy's traffic
+sources) which needs a referrer on the beacon; and favourites/wishlist counts.
 
 ### 3a. The 13 Sep night list — sidebars and the next features
 

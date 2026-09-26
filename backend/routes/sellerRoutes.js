@@ -120,6 +120,9 @@ router.get('/google/readiness', requireApprovedSeller, async (req, res) => {
   }
 });
 router.get('/products/:productId/google', requireApprovedSeller, require('../controllers/searchInsightsController').productGoogle);
+// Everything ABOUT one listing that the edit form cannot show: what it sold,
+// how often it was opened. The report page (plan 4.62) joins it with Google's.
+router.get('/products/:productId/report', requireApprovedSeller, require('../controllers/productReportController').productReport);
 router.post('/ai/image', requireApprovedSeller, ai.makeImage);
 router.post('/ai/attach', requireApprovedSeller, ai.attachToProduct);
 router.get('/ai/drafts', requireApprovedSeller, ai.listDrafts);

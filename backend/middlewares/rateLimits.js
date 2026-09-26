@@ -29,6 +29,10 @@ const LIMITS = {
   auth: { max: 20, what: 'sign-in attempts' },
   checkout: { max: 40, what: 'checkout attempts' },
   ai: { max: 40, what: 'AI requests' },
+  // One person browsing hard opens maybe a few dozen product pages in a
+  // quarter of an hour; 300 leaves room for a family on one router and still
+  // stops a script inflating a seller's numbers.
+  view: { max: 300, what: 'page views' },
 };
 
 const limiter = ({ max, what }) =>
@@ -52,4 +56,5 @@ module.exports = {
   authLimiter: limiter(LIMITS.auth),
   checkoutLimiter: limiter(LIMITS.checkout),
   aiLimiter: limiter(LIMITS.ai),
+  viewLimiter: limiter(LIMITS.view),
 };

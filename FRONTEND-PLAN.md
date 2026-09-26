@@ -2933,3 +2933,66 @@ the description, and nothing from Google visible until "All 8" is pressed.
 
 The fuller home for per-product read-outs is a report page of its own -
 specced in WHAT-IS-LEFT §3b.
+
+### 4.62 A page per listing, and three sentences instead of a paragraph (27 Sep 2026)
+
+Two things in one evening, both Rajat's.
+
+**First, the paragraph.** The Google verdicts, moved into the health bar's
+"All {n}" panel by §4.61, printed like this:
+
+> Indexed:
+> not yet · URL is unknown to Google. Google finds new pages within a few
+> weeks; a complete listing is indexed sooner.
+> Google Shopping:  not in feed
+> Not shown in any Google search in the last 28 days.
+
+*"Ye sab text noisy sa feel hota hai, kuch samajh nahi aata, aisa lagta hai
+faltu keede makode chal rahe hain, padhne ka man nahi karta."* The diagnosis
+is specific, not taste: the label and its answer were on different lines so
+nothing lined up, the answer and its explanation were glued into one sentence
+so there was no short answer to find, and the last line had no label at all.
+Three questions answered as a paragraph.
+
+**Google's own tools answer in three parts** - Search Console's URL Inspection
+gives an icon, a verdict of three or four words ("URL is not on Google"), then
+one plain line underneath; Merchant Center's product page uses a status chip
+the same way. So `components/seller/GoogleStatus.jsx` is three rows, each an
+icon, an answer in colour, and one short sentence: **Google search** · **Google
+Shopping** · **Words people searched**. Problems and the query table sit below,
+only when there are any.
+
+**Second, the page.** *"Ek about page ho seller ke paas bhi product ka, jisme
+bare hue product ki report."* Researched, and it is a real pattern with a real
+split by seller size - **Etsy** gives every listing its own Stats with traffic
+sources; **eBay** hangs prompts off the listings table; **Amazon** has per-ASIN
+rows inside account dashboards and no page at all; **Shopify** keeps product
+analytics in Reports. A page per product is a small marketplace's move, cheap
+for us and useless at Amazon's scale. Full research in WHAT-IS-LEFT §3b.
+
+`/seller/products/[id]/report` now holds: what it sold and earned, how often
+the page was opened, stock left · the listing score with every fix as a link
+into the editor · the Google preview · the rewritten Google status. Reached
+from the health bar in the editor ("See how this listing is doing →", which is
+Rajat's "isko clickable page bana de") and from the row menu in All products.
+**Edit is for the facts of the product; the report is for what happened to it.**
+
+**The view counter, and the bug that nearly shipped.** It first counted inside
+the API's `getProduct` - and a test wrote a row, so it looked right. It was
+wrong by however many people share one cached page: `web/src/lib/api.js`
+fetches the product through Next's cached fetch, so the API is reached once
+per revalidate window for the whole world. A hundred shoppers would have read
+as one, and a number a seller cannot trust is worse than none. It is now a
+beacon from the page itself (`components/product/ViewPing`), one per page
+load, which also drops every crawler that does not run JavaScript.
+
+Counted honestly: not the seller's own looks at their own listing (the beacon
+carries the cookie and the API checks), not a StrictMode double-render, not a
+cancelled order in the money figures. Rows are per day in **IST**, because a
+view at 01:00 in Jaipur belongs to that day - `summariseViews` is a pure
+function so the window arithmetic is tested (`tests/productViews.test.mjs`,
+7 tests) rather than reasoned about.
+
+Verified in the browser: three shopper visits count three; the seller's own
+two visits count zero; one page load fires exactly one beacon. 1342 backend
+tests green.

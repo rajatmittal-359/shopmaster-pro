@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { notFound, permanentRedirect } from 'next/navigation';
 import { getProduct, getReviews, getRelated, getSimilar, getSeller } from '@/lib/api';
+import ViewPing from '@/components/product/ViewPing';
 import { priceOf } from '@/lib/pricing';
 import { serialiseJsonLd } from '@/lib/jsonLd';
 import { faqSchema, productSchema, breadcrumbSchema } from '@/lib/productSchema';
@@ -149,6 +150,8 @@ export default async function ProductPage({ params }) {
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-6 pb-28 md:pb-6">
+      {/* Counts this opening for the seller's report page. Renders nothing. */}
+      <ViewPing productId={String(product._id)} />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
