@@ -72,7 +72,7 @@ git clone https://github.com/rajatmittal-359/shopmaster-pro
 cd shopmaster-pro
 
 # 2. the half that git does not carry - from the handover folder
-cp -R /Volumes/<usb>/handover/project/private .
+cp -R /Volumes/<usb>/handover/project/private .   # USB, or wherever LocalSend put it
 cp /Volumes/<usb>/handover/project/OPS-AND-MANUAL-ACTIONS.md .
 cp /Volumes/<usb>/handover/project/ENV .
 cp /Volumes/<usb>/handover/project/backend.env backend/.env
@@ -134,8 +134,21 @@ claude mcp add --transport http firecrawl <the url from that file>
    transfer is not empty.**
 2. Push everything: `git status` must be clean and `git push` must say
    *Everything up-to-date*.
-3. The pack is full of live keys. Move it by cable or AirDrop, not by mail or
-   cloud, and delete it from both machines once the Mac is proved.
+3. The pack is full of live keys. **Windows has no AirDrop** - that is
+   Apple-to-Apple only. Move it one of these ways, best first:
+   - a **USB drive**, then delete the copy on it once the Mac is proved;
+   - **LocalSend** (free, open source, Windows and Mac, stays on your own
+     wifi) if no drive is at hand.
+
+   Not by WhatsApp, mail or Drive - not because the transfer is unsafe, but
+   because the file then lives in a chat history and in that app's cloud
+   backup, which WhatsApp's Drive backup does not encrypt end-to-end by
+   default. If there is genuinely no other way: 7-Zip the folder with AES-256
+   and a real password, send the archive one way and the password another, and
+   delete both afterwards.
+
+   What IS fine to send over WhatsApp: screenshots, notes, the GitHub link,
+   and HANDOVER.md itself - it names files, never their contents.
 4. Nothing else on that laptop is needed. Every secret has a second home:
    `private/`, the box at `/srv/shopmaster/env/`, and the dashboards themselves.
 
