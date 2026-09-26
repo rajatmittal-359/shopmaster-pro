@@ -3139,3 +3139,19 @@ protection the platform exists to give.
 
 Only live, in-stock, photographed products are listed - a catalogue offering
 something sold out costs more than a short one.
+
+**Corrected within the hour, from Rajat's own screen.** The menu paths were
+written from the old app: WhatsApp Business in September 2026 has a **Tools**
+tab, not Settings → Business tools, and **Labels no longer exist - they are
+"Lists"**. Instructions that send a seller to a menu that is not there are
+worse than none, so every hint now names the real path, and the card that
+listed five labels now explains Lists, Instagram & Facebook (worth it, free),
+Advertise and Meta One (paid, skip) and **Payments (leave off - money taken in
+a chat has no order record, no courier booking and no returns cover)**.
+
+Added in the same pass, because the screen showed it: **Quick replies**, the
+five answers a jewellery shop types all day - collection, COD, delivery,
+returns, custom order. Each one points back at the product page rather than
+stating a policy in the chat: the page is the promise the customer was shown,
+and a rule typed from memory at 1am is how a shop ends up owing something it
+never offered.

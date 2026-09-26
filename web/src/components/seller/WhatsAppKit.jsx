@@ -110,6 +110,24 @@ export default function WhatsAppKit({ data }) {
     `Namaste! Abhi hum reply nahi kar pa rahe. Aapka message padh kar subah jawab denge 🙏\n` +
     `Tab tak poora collection dekhiye: ${url}`;
 
+  /*
+   * The five questions every jewellery shop answers all day. Each one points
+   * back at the product page rather than stating a policy in the chat: the
+   * page is the promise the customer was shown, and a rule typed from memory
+   * at 1am is how a shop ends up owing something it never offered.
+   */
+  const quickReplies = [
+    { code: 'collection', text: `Namaste! Humara poora collection yahan hai:
+${url}` },
+    { code: 'cod', text: `Ji haan, cash on delivery available hai. Order product page se kar sakte hain:
+${url}` },
+    { code: 'delivery', text: `Delivery pure India me hoti hai. Aapke pin code ka time product page par dikh jata hai:
+${url}` },
+    { code: 'return', text: `Return aur exchange ka niyam har product ke page par likha hai - wahi laagu hota hai:
+${url}` },
+    { code: 'custom', text: 'Ji, custom order ho jata hai. Bataiye kya chahiye - design, colour, size aur kab tak - hum daam aur time bata denge.' },
+  ];
+
   return (
     <div className="space-y-6">
       <PanelCard
@@ -121,21 +139,21 @@ export default function WhatsAppKit({ data }) {
             label={t('Business description')}
             value={description}
             multiline
-            hint={t('Settings → Business tools → Business profile → Description. WhatsApp allows 512 characters.')}
+            hint={t('Tools → Profile → Description. WhatsApp allows 512 characters.')}
           />
-          <CopyRow label={t('Website')} value={url} hint={t('The same profile screen. Your shop page, not the marketplace home - the person messaging you wants your things.')} />
-          {city && <CopyRow label={t('Address / area')} value={city} hint={t('Use the same address as your Google Business Profile, exactly.')} />}
+          <CopyRow label={t('Website')} value={url} hint={t('Tools → Profile → Website. Your shop page, not the marketplace home - the person messaging you wants your things.')} />
+          {city && <CopyRow label={t('Address / area')} value={city} hint={t('Tools → Profile → Address. Use the same words as your Google Business Profile, exactly.')} />}
           <CopyRow
             label={t('Greeting message')}
             value={greeting}
             multiline
-            hint={t('Business tools → Greeting message. Sent to anyone who writes for the first time, or after 14 days.')}
+            hint={t('Tools → Greeting message. Sent to anyone who writes for the first time, or after 14 days.')}
           />
           <CopyRow
             label={t('Away message')}
             value={away}
             multiline
-            hint={t('Business tools → Away message → Outside business hours. A buyer at 1am should not meet silence.')}
+            hint={t('Tools → Away message → Outside business hours. A buyer at 1am should not meet silence.')}
           />
           {waLink && (
             <CopyRow
@@ -146,13 +164,13 @@ export default function WhatsAppKit({ data }) {
           )}
         </div>
         <p className="mt-4 text-xs text-muted-foreground">
-          {t('Category: choose the one your Google Business Profile uses, word for word. Business hours: set them, so WhatsApp can show "usually replies within…".')}
+          {t('Also on Tools → Profile: the category (use the same words as your Google Business Profile) and your hours, so WhatsApp can show "usually replies within…".')}
         </p>
       </PanelCard>
 
       <PanelCard
         title={t('Your catalogue, ready to type in')}
-        lead={t('Business tools → Catalogue → Add new item. Use the same photos as on your product page. The link is the important one: it brings the order back here, where it is recorded, booked with the courier and covered by returns.')}
+        lead={t('Tools → Catalog → Add new item. Use the same photos as on your product page. The link is the important one: it brings the order back here, where it is recorded, booked with the courier and covered by returns.')}
       >
         {items.length === 0 ? (
           <p className="text-sm text-muted-foreground">
@@ -194,14 +212,49 @@ export default function WhatsAppKit({ data }) {
         )}
       </PanelCard>
 
-      <PanelCard title={t('The five labels worth keeping')} lead={t('Business tools → Labels. This is the one WhatsApp feature sellers actually keep using - it turns the chat list into an order list.')}>
-        <ul className="flex flex-wrap gap-2 text-sm">
-          {['New order', 'Paid', 'Dispatched', 'Delivered', 'Problem'].map((l) => (
-            <li key={l} className="rounded-full border px-3 py-1">{t(l)}</li>
+      <PanelCard
+        title={t('Answers you will type a hundred times')}
+        lead={t('Tools → Quick replies. Give each one a short code; then typing "/" and the code sends the whole message. This is the feature sellers actually keep using.')}
+      >
+        <div className="divide-y">
+          {quickReplies.map((q) => (
+            <div key={q.code} className="py-3">
+              <div className="flex items-start justify-between gap-3">
+                <code className="rounded bg-muted px-1.5 py-0.5 text-xs font-medium">/{q.code}</code>
+                <button
+                  type="button"
+                  onClick={() => copy(q.text, t('Copied'))}
+                  className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-brand-ink hover:underline"
+                >
+                  <Copy className="size-3.5" aria-hidden /> copy
+                </button>
+              </div>
+              <p className="mt-1 whitespace-pre-line rounded-lg bg-muted/50 p-2.5 text-sm">{q.text}</p>
+            </div>
           ))}
+        </div>
+      </PanelCard>
+
+      <PanelCard title={t('The rest of the Tools menu, in one line each')}>
+        <ul className="space-y-2 text-sm">
+          <li>
+            <b>{t('Lists')}</b> — {t('this replaced Labels. Make one per stage - New order, Paid, Dispatched, Delivered, Problem - and the chat list becomes an order list.')}
+          </li>
+          <li>
+            <b>{t('Instagram & Facebook')}</b> — {t('worth connecting: the catalogue can then show on the Instagram profile too, for free.')}
+          </li>
+          <li>
+            <b>{t('Advertise')}</b> — {t('costs money and needs a card. Not now - the free listings and Google are not full yet.')}
+          </li>
+          <li>
+            <b>{t('Payments')}</b> — {t('leave it off. Money taken inside a chat has no order record, no courier booking and no returns cover; the product page handles all three.')}
+          </li>
+          <li>
+            <b>{t('Meta One')}</b> — {t('a paid bundle. Skip it.')}
+          </li>
         </ul>
         <p className="mt-3 text-xs text-muted-foreground">
-          {t('One warning: the free Business app is all you need. Do not sign up for the WhatsApp Business Platform (API) - that one charges per conversation.')}
+          {t('And the one real warning: the free Business app is all you need. Never sign up for the WhatsApp Business Platform (API) - that one charges per conversation.')}
         </p>
       </PanelCard>
     </div>
