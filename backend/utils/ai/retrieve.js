@@ -37,6 +37,16 @@ const { embed } = require('./embed');
  *   pincode - which is exactly what an embedding blurs. Neither is a fallback
  *   any more, and if either road fails the other still answers.
  *
+ * THE TRADE-OFF, MEASURED AND ACCEPTED
+ *   Fusion reorders, so a chunk the vector road put 2nd can land 6th once
+ *   the text road disagrees. Checked on the live index with "how do I see
+ *   how one listing is doing": ProductReport.jsx went from 2nd to 6th and
+ *   GoogleStatus.jsx from 3rd to 8th - both still inside the eight chunks
+ *   the assistant reads, so nothing was lost from its context, only from the
+ *   top of it. That is fine at k=8. It would NOT be fine at k=3: if the
+ *   default k is ever lowered, check this again, because the right answer
+ *   would start falling off the end.
+ *
  * WHAT WAS DELIBERATELY NOT DONE
  *   Semantic chunking. Three independent evaluations say it does not pay:
  *   "cluster-based semantic chunking did not yield any consistent
