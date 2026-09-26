@@ -11,21 +11,15 @@
  *   2. EVERY broken field comes back, not just the first. A form with three
  *      problems that reports one makes the rest a guessing game.
  *
- *   3. The browser's rules and the database's rules agree. The browser is only
- *      there to save a round-trip - the model is the authority - so the danger
- *      is drift: a rule the browser lets through and the server still refuses
- *      gives a form that submits and then fails for no visible reason.
+ * There was a third promise here - that the browser's rules and the database's
+ * rules agree - checked by importing the React app's own validators so a copy
+ * could never drift. `frontend/` was deleted on 26 Sep 2026 and `web/` has no
+ * shared validation module to import in its place, so that block went with it.
+ * The gap is recorded in WHAT-IS-LEFT.md: the parity check is worth rebuilding
+ * against `web/`, and until it is, client and server rules can drift unseen.
  */
 import { describe, it, expect } from 'vitest';
 import { createRequire } from 'module';
-
-// The very same rules the browser runs. Imported, not copied - a copy would
-// pass this suite forever while the real form drifted away underneath it.
-import {
-  validateRegister,
-  validateAddress,
-  validateProduct,
-} from '../../frontend/src/utils/validate.js';
 
 const require = createRequire(import.meta.url);
 const mongoose = require('mongoose');
@@ -145,143 +139,5 @@ describe('a PIN code decides where the parcel goes', () => {
 
   it('accepts a real one', () => {
     expect(addressDoc({ zipCode: '302019' }).validateSync()).toBeUndefined();
-  });
-});
-
-describe('the browser and the database agree', () => {
-  const GOOD_DESCRIPTION = 'A hand-finished rose gold ring.';
-
-  const cases = [
-    [
-      'a two-letter product name',
-      validateProduct,
-      { name: 'ab', description: GOOD_DESCRIPTION, category: 'c', price: 1600, stock: 5 },
-      () => productDoc({ name: 'ab' }),
-      'name',
-    ],
-    [
-      'a description under ten characters',
-      validateProduct,
-      { name: 'Rose Gold Ring', description: 'short', category: 'c', price: 1600, stock: 5 },
-      () => productDoc({ description: 'short' }),
-      'description',
-    ],
-    [
-      'fractional stock',
-      validateProduct,
-      { name: 'Rose Gold Ring', description: GOOD_DESCRIPTION, category: 'c', price: 1600, stock: '2.5' },
-      () => productDoc({ stock: 2.5 }),
-      'stock',
-    ],
-    [
-      'negative stock',
-      validateProduct,
-      { name: 'Rose Gold Ring', description: GOOD_DESCRIPTION, category: 'c', price: 1600, stock: '-1' },
-      () => productDoc({ stock: -1 }),
-      'stock',
-    ],
-    [
-      'a five-digit PIN code',
-      validateAddress,
-      { phoneNumber: '9829012345', street: 's', city: 'c', state: 'st', zipCode: '30201' },
-      () => addressDoc({ zipCode: '30201' }),
-      'zipCode',
-    ],
-    [
-      'a landline in the mobile field',
-      validateAddress,
-      { phoneNumber: '1412345678', street: 's', city: 'c', state: 'st', zipCode: '302019' },
-      () => addressDoc({ phoneNumber: '1412345678' }),
-      'phoneNumber',
-    ],
-  ];
-
-  it.each(cases)('both refuse %s', (_label, browserFn, form, makeDoc, field) => {
-    expect(Boolean(makeDoc().validateSync()?.errors?.[field])).toBe(true);
-
-    // If this fails, the form lets something through that the server will
-    // refuse: the customer presses submit and nothing visibly happens.
-    expect(Boolean(browserFn(form)[field])).toBe(true);
-  });
-
-  it('both accept a product that is genuinely fine', () => {
-    const form = {
-      name: 'Rose Gold Ring',
-      description: GOOD_DESCRIPTION,
-      category: 'c',
-      price: '1600',
-      stock: '5',
-      mrp: '2000',
-      weight: '0.02',
-    };
-
-    // Just as important as agreeing on refusals: a browser rule STRICTER than
-    // the server blocks a listing the shop would have been happy to take.
-    expect(validateProduct(form)).toEqual({});
-    expect(productDoc().validateSync()).toBeUndefined();
-  });
-
-  it('both accept an address that is genuinely fine', () => {
-    const form = {
-      phoneNumber: '9829012345',
-      street: '12 Katewa Nagar',
-      city: 'Jaipur',
-      state: 'Rajasthan',
-      zipCode: '302019',
-    };
-
-    expect(validateAddress(form)).toEqual({});
-    expect(addressDoc().validateSync()).toBeUndefined();
-  });
-
-  it('both refuse a password under six characters', () => {
-    const browser = validateRegister({
-      name: 'Rajat',
-      email: 'r@example.com',
-      password: 'abc12',
-      role: 'customer',
-    });
-    const server = new User({
-      name: 'Rajat',
-      email: 'r@example.com',
-      password: 'abc12',
-      role: 'customer',
-    }).validateSync();
-
-    expect(browser.password).toBeTruthy();
-    expect(server.errors.password).toBeTruthy();
-  });
-});
-
-describe('MRP, which the server does not police', () => {
-  const GOOD_DESCRIPTION = 'A hand-finished rose gold ring.';
-
-  it('refuses an MRP at or below the selling price', () => {
-    // The listing only strikes through an MRP HIGHER than the price. Set it
-    // lower and it silently vanishes, leaving the seller to wonder why their
-    // discount never showed up.
-    const errors = validateProduct({
-      name: 'Rose Gold Ring',
-      description: GOOD_DESCRIPTION,
-      category: 'c',
-      price: '1600',
-      stock: '5',
-      mrp: '1500',
-    });
-
-    expect(errors.mrp).toMatch(/higher than the selling price/i);
-  });
-
-  it('is happy with no MRP at all', () => {
-    expect(
-      validateProduct({
-        name: 'Rose Gold Ring',
-        description: GOOD_DESCRIPTION,
-        category: 'c',
-        price: '1600',
-        stock: '5',
-        mrp: '',
-      })
-    ).toEqual({});
   });
 });

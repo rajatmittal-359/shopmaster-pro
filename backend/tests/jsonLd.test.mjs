@@ -25,7 +25,9 @@
  *   3. U+2028 and U+2029 too: legal in JSON, line terminators in JavaScript
  */
 import { describe, it, expect } from 'vitest';
-import { serialiseJsonLd } from '../../frontend/src/utils/jsonLd.js';
+// Was ../../frontend/src/utils/jsonLd.js until the React app was deleted on
+// 26 Sep 2026. Same module, same escaping, now the one `web/` actually ships.
+import { serialiseJsonLd } from '../../web/src/lib/jsonLd.js';
 
 const CLOSER = 'Ring</script><script>alert(1)</script>';
 
