@@ -274,6 +274,67 @@ synonyms collection (jhumka/jhumki/झुमका), Gemini query → filters.
   behind a near-miss check). Building it half-way would print exactly the kind
   of invented confidence this feature exists to remove.
 
+### 3b. A page per product: "how is this listing doing" (Rajat's idea, 27 Sep 2026)
+
+*"Mai soch raha tha ek about page ho seller ke paas bhi product ka, jisme bare
+hue product ki report - preview aur score ya fix aur aur bhi. Product ki exact
+info to edit mode me dikh jati hai, usko chhod ke. Jaise ye jahan score dikh
+raha hai isko clickable page bana de."*
+
+**Researched 27 Sep. The idea is sound, and one big platform does exactly it.**
+
+- **Everyone separates "edit the listing" from "how the listing is doing".**
+  That part is unanimous, and it is why *8 · Google* had to come out of the
+  form (plan §4.61).
+- **Where the report lives splits by seller size, and that is the useful part:**
+  - **Etsy - the closest reference we have**, because their sellers are Mummy
+    and Rahul, not enterprises: a **per-listing Stats view**. You open the
+    listing itself, not the shop-level Stats page, and scroll to **Traffic
+    Sources**, which splits the visits by Etsy search, direct, social and Etsy
+    ads - alongside views, visits, favourites, orders and revenue. This is
+    Rajat's about page, and it already exists on the platform whose sellers
+    most resemble ours.
+  - **eBay** attaches per-listing prompts ("Opportunities", formerly "Sell it
+    faster") to the rows of the listings table rather than giving each listing
+    a page.
+  - **Amazon** has no per-ASIN page at all - per-ASIN **rows** inside
+    account-level dashboards (Listing Quality Dashboard, Detail Page Sales and
+    Traffic by ASIN). At millions of ASINs a page each would be useless.
+  - **Shopify** has nothing per product; product analytics lives in Analytics
+    and Reports, away from the product entirely.
+- **So a page per product is a SMALL-marketplace pattern.** It is cheap for us
+  and impossible for Amazon, and that is the same shape of advantage as the
+  search-word coach in §3. We have three sellers.
+
+**What we could put on it today, without new data:** the listing score and all
+its fixes (`lib/listingScore`, already shared with the server) · the Google
+result preview · Google's own verdicts from `/seller/products/:id/google` -
+indexed and last crawl, Merchant Center status and issues, Shopping
+impressions and clicks over 28 days, and the Search Console queries that
+reached the page · orders and units for this product · its stock history ·
+its photos and what the AI did to them.
+
+**The one thing missing, and it is the thing Etsy's page is mostly made of:
+on-site views.** Nothing counts a view of a product page today - there is no
+field on `Product`, no `ProductView` model, and GA4 is client-side and not
+queried by us. So either the page launches honest ("Google showed it 34 times;
+we do not yet count visits here"), or a small view counter goes in first. The
+counter is the better answer and it is cheap: it also feeds the "buyers type"
+evidence the search-word coach needs.
+
+**Gate.** Goal: **seller recruitment and retention** - Etsy's whole
+seller-retention loop runs on a seller being able to see what a listing earns
+them. What breaks without it: nothing today, but the read-outs have no proper
+home, so they keep being pushed into a form that should only hold work.
+
+**Shape to build:** `/seller/products/[id]/report`, reached from the score
+block in the edit form (making the score clickable, as Rajat asked) and from
+the row in All products. Edit stays the place for exact product info; the
+report page holds everything about it. One backend aggregation endpoint, plus
+the view counter.
+
+**Not started.** Needs Rajat's go-ahead on the view counter going in first.
+
 ### 3a. The 13 Sep night list — sidebars and the next features
 
 **Decided 13 Sep 05:00 ("abhi kardo"): S1–S9, A1–A2, C1–C8 built and pushed — plan §4.32.** Still to eyeball in the browser signed in as seller and admin (the session had expired when I looked): the new sidebars with badges, Returns & issues, Promotions form, Performance, Help, admin Products/Customers. A3/A4 wait; F1–F12 still Rajat's pick.

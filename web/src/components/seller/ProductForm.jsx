@@ -753,9 +753,9 @@ export default function ProductForm({ productId, copyFromId }) {
           // Search words live in this card too, so they count towards its tick.
           { id: 'details', label: t('Details'), done: Boolean(form.color || form.size || form.material || (form.tags || []).length) },
           { id: 'faqs', label: t('Questions'), done: (form.faqs || []).some((x) => x.q && x.a) },
-          // No `done`: section 8 is Google's preview and verdicts, a read-out
-          // with nothing to fill, so it carries no tick and is not counted.
-          { id: 'google', label: t('Google') },
+          // Every chip is now a step that can be filled and ticked. The
+          // read-outs left the sequence on 27 Sep 2026 - the Google preview
+          // went under the description, the verdicts under the health bar.
         ]}
       />
 
@@ -906,6 +906,13 @@ export default function ProductForm({ productId, copyFromId }) {
             onChange={setValue('description')}
             placeholder="Describe it the way you would to a customer standing in front of you…"
           />
+          {/* The Google result, under the two fields that write it (27 Sep
+              2026). It used to be a numbered card at the end of the form,
+              which promised a step nobody could fill - Rajat: "if something
+              isn't a product filling step then why even it is here". Here it
+              is what it always was: a mirror of the name and the description,
+              moving as they are typed. */}
+          <ListingQuality part="preview" form={form} photos={photos} categoryLabel={categoryLabel} needsSize={needsSize} />
         </Field>
 
         {/* What the shopper reads BEFORE the description (21 Sep 2026): Amazon's
@@ -1357,26 +1364,6 @@ export default function ProductForm({ productId, copyFromId }) {
             </Button>
           </div>
         </div>
-      </Card>
-
-      <Card
-        id="google"
-        title="8 · Google"
-        defaultOpen={false}
-        badge={<span className="rounded bg-muted px-1.5 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wide text-muted-foreground">{t('Optional')}</span>}
-        summary={`${t('How it looks in Google')}${productId ? ` · ${t("Google's own verdicts")}` : ''}`}
-        lead={t('Nothing to fill here - this is how Google sees the listing. Search words, and the button that suggests them, are up in 6 · Details.')}
-      >
-        <ListingQuality
-          part="google"
-          form={form}
-          photos={photos}
-          productId={productId}
-          categoryLabel={categoryLabel}
-          needsSize={needsSize}
-          textModel={textModel}
-          onAddTags={(words) => setForm((f) => ({ ...f, tags: [...new Set([...(f.tags || []), ...words])] }))}
-        />
       </Card>
 
       {/* The question itself. Three answers, and the first one is the kind one:

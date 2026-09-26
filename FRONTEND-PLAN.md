@@ -2891,3 +2891,45 @@ deploy gate buys less than it risks.
 
 **Nothing was lost.** Read from production read-only: the listing still holds
 all 22 words, last written 26 Sep 14:46 - the damaged form was never saved.
+
+### 4.61 A numbered card is a promise to fill it (27 Sep 2026)
+
+Rajat, looking at the form the day after the Suggest button moved: *"if
+something isn't a product filling step then why even it is here - preview is
+another thing, it is either show in relevant thing on side."*
+
+He is right, and §4.59 only went half way. Moving the button out of *8 · Google*
+left the card honest about its contents but still **numbered**, still a chip in
+the rail, still sitting in a sequence of things you fill. The number was the
+lie. The rail had already been forced to work around it - a chip with
+`done: undefined` so it would not be counted - which is the tell that the
+sequence was carrying something that did not belong to it.
+
+**Shopify does keep a "Search engine listing preview" in its product form, and
+that is not a contradiction** - theirs earns the place because it carries
+editable **Page title** and **Description** overrides (help.shopify.com,
+*Adding and updating products*). It is a field group with a preview attached.
+Ours is derived entirely from what the seller already typed. A preview of a
+field belongs beside that field; a report of what Google did is not part of
+authoring at all.
+
+**So the card is gone, and its two halves went where they belong.**
+- **The Google result preview** now sits inside *2 · Words*, directly under the
+  description. It mirrors the name and the description as they are typed -
+  which is the only moment it teaches anything - and it renders nothing until
+  there is a name.
+- **Google's own verdicts** (indexed, Shopping status and issues, what people
+  typed) ride inside the health bar's **"All {n}"** panel. That was the second
+  correction of the evening: they first went in as a strip of their own under
+  the bar, and Rajat rejected it on sight - *"faltu noisy nahi karna UI ko -
+  only if user wants, with a button"*. The same finding as 15 Sep: a listing is
+  usually fine, so a permanent row saying so earns nothing and costs attention
+  every time. Inside a panel the seller opens on purpose, it costs nothing.
+
+**The form is now seven numbered steps and every one of them can be filled and
+ticked.** The rail reads 3/7 instead of 3/7-with-an-eighth-chip-that-never-lit.
+Verified in the browser at 1440: no eighth card, seven chips, the preview under
+the description, and nothing from Google visible until "All 8" is pressed.
+
+The fuller home for per-product read-outs is a report page of its own -
+specced in WHAT-IS-LEFT §3b.
