@@ -361,6 +361,80 @@ increment - the server-side version counted cache misses, not visitors. Plan
 that the rows are per day; "where the visit came from" (Etsy's traffic
 sources) which needs a referrer on the beacon; and favourites/wishlist counts.
 
+### 3c. "Semantic chunking and Google's OKF are much better than RAG" - researched, and mostly not true (27 Sep 2026)
+
+Rajat, going to bed: *"Mai aajkal bahut logo se sun raha hu RAG se zyada
+semantic chunking aur naya Google ka OKF RAG se bahut better hai - iske baare
+me research karna, deeply sochna, fir apne ko kitna fayda hoga us hisaab se
+laga dena."*
+
+**OKF is Google's Open Knowledge Format** (v0.1, June 2026): knowledge as
+human-readable Markdown concept files with YAML frontmatter and explicit links
+between concepts, traversed deterministically instead of by nearest-neighbour
+search. Portable, git-native, diff-able - genuinely nice properties.
+
+**The one controlled evaluation says it does not retrieve better.** Abhinav,
+*Does Google's Open Knowledge Format Improve RAG?* (SSRN 7227678, Aug 2026):
+a 623-page wildfire-mitigation filing, 93 questions, page-level answer keys.
+
+| What was measured | Page hit |
+|---|---|
+| OKF lexical retriever | 91.1% |
+| Dense-vector baseline | 65.8% |
+| **Plain BM25 over ordinary chunks, no OKF** | **97.5%** |
+
+The apparent OKF win vanished under inspection: the dense encoder read only
+**256 word-piece tokens** while **80.9% of passages were longer** - it was
+being fed truncated text. A proper OKF bundle (1,011 concepts, 99.9% of the
+source words) still did not beat ordinary chunk retrieval, and bolted onto a
+strong hybrid pipeline it **added nothing**. The author's own conclusion: OKF
+looks like an improvement when the baseline is weak.
+
+**Semantic chunking: three independent evaluations say no.** arXiv 2607.01852
+- "cluster-based semantic chunking did not yield any consistent improvement
+with the implemented configuration and adds computing complexity". Vectara -
+"failed to show a clear advantage in identifying evidence sentences across
+datasets". Chroma's benchmark puts plain recursive chunking at the top.
+
+**What this means for us specifically.**
+- We do **not** have the bug that made the study's baseline look weak. Our
+  chunks cap at 1,800 characters and `utils/ai/embed.js` sends up to 8,000 to
+  `gemini-embedding-001`. Nothing is truncated. Checked, not assumed.
+- We already do **structural chunking** - `indexKnowledge.js` splits markdown
+  on headings, then paragraphs, then lines. That is the thing semantic
+  chunking approximates, except ours is exact, because a person wrote the
+  headings.
+- So: **OKF, no. Semantic chunking, no.** Neither would pay for the work.
+
+**What the research DID pay for, and is now built.** The finding that matters
+is not about OKF at all: a plain lexical retriever beat a dense one outright
+on real documents. We had a MongoDB text index sitting on the same chunks and
+were using it **only as a fallback for when embedding failed**. It is now a
+peer: `utils/ai/retrieve.js` runs both roads together and fuses the rankings
+with Reciprocal Rank Fusion (k=60, the Cormack constant), capped at three
+chunks per file so one long file cannot take every slot.
+
+**Measured on the live index (459 chunks), not claimed:**
+- *"what commission do I pay"* - vector alone missed `payout.js`,
+  `priceOrder.js`, `Earnings.jsx`, `OrderDetail.jsx`. Those are the files that
+  answer what a seller is actually paid.
+- *"how do returns work"* - vector returned generic pages; the text road found
+  `OrderDetail.jsx` and `ShipmentTimeline.jsx`.
+- *"Shiprocket se booking kaise hoti hai"* - the per-file cap freed slots and
+  surfaced `bookingFailure.js`, which answers the half of the question the
+  booking file does not.
+
+Cost: nothing. No new service, no new index, no extra AI call - the embedding
+already happened, and the text index already existed. 9 tests on the fusion
+(`tests/rankFuse.test.mjs`); it is pure, and its failure mode is silent, which
+is the worst kind: the assistant keeps answering fluently from slightly worse
+evidence and nobody ever sees a bug.
+
+**Still open, if we ever want more:** a cross-encoder reranker over the fused
+top 20. That is the third leg of the "strong hybrid pipeline" the study used,
+and it is the only remaining idea with evidence behind it. It needs a rerank
+model call per question, so it is a cost decision, not a code decision.
+
 ### 3a. The 13 Sep night list — sidebars and the next features
 
 **Decided 13 Sep 05:00 ("abhi kardo"): S1–S9, A1–A2, C1–C8 built and pushed — plan §4.32.** Still to eyeball in the browser signed in as seller and admin (the session had expired when I looked): the new sidebars with badges, Returns & issues, Promotions form, Performance, Help, admin Products/Customers. A3/A4 wait; F1–F12 still Rajat's pick.
