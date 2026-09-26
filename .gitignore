@@ -83,3 +83,6 @@ ENV
 web/test-results/
 web/playwright-report/
 .playwright-mcp/
+
+# The handover pack: live keys, never committed (scripts/handover-pack.js)
+handover/
