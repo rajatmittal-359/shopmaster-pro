@@ -3172,3 +3172,27 @@ returns, custom order. Each one points back at the product page rather than
 stating a policy in the chat: the page is the promise the customer was shown,
 and a rule typed from memory at 1am is how a shop ends up owing something it
 never offered.
+
+### 4.66 Two doors to one job (27 Sep 2026)
+
+Rajat, an hour after the WhatsApp tab went in: *"Do teen jagah WhatsApp
+catalogue ka likha hai site me, mujhe kaha jaana hai, kya karna hai?"*
+
+He was right and it was my fault. A `WhatsAppCatalog` dialog had sat on **All
+products** since 19 Sep - the whole list as a paste-able message, and a
+Commerce Manager CSV - and I built the new tab without noticing it. Two doors
+to one job is worse than either door alone, and the person who has to choose
+between them is the one who knows least about why there are two.
+
+They are one now. The old dialog's two genuinely useful outputs - **copy the
+whole list as one message** (for a status update or a broadcast) and
+**download the CSV** (Meta Commerce Manager's columns, which are Google
+Merchant's columns, so one file serves both) - moved into the WhatsApp tab's
+catalogue card. `WhatsAppCatalog.jsx` is deleted, and the button on All
+products is now a link to the tab.
+
+Worth recording because it also answers "type or import": the CSV imports a
+whole catalogue at once but needs the WhatsApp account linked to a Meta
+Business account first. For the six items the house shop has live, typing them
+in is quicker than the linking. The panel says so rather than leaving the
+seller to find out.

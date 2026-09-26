@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { ChartNoAxesColumn, ExternalLink, Eye, EyeOff, ImagePlus, MoreHorizontal, Pencil, Plus, Search } from 'lucide-react';
+import { ChartNoAxesColumn, ExternalLink, Eye, EyeOff, ImagePlus, MessageCircle, MoreHorizontal, Pencil, Plus, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { authedFetch } from '@/lib/client';
 import { Badge } from '@/components/ui/badge';
@@ -14,7 +14,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import PanelCard from '@/components/panel/PanelCard';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { scoreListing } from '@/lib/listingScore';
-import WhatsAppCatalog from '@/components/seller/WhatsAppCatalog';
 import { useT } from '@/lib/i18n';
 
 /**
@@ -243,8 +242,13 @@ export default function ProductTable() {
             );
           })}
         </div>
-        {/* The shop's own WhatsApp is its marketing channel; the links point back here. */}
-        <WhatsAppCatalog products={products} />
+        {/* The shop's own WhatsApp is its marketing channel; the links point
+            back here. The whole setup - profile, greeting, catalogue, quick
+            replies - lives on one page, so this is a door to it rather than a
+            second copy of it (27 Sep 2026). */}
+        <Button variant="outline" size="sm" render={<Link href="/seller/grow?tab=whatsapp" />} nativeButton={false}>
+          <MessageCircle className="size-4" aria-hidden /> {t('WhatsApp catalogue')}
+        </Button>
         <label className="flex h-9 w-full items-center gap-2 rounded-lg border bg-background px-3 sm:w-64">
           <Search className="size-4 text-muted-foreground" aria-hidden />
           <input

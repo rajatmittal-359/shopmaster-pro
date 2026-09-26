@@ -32,6 +32,15 @@ import { useT } from '@/lib/i18n';
  *   for the same reason, and a seller who takes the order in chat loses the
  *   protection the platform is for.
  */
+/*
+ * ONE PLACE, NOT TWO (27 Sep 2026)
+ *   A `WhatsAppCatalog` dialog has sat on All products since 19 Sep with the
+ *   paste-able list and the Commerce Manager CSV in it. I built this tab
+ *   without noticing, and Rajat found the result immediately: "do teen jagah
+ *   WhatsApp catalogue ka likha hai site me, mujhe kaha jaana hai?" Fair -
+ *   two doors to one job is worse than either door alone. The old dialog's
+ *   two useful outputs moved here, and All products now links to this tab.
+ */
 const rupees = (n) => `₹${Number(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
 
 /*
@@ -82,6 +91,33 @@ export default function WhatsAppKit({ data }) {
   const shop = data.businessName || 'our shop';
   const url = data.shopUrl;
   const items = data.catalogue || [];
+
+  // The whole list as one message, for a status update or a broadcast.
+  const asMessage = items.map((p) => `${fitName(p.name)} - ${rupees(p.salePrice || p.price)}\n${p.url}`).join('\n\n');
+
+  /*
+   * Meta Commerce Manager's import columns - the same set Google Merchant
+   * takes, so one file serves both. Worth it once a catalogue is too long to
+   * type; for half a dozen items, typing is faster than linking a Meta
+   * Business account.
+   */
+  const csvCell = (v) => `"${String(v ?? '').replace(/"/g, '""').replace(/\s+/g, ' ').trim()}"`;
+  const asCsv = () => {
+    const head = ['id', 'title', 'description', 'availability', 'condition', 'price', 'link', 'image_link', 'brand'];
+    const rows = items.map((p) =>
+      [p.sku || '', p.name, p.description || '', 'in stock', 'new', `${Number(p.salePrice || p.price).toFixed(2)} INR`, p.url, '', shop].map(csvCell)
+    );
+    return [head.join(','), ...rows.map((r) => r.join(','))].join('\n');
+  };
+
+  const downloadCsv = () => {
+    const blob = new Blob([asCsv()], { type: 'text/csv;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'whatsapp-catalogue.csv';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
   const phone = data.shop?.phone || '';
   const city = data.shop?.city || '';
   /*
@@ -229,6 +265,18 @@ ${url}` },
                 </li>
               ))}
             </ol>
+            <div className="mt-4 flex flex-wrap gap-2 border-t pt-4">
+              <Button size="sm" variant="outline" onClick={() => copy(asMessage, t('Whole list copied'))}>
+                <Copy className="size-3.5" aria-hidden /> {t('Copy the whole list as one message')}
+              </Button>
+              <Button size="sm" variant="ghost" onClick={downloadCsv}>
+                {t('Download CSV for Meta Commerce Manager')}
+              </Button>
+            </div>
+            <p className="mt-2 text-xs text-muted-foreground">
+              {t('The message is for a status update or a broadcast. The CSV imports the whole catalogue at once, but needs the WhatsApp account linked to a Meta Business account first - for a handful of items, typing them in is quicker.')}
+            </p>
+
             <div className="mt-4 space-y-1 text-xs text-muted-foreground">
               <p>
                 {t('Country of Origin is REQUIRED on that form - choose')} <b>{items[0]?.origin || 'India'}</b>{t(' for all of these.')}
