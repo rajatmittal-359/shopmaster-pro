@@ -2996,3 +2996,49 @@ function so the window arithmetic is tested (`tests/productViews.test.mjs`,
 Verified in the browser: three shopper visits count three; the seller's own
 two visits count zero; one page load fires exactly one beacon. 1342 backend
 tests green.
+
+### 4.63 The cap was refusing the seller's own knowledge (27 Sep 2026)
+
+Rajat tested the Search words field the way a seller would, and found the
+worst kind of bug - one where the product is working exactly as built.
+
+He meant to type **artificial**. He typed **artifcial**. The field was at
+13/13, so the `Add "artifcial"` row was disabled and did nothing; no message
+said why, and nothing offered the right spelling. *"Na to add kar pa raha, na
+koi AI theek karega... agar add nahi hoga to fir kya karu? Is hisaab se to
+seller ne confidence loss kar diya."*
+
+**The cap was the real fault, and it was backwards.** The AI's suggestions had
+filled all 13 places, and the field then refused the one thing we said we
+wanted most - a word the seller knows and we do not. Advice was crowding out
+the person. Etsy's 13 is *their platform's* hard limit; ours is only advice,
+so `Picker` gained `softMax` beside `max`: it counts and it advises
+("4 words · 13 is a good number") and it never blocks. `max` stays for the
+fields where Google really does take three values.
+
+**And a hard cap must say why where the finger is.** A disabled row now
+carries "remove one first" on the row itself, not in a line under a field
+nobody is reading while the list is open.
+
+**"Did you mean" - the cheapest honest half of the coach.** Before a typed
+word is accepted it is checked by edit distance against every word already on
+the page: the seller's own other words, and everything the suggester found
+from Google, from our own search box and from the model. A near-miss is
+offered above the list - *"Did you mean **rose gold**? People really type this
+one"* - and never forced; "Add your word as typed" stays right under it.
+Phrases are compared word by word, so "necklase" finds "necklace set" and
+"artifcial" would find "artificial jewellery" once that phrase is among the
+evidence. Under five letters nothing is offered, because at that length
+almost everything is one edit from something.
+
+**What it deliberately cannot do yet.** It only knows words we have evidence
+for on that page. Rajat's own "artifcial" was not corrected in his test,
+because nothing in that listing's evidence contained "artificial" - the
+honest outcome, and exactly the gap the full coach closes with a real lexicon
+and the Search Console join (WHAT-IS-LEFT §3). Guessing at a word nobody has
+typed is how a helper starts being wrong, which costs more confidence than
+staying quiet.
+
+Verified in the browser: at 13 words a typed word is accepted, not refused ·
+"rose golld" offers "rose gold" · accepting it adds no duplicate · keeping
+your own spelling still works · the line reads as advice, not as a wall.

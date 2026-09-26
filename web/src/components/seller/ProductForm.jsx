@@ -292,6 +292,9 @@ export default function ProductForm({ productId, copyFromId }) {
   // Which model writes: 'auto' (Gemini, nano behind it), 'gemini', 'nano'. The
   // same rule as the photo tools - the seller always sees who is doing the work.
   const [textModel, setTextModel] = useState('auto');
+  // Everything the suggester found, so the Search words field can offer a
+  // real phrase while the seller types and catch a misspelling of one.
+  const [suggestedWords, setSuggestedWords] = useState([]);
   const [ai, setAi] = useState({ status: 'idle' });
   const [usage, setUsage] = useState(null);
   // Whether this shop is registered under GST - decides if the tax fields show at all.
@@ -1274,8 +1277,21 @@ export default function ProductForm({ productId, copyFromId }) {
                * listing lost eight words to a single backspace. Fixed in
                * picker.jsx on 27 Sep 2026; the reason is written there.
                */
-              max={13}
-              options={form.tags || []}
+              /*
+               * A TARGET, NOT A WALL (27 Sep 2026). This was `max={13}`, and
+               * the moment the AI's suggestions filled the field a seller
+               * typing their OWN word was refused, silently. Rajat, testing:
+               * "na to add kar pa raha, na koi AI theek karega... seller ne
+               * confidence loss kar diya." Etsy's 13 is their platform's hard
+               * limit; ours is advice, so it advises.
+               */
+              softMax={13}
+              /*
+               * The dropdown knows the seller's own words AND everything the
+               * suggester found, so typing "neck" offers the real phrases and
+               * a misspelling can be caught against words people really type.
+               */
+              options={[...new Set([...(form.tags || []), ...suggestedWords])]}
               value={form.tags || []}
               onChange={(list) => {
                 const before = form.tags || [];
@@ -1303,6 +1319,7 @@ export default function ProductForm({ productId, copyFromId }) {
                 the seller never saw where they went. */}
             <div className="mt-3 rounded-lg border bg-muted/30 p-3">
               <ListingQuality
+                onWords={setSuggestedWords}
                 part="words"
                 form={form}
                 photos={photos}

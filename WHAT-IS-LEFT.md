@@ -268,6 +268,19 @@ synonyms collection (jhumka/jhumki/झुमका), Gemini query → filters.
     verdicts, nothing to fill. Mummy does not have to relearn where the field
     is, and the two halves are no longer two cards apart. Done, not owed.
 
+  **Half of it shipped 27 Sep** (plan §4.63): the field no longer refuses a
+  seller's own word at the cap, and a typed word that is a near-miss of a word
+  already on the page is offered as a correction. What is left is the part
+  that needs a backend: a real lexicon, so a misspelling of a word this
+  particular listing has no evidence for is still caught, and the Search
+  Console join so the correction can carry "seen 12 times in searches that
+  reached your shop".
+
+  **Also open, small:** `components/ui/picker.jsx` is not translated - its
+  strings ("remove one first", "Did you mean", the count line) stay English
+  when the panel is switched to Hindi. Pre-existing, but Mummy uses that
+  switch.
+
   **Scheduled: next session.** Rajat chose "next session, properly" over a
   quick version - the coach needs the gate, a reference pass, and backend work
   (joining Search Console queries and `SearchLog` into one evidence lookup

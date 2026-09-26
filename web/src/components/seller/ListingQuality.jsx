@@ -33,7 +33,7 @@ const FIELD_IDS = { name: 'name', description: 'description', images: 'photos', 
 
 const plain = (html) => String(html || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
 
-export default function ListingQuality({ form, photos, productId, categoryLabel, needsSize, textModel, onAddTags, part = 'bar' }) {
+export default function ListingQuality({ form, photos, productId, categoryLabel, needsSize, textModel, onAddTags, onWords, part = 'bar' }) {
   const listing = useMemo(
     () => ({ ...form, images: photos.map((p) => p.src), category: form.category, needsSize }),
     [form, photos, needsSize]
@@ -83,6 +83,9 @@ export default function ListingQuality({ form, photos, productId, categoryLabel,
         },
       });
       setKw(data);
+      // The field above needs this vocabulary to catch a misspelling of a
+      // word real people actually type (Picker's "did you mean").
+      onWords?.((data.keywords || []).map((k) => k.word));
     } catch (err) {
       toast.error(err.message);
     } finally {

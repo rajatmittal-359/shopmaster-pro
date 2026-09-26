@@ -3,7 +3,7 @@
 import * as React from "react";
 import { Combobox } from "@base-ui/react/combobox";
 import { cn } from "cn";
-import { Check, ChevronDown, Plus, X } from "lucide-react";
+import { Check, ChevronDown, Lightbulb, Plus, X } from "lucide-react";
 
 /**
  * Picker - ONE control for "choose from a list", however long the list is.
@@ -44,6 +44,61 @@ export const EXCLUSIVE = ['None', 'All', 'Not applicable', 'Not stated', 'Unisex
 
 const asArray = (v) => (Array.isArray(v) ? v : v ? [v] : []);
 const same = (a, b) => String(a).trim().toLowerCase() === String(b).trim().toLowerCase();
+
+/*
+ * DID YOU MEAN - the cheapest half of the search-word coach (27 Sep 2026).
+ *
+ * Rajat, testing as a seller would: he meant to type "artificial", typed
+ * "artifcial", and nothing on the page helped. "Na to add kar pa raha, na koi
+ * AI theek karega... is hisaab se to seller ne confidence loss kar diya."
+ *
+ * A seller knows the market word and doubts their spelling of it - that doubt
+ * is the whole reason they type nothing at all. So before a typed word is
+ * accepted, it is checked against the words already on this page: the
+ * seller's own other words and every word the suggester found from Google,
+ * the shop's searches and the model. A near-miss is offered as a correction,
+ * never forced - the seller's word is theirs.
+ *
+ * It only knows words we have evidence for. A misspelling of something nobody
+ * has ever typed here goes in as written, which is the honest outcome: the
+ * full coach with a real lexicon is WHAT-IS-LEFT §3.
+ */
+const distance = (a, b) => {
+  if (Math.abs(a.length - b.length) > 3) return 99;
+  let prev = [...Array(b.length + 1).keys()];
+  for (let i = 1; i <= a.length; i++) {
+    const row = [i];
+    for (let j = 1; j <= b.length; j++) {
+      row[j] = Math.min(prev[j] + 1, row[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    }
+    prev = row;
+  }
+  return prev[b.length];
+};
+
+/** The closest known word to what was typed, if it is close enough to mean it. */
+const nearMiss = (typed, words) => {
+  const t = String(typed).trim().toLowerCase();
+  // Under five letters almost everything is within one edit of something.
+  if (t.length < 5) return null;
+  let best = null;
+  for (const w of words) {
+    const word = String(w).toLowerCase();
+    if (word === t) return null; // typed exactly - nothing to correct
+    // Compare against each word of a phrase too, so "artifcial" can find
+    // "artificial jewellery" and "necklase" can find "necklace set".
+    const parts = [word, ...word.split(/\s+/)];
+    for (const part of parts) {
+      if (part.length < 5) continue;
+      const d = distance(t, part);
+      // One edit for a short word, two once it is long enough that two typos
+      // are still obviously the same word.
+      const allowed = t.length >= 8 ? 2 : 1;
+      if (d > 0 && d <= allowed && (!best || d < best.d)) best = { word, d };
+    }
+  }
+  return best?.word || null;
+};
 
 /*
  * ENTER inside this field means "that one", never "save the listing" (24 Sep
@@ -114,6 +169,17 @@ export function Picker({
   onChange,
   multiple = false,
   max = null,
+  /*
+   * A TARGET, NOT A WALL. `max` refuses; `softMax` only advises.
+   *
+   * Search words had `max={13}` - Etsy's number - and it locked the field the
+   * moment the AI's suggestions filled it. A seller then typing their OWN
+   * word, which is the knowledge we do not have and most want, was simply
+   * refused with no explanation. The advice was crowding out the person.
+   * Etsy's 13 is a platform hard limit; ours is only advice, so it now reads
+   * as advice and never blocks.
+   */
+  softMax = null,
   allowCustom = false,
   exclusive = EXCLUSIVE,
   placeholder = 'Choose…',
@@ -128,13 +194,25 @@ export function Picker({
   const chosen = multiple ? asArray(value) : value || '';
   const count = multiple ? chosen.length : 0;
   const full = multiple && max != null && count >= max;
+  const over = multiple && softMax != null && count >= softMax;
 
   const typed = query.trim();
   const isNew = allowCustom && typed.length > 0 && !options.some((o) => same(o, typed));
+  // Only worth asking about a word being invented; picking one off the list
+  // is not a typo.
+  const meant = isNew ? nearMiss(typed, options) : null;
   // The invented value rides in the list as an ordinary item; the renderer is
   // what marks it "Add …". Base UI's own filter keeps it, since it matches the
   // query exactly.
   const items = isNew ? [...options, typed] : options;
+
+  /*
+   * The correction cannot be a Combobox.Item: Base UI filters the list by
+   * what has been typed, and a correction never matches the misspelling that
+   * asked for it - that is the whole point of it. So it sits above the list
+   * as its own row.
+   */
+  const accept = (word) => commit(multiple ? [...asArray(chosen), word] : word);
 
   const commit = (next) => {
     setQuery('');
@@ -161,6 +239,7 @@ export function Picker({
      * held. Over-cap listings stay whole and can only shrink; the unticked
      * rows are already disabled past the cap, so nothing new gets in.
      */
+    // softMax deliberately has no ceiling: it advises, it does not refuse.
     const ceiling = max == null ? Infinity : Math.max(max, asArray(chosen).length);
     if (list.length > ceiling) list = list.slice(0, ceiling);
     onChange([...new Set(list)]);
@@ -255,19 +334,37 @@ export function Picker({
         <Combobox.Portal>
           <Combobox.Positioner className="isolate z-50" sideOffset={4}>
             <Combobox.Popup className="max-h-[min(var(--available-height),18rem)] w-(--anchor-width) origin-(--transform-origin) overflow-y-auto overscroll-contain rounded-lg bg-popover p-1 text-popover-foreground shadow-md ring-1 ring-foreground/10 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0">
+              {meant && (
+                <button
+                  type="button"
+                  // The pointer is caught before Base UI can treat the click
+                  // as "outside the list" and close the popup under it.
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => accept(meant)}
+                  className="flex w-full items-center gap-2 rounded-md bg-amber-500/10 px-2 py-2 text-left text-sm hover:bg-amber-500/20"
+                >
+                  <Lightbulb className="size-4 shrink-0 text-amber-600 dark:text-amber-400" aria-hidden />
+                  <span className="min-w-0">
+                    Did you mean <b>{meant}</b>?
+                    <span className="block text-[0.7rem] text-muted-foreground">People really type this one.</span>
+                  </span>
+                </button>
+              )}
               <Combobox.Empty className="px-2 py-3 text-sm text-muted-foreground">
                 {allowCustom ? 'Type it and press Enter to add it.' : 'Nothing matches that.'}
               </Combobox.Empty>
               <Combobox.List>
                 {(item) => {
                   const fresh = isNew && item === typed;
+                  const blocked = full && !asArray(chosen).includes(item);
                   return (
                     <Combobox.Item
                       key={item}
                       value={item}
-                      // Past the cap the rest go quiet instead of disappearing:
-                      // the seller can see what they did not choose.
-                      disabled={full && !asArray(chosen).includes(item)}
+                      // Past a HARD cap the rest go quiet instead of
+                      // disappearing: the seller can see what they did not
+                      // choose, and the row says why it cannot be taken.
+                      disabled={blocked}
                       className="flex min-h-9 cursor-default items-center gap-2 rounded-md px-2 py-1.5 text-sm outline-none select-none data-disabled:opacity-40 data-highlighted:bg-accent data-highlighted:text-accent-foreground"
                     >
                       <span className="grid size-4 shrink-0 place-items-center">
@@ -279,7 +376,13 @@ export function Picker({
                           </Combobox.ItemIndicator>
                         )}
                       </span>
-                      <span>{fresh ? <>Add &ldquo;{item}&rdquo;</> : item}</span>
+                      <span className="min-w-0 flex-1">
+                        {fresh ? <>Add &ldquo;{item}&rdquo;</> : item}
+                      </span>
+                      {/* A row that cannot be taken has to say so where the
+                          finger is, not in a line under the field nobody is
+                          looking at while the list is open. */}
+                      {blocked && <span className="shrink-0 text-[0.65rem] text-muted-foreground">remove one first</span>}
                     </Combobox.Item>
                   );
                 }}
@@ -291,7 +394,7 @@ export function Picker({
 
       {/* One quiet line under the field: how many are allowed, and - only when
           it matters - that a value may be invented. Never both shouting. */}
-      {(max != null || allowCustom) && multiple && (
+      {(max != null || softMax != null || allowCustom) && multiple && (
         <p className="mt-1 text-xs text-muted-foreground">
           {max != null && (
             <>
@@ -299,7 +402,15 @@ export function Picker({
               {full ? ' · remove one to add another' : ''}
             </>
           )}
-          {max != null && allowCustom && !full ? ' · ' : ''}
+          {/* The soft target never says "x/13", because that reads as a wall.
+              It says how many there are, and what the number to aim at is. */}
+          {softMax != null && (
+            <>
+              {count} {count === 1 ? 'word' : 'words'}
+              {over ? ` · ${softMax} is usually enough, but your own words are always worth adding` : ` · ${softMax} is a good number`}
+            </>
+          )}
+          {(max != null || softMax != null) && allowCustom && !full ? ' · ' : ''}
           {allowCustom && !full && customHint}
         </p>
       )}
