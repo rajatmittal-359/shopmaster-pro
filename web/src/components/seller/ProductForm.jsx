@@ -218,10 +218,22 @@ const EditingContext = createContext(false);
  * Sections 7 and 8 pass defaultOpen={false} explicitly - they are the
  * optional ones and stay shut in both modes.
  */
-function Card({ id, title, lead, aside, summary, defaultOpen, foldOnPhone = false, badge, children }) {
+function Card({ id, title, lead, aside, summary, defaultOpen, foldOnPhone = false, badge, req = false, children }) {
   const t = useT();
   const editing = useContext(EditingContext);
   const key = id || String(title).toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  /*
+   * `req` puts the same asterisk on a whole SECTION that `Field` puts on one
+   * input - used by Photos, which has no single field to mark and which
+   * `submit` refuses a listing without. It rides in as the badge rather than
+   * into the title, because the title is a translation key and adding a star
+   * to the string would orphan the Hindi and Hinglish entries.
+   */
+  const mark = req ? (
+    <span className="text-destructive" title={t('Needed to list this product')}>
+      *<span className="sr-only"> {t('required')}</span>
+    </span>
+  ) : null;
   return (
     <Fold
       id={key}
@@ -229,7 +241,14 @@ function Card({ id, title, lead, aside, summary, defaultOpen, foldOnPhone = fals
       lead={typeof lead === 'string' ? t(lead) : lead}
       summary={summary}
       aside={aside}
-      badge={badge}
+      badge={
+        mark && badge ? (
+          <>
+            {mark}
+            {badge}
+          </>
+        ) : (mark ?? badge)
+      }
       defaultOpen={defaultOpen ?? editing}
       remember={editing}
       foldOnPhone={foldOnPhone}
@@ -581,6 +600,34 @@ export default function ProductForm({ productId, copyFromId }) {
           });
         }
       }
+      /*
+       * WEIGHT: warned about, never blocked (26 Sep 2026).
+       *
+       * 24 of the 28 live products have no weight, and every courier quote
+       * for them is a guess - the courier bills the real weight either way,
+       * so the difference comes out of the seller's money. It is the biggest
+       * single gap in the catalogue and it is invisible, because nothing ever
+       * said it out loud at the moment it was created.
+       *
+       * Not a hard stop, on purpose: a seller who cannot list until they find
+       * a weighing scale simply does not list. So the listing goes through
+       * and the cost is named once, with the fix one tap away. This is the
+       * honest version of the enforcement we decided against - see
+       * FRONTEND-PLAN 4.58.
+       */
+      if (!asDraft && !(Number(form.weight) > 0)) {
+        toast.warning(t('Listed without a weight'), {
+          description: t('The courier is quoted on the packed weight. Without it we estimate, and the difference comes out of your payment.'),
+          action: productId
+            ? undefined
+            : {
+                label: t('Add it'),
+                onClick: () => router.push('/seller/products'),
+              },
+          duration: 8000,
+        });
+      }
+
       router.push('/seller/products');
       router.refresh();
     } catch (err) {
@@ -707,6 +754,7 @@ export default function ProductForm({ productId, copyFromId }) {
       {/* 1. MEDIA */}
       <Card
         id="photos"
+        req
         title="1 · Photos"
         summary={photos.length ? t(photos.length > 1 ? '{n} photos · first is the main one' : '1 photo · the main one', { n: photos.length }) : t('No photo yet - the one thing nothing sells without')}
         lead="Up to five. The first is the main one - white background sells best."
