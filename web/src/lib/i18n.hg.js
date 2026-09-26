@@ -286,8 +286,11 @@ const HG = {
   'Nothing left to fix. Save it.': 'Kuch baaki nahi. Save karo.',
   'Hide': 'Chhupao',
   'All {n}': 'Sab {n}',
-  '6 · Questions shoppers ask': '6 · Customer ke sawaal',
-  '7 · Google': '7 · Google',
+  // Was "3b" until 26 Sep 2026 - a letter left over from the day the category
+  // templates were added after the numbering. Never had a translation.
+  '4 · Product facts': '4 · Product ki jaankari',
+  '7 · Questions shoppers ask': '7 · Customer ke sawaal',
+  '8 · Google': '8 · Google',
   '{n} photos · first is the main one': '{n} photo · pehli main hai',
   '1 photo · the main one': '1 photo · yahi main hai',
   'No photo yet - the one thing nothing sells without': 'Abhi photo nahi - bina photo kuch nahi bikta',

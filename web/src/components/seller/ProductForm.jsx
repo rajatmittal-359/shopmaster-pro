@@ -18,6 +18,7 @@ import VideoSlot from '@/components/seller/VideoSlot';
 import RichTextEditor from '@/components/seller/RichTextEditor';
 import TemplateFacts, { useListingTemplate } from '@/components/seller/TemplateFacts';
 import CategoryPicker from '@/components/seller/CategoryPicker';
+import FormRail from '@/components/seller/FormRail';
 import FieldAssist from '@/components/seller/FieldAssist';
 import Fold from '@/components/panel/Fold';
 import MicButton from '@/components/voice/MicButton';
@@ -162,6 +163,25 @@ function Field({ id, label, hint, aside, children, className = '' }) {
  * with their summaries - instead of a wall that has to be scrolled past. A
  * section the seller opens is remembered per section, and the score panel's
  * "Fix" link still opens the section it points at.
+ */
+/*
+ * CLOSED on a first visit, by Rajat's decision (26 Sep 2026).
+ *
+ * The obvious reading of "7-8 cards chevron wale thode noisy feel dete hai"
+ * was that the cards were shut and the page was a wall of closed doors, so
+ * this was briefly flipped to open - Shopify's product page keeps every
+ * section open and folds only the optional "Search engine listing". Tried it
+ * in the browser, and he was clear: *"by default pehli baar aate hai sab
+ * cards band kyu nahi rehte, mai khol lunga chevron se."*
+ *
+ * So closed it is, and the reasoning is his own catalogue rather than
+ * Shopify's: a seller listing their tenth kurta does not read eight open
+ * sections, they open the two they are changing. Each closed card still
+ * carries its SUMMARY line ("3 photos · first is the main one", "₹450 · 5 in
+ * stock"), so a folded page is still readable at a glance - and the rail above
+ * now carries the orientation that an open page was providing.
+ *
+ * The person's own choice wins after that and is remembered per card.
  */
 function Card({ id, title, lead, aside, summary, defaultOpen = false, foldOnPhone = false, badge, children }) {
   const t = useT();
@@ -593,6 +613,25 @@ export default function ProductForm({ productId, copyFromId }) {
         onAddTags={(words) => setForm((f) => ({ ...f, tags: [...new Set([...(f.tags || []), ...words])] }))}
       />
 
+      {/*
+        The rail: orientation and a jump, which is the honest half of what a
+        stepper or tabs would have given - without hiding a section from the
+        listing score or making an edit walk seven steps. See FormRail.jsx for
+        the three references that decided it.
+      */}
+      <FormRail
+        sections={[
+          { id: 'photos', label: t('Photos'), done: photos.length > 0 },
+          { id: 'words', label: t('Words'), done: Boolean(form.name && form.description) },
+          { id: 'category-card', label: t('Category'), done: Boolean(form.category) },
+          ...(template ? [{ id: 'facts-card', label: t('Facts'), done: Object.values(form.attributes || {}).some((v) => v && String(v).length) }] : []),
+          { id: 'price-card', label: t('Price'), done: Boolean(form.price) && form.stock !== '' && form.stock !== undefined },
+          { id: 'details', label: t('Details'), done: Boolean(form.color || form.size || form.material) },
+          { id: 'faqs', label: t('Questions'), done: (form.faqs || []).some((x) => x.q && x.a) },
+          { id: 'google', label: t('Google'), done: (form.tags || []).length > 0 },
+        ]}
+      />
+
       {/* 1. MEDIA */}
       <Card
         id="photos"
@@ -765,7 +804,7 @@ export default function ProductForm({ productId, copyFromId }) {
           The writer fills them from the photo; the seller corrects. */}
       <Card
         id="facts-card"
-        title="3b · Product facts"
+        title="4 · Product facts"
         foldOnPhone
         summary={template ? `${Object.values(form.attributes || {}).filter((v) => v && String(v).length).length} of ${template.attributes.length} facts${form.productType ? ` · ${form.productType}` : ''}` : t('Choose a category first')}
         lead={template ? `The facts shoppers filter on for ${template.label.toLowerCase()}. The AI fills them from the photo - check, do not retype.` : 'Pick the category above and its questions appear here.'}
@@ -792,7 +831,7 @@ export default function ProductForm({ productId, copyFromId }) {
       {/* 4. PRICING & INVENTORY */}
       <Card
         id="price-card"
-        title="4 · Price and stock"
+        title="5 · Price and stock"
         foldOnPhone
         summary={`${form.price ? `₹${form.price}` : t('No price')} · ${form.stock !== '' && form.stock !== undefined ? t('{n} in stock', { n: form.stock }) : t('stock?')}${form.weight ? ` · ${form.weight} g` : ''} · ${t({ R: 'return + refund', X: 'exchange only', N: 'no return' }[form.returnMode] || 'category return rule')}`}
       >
@@ -954,7 +993,7 @@ export default function ProductForm({ productId, copyFromId }) {
       {/* 5. DETAILS THE CHANNELS NEED */}
       <Card
         id="details"
-        title="5 · Details"
+        title="6 · Details"
         foldOnPhone
         summary={[form.color, form.size, form.gender && form.gender !== 'unisex' ? form.gender : null, form.material].filter(Boolean).join(' · ') || t('Colour, size, who it is for - Google Shopping needs these')}
         lead="Colour, who it is for and age group put it on Google Shopping for free."
@@ -1098,7 +1137,7 @@ export default function ProductForm({ productId, copyFromId }) {
           job. Drafted from the facts and the rulebook, kept by the seller. */}
       <Card
         id="faqs"
-        title="6 · Questions shoppers ask"
+        title="7 · Questions shoppers ask"
         defaultOpen={false}
         badge={<span className="rounded bg-muted px-1.5 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wide text-muted-foreground">{t('Optional')}</span>}
         summary={(form.faqs || []).filter((x) => x.q && x.a).length ? t('{n} answers', { n: (form.faqs || []).filter((x) => x.q && x.a).length }) : t('None yet - two short answers help AI answers quote you')}
@@ -1144,7 +1183,7 @@ export default function ProductForm({ productId, copyFromId }) {
 
       <Card
         id="google"
-        title="7 · Google"
+        title="8 · Google"
         defaultOpen={false}
         badge={<span className="rounded bg-muted px-1.5 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wide text-muted-foreground">{t('Optional')}</span>}
         summary={`${t('{n} search words · how it looks in Google', { n: (form.tags || []).length })}${productId ? ` · ${t("Google's own verdicts")}` : ''}`}
