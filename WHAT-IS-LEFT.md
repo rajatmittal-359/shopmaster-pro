@@ -268,7 +268,11 @@ synonyms collection (jhumka/jhumki/झुमका), Gemini query → filters.
     verdicts, nothing to fill. Mummy does not have to relearn where the field
     is, and the two halves are no longer two cards apart. Done, not owed.
 
-  **Half of it shipped 27 Sep** (plan §4.63): the field no longer refuses a
+  **Most of it shipped 27 Sep.** Plan §4.64 - the seller says or types the
+  whole thing in their own language and the model hands it back as corrected
+  search phrases, badged ★ and sorted first. Voice is the browser's own
+  `SpeechRecognition` at `hi-IN`, free, so **Sarvam (Hindi voice) can stay
+  parked**. Plan §4.63 - the field no longer refuses a
   seller's own word at the cap, and a typed word that is a near-miss of a word
   already on the page is offered as a correction. What is left is the part
   that needs a backend: a real lexicon, so a misspelling of a word this

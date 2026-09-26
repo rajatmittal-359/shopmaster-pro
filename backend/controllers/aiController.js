@@ -605,6 +605,24 @@ const suggestKeywords = async (req, res) => {
       return res.status(429).json({ message: `You have used today's ${CAPS.textsPerSellerPerDay} AI drafts. It resets at midnight.`, usage });
     }
     const { name, description, categoryName, color, imageUrl } = req.body || {};
+    /*
+     * THE SELLER'S OWN WORDS (27 Sep 2026, Rajat's idea).
+     *
+     *   "Seller ko bolne ka bhi de do - jo samajh aae bol de, usse search
+     *    keyword suggest kar de... khud bolna hai to AI usme se theek karke
+     *    suggest kar dega."
+     *
+     * A seller knows the market word. What stops them is doubt about the
+     * spelling and about the shape a search takes - so the answer is not to
+     * correct them one chip at a time, it is to let them say the whole thing
+     * in their own language, however they like, and turn that into search
+     * phrases. They come back badged as theirs, so a seller can see their own
+     * knowledge in the list instead of a wall of the model's guesses.
+     *
+     * Free text, any language, any spelling, capped so a pasted essay cannot
+     * become the prompt.
+     */
+    const sellerWords = String(req.body?.sellerWords || '').replace(/\s+/g, ' ').trim().slice(0, 500);
     if (!name && !imageUrl) return res.status(400).json({ message: 'Give the product a title first.' });
     const textModel = ['gemini', 'nano'].includes(req.body?.textModel) ? req.body.textModel : 'auto';
     const facts = [name && `Title: ${name}`, categoryName && `Category: ${categoryName}`, color && `Colour: ${color}`,
@@ -613,7 +631,9 @@ const suggestKeywords = async (req, res) => {
     // Console), our own search box, the synonym family - each with its count.
     // The model then fills the gaps and is told what is already known.
     const { remember } = require('../utils/ai/aiCache');
-    const cacheKey = { name, categoryName, color, description: String(description || '').slice(0, 800), tags: req.body?.tags, textModel };
+    // The seller's own words are part of the key: the same product asked
+    // twice with different words is a different question.
+    const cacheKey = { name, categoryName, color, description: String(description || '').slice(0, 800), tags: req.body?.tags, textModel, sellerWords: String(req.body?.sellerWords || '').slice(0, 500) };
     const cached = await require('../utils/ai/aiCache').AiCache.findOne({ key: require('../utils/ai/aiCache').keyOf('keywords', String(req.user._id), cacheKey) }).lean().catch(() => null);
     if (cached) return res.json({ ...cached.value, cached: true, usage: await usageFor(req.user._id, exempt) });
     void remember;
@@ -625,12 +645,28 @@ Product facts:
 ${facts}
 ${known ? `\nWords real people already typed for products like this (source, count): ${known}\nDo not repeat these; add what is missing around them.` : ''}
 
+${sellerWords ? `
+The SELLER described this product in their own words, possibly in Hindi, Hinglish or with spelling mistakes:
+"${sellerWords}"
+They know this market better than you do. Read what they MEANT - fix the spelling, keep the meaning - and turn it into search phrases shoppers would type. Put those in "fromSeller", each with what they said and the phrase to use. Never invent a material, purity, weight or claim they did not make.
+` : ''}
 Give 8 to 12 search phrases an Indian shopper would actually type for THIS product - a mix of: the plain product type, type + colour, type + occasion or use, type + material or style words that are true from the facts, and one or two Hinglish spellings people use (e.g. "jhumka", "kurti", "payal"). Lowercase. 1-4 words each. No brand names, no prices, no invented materials or purity claims.
 
-Answer with ONE JSON object: {"keywords": ["..."], "titleTip": "one short sentence on how to make the title match how people search, or empty"}`;
+Answer with ONE JSON object: {"keywords": ["..."], ${sellerWords ? '"fromSeller": [{"said": "their word as they wrote it", "use": "the corrected search phrase", "why": "at most eight words on what changed, empty if nothing did"}], ' : ''}"titleTip": "one short sentence on how to make the title match how people search, or empty"}`;
     const answer = await require('../utils/gemini').generate(prompt, {
       imageUrl: ownImage(imageUrl) ? imageUrl : undefined,
-      responseSchema: { type: 'object', properties: { keywords: { type: 'array', items: { type: 'string' } }, titleTip: { type: 'string' } }, required: ['keywords'] },
+      responseSchema: {
+        type: 'object',
+        properties: {
+          keywords: { type: 'array', items: { type: 'string' } },
+          fromSeller: {
+            type: 'array',
+            items: { type: 'object', properties: { said: { type: 'string' }, use: { type: 'string' }, why: { type: 'string' } }, required: ['use'] },
+          },
+          titleTip: { type: 'string' },
+        },
+        required: ['keywords'],
+      },
       temperature: 0.5,
       textModel,
     });
@@ -644,12 +680,35 @@ Answer with ONE JSON object: {"keywords": ["..."], "titleTip": "one short senten
     const hay = `${name || ''} ${String(description || '').replace(/<[^>]*>/g, ' ')}`.toLowerCase();
     const fromModel = [...new Set((parsed.keywords || []).map((k) => String(k).toLowerCase().trim()).filter((k) => k && k.length <= 40))].slice(0, 12);
     const seen = new Set();
+    /*
+     * The seller's own words come FIRST - ahead of Google, ahead of the
+     * model. Theirs is the only source that knows this shop's actual stock,
+     * and a list that buries them under twelve machine guesses teaches the
+     * seller that speaking up changed nothing.
+     */
+    const mine = (parsed.fromSeller || [])
+      .map((x) => ({
+        word: String(x.use || '').toLowerCase().trim(),
+        said: String(x.said || '').trim(),
+        why: String(x.why || '').slice(0, 60),
+      }))
+      .filter((x) => x.word && x.word.length <= 40)
+      .slice(0, 12)
+      .map((x) => ({
+        word: x.word,
+        source: 'seller',
+        count: 0,
+        // Only worth saying when the word actually changed.
+        note: x.said && x.said.toLowerCase() !== x.word ? `You said "${x.said}"${x.why ? ` - ${x.why}` : ''}` : 'From your own words',
+      }));
+
     const keywords = [
+      ...mine,
       ...evidence.words.slice(0, 12).map((w) => ({ word: w.word, source: w.source, count: w.count, note: w.note })),
       ...fromModel.map((k) => ({ word: k, source: 'ai', count: 0, note: 'Suggested by AI from the facts' })),
     ]
       .filter((k) => (seen.has(k.word) ? false : seen.add(k.word)))
-      .slice(0, 20)
+      .slice(0, 24)
       .map((k) => ({ ...k, present: hay.includes(k.word) }));
     await AiUsage.record(req.user._id, { kind: 'text', provider: answer.provider || 'gemini' });
     const payload = {

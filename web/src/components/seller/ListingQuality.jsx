@@ -8,6 +8,7 @@ import { authedFetch } from '@/lib/client';
 import { scoreListing } from '@/lib/listingScore';
 import { useT } from '@/lib/i18n';
 import { Button } from '@/components/ui/button';
+import SayIt from '@/components/seller/SayIt';
 
 /**
  * The listing, scored - and the way up.
@@ -41,6 +42,8 @@ export default function ListingQuality({ form, photos, productId, categoryLabel,
   const { score, fixes } = useMemo(() => scoreListing(listing), [listing]);
   const [kw, setKw] = useState(null); // { keywords, titleTip, writtenBy }
   const [kwBusy, setKwBusy] = useState(false);
+  // What the seller said or typed in their own words (SayIt).
+  const [said, setSaid] = useState('');
   const [google, setGoogle] = useState(null);
   const [allOpen, setAllOpen] = useState(false);
   const t = useT();
@@ -66,7 +69,7 @@ export default function ListingQuality({ form, photos, productId, categoryLabel,
     if (typeof el.focus === 'function') setTimeout(() => el.focus({ preventScroll: true }), 300);
   };
 
-  const suggest = async () => {
+  const suggest = async (sellerWords = '') => {
     setKwBusy(true);
     try {
       const first = photos[0];
@@ -79,6 +82,9 @@ export default function ListingQuality({ form, photos, productId, categoryLabel,
           color: form.color,
           tags: form.tags,
           imageUrl: first?.kind === 'existing' ? first.src : undefined,
+          // The seller's own sentence, if they gave one. The model is told to
+          // read what they MEANT and hand the words back corrected.
+          sellerWords: sellerWords || undefined,
           textModel,
         },
       });
@@ -158,8 +164,8 @@ export default function ListingQuality({ form, photos, productId, categoryLabel,
               {kw.keywords.map((k) => {
                 const have = k.present || (form.tags || []).includes(k.word);
                 // Where the word came from (plan 2.32): G = Google searchers, S = ShopMaster shoppers, ≈ = same-thing word, AI = suggested.
-                const badge = k.source === 'google' ? 'G' : k.source === 'shop' ? 'S' : k.source === 'family' ? '≈' : 'AI';
-                const badgeClass = k.source === 'google' ? 'bg-sky-500/15 text-sky-800 dark:text-sky-200' : k.source === 'shop' ? 'bg-amber-500/15 text-amber-800 dark:text-amber-200' : 'bg-muted text-muted-foreground';
+                const badge = k.source === 'seller' ? '★' : k.source === 'google' ? 'G' : k.source === 'shop' ? 'S' : k.source === 'family' ? '≈' : 'AI';
+                const badgeClass = k.source === 'seller' ? 'bg-primary/20 text-brand-ink' : k.source === 'google' ? 'bg-sky-500/15 text-sky-800 dark:text-sky-200' : k.source === 'shop' ? 'bg-amber-500/15 text-amber-800 dark:text-amber-200' : 'bg-muted text-muted-foreground';
                 const tip = k.note || (k.source === 'ai' ? 'Suggested by AI from the facts' : '');
                 return have ? (
                   <span key={k.word} title={tip} className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs text-emerald-800 dark:text-emerald-200">
@@ -187,10 +193,11 @@ export default function ListingQuality({ form, photos, productId, categoryLabel,
             )}
             {kw.titleTip && <p className="mt-2 text-xs text-muted-foreground">Title: {kw.titleTip}</p>}
             <p className="mt-1 text-[11px] text-muted-foreground">
-              <b>Green</b> = already in your listing · <b>G</b> = typed on Google{kw.evidence?.google ? '' : ' (not read yet)'} · <b>S</b> = typed on ShopMaster · <b>≈</b> = same-thing word · <b>AI</b> = {kw.writtenBy} · number = how many times
+              <b>Green</b> = already in your listing · <b>★</b> = from your own words · <b>G</b> = typed on Google{kw.evidence?.google ? '' : ' (not read yet)'} · <b>S</b> = typed on ShopMaster · <b>≈</b> = same-thing word · <b>AI</b> = {kw.writtenBy} · number = how many times
             </p>
           </>
         )}
+        <SayIt value={said} onChange={setSaid} busy={kwBusy} onSubmit={() => suggest(said)} />
       </div>
     );
   }

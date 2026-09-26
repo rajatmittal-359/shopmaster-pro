@@ -3042,3 +3042,53 @@ staying quiet.
 Verified in the browser: at 13 words a typed word is accepted, not refused ·
 "rose golld" offers "rose gold" · accepting it adds no duplicate · keeping
 your own spelling still works · the line reads as advice, not as a wall.
+
+### 4.64 Let the seller say it (27 Sep 2026, Rajat's idea)
+
+§4.63 corrected the seller one chip at a time, against words we already had
+evidence for. Rajat tested it with his own failing word and it did nothing -
+*"yaha tumne ye necklace testing ke liye galat type kiya, to ab AI kaha hai?"*
+Fair. A corrector that only knows words it has already seen is not much of a
+corrector.
+
+His answer inverts it, and it is better than mine:
+
+> *"Ek input box hi de do. Jo bolna chahega bol dega, usse phir search
+> keywords generate ho jaenge... khud bolna hai to AI usme se theek karke
+> suggest kar dega. Likhne ka bolne ka dono ho."*
+
+Instead of policing single words, take the **whole sentence** - Hindi,
+Hinglish, misspelt, spoken - and let the model read what was *meant*. A seller
+who cannot spell "artificial" can still say *"artifcial jwellery ka ring hai,
+rose gold colour, pearl lga hua hai, shadi aur party me pehnte hai"*, and
+every clause of that is knowledge we do not have.
+
+**What it does.** A box under the suggestions, with a microphone. The sentence
+goes to `/seller/ai/keywords` as `sellerWords`; the model is told the seller
+knows this market better than it does, to fix the spelling and keep the
+meaning, and to return each phrase **with what the seller said**. Those come
+back badged **★** and sorted **first** - ahead of Google, ahead of the model -
+because a list that buries the seller's own words under twelve machine guesses
+teaches them that speaking up changed nothing. Hovering a ★ word says where it
+came from: *You said "artifcial jwellery ka ring hai" - Fixed spelling and
+shortened to search phrase.*
+
+**Speaking costs nothing.** The browser's own `SpeechRecognition` (Chrome, on
+Android and desktop) does `hi-IN` for free, with no key and no account, and
+nothing passes through us. That is why **Sarvam stays parked** - the reason to
+buy Hindi voice just went away. Where the browser cannot listen the microphone
+is simply not drawn; typing is always the way in, never the fallback nobody
+mentions. Interim results are on, so words appear while they are still being
+spoken - four silent seconds reads as "broken" and people stop.
+
+**Proved with one real Gemini call**, on Rajat's own failing sentence:
+`artifcial → artificial ring ★` · `rose gold colour → rose gold ring ★` ·
+`pearl lga hua hai → pearl ring ★` · `shadi aur party me pehnte hai →
+wedding ring ★`. Four phrases from a sentence with three misspellings in it,
+all first in the list, each one tap from the field.
+
+This is the half of the search-word coach that needed no lexicon: the seller
+supplies the vocabulary, so we never have to guess at a word nobody typed.
+What is still owed is the evidence beside it - "buyers type jhumka, seen 12
+times in searches that reached your shop" - which needs the Search Console
+join (WHAT-IS-LEFT §3).
