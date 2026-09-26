@@ -2831,3 +2831,63 @@ exactly what section 8 has been reduced to. `ListingQuality` grew a third part,
 `part="words"`, beside `bar` and `google`; the same component still owns the
 one definition of what counts as filled, so the box, the score and the rail
 cannot drift apart.
+
+### 4.60 The search-words field was eating words (27 Sep 2026)
+
+Rajat, editing a live listing: *"mai yaha search word me kuch word likhta hu
+to kaafi saare words gayab ho jate hai, back karta hu to kaafi word hat jate
+hai galti se bhi ekdum se, fir ctrl se wapas bhi nhi aate."* Two separate
+defects, one of them written into `Picker` on 24 Sep and one inherited from
+Base UI. Neither had anything to do with the screenshot he was looking at.
+
+**Defect 1 - the cap was deleting, not capping.** `commit()` ended with
+`list = list.slice(0, max)`, and `commit` runs on EVERY value change including
+a removal. The listing he was on carries **22** search words from the AI
+backfill against a cap of **13**. So removing one word took the list to 21 and
+the slice then silently threw away eight more. The comment in `ProductForm`
+promising *"it never deletes a seller's word on its own"* described a
+behaviour the code did not have - it was written as an intention and never
+checked. The cap now stops NEW words only: the ceiling is whichever is larger,
+`max` or what the field already held, so an over-cap listing stays whole and
+can only shrink one word at a time. 7 live listings were exposed to this.
+
+**Defect 2 - Backspace deleted a word per keypress, and keyboards repeat.**
+Base UI's `ComboboxInput` removes the last chip the moment Backspace lands on
+an empty input. Auto-repeat fires roughly thirty times a second, so a
+Backspace held half a second past the end of a word walks backwards through
+the whole list - and with defect 1 compounding it, the field emptied in about
+a second. Ctrl+Z does not reach a chip, so there was no way back.
+
+Every reference says the same thing, and it is *select first*:
+- **Material 3**, chips accessibility: a chip *"can be removed by selecting it
+  and pressing the Delete key"*.
+- **Angular Material**'s chip list already behaves this way - *"when you press
+  BACKSPACE, the last chip will be selected"* (angular/components#18659).
+- **eBay**'s design system: a removal moves focus to the adjacent chip rather
+  than running past it.
+
+Base UI already had the machinery - its chips are focusable and a focused chip
+removes itself on Backspace - so the fix uses it rather than replacing it: the
+first Backspace only moves focus to the last chip (and gives it a red focus
+ring, because it is now one keypress from deletion), the second removes it.
+Auto-repeat is dropped in both the input and the chip, so a held key can never
+take a second word however long it is held. `event.preventBaseUIHandler()` is
+Base UI's own way to stand its handler down.
+
+**And the way back.** House rule 6 says undo after removing; this field did
+not have one. Removing search words now raises a toast carrying **Undo**, the
+same shape MediaManager and FieldAssist already use. Every one of these words
+was either researched from real searches or typed by someone who knows the
+market - it is the last field in the form that should lose things quietly.
+
+**Verified in the browser** against the real component on a throwaway page,
+since `web/` has no unit runner: removing one chip of 22 leaves 21 (was 13);
+one Backspace on the empty input removes nothing and focuses the last chip;
+the second removes exactly one; 25 auto-repeat events remove nothing; typing a
+word still adds it under the cap and is refused at it without losing anything.
+No e2e test was added - `playwright.config.js` deliberately keeps the suite to
+the five paths a deploy must not break, and a UI test of a chip field in the
+deploy gate buys less than it risks.
+
+**Nothing was lost.** Read from production read-only: the listing still holds
+all 22 words, last written 26 Sep 14:46 - the damaged form was never saved.

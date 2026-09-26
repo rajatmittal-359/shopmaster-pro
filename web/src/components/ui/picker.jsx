@@ -46,13 +46,66 @@ const asArray = (v) => (Array.isArray(v) ? v : v ? [v] : []);
 const same = (a, b) => String(a).trim().toLowerCase() === String(b).trim().toLowerCase();
 
 /*
- * Enter inside this field means "that one", never "save the listing" (24 Sep
+ * ENTER inside this field means "that one", never "save the listing" (24 Sep
  * 2026 - found in the browser: typing a colour and pressing Enter submitted
  * the whole product form). Base UI's own selection runs on keydown; this only
  * cancels the browser's default, which for a lone input in a form is submit.
  */
 const swallowEnter = (e) => {
   if (e.key === 'Enter') e.preventDefault();
+};
+
+/*
+ * BACKSPACE ON AN EMPTY FIELD SELECTS THE LAST CHIP. IT DOES NOT DELETE IT.
+ *
+ * Base UI deletes outright: ComboboxInput's keydown removes the last selected
+ * value the moment Backspace lands on an empty input. A keyboard auto-repeats
+ * about thirty times a second, so a Backspace held half a second past the end
+ * of a word walks backwards through the whole list - Rajat, 27 Sep 2026:
+ * "galti se bhi ekdum se, fir ctrl se wapas bhi nhi aate".
+ *
+ * Every reference says select first:
+ *   - Material 3, chips accessibility: a chip "can be removed by selecting it
+ *     and pressing the Delete key".
+ *   - Angular Material's chip list does exactly this - "when you press
+ *     BACKSPACE, the last chip will be selected" (angular/components#18659).
+ *   - eBay's design system: removing a chip moves focus to the adjacent chip,
+ *     never past it silently.
+ *
+ * Base UI already has the machinery - its chips are focusable and a FOCUSED
+ * chip removes itself on Backspace. So the first press only moves focus
+ * there, and the second removes it: two deliberate presses per word.
+ * `preventBaseUIHandler` is Base UI's own way to stand its handler down.
+ *
+ * Auto-repeat is dropped on the floor in both places, so a key held down can
+ * never remove a second chip, however long it is held.
+ */
+const chipsKeyDown = (e) => {
+  swallowEnter(e);
+  if (e.key !== 'Backspace') return;
+
+  const stop = () => {
+    e.preventDefault();
+    e.preventBaseUIHandler?.();
+  };
+
+  if (e.repeat) return stop();
+  if (e.currentTarget.value !== '') return;
+
+  const row = e.currentTarget.parentElement;
+  const chips = row ? Array.from(row.children).filter((el) => el !== e.currentTarget) : [];
+  const last = chips[chips.length - 1];
+  if (!last) return;
+  stop();
+  last.focus();
+};
+
+/** A focused chip deletes itself on Backspace - but not on a repeat of it. */
+const chipKeyDown = (e) => {
+  if (e.repeat && (e.key === 'Backspace' || e.key === 'Delete')) {
+    e.preventDefault();
+    e.preventBaseUIHandler?.();
+  }
 };
 
 export function Picker({
@@ -91,7 +144,25 @@ export function Picker({
     const added = list.find((v) => !asArray(chosen).includes(v));
     if (added && exclusive.some((e) => same(e, added))) list = [added];
     else if (list.length > 1) list = list.filter((v) => !exclusive.some((e) => same(e, v)));
-    if (max != null) list = list.slice(0, max);
+    /*
+     * THE CAP STOPS NEW WORDS. IT MUST NEVER EAT WORDS ALREADY THERE.
+     *
+     * This was `list.slice(0, max)`, and `commit` runs on EVERY change -
+     * including a removal. So on a listing carrying 22 search words from the
+     * AI backfill against a cap of 13, ONE backspace took the list to 21 and
+     * the slice silently threw away eight more (Rajat, 27 Sep 2026: "kaafi
+     * saare words gayab ho jate hai... ekdum se"). Held down, the field
+     * emptied in about a second.
+     *
+     * The comment in ProductForm promising "it never deletes a seller's word
+     * on its own" was describing behaviour the code did not have.
+     *
+     * The ceiling is whichever is larger: the cap, or what the field already
+     * held. Over-cap listings stay whole and can only shrink; the unticked
+     * rows are already disabled past the cap, so nothing new gets in.
+     */
+    const ceiling = max == null ? Infinity : Math.max(max, asArray(chosen).length);
+    if (list.length > ceiling) list = list.slice(0, ceiling);
     onChange([...new Set(list)]);
   };
 
@@ -124,7 +195,10 @@ export function Picker({
                   {asArray(current).map((v) => (
                     <Combobox.Chip
                       key={v}
-                      className="group flex items-center gap-1 rounded-full border border-primary/30 bg-primary/10 py-0.5 pr-1 pl-2.5 text-xs font-medium outline-none focus-within:ring-2 focus-within:ring-ring/50 data-highlighted:bg-primary/20"
+                      onKeyDown={chipKeyDown}
+                      // A selected chip has to LOOK selected - it is one
+                      // keypress from being deleted, so focus is not decoration.
+                      className="group flex items-center gap-1 rounded-full border border-primary/30 bg-primary/10 py-0.5 pr-1 pl-2.5 text-xs font-medium outline-none focus:ring-2 focus:ring-destructive/60 focus-within:ring-2 focus-within:ring-ring/50 data-highlighted:bg-primary/20"
                       aria-label={v}
                     >
                       {v}
@@ -139,7 +213,7 @@ export function Picker({
                   <Combobox.Input
                     id={id}
                     aria-label={ariaLabel}
-                    onKeyDown={swallowEnter}
+                    onKeyDown={chipsKeyDown}
                     placeholder={asArray(current).length > 0 ? '' : placeholder}
                     className="h-6 min-w-24 flex-1 border-0 bg-transparent p-0 text-base outline-none placeholder:text-muted-foreground md:text-sm"
                   />

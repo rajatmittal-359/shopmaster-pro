@@ -1260,14 +1260,34 @@ export default function ProductForm({ productId, copyFromId }) {
                * than by count, which does not translate to a chip field.
                *
                * Listings carrying more than this from the AI backfill are not
-               * broken: the field simply asks for one to be removed before
-               * another is added, which is the right way round - it never
-               * deletes a seller's word on its own.
+               * broken: the field asks for one to be removed before another
+               * is added, and it never deletes a seller's word on its own.
+               * That second half was WRITTEN HERE BEFORE IT WAS TRUE - Picker
+               * sliced the list to `max` on every change, so a 22-word
+               * listing lost eight words to a single backspace. Fixed in
+               * picker.jsx on 27 Sep 2026; the reason is written there.
                */
               max={13}
               options={form.tags || []}
               value={form.tags || []}
-              onChange={(list) => setForm((f) => ({ ...f, tags: list.map((x) => String(x).toLowerCase()) }))}
+              onChange={(list) => {
+                const before = form.tags || [];
+                const next = list.map((x) => String(x).toLowerCase());
+                setForm((f) => ({ ...f, tags: next }));
+                /*
+                 * House rule 6, undo after removing (27 Sep 2026). Every
+                 * other word here was either researched from real searches or
+                 * typed by a seller who knows the market, and the browser's
+                 * Ctrl+Z does not reach a chip - Rajat: "ctrl se wapas bhi
+                 * nhi aate". So the toast carries the way back.
+                 */
+                const gone = before.filter((w) => !next.includes(w));
+                if (gone.length) {
+                  toast(gone.length === 1 ? t('Removed "{w}"', { w: gone[0] }) : t('{n} search words removed', { n: gone.length }), {
+                    action: { label: t('Undo'), onClick: () => setForm((f) => ({ ...f, tags: before })) },
+                  });
+                }
+              }}
               placeholder={t('kundan choker')}
               customHint={t('type a word and press Enter')}
             />
