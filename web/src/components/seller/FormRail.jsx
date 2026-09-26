@@ -119,7 +119,18 @@ export default function FormRail({ sections }) {
     });
   };
 
-  const done = sections.filter((s) => s.done).length;
+  /*
+   * A section with `done: undefined` is a READ-OUT, not something to fill -
+   * section 8 "Google" is the preview, the suggestions and Google's own
+   * verdicts. It gets no tick and is left out of the count.
+   *
+   * Rajat caught this (26 Sep 2026): the Google chip was showing a tick in
+   * edit mode because I had wired it to `tags` - and tags are edited in
+   * section 6 "Details", not in Google. Nothing was hidden or lost; the chip
+   * was reporting on a field that lives somewhere else.
+   */
+  const counted = sections.filter((s) => s.done !== undefined);
+  const done = counted.filter((s) => s.done).length;
 
   return (
     <nav
@@ -152,7 +163,7 @@ export default function FormRail({ sections }) {
           })}
         </ul>
         <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
-          {done}/{sections.length}
+          {done}/{counted.length}
         </span>
       </div>
     </nav>

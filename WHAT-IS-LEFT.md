@@ -210,6 +210,58 @@ synonyms collection (jhumka/jhumki/झुमका), Gemini query → filters.
   reference it comes from and what it costs us, and one recommendation.
   **Nothing is built until Rajat picks a letter.**
 
+- **The search-word coach: take the seller's OWN word and make it the right one (Rajat, 26 Sep 2026).**
+  *"Seller ko pata hota hai product kya hai, lekin self-doubt hota hai - kya yahi acha word hai market me, is word ki kya value hai, chalega ya nahi. Us chakkar me vo ghabra ke kuch nahi likhta."*
+
+  **This is not the AI that fills the words - that exists and is good.** This is
+  the opposite direction: the seller types what they already know, however they
+  know it (misspelt, Hinglish, Devanagari, a local trade term), and we hand it
+  back corrected, with evidence that it is worth having. Their vocabulary is
+  knowledge we do not have; today spelling doubt makes them type nothing.
+
+  **Researched 26 Sep. The two big references contradict each other, and the
+  contradiction is the design.**
+  - **Amazon** tells sellers to put synonyms, abbreviations and *spelling
+    variations* into the backend Search Terms field (250 bytes, no commas,
+    never repeat title words, refresh every 60-90 days from the Search Term
+    Report). Its backend field is a raw index, so a misspelling buys a match.
+  - **Etsy** says the opposite: *"It's not necessary to include misspellings -
+    Etsy search will redirect shoppers to correct any small typos."* It matches
+    on ROOT words (shelf/shelves), wants multi-word phrases, and gives the best
+    rule anyone has written down: *"If you can't imagine someone typing a
+    phrase into Google, it shouldn't be in your tags."*
+  - **We are Etsy, not Amazon**: our own search is Atlas Search with typo and
+    prefix tolerance, and Google corrects spelling too. So the feature must
+    **replace** the seller's misspelling, never store it alongside. That single
+    fact decides the whole behaviour.
+  - **Nobody does this.** Flipkart says "use the tools on your dashboard";
+    Amazon gives real search volume only to brand owners through Brand
+    Analytics. Indian third-party tools (ListIQ and friends) exist precisely
+    because sellers must leave the platform to find out if a word is worth
+    anything. The big platforms cannot hand-hold millions of sellers. **We have
+    three.** This is a small-marketplace advantage, not an oversight of theirs.
+
+  **What "value" can honestly mean here.** Real volume needs Google Ads /
+  Keyword Planner - a decision Rajat has not taken. Without it we must not
+  print invented numbers. What we CAN say is stronger for a seller anyway,
+  because it is their own buyers: Search Console queries that reached this
+  shop, our own `SearchLog`, and Merchant Center's "product terms" once there
+  is traffic. So the answer reads *"buyers type **jhumka** - seen 12 times in
+  searches that reached your shop"*, never *"8,100 a month"*.
+
+  **Shape:** the seller types into Search words as they do now; on Enter, if the
+  word is a near-miss of a term we have evidence for, offer the correction with
+  the evidence beside it - accept, or keep mine. Never silently rewrite. Also
+  worth flagging what Amazon warns about: a word already in the title is wasted
+  as a search word.
+
+  **Decisions still owed:** (a) open a Google Ads account for real volume, yes
+  or no; (b) whether the Search words field moves from "6 · Details" into
+  "8 · Google" so the field and its suggestions finally sit together - not done
+  on 26 Sep because Mummy already knows where the field is, and the confusion
+  was reduced instead by saying plainly in section 8 that it writes into
+  Details.
+
 ### 3a. The 13 Sep night list — sidebars and the next features
 
 **Decided 13 Sep 05:00 ("abhi kardo"): S1–S9, A1–A2, C1–C8 built and pushed — plan §4.32.** Still to eyeball in the browser signed in as seller and admin (the session had expired when I looked): the new sidebars with badges, Returns & issues, Promotions form, Performance, Help, admin Products/Customers. A3/A4 wait; F1–F12 still Rajat's pick.

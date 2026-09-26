@@ -745,9 +745,12 @@ export default function ProductForm({ productId, copyFromId }) {
           { id: 'category-card', label: t('Category'), done: Boolean(form.category) },
           ...(template ? [{ id: 'facts-card', label: t('Facts'), done: Object.values(form.attributes || {}).some((v) => v && String(v).length) }] : []),
           { id: 'price-card', label: t('Price'), done: Boolean(form.price) && form.stock !== '' && form.stock !== undefined },
-          { id: 'details', label: t('Details'), done: Boolean(form.color || form.size || form.material) },
+          // Search words live in this card too, so they count towards its tick.
+          { id: 'details', label: t('Details'), done: Boolean(form.color || form.size || form.material || (form.tags || []).length) },
           { id: 'faqs', label: t('Questions'), done: (form.faqs || []).some((x) => x.q && x.a) },
-          { id: 'google', label: t('Google'), done: (form.tags || []).length > 0 },
+          // No `done`: section 8 is Google's preview and verdicts, a read-out
+          // with nothing to fill, so it carries no tick and is not counted.
+          { id: 'google', label: t('Google') },
         ]}
       />
 
@@ -1243,7 +1246,20 @@ export default function ProductForm({ productId, copyFromId }) {
               id="tags"
               multiple
               allowCustom
-              max={12}
+              /*
+               * 13, which is Etsy's number and the only researched one I
+               * could find: their handbook tells sellers to use all 13 tags,
+               * and to write multi-word phrases rather than single words -
+               * "if you can't imagine someone typing a phrase into Google, it
+               * shouldn't be in your tags". Amazon caps by bytes (250) rather
+               * than by count, which does not translate to a chip field.
+               *
+               * Listings carrying more than this from the AI backfill are not
+               * broken: the field simply asks for one to be removed before
+               * another is added, which is the right way round - it never
+               * deletes a seller's word on its own.
+               */
+              max={13}
               options={form.tags || []}
               value={form.tags || []}
               onChange={(list) => setForm((f) => ({ ...f, tags: list.map((x) => String(x).toLowerCase()) }))}
@@ -1309,6 +1325,7 @@ export default function ProductForm({ productId, copyFromId }) {
         defaultOpen={false}
         badge={<span className="rounded bg-muted px-1.5 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wide text-muted-foreground">{t('Optional')}</span>}
         summary={`${t('{n} search words · how it looks in Google', { n: (form.tags || []).length })}${productId ? ` · ${t("Google's own verdicts")}` : ''}`}
+        lead={t('Nothing to fill here - this is how Google sees the listing. The words it suggests are added to "Search words" up in Details.')}
       >
         <ListingQuality
           part="google"
