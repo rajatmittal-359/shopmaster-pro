@@ -46,8 +46,31 @@
 	}
 
 	# Everything else is the Next.js site.
+	#
+	# DEPLOYS USED TO SERVE 502s (fixed 26 Sep 2026). `release.sh` recreates the
+	# web container, which gets a NEW address on the docker network. Caddy had
+	# already resolved `web` once and kept that address, so for the few seconds
+	# between the old container going and the new one being reachable, every
+	# request failed - and the ones that caught it in the log were Googlebot's
+	# and GPTBot's, which is an indexing risk, not just an ugly log:
+	#   dial tcp 172.18.0.3:3000: connect: connection refused
+	#   dial tcp: lookup web on 127.0.0.11:53: server misbehaving
+	#
+	# `dynamic a` re-resolves the name against Docker's DNS instead of caching
+	# it, and lb_try_duration makes Caddy wait and retry through the swap
+	# rather than answering 502 on the first refusal. release.sh already waits
+	# for both health checks, so this closes the only remaining gap - Caddy's
+	# own view of where the container lives.
 	handle {
-		reverse_proxy web:3000
+		reverse_proxy {
+			dynamic a {
+				name web
+				port 3000
+				refresh 1s
+			}
+			lb_try_duration 10s
+			lb_try_interval 250ms
+		}
 	}
 
 	log {

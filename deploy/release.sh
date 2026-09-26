@@ -36,6 +36,18 @@ set_tag "$TAG"
 docker compose pull --quiet
 docker compose up -d --remove-orphans
 
+# The Caddyfile is a bind mount, and the deploy workflow refreshes it from main
+# on every run - but a changed file on disk is not a changed container, so
+# `compose up` leaves Caddy running its old config. Validate first and only
+# reload if it parses: a broken Caddyfile that is never loaded is harmless,
+# one that is loaded takes the site down. Missing/older Caddy: skip quietly.
+if docker compose exec -T caddy caddy validate --config /etc/caddy/Caddyfile >/dev/null 2>&1; then
+  docker compose exec -T caddy caddy reload --config /etc/caddy/Caddyfile >/dev/null 2>&1 \
+    && echo "▸ caddy reloaded" || echo "▸ caddy reload failed - it is still serving the previous config"
+else
+  echo "▸ caddy config did not validate - left as it was"
+fi
+
 if healthy; then
   echo "$TAG" > .last_good
   echo "✓ $TAG is live"
