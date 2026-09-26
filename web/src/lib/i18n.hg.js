@@ -307,7 +307,6 @@ const HG = {
   'Colour, size, who it is for - Google Shopping needs these': 'Rang, size, kiske liye - Google Shopping ko ye chahiye',
   '{n} answers': '{n} jawab',
   'None yet - two short answers help AI answers quote you': 'Abhi nahi - do chhote jawab likho, AI aur Google aapko quote karenge',
-  '{n} search words · how it looks in Google': '{n} search words · Google me kaisa dikhega',
   'Google\'s own verdicts': 'Google ka apna faisla',
   // The fixes the score asks for (lib/listingScore CHECKS)
   'Give the title at least four words - type, material or style, and who it is for': 'Naam me kam se kam chaar shabd - cheez, material ya style, aur kiske liye',
@@ -563,6 +562,8 @@ const HG = {
   'Draft 3 with AI': 'AI se 3 draft',
   'What people type to find this': 'Ise dhoondhne ke liye log kya type karte hain',
   'Suggest search words': 'Search words suggest karo',
+  'Words people actually typed': 'Jo shabd logon ne sach me type kiye',
+  'Nothing to fill here - this is how Google sees the listing. Search words, and the button that suggests them, are up in 6 · Details.': 'Yahan kuch bharna nahi hai - Google ko ye listing aisi dikhti hai. Search words, aur unhe suggest karne wala button, upar 6 · Details me hain.',
   'Suggest again': 'Phir suggest karo',
   'Real searches first (Google, ShopMaster), AI fills the gaps. Tap a word to add it.': 'Pehle asli searches (Google, ShopMaster), baaki AI bharta hai. Shabd par tap karo, jud jayega.',
   'How it looks in Google': 'Google me kaisa dikhega',

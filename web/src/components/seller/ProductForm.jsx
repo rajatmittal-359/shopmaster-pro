@@ -639,6 +639,11 @@ export default function ProductForm({ productId, copyFromId }) {
 
   const errorLine = (message) => setState((s) => ({ ...s, status: message ? 'error' : 'idle', message }));
 
+  // The three ListingQuality parts all need these; they were pasted out three
+  // times, which is three chances for them to drift apart.
+  const categoryLabel = categories.find((c) => c._id === form.category)?.label;
+  const needsSize = /cloth|fashion|footwear|shoe|kurt|saree|dress|apparel|wear|trouser|shirt|jeans/i.test(categoryLabel || '');
+
   return (
     <EditingContext.Provider value={Boolean(productId)}>
       <form onSubmit={submit} className="max-w-3xl space-y-5">
@@ -726,8 +731,8 @@ export default function ProductForm({ productId, copyFromId }) {
         form={form}
         photos={photos}
         productId={productId}
-        categoryLabel={categories.find((c) => c._id === form.category)?.label}
-        needsSize={/cloth|fashion|footwear|shoe|kurt|saree|dress|apparel|wear|trouser|shirt|jeans/i.test(categories.find((c) => c._id === form.category)?.label || '')}
+        categoryLabel={categoryLabel}
+        needsSize={needsSize}
         textModel={textModel}
         onAddTags={(words) => setForm((f) => ({ ...f, tags: [...new Set([...(f.tags || []), ...words])] }))}
       />
@@ -1266,6 +1271,21 @@ export default function ProductForm({ productId, copyFromId }) {
               placeholder={t('kundan choker')}
               customHint={t('type a word and press Enter')}
             />
+            {/* The suggester, directly under the field it writes into (27 Sep
+                2026). It used to live in 8 · Google; the words landed here and
+                the seller never saw where they went. */}
+            <div className="mt-3 rounded-lg border bg-muted/30 p-3">
+              <ListingQuality
+                part="words"
+                form={form}
+                photos={photos}
+                productId={productId}
+                categoryLabel={categoryLabel}
+                needsSize={needsSize}
+                textModel={textModel}
+                onAddTags={(words) => setForm((f) => ({ ...f, tags: [...new Set([...(f.tags || []), ...words])] }))}
+              />
+            </div>
           </Field>
         </div>
       </Card>
@@ -1324,16 +1344,16 @@ export default function ProductForm({ productId, copyFromId }) {
         title="8 · Google"
         defaultOpen={false}
         badge={<span className="rounded bg-muted px-1.5 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wide text-muted-foreground">{t('Optional')}</span>}
-        summary={`${t('{n} search words · how it looks in Google', { n: (form.tags || []).length })}${productId ? ` · ${t("Google's own verdicts")}` : ''}`}
-        lead={t('Nothing to fill here - this is how Google sees the listing. The words it suggests are added to "Search words" up in Details.')}
+        summary={`${t('How it looks in Google')}${productId ? ` · ${t("Google's own verdicts")}` : ''}`}
+        lead={t('Nothing to fill here - this is how Google sees the listing. Search words, and the button that suggests them, are up in 6 · Details.')}
       >
         <ListingQuality
           part="google"
           form={form}
           photos={photos}
           productId={productId}
-          categoryLabel={categories.find((c) => c._id === form.category)?.label}
-          needsSize={/cloth|fashion|footwear|shoe|kurt|saree|dress|apparel|wear|trouser|shirt|jeans/i.test(categories.find((c) => c._id === form.category)?.label || '')}
+          categoryLabel={categoryLabel}
+          needsSize={needsSize}
           textModel={textModel}
           onAddTags={(words) => setForm((f) => ({ ...f, tags: [...new Set([...(f.tags || []), ...words])] }))}
         />

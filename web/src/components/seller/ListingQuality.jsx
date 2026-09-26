@@ -104,16 +104,25 @@ export default function ListingQuality({ form, photos, productId, categoryLabel,
    *                  Dashboard (prioritised by impact) drawn the way Untitled
    *                  UI draws a progress ring. Rajat, 15 Sep: the old block
    *                  put five things before the form and read as noise.
-   *   part="google"  the search words, the Google preview and Google's own
-   *                  verdicts - at the END of the form, folded, for when the
-   *                  words are written.
+   *   part="words"   the "Suggest search words" button and the words it
+   *                  finds. It sits in 6 · Details, directly under the Search
+   *                  words field it fills (27 Sep 2026). It used to live two
+   *                  cards away in 8 · Google, writing into a field nobody
+   *                  could see - Rajat: "google and search word me confuse hu
+   *                  mai". The button moved to the field; the field did not
+   *                  move, so nobody has to relearn where it is.
+   *   part="google"  the Google preview and Google's own verdicts - at the
+   *                  END of the form, folded. Nothing to fill: a read-out.
    */
-  if (part === 'google') {
+  if (part === 'words') {
     return (
       <div>
-      <div>
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="text-sm font-medium">{t('What people type to find this')}</p>
+          {/* Not "what people type to find this" any more - that is the
+              field's own label, right above this box. This line says what is
+              different about the box: these are words with evidence behind
+              them, not a second place to type. */}
+          <p className="text-sm font-medium">{t('Words people actually typed')}</p>
           <Button type="button" size="sm" variant="outline" onClick={suggest} disabled={kwBusy || !form.name}>
             {kwBusy ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
             {t(kw ? 'Suggest again' : 'Suggest search words')}
@@ -160,10 +169,14 @@ export default function ListingQuality({ form, photos, productId, categoryLabel,
           </>
         )}
       </div>
+    );
+  }
 
-
+  if (part === 'google') {
+    return (
+      <div>
       {form.name && (
-        <div className="mt-4 border-t pt-4">
+        <div>
           <p className="text-sm font-medium">{t('How it looks in Google')}</p>
           <div className="mt-2 rounded-lg border bg-background p-3">
             <p className="truncate text-[15px] text-[#1a0dab] dark:text-[#8ab4f8]">{form.name}{categoryLabel ? ` | ${categoryLabel.split(' → ').pop()}` : ''} | ShopMaster Pro</p>
@@ -176,7 +189,7 @@ export default function ListingQuality({ form, photos, productId, categoryLabel,
         </div>
       )}
 
-      {/* 4 · Google's verdicts, saved products only */}
+      {/* Google's own verdicts, saved products only */}
       {productId && google && (
         <div className="mt-4 border-t pt-4 text-sm">
           <p className="font-medium">Google, right now</p>

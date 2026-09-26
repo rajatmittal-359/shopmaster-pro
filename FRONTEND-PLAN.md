@@ -2792,3 +2792,42 @@ electronics and beauty.
 **Left for the sellers, not for code:** weight on 24 products (the courier
 bills the real weight either way) and photographs on Rahul's 20 single-image
 listings. Neither can be invented here.
+
+### 4.59 The button goes to its field (27 Sep 2026)
+
+Rajat, reading the form he had just been shown: *"aur google and search word
+me confuse hu mai"*. He was right, and it was not his confusion - it was a
+split we had built.
+
+**What was wrong.** The **Search words** field lives in *6 · Details*. The
+**"Suggest search words"** button, the words it finds and their evidence
+badges lived in *8 · Google*, two cards further down and folded shut. Pressing
+the button added words to a field you could not see, in a card you had already
+scrolled past. Section 8's lead line tried to explain it in words - *"the words
+it suggests are added to Search words up in Details"* - which is the tell: a
+layout that needs a sentence of explanation is the wrong layout.
+
+**The two ways out, and why this one.** Either the field moves down to the
+button, or the button moves up to the field. Moving the field is the bigger
+change and the worse one: Mummy already knows where Search words is, and
+*8 · Google* is marked **Optional** and folded - a required-ish field would
+have gone into a card people are told they may skip. So the button moved.
+Nothing anyone has learned changed position.
+
+**What it is now.**
+- *6 · Details* → under the Search words chips, a tinted box: **"Words people
+  actually typed"**, the Suggest button, and the chips with their G / S / ≈ /
+  AI badges. Tapping a word drops it into the field 40 pixels above, where you
+  watch it land. The heading changed too - "What people type to find this" was
+  the *field's* label and repeating it made the box look like a second place
+  to type.
+- *8 · Google* → the Google preview and, for a saved product, Google's own
+  verdicts. A pure read-out. The rail already treats it as one (`done:
+  undefined`, §4.58), so the chip and the card now agree.
+
+Reference: **Shopify admin** puts every assist for a field inside that field's
+block, and the only thing it folds away is *Search engine listing* - a preview,
+exactly what section 8 has been reduced to. `ListingQuality` grew a third part,
+`part="words"`, beside `bar` and `google`; the same component still owns the
+one definition of what counts as filled, so the box, the score and the rail
+cannot drift apart.

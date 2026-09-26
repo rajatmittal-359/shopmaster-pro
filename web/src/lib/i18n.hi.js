@@ -354,7 +354,6 @@ const HI = {
   'Colour, size, who it is for - Google Shopping needs these': 'रंग, साइज़, किसके लिए - Google Shopping को ये चाहिए',
   '{n} answers': '{n} जवाब',
   'None yet - two short answers help AI answers quote you': 'अभी नहीं - दो छोटे जवाब लिखें, AI और Google आपको quote करेंगे',
-  '{n} search words · how it looks in Google': '{n} खोज शब्द · Google में कैसा दिखेगा',
   'Google\'s own verdicts': 'Google का अपना फ़ैसला',
   // The fixes the score asks for (lib/listingScore CHECKS)
   'Give the title at least four words - type, material or style, and who it is for': 'नाम में कम से कम चार शब्द - चीज़, धातु या स्टाइल, और किसके लिए',
@@ -602,6 +601,8 @@ const HI = {
   'Draft 3 with AI': 'AI से 3 ड्राफ़्ट',
   'What people type to find this': 'इसे ढूँढने के लिए लोग क्या टाइप करते हैं',
   'Suggest search words': 'खोज शब्द सुझाएँ',
+  'Words people actually typed': 'जो शब्द लोगों ने सचमुच टाइप किए',
+  'Nothing to fill here - this is how Google sees the listing. Search words, and the button that suggests them, are up in 6 · Details.': 'यहाँ कुछ भरना नहीं है - Google को यह लिस्टिंग ऐसी दिखती है। खोज शब्द और उन्हें सुझाने वाला बटन ऊपर 6 · Details में हैं।',
   'Suggest again': 'फिर सुझाएँ',
   'Real searches first (Google, ShopMaster), AI fills the gaps. Tap a word to add it.': 'पहले असली खोजें (Google, ShopMaster), बाकी AI भरता है। शब्द पर टैप करें, जुड़ जाएगा।',
   'How it looks in Google': 'Google में कैसा दिखेगा',

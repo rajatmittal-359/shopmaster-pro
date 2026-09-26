@@ -255,12 +255,24 @@ synonyms collection (jhumka/jhumki/झुमका), Gemini query → filters.
   worth flagging what Amazon warns about: a word already in the title is wasted
   as a search word.
 
-  **Decisions still owed:** (a) open a Google Ads account for real volume, yes
-  or no; (b) whether the Search words field moves from "6 · Details" into
-  "8 · Google" so the field and its suggestions finally sit together - not done
-  on 26 Sep because Mummy already knows where the field is, and the confusion
-  was reduced instead by saying plainly in section 8 that it writes into
-  Details.
+  **Both decisions taken, 27 Sep 2026.**
+  - *(a) Google Ads: yes, open it.* Rajat: "mera manna to ye hai koi faeda free
+    ka mil raha le lena chahiye". An account with no campaign and no card costs
+    nothing and unlocks Keyword Planner, whose ranges ("100-1K a month") are a
+    second, independent source of evidence beside our own searches. It is a
+    manual step - it is on his list in OPS-AND-MANUAL-ACTIONS.md.
+  - *(b) The field does not move; the BUTTON did.* Rajat asked for exactly
+    this: "Suggest search words" and the word chips now sit inside 6 · Details,
+    in a tinted box directly under the Search words field they write into.
+    8 · Google is now purely a read-out - the Google preview and Google's own
+    verdicts, nothing to fill. Mummy does not have to relearn where the field
+    is, and the two halves are no longer two cards apart. Done, not owed.
+
+  **Scheduled: next session.** Rajat chose "next session, properly" over a
+  quick version - the coach needs the gate, a reference pass, and backend work
+  (joining Search Console queries and `SearchLog` into one evidence lookup
+  behind a near-miss check). Building it half-way would print exactly the kind
+  of invented confidence this feature exists to remove.
 
 ### 3a. The 13 Sep night list — sidebars and the next features
 
