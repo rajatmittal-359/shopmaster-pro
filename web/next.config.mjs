@@ -34,8 +34,7 @@ const nextConfig = {
   /*
    * The React app's URLs, kept alive.
    *
-   * Rajat is deleting `frontend/` once this covers it, and the day the domain
-   * points here every bookmark, every emailed link and every WhatsApp message
+   * `frontend/` was deleted on 26 Sep 2026 because this covers it: every bookmark, every emailed link and every WhatsApp message
    * carrying /customer/orders still has to land somewhere. These are behind a
    * login so there is no ranking to preserve - but a customer who bookmarked
    * their orders page and gets a 404 has no way of knowing the shop still

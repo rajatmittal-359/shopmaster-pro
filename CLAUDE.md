@@ -16,9 +16,9 @@ it sells anything, and nothing in the frame may name a category.
 
 | Folder | State (12 Sep 2026) |
 |---|---|
-| `backend/` | Express 5 + Mongoose 9. **Live** on Render Singapore. 903 tests, `npm test`, no database needed |
-| `web/` | Next.js 16 + shadcn (Base UI). **Complete, localhost only.** Replaces `frontend/` at the October cutover |
-| `frontend/` | The old React app. **Still what the domain serves**, and the record of what the shop can *do*. Do not build on it. **Not deleted until `WHAT-IS-LEFT.md` §1 is empty** and the cutover has run a week |
+| `backend/` | Express 5 + Mongoose 9. **Live** on AWS Lightsail Mumbai (Docker + Caddy). `npm test`, no database needed |
+| `web/` | Next.js 16 + shadcn (Base UI). **Live** - this is what www.shopmasterpro.in serves |
+| ~~`frontend/`~~ | The old React app. **Deleted 26 Sep 2026**, six days after the cutover and with `WHAT-IS-LEFT.md` §1 empty. Its URLs stay alive as 308s in `web/next.config.mjs`; the code itself is in git history if it is ever needed |
 
 ## The documents, and which one to open
 

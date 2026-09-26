@@ -15,7 +15,7 @@ follows is what remains after that.
 
 ## 1. Dropped in the port — the React app had these, `web/` does not
 
-**`frontend/` is not deleted until this section is empty.** Rajat, 12 Sep: the
+**`frontend/` was deleted on 26 Sep 2026** - this section was empty and verified on 12 Sep, the domain had been served by `web/` for six days, and Rajat had suspended the old Render site. The old app's URLs live on as 308 redirects in `web/next.config.mjs`. Originally: **not deleted until this section is empty.** Rajat, 12 Sep: the
 Next app shows things *our* way and adds what React never had, but React is
 the record of what the shop could *do* — anything here still has to come
 across, in the new UI, not the old one.
