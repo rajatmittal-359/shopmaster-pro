@@ -46,7 +46,7 @@ it sells anything, and nothing in the frame may name a category.
 4. **Commit at milestones**, not after every fix. Push together.
 5. **Jaipur is the trust story** — same-city trust recruits sellers and buyers.
    The mark is a shopping bag with a shop front inside it - awning and two
-   shutters - on a magenta tile (`#C21A8D` to `#78095A`). Jaipur is carried by
+   shutters - on a Jaipur pink tile (`#C2186F` to `#7E0F4F`). Jaipur is carried by
    the COLOUR, not by a building: the jharokha went on 26 Sep 2026 because a
    marketplace is not a building and an arch reads as a generic window at 16px.
    A bag alone is Shopify's and Flipkart's; the shop front is what makes it

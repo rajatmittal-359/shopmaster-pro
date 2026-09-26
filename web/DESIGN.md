@@ -138,8 +138,9 @@ header on top of a dashboard.
 Jaipur is in the identity on purpose and with restraint - but through the
 COLOUR, not through a building. The mark is a shopping bag with a shop front
 inside it: a scalloped awning and two shutters, which is what says *many shops
-in one place* rather than one shop. It sits on a magenta tile that runs
-`#C21A8D` into `#78095A`, lit from the top-left.
+in one place* rather than one shop. It sits on a Jaipur pink tile that runs
+`#C2186F` into `#7E0F4F`, lit from the top-left - one colour deepening into
+itself rather than two colours meeting.
 
 The jharokha went on 26 Sep 2026. It was the honest Jaipur form and it was
 also a building, and a marketplace is not a building; at 16px an arch and a
@@ -365,8 +366,8 @@ Quality bands are tiny rounded labels: Best / High / Good / Basic.
 ### Signature Components
 
 - **The mark**: a shopping bag with a shop front inside it - white bag,
-  scalloped awning and two shutters in `--brand-rose #E03B8A`, on a magenta
-  tile (`#C21A8D` to `#78095A`). Rendered in 3D (FLUX.2 klein-9b on
+  scalloped awning and two shutters in `--brand-rose #E03B8A`, on a
+  Jaipur pink tile (`#C2186F` to `#7E0F4F`). Rendered in 3D (FLUX.2 klein-9b on
   Cloudflare, 26 Sep 2026), then recoloured onto brand tokens hue-by-hue with
   every pixel's lightness left alone, so the render's own shading survives.
   Finished with a specular sheen, a rim light, a bloom and a vignette, and cut

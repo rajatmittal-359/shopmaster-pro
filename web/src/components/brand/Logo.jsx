@@ -5,8 +5,9 @@ import Image from 'next/image';
  *
  * WHAT IT IS
  *   A shopping bag with a shop front inside it: a scalloped awning across the
- *   bag and two shutters below it, white on a magenta tile that runs #C21A8D
- *   into #78095A and is lit from the top-left.
+ *   bag and two shutters below it, white on a Jaipur pink tile that runs
+ *   #C2186F into #7E0F4F and is lit from the top-left - one colour deepening
+ *   into itself rather than two colours meeting.
  *
  * WHY NOT A BAG ON ITS OWN
  *   Because a bag on its own is taken. Shopify's mark is a bag with an S cut

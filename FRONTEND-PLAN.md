@@ -2701,8 +2701,17 @@ in through the ends of the awning and eats the shop front. It did, once.
 printed with two measured numbers: white bag against ground (WCAG asks 3:1 for
 icon graphics) and how far the awning stands clear of the tile — below about
 1.3× the shop front dissolves at 32px. Rajat: *"rehndo pink hi badiya hai,
-purple hata do"*, then *"magenta"*. **`#C21A8D` → `#78095A`**, awning and
-shutters `--brand-rose #E03B8A`, bag white. 10.6:1 and 2.60×.
+purple hata do"*, then *"magenta"* — and then, once magenta was actually on
+the site rather than on a comparison card, *"jaipur pink kar do, log ko vo
+zada theek laga"*. Which is the right instinct and the reason the page shows
+every candidate in a real header and on a home screen: magenta reads sharper
+and more generic-digital, and it is the one shade on that page that does not
+belong to the Pink City.
+
+**Final: `#C2186F` → `#7E0F4F`**, awning and shutters `--brand-rose #E03B8A`,
+bag white. 10.2:1 bag-on-ground, 2.50× awning separation. One colour
+deepening into itself, which is why it holds its hue at 16px where a two-stop
+ground muddies.
 
 **The finish**, because a flat tile of colour is not an icon: a specular
 sheen, a rim light — bright along the top edge, dark along the bottom, which
