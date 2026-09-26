@@ -23,6 +23,14 @@
  *   node fixSellerBrand.js --fill-empty       also show empty brands
  *   node fixSellerBrand.js --fill-empty --apply
  *   node fixSellerBrand.js --shop "All in one"    a different shop
+ *   node fixSellerBrand.js --brand "Charming Jewels"   say the canonical name
+ *
+ * THE FIELD IS `businessName`
+ *   The first version read `Seller.shopName`, which does not exist on the
+ *   model at all - so it found an empty string on every shop and refused to
+ *   do anything, on dev and on production alike. The shop's name lives in
+ *   `businessName`; `utils/shopNames.js` is the one place that already knew
+ *   that, and it is what the public API serves as `shop.name`.
  */
 const mongoose = require('mongoose');
 require('dotenv').config();
@@ -40,6 +48,7 @@ const valueOf = (f, fallback) => {
 const APPLY = has('--apply');
 const FILL_EMPTY = has('--fill-empty');
 const SHOP = valueOf('--shop', null);
+const BRAND = valueOf('--brand', null);
 
 /** Same name, said differently: case and spacing only. */
 const sameName = (a, b) => String(a || '').trim().toLowerCase().replace(/\s+/g, ' ') === String(b || '').trim().toLowerCase().replace(/\s+/g, ' ');
@@ -49,7 +58,7 @@ const sameName = (a, b) => String(a || '').trim().toLowerCase().replace(/\s+/g, 
   console.log(`Connected to: ${mongoose.connection.name}`);
   console.log(APPLY ? 'Mode: APPLY - this writes\n' : 'Mode: dry run - nothing is written\n');
 
-  const sellers = SHOP ? await Seller.find({ shopName: SHOP }).lean() : await Seller.find({ isPlatformOwned: true }).lean();
+  const sellers = SHOP ? await Seller.find({ businessName: SHOP }).lean() : await Seller.find({ isPlatformOwned: true }).lean();
   if (!sellers.length) {
     console.log(SHOP ? `No shop named "${SHOP}".` : 'No platform-owned shop found. Pass --shop "<name>".');
     await mongoose.disconnect();
@@ -61,7 +70,7 @@ const sameName = (a, b) => String(a || '').trim().toLowerCase().replace(/\s+/g, 
   let left = 0;
 
   for (const s of sellers) {
-    const canonical = String(s.shopName || '').trim();
+    const canonical = String(BRAND || s.businessName || '').trim();
     /*
      * Found on the dev database, where this shop's shopName is empty: without
      * this guard the canonical name is "" and --fill-empty --apply would write
@@ -69,7 +78,7 @@ const sameName = (a, b) => String(a || '').trim().toLowerCase().replace(/\s+/g, 
      * meant to repair.
      */
     if (!canonical) {
-      console.log(`  REFUSED: this shop has no shopName, so there is no canonical brand to apply (seller ${s.userId})`);
+      console.log(`  REFUSED: this shop has no businessName, so there is no canonical brand to apply. Pass --brand "<name>" (seller ${s.userId})`);
       continue;
     }
 
