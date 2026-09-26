@@ -30,6 +30,7 @@ it sells anything, and nothing in the frame may name a category.
 | `web/DESIGN.md` | Tokens and rules of the visual system. Hand it to any tool or person before they touch a page | A token or rule changes |
 | `.claude/project-rules/{frontend,backend,database}.md` | **What the three skills read first**: goals for the gate, house rules, schema truths + live index list, conventions and file names. The skills themselves (`/frontend`, `/backend`, `/database`) are user-level in `~/.claude/skills/` so they work in every project; these files are what makes them *this* project's | A rule, index, helper or goal changes |
 | `README.md` | The front door for a stranger | Rarely |
+| `HANDOVER.md` | Moving the project to another machine: Rajat's tick-list, and what `git clone` cannot carry (secrets, his checklist, Claude's memory and the three skills) | Anything changes that a new machine would need - a new key, a new skill, a new local step |
 | `private/` (gitignored) | Test credentials, Brevo domain notes, the Google client secret. Never commit, never print | — |
 
 ## Rules that came from Rajat, with the reason
