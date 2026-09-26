@@ -238,7 +238,7 @@ export default function ListingQuality({ form, photos, productId, categoryLabel,
         <div className="min-w-0 flex-1">
           <p className="text-sm">
             <span className={`font-semibold ${tone}`}>{band}</span>
-            <span className="text-muted-foreground"> · {t(score >= 80 ? 'Google and shoppers have what they need' : 'above 80 is where listings start to show')}</span>
+            <span className="text-muted-foreground"> · {t(score >= 80 ? 'Google and shoppers have what they need' : 'above 80 means nothing important is missing')}</span>
           </p>
           {next ? (
             <button type="button" onClick={() => jump(next.field)} className="group mt-1 flex w-full items-center gap-2 text-left text-sm">

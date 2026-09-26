@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Sparkles, Loader2, Cpu } from 'lucide-react';
 import { authedFetch } from '@/lib/client';
@@ -137,13 +137,36 @@ const RETURN_MODES = {
   N: ['No return', 'Hygiene, custom or made-to-order. Wrong, damaged or faulty is still covered.'],
 };
 
-/** A small, consistent field: label above, hint below. */
-function Field({ id, label, hint, aside, children, className = '' }) {
+/**
+ * A small, consistent field: label above, hint below.
+ *
+ * `req` marks the five the SERVER refuses a listing without - name,
+ * description, category, price, stock (`models/Product.js`, where they are
+ * `required: [notWhileDraft, …]`). Added 26 Sep 2026 after Rajat asked for the
+ * asterisk. It is deliberately tied to the model rather than sprinkled by
+ * taste: a star on a field the server would have accepted is a lie, and a
+ * missing star on one it refuses is worse - which is exactly what was
+ * happening to DESCRIPTION and CATEGORY. Both were required by the model and
+ * neither was marked or validated in the browser, so a seller only found out
+ * when "List it" came back with a 400.
+ *
+ * "Save for later" saves a draft and needs none of them - that is what
+ * `notWhileDraft` means - so the asterisk is explained once, in the footer,
+ * as "needed to list" rather than "needed to save".
+ */
+function Field({ id, label, hint, aside, req = false, children, className = '' }) {
   const t = useT();
   return (
     <div className={className}>
       <div className="flex items-center justify-between gap-2">
-        <Label htmlFor={id}>{typeof label === 'string' ? t(label) : label}</Label>
+        <Label htmlFor={id}>
+          {typeof label === 'string' ? t(label) : label}
+          {req && (
+            <span className="text-destructive" title={t('Needed to list this product')}>
+              *<span className="sr-only"> {t('required')}</span>
+            </span>
+          )}
+        </Label>
         {aside}
       </div>
       <div className="mt-1.5">{children}</div>
@@ -164,30 +187,53 @@ function Field({ id, label, hint, aside, children, className = '' }) {
  * section the seller opens is remembered per section, and the score panel's
  * "Fix" link still opens the section it points at.
  */
-/*
- * CLOSED on a first visit, by Rajat's decision (26 Sep 2026).
- *
- * The obvious reading of "7-8 cards chevron wale thode noisy feel dete hai"
- * was that the cards were shut and the page was a wall of closed doors, so
- * this was briefly flipped to open - Shopify's product page keeps every
- * section open and folds only the optional "Search engine listing". Tried it
- * in the browser, and he was clear: *"by default pehli baar aate hai sab
- * cards band kyu nahi rehte, mai khol lunga chevron se."*
- *
- * So closed it is, and the reasoning is his own catalogue rather than
- * Shopify's: a seller listing their tenth kurta does not read eight open
- * sections, they open the two they are changing. Each closed card still
- * carries its SUMMARY line ("3 photos · first is the main one", "₹450 · 5 in
- * stock"), so a folded page is still readable at a glance - and the rail above
- * now carries the orientation that an open page was providing.
- *
- * The person's own choice wins after that and is remembered per card.
+/**
+ * Is this form editing an existing product, or filling a new one? The cards
+ * behave differently, so they have to know.
  */
-function Card({ id, title, lead, aside, summary, defaultOpen = false, foldOnPhone = false, badge, children }) {
+const EditingContext = createContext(false);
+
+/*
+ * NEW product: every card shut, every time. EDIT: open, and remembered.
+ *
+ * Rajat, after using it: *"new product add karte time har time band mile"* -
+ * and separately, *"edit mode me khule mil sakte hai"*. Two different jobs:
+ *
+ *   Adding is a repeated ritual. It should start identically every time, so
+ *   the seller's hands learn one shape - not whatever they happened to leave
+ *   open on the last listing. So the memory is switched OFF here entirely
+ *   (Fold's `remember`), otherwise opening Price once would reopen it on
+ *   every product forever.
+ *
+ *   Editing is the opposite: you came to look at what is already there, so
+ *   the sections are open and your choice IS remembered.
+ *
+ * Briefly tried Shopify's way - always open, everywhere - because their
+ * product page folds only the optional "Search engine listing". Rajat looked
+ * at it and said no, and for his catalogue he is right: a seller listing
+ * their tenth kurta opens the two sections they are changing. Each closed
+ * card still carries its summary ("3 photos · first is the main one",
+ * "₹450 · 5 in stock"), and the rail above carries the orientation.
+ *
+ * Sections 7 and 8 pass defaultOpen={false} explicitly - they are the
+ * optional ones and stay shut in both modes.
+ */
+function Card({ id, title, lead, aside, summary, defaultOpen, foldOnPhone = false, badge, children }) {
   const t = useT();
+  const editing = useContext(EditingContext);
   const key = id || String(title).toLowerCase().replace(/[^a-z0-9]+/g, '-');
   return (
-    <Fold id={key} title={t(title)} lead={typeof lead === 'string' ? t(lead) : lead} summary={summary} aside={aside} badge={badge} defaultOpen={defaultOpen} foldOnPhone={foldOnPhone}>
+    <Fold
+      id={key}
+      title={t(title)}
+      lead={typeof lead === 'string' ? t(lead) : lead}
+      summary={summary}
+      aside={aside}
+      badge={badge}
+      defaultOpen={defaultOpen ?? editing}
+      remember={editing}
+      foldOnPhone={foldOnPhone}
+    >
       {children}
     </Fold>
   );
@@ -466,8 +512,33 @@ export default function ProductForm({ productId, copyFromId }) {
     if (asDraft && !String(form.name || '').trim()) {
       return setState({ status: 'error', message: 'Give it a name first - that is all a draft needs.' });
     }
-    if (!asDraft && photos.length === 0) return setState({ status: 'error', message: 'Add at least one photograph.' });
-    if (!asDraft && !form.category) return setState({ status: 'error', message: 'Choose a category.' });
+    /*
+     * The starred fields, refused here rather than by the server.
+     *
+     * Every card is closed by default, so an error message on its own leaves
+     * the seller hunting for which of eight sections is wrong. `smp:reveal`
+     * is what the rail and the score already use: it opens the folded card
+     * and then the scroll lands on something.
+     *
+     * DESCRIPTION was the one genuinely missing (26 Sep 2026). The model has
+     * required: [notWhileDraft] on it, the browser had no `required` for it
+     * because it is a rich-text editor and not an <input>, so "List it" went
+     * to the server and came back a 400 with nothing pointing at the field.
+     */
+    const refuse = (message, sectionId) => {
+      if (sectionId) {
+        window.dispatchEvent(new CustomEvent('smp:reveal', { detail: sectionId }));
+        requestAnimationFrame(() => document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+      }
+      setState({ status: 'error', message });
+      return undefined;
+    };
+
+    if (!asDraft && photos.length === 0) return refuse('Add at least one photograph.', 'photos');
+    if (!asDraft && !String(form.description || '').replace(/<[^>]*>/g, '').trim()) {
+      return refuse('Write a description - it is what the shopper reads before deciding.', 'words');
+    }
+    if (!asDraft && !form.category) return refuse('Choose a category.', 'category-card');
     setState({ status: 'saving' });
 
     const body = {
@@ -522,7 +593,8 @@ export default function ProductForm({ productId, copyFromId }) {
   const errorLine = (message) => setState((s) => ({ ...s, status: message ? 'error' : 'idle', message }));
 
   return (
-    <form onSubmit={submit} className="max-w-3xl space-y-5">
+    <EditingContext.Provider value={Boolean(productId)}>
+      <form onSubmit={submit} className="max-w-3xl space-y-5">
       {copyFromId && (
         <p className="rounded-xl border bg-muted/40 p-3 text-sm text-muted-foreground">
           Another size or colour of the same product. Everything is copied except the size, the stock
@@ -741,6 +813,7 @@ export default function ProductForm({ productId, copyFromId }) {
 
         <Field
           id="name"
+          req
           label="Title"
           hint="Put the colour in it if there is one - “Rose Gold Pearl Ring”. It is the first thing a shopper reads and the first thing Google matches."
           aside={
@@ -758,6 +831,7 @@ export default function ProductForm({ productId, copyFromId }) {
 
         <Field
           id="description"
+          req
           label="Description"
           hint="Two or three short paragraphs. What it is, what it goes with, when to wear or use it. Bullets for the details. Write in any language - Improve can turn it into English."
           aside={
@@ -793,7 +867,7 @@ export default function ProductForm({ productId, copyFromId }) {
 
       {/* 3. ORGANISATION */}
       <Card id="category-card" title="3 · Category" foldOnPhone summary={categories.find((c) => c._id === form.category)?.label || t('Not chosen - decides where it appears')}>
-        <Field id="category" label="Where it sits in the shop" hint="Type to search. Shoppers browse by these, and Google reads them.">
+        <Field id="category" req label="Where it sits in the shop" hint="Type to search. Shoppers browse by these, and Google reads them.">
           <CategoryPicker id="category" options={categories} value={form.category} onChange={setValue('category')} />
           <SuggestCategory parents={parents} />
         </Field>
@@ -836,7 +910,7 @@ export default function ProductForm({ productId, copyFromId }) {
         summary={`${form.price ? `₹${form.price}` : t('No price')} · ${form.stock !== '' && form.stock !== undefined ? t('{n} in stock', { n: form.stock }) : t('stock?')}${form.weight ? ` · ${form.weight} g` : ''} · ${t({ R: 'return + refund', X: 'exchange only', N: 'no return' }[form.returnMode] || 'category return rule')}`}
       >
         <div className="grid gap-5 sm:grid-cols-3">
-          <Field id="price" label="Selling price (₹)">
+          <Field id="price" req label="Selling price (₹)">
             <Input id="price" required inputMode="numeric" value={form.price} onChange={set('price')} className="h-10" />
           </Field>
           <Field
@@ -846,7 +920,7 @@ export default function ProductForm({ productId, copyFromId }) {
           >
             <Input id="mrp" inputMode="numeric" value={form.mrp ?? ''} onChange={set('mrp')} className="h-10" />
           </Field>
-          <Field id="stock" label="How many">
+          <Field id="stock" req label="How many">
             <Input id="stock" required inputMode="numeric" value={form.stock} onChange={set('stock')} className="h-10" />
           </Field>
         </div>
@@ -1242,10 +1316,21 @@ export default function ProductForm({ productId, copyFromId }) {
         <Button type="button" onClick={() => (dirty ? setLeaving('cancel') : router.push('/seller/products'))} variant="ghost">
           Cancel
         </Button>
+        {/*
+          What the star means, said once and said honestly: the five marked
+          fields are what LISTING needs, not what saving needs. "Save for
+          later" writes a draft and the model asks for none of them
+          (`notWhileDraft`), so promising otherwise here would be a lie the
+          seller could catch in one click.
+        */}
+        <p className="basis-full text-xs text-muted-foreground sm:basis-auto">
+          <span className="text-destructive">*</span> {t('needed to list · “Save for later” keeps a draft without them')}
+        </p>
         <p aria-live="polite" className="text-sm">
           {state.status === 'error' && <span className="text-destructive">{state.message}</span>}
         </p>
       </div>
-    </form>
+      </form>
+    </EditingContext.Provider>
   );
 }

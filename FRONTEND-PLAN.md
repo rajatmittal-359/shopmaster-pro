@@ -2726,3 +2726,69 @@ the whole tile instead of a light inside an arch.
 **Still open:** the `.arch` utility in `globals.css` (E1, 22 Sep) is a page
 motif, not the mark, and was left alone. `scripts/brand/generate-logo.mjs`
 keeps its jharokha prompts as the record of how 4.9 was made.
+
+### 4.58 What a listing actually owes, and to whom (26 Sep 2026)
+
+Rajat asked for the `*` required marker, then asked the better question behind
+it: *"ye konsi dikkaton ko dekh ke lagana chahiye aur konsi literally nahi"* -
+and then the method: *"pehle problem identify karo, phir uska solution duniya
+me dhoondho, har tarah ke factors ka alag alag sol, phir combine."*
+
+**The problem, from our own code.** Eleven things read a product, and they
+have different rulebooks: the model (refuses a save), the shopper, our search,
+the Merchant feed, `productSchema.js`, `faqs` for AI answers, **our own
+assistant** (`ai/assistant.js` literally selects name, price, stock, images,
+description, tags, category, colour, gender, ageGroup, brand, weight -
+which is the "AI ko bhi dikkat hoti hai" Rajat had noticed), Shiprocket,
+`invoice.js`, the sitemap and returns.
+
+**Each factor, researched separately.**
+- **Google Search** requires only `name`, `image`, `offers`. Brand, colour,
+  size, sku are *Recommended*. So stars "for SEO" are mostly unnecessary.
+- **Merchant Center** is the strict one, and demands the page and the feed
+  agree.
+- **Google AI**: *"no additional AI-specific technical requirements"* -
+  snippet-eligible is AI-eligible.
+- **ChatGPT**: `OAI-SearchBot` (search visibility) is a different crawler from
+  `GPTBot` (training); blocking the wrong one costs shopping visibility.
+- **Perplexity** ranks partly on completeness - availability, reviews,
+  pricing, specifications - so completeness is an AEO lever, not just taste.
+- **Amazon's Listing Quality Dashboard** separates *required/compliance*
+  (country of origin, material, safety) from *recommended/discoverability*,
+  does NOT block listing, and suppresses below roughly 70/100.
+- **Baymard**: 42% of users judge size from the images; wearables need a human
+  model - which prices our 20 single-photograph listings.
+- **Legal Metrology Amendment 2026**, in force 1 Jul 2026: imported goods need
+  a searchable AND sortable country-of-origin filter. Architecture, not a
+  field.
+
+**Combined, three conclusions.**
+
+1. **Do not add more stars.** A star must mean "the system refuses this now",
+   or it teaches sellers to ignore all stars. Six qualify: title, description,
+   category, price, stock (the model's `notWhileDraft` set) and photographs
+   (which `submit` already refuses).
+
+2. **Do not copy Amazon's suppression.** It is the right mechanism at Amazon's
+   scale and the wrong one at ours: weight is missing on 24 of 28 live
+   products, so a real threshold would hide most of the catalogue tomorrow.
+
+3. **Fix the promise we were already making.** The form said *"above 80 is
+   where listings start to show"* and nothing anywhere implemented it - there
+   is no score gate in the feed or the controllers. Sellers learn a warning is
+   empty and then ignore the rest, which is the likeliest reason 24 listings
+   have no weight. Changed to *"above 80 means nothing important is missing"*,
+   in English, Hindi and Hinglish.
+
+**And the audit was over-reporting.** `scripts/audit-listings.js` flagged all
+28 products for a missing manufacturer and net quantity. `models/Product.js`
+had already settled that on 15 Sep: Legal Metrology rule 6(10) covers
+PRE-PACKAGED goods - "handmade jewellery is not pre-packaged; boxed
+electronics, cosmetics and food are". The check now follows the category, and
+`general` is left alone rather than guessed at. 198 findings became 131, and
+the legal ones went from 26 to **6 real ones**, all of them Rahul's
+electronics and beauty.
+
+**Left for the sellers, not for code:** weight on 24 products (the courier
+bills the real weight either way) and photographs on Rahul's 20 single-image
+listings. Neither can be invented here.

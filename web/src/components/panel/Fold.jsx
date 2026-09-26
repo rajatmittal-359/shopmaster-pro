@@ -20,7 +20,16 @@ import { ChevronDown } from 'lucide-react';
  */
 const KEY = (id) => `smp.fold.${id}`;
 
-export default function Fold({ id, title, summary, lead, badge, defaultOpen = true, foldOnPhone = false, aside, children, className = '' }) {
+/**
+ * `remember` (26 Sep 2026): whether this card's open/closed choice survives.
+ *
+ * On by default, which is right for a page you return to. It is turned OFF
+ * for the NEW-product form: Rajat, after using it - "matlab new product add
+ * karte time har time band mile". Every new listing should start the same
+ * way, all shut, whatever the seller happened to open while filling the last
+ * one. Editing an existing product is the opposite case and keeps the memory.
+ */
+export default function Fold({ id, title, summary, lead, badge, defaultOpen = true, foldOnPhone = false, remember = true, aside, children, className = '' }) {
   const [open, setOpen] = useState(defaultOpen);
   const [ready, setReady] = useState(false);
   const ref = useRef(null);
@@ -30,7 +39,7 @@ export default function Fold({ id, title, summary, lead, badge, defaultOpen = tr
     Promise.resolve().then(() => {
       if (cancelled) return;
       try {
-        const saved = localStorage.getItem(KEY(id));
+        const saved = remember ? localStorage.getItem(KEY(id)) : null;
         if (saved === '1') setOpen(true);
         else if (saved === '0') setOpen(false);
         // On a phone, sections after the first two start folded with their
@@ -45,7 +54,7 @@ export default function Fold({ id, title, summary, lead, badge, defaultOpen = tr
     return () => {
       cancelled = true;
     };
-  }, [id, foldOnPhone]);
+  }, [id, foldOnPhone, remember]);
 
   // A jump link (the score panel's "fix this") targets a field inside a folded
   // section: open before the page scrolls, or the scroll lands on nothing.
@@ -61,6 +70,7 @@ export default function Fold({ id, title, summary, lead, badge, defaultOpen = tr
   const toggle = () => {
     const next = !open;
     setOpen(next);
+    if (!remember) return; // a new-product form forgets on purpose
     try {
       localStorage.setItem(KEY(id), next ? '1' : '0');
     } catch {

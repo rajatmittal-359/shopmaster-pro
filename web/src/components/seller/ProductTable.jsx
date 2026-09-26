@@ -83,7 +83,7 @@ function Readiness({ product }) {
   const next = fixes[0];
   const tone = score >= 50 ? 'text-amber-700 dark:text-amber-300' : 'text-destructive';
   return (
-    <Link href={`/seller/products/${product._id}#${FIELD_ANCHOR[next.field] || next.field}`} className={`inline-flex max-w-full items-center gap-1.5 text-xs ${tone} hover:underline`} title={t('Listing score {n} of 100 - above 80 is where listings start to show', { n: score })}>
+    <Link href={`/seller/products/${product._id}#${FIELD_ANCHOR[next.field] || next.field}`} className={`inline-flex max-w-full items-center gap-1.5 text-xs ${tone} hover:underline`} title={t('Listing score {n} of 100 - above 80 means nothing important is missing', { n: score })}>
       <span className="font-semibold tabular-nums">{score}/100</span>
       <span className="truncate text-muted-foreground">{t(next.text).split(' - ')[0]}</span>
       <span className="shrink-0 rounded bg-primary/10 px-1 font-semibold tabular-nums text-brand-ink">+{next.points}</span>

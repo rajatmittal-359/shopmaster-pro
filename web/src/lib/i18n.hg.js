@@ -280,7 +280,7 @@ const HG = {
   'Getting there': 'Ban raha hai',
   'Not ready': 'Abhi taiyaar nahi',
   'Google and shoppers have what they need': 'Google aur customer ko jo chahiye, sab hai',
-  'above 80 is where listings start to show': '80 ke upar se listing dikhni shuru hoti hai',
+  'above 80 means nothing important is missing': '80 ke upar matlab kuch zaroori chhuta nahi',
   'Next': 'Agla',
   'Fix →': 'Theek karo →',
   'Nothing left to fix. Save it.': 'Kuch baaki nahi. Save karo.',
@@ -345,7 +345,7 @@ const HG = {
   'Show in shop': 'Dukaan me dikhao',
   'No photo - add one': 'Photo nahi - lagao',
   '{n} held in checkouts': '{n} checkout me ruke',
-  'Listing score {n} of 100 - above 80 is where listings start to show': 'Listing score {n}/100 - 80 ke upar se listing dikhni shuru hoti hai',
+  'Listing score {n} of 100 - above 80 means nothing important is missing': 'Listing score {n}/100 - 80 ke upar matlab kuch zaroori chhuta nahi',
   'Save': 'Save',
   'Saving…': 'Save ho raha hai…',
   // Settings tabs and the save bar

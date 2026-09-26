@@ -84,9 +84,29 @@ const audit = (all) => {
 
     if (!(p.faqs || []).length) add(p, 'THIN', 'no-faqs', 'no FAQs - this is what an AI answer quotes');
     if (!p.countryOfOrigin) add(p, 'THIN', 'no-origin', 'no country of origin');
-    if (!p.manufacturer) add(p, 'THIN', 'no-manufacturer', 'no manufacturer (Legal Metrology)');
-    if (!p.netQuantity) add(p, 'THIN', 'no-net-quantity', 'no net quantity (Legal Metrology)');
     if (!p.hsn) add(p, 'THIN', 'no-hsn', 'no HSN');
+
+    /*
+     * Legal Metrology applies to PRE-PACKAGED goods, not to everything.
+     *
+     * The first version of this audit flagged all 28 products for a missing
+     * manufacturer and net quantity, which over-reported badly: it was asking
+     * Charming Jewels' handmade jewellery for a declaration the law does not
+     * require of it. `models/Product.js` already settled this on 15 Sep 2026 -
+     * "rule 6(10): a PRE-PACKAGED commodity sold online shows the manufacturer
+     * / packer / importer's name and address, net quantity, MRP and customer
+     * care. Handmade jewellery is not pre-packaged; boxed electronics,
+     * cosmetics and food are."
+     *
+     * So the check follows the category. `general` is left alone rather than
+     * guessed at - a gift box is packaged, a bicycle is not, and the audit has
+     * no way to tell them apart.
+     */
+    const PREPACKED = new Set(['electronics', 'beauty', 'home-textiles']);
+    if (PREPACKED.has(tpl.key)) {
+      if (!p.manufacturer) add(p, 'COSTS', 'no-manufacturer', `${tpl.label}: pre-packaged, so Legal Metrology asks for the maker's name and address`);
+      if (!p.netQuantity) add(p, 'COSTS', 'no-net-quantity', `${tpl.label}: pre-packaged, so Legal Metrology asks for net quantity`);
+    }
   }
 
   /*

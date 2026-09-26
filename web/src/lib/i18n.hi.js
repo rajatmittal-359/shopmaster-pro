@@ -330,7 +330,7 @@ const HI = {
   'Getting there': 'बन रहा है',
   'Not ready': 'अभी तैयार नहीं',
   'Google and shoppers have what they need': 'Google और ग्राहक को जो चाहिए, सब है',
-  'above 80 is where listings start to show': '80 के ऊपर से लिस्टिंग दिखनी शुरू होती है',
+  'above 80 means nothing important is missing': '80 के ऊपर मतलब कुछ ज़रूरी छूटा नहीं',
   'Next': 'अगला',
   'Fix →': 'ठीक करें →',
   'Nothing left to fix. Save it.': 'कुछ बाकी नहीं। सेव करें।',
@@ -392,7 +392,7 @@ const HI = {
   'Show in shop': 'दुकान में दिखाएँ',
   'No photo - add one': 'फोटो नहीं - लगाएँ',
   '{n} held in checkouts': '{n} चेकआउट में रुके',
-  'Listing score {n} of 100 - above 80 is where listings start to show': 'लिस्टिंग स्कोर {n}/100 - 80 के ऊपर से लिस्टिंग दिखनी शुरू होती है',
+  'Listing score {n} of 100 - above 80 means nothing important is missing': 'लिस्टिंग स्कोर {n}/100 - 80 के ऊपर मतलब कुछ ज़रूरी छूटा नहीं',
   'Save': 'सेव',
   'Saving…': 'सेव हो रहा है…',
   // Settings tabs and the save bar
