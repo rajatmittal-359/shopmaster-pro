@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import PanelCard from '@/components/panel/PanelCard';
 import GoogleReadiness from '@/components/seller/GoogleReadiness';
+import WhatsAppKit from '@/components/seller/WhatsAppKit';
 import PanelTabs from '@/components/panel/PanelTabs';
 import { useT } from '@/lib/i18n';
 
@@ -156,12 +157,16 @@ export default function Grow() {
           { key: 'google', label: t('On Google'), count: data.steps.filter((x) => x.world === 'google' && !x.done).length },
           { key: 'fields', label: t('Fields') },
           { key: 'market', label: t('Market') },
+          // WhatsApp is where an Indian shop's customers already are, so it
+          // sits beside Google rather than under "later" (27 Sep 2026).
+          { key: 'whatsapp', label: t('WhatsApp') },
           { key: 'guide', label: t('Guide & routine') },
         ]}
       >
         {(tab) => (
           <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
             <div className="space-y-6">
+              {tab === 'whatsapp' && <WhatsAppKit data={data} />}
               {tab === 'do' && (
                 <>
                   <GoogleReadiness />

@@ -257,6 +257,55 @@ exports.sellerGrow = async (req, res) => {
       steps,
       shopUrl: `${process.env.FRONTEND_URL || 'https://www.shopmasterpro.in'}/sellers/${sellerId}`,
       businessName: (seller && seller.businessName) || '',
+      /*
+       * EVERYTHING THE WHATSAPP BUSINESS SETUP NEEDS, ALREADY FILLED IN
+       * (27 Sep 2026, Rajat setting his mother's shop up at 1am: "poora
+       * setup kar do catalog ka jisse mujhe dikkat na aae... site pe UI pe
+       * system").
+       *
+       * WhatsApp's own catalogue has no import - every item is typed on a
+       * phone, and a seller typing a name, a price and a 100-character URL
+       * six times will get one of them wrong. The shop already knows all of
+       * it. So the panel hands over each field ready to copy, and the LINK
+       * is the product's own page here: an order that arrives through the
+       * catalogue link is a real order with a record, a courier booking and
+       * returns cover, where one agreed in a chat is not.
+       *
+       * Only live, in-stock items go: a catalogue that offers something out
+       * of stock is worse than a shorter one.
+       */
+      catalogue: products
+        .filter((p) => (p.stock || 0) > 0 && (p.images || []).length)
+        .sort((a, b) => (b.images || []).length - (a.images || []).length)
+        .slice(0, 30)
+        .map((p) => ({
+          name: p.name,
+          price: p.price,
+          sku: p.sku || '',
+          photos: (p.images || []).length,
+          url: `${process.env.FRONTEND_URL || 'https://www.shopmasterpro.in'}/products/${p.slug || p._id}`,
+        })),
+      shop: {
+        phone: (seller && seller.pickupAddress && seller.pickupAddress.phone) || (seller && seller.phone) || '',
+        city: (seller && seller.pickupAddress && seller.pickupAddress.city) || '',
+        /*
+         * What this shop actually sells, in its own categories - so the
+         * generated WhatsApp description can say "necklaces, earrings and
+         * rings" instead of the empty "quality products" every generated
+         * profile on the internet says. Ordered by how many listings sit in
+         * each, so the shop leads with what it is known for.
+         */
+        sells: Object.entries(
+          products.reduce((n, p) => {
+            const c = p.category && p.category.name;
+            if (c) n[c] = (n[c] || 0) + 1;
+            return n;
+          }, {})
+        )
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 4)
+          .map(([name]) => name),
+      },
     });
   } catch (error) {
     sendError(res, error);

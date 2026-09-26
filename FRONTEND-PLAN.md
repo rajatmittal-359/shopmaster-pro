@@ -3092,3 +3092,50 @@ supplies the vocabulary, so we never have to guess at a word nobody typed.
 What is still owed is the evidence beside it - "buyers type jhumka, seen 12
 times in searches that reached your shop" - which needs the Search Console
 join (WHAT-IS-LEFT §3).
+
+### 4.65 The WhatsApp setup belongs in the panel, not in a chat (27 Sep 2026)
+
+Rajat set his mother's WhatsApp Business up on her phone at 1am, and I was
+answering it a message at a time - here is the description, here is the link,
+here are the six catalogue rows. Halfway through he stopped me: *"Poora setup
+kar do catalog ka jisse mujhe dikkat na aae... site pe UI pe system."*
+
+He is right, and it is the same mistake as the Grow page was built to fix: the
+first seller's setup took the admin two evenings in twelve browser tabs, and a
+second seller cannot repeat that. WhatsApp is where an Indian shop's customers
+already are, so it belongs beside Google, not in my chat history.
+
+**What it can and cannot do.** The free WhatsApp Business app has no import
+and no API - every field is typed on a phone by hand, and nothing we build
+will press those buttons. What the panel CAN do is remove every chance of
+getting one wrong. `Grow` gains a **WhatsApp** tab that generates, from the
+shop's own data, with one-tap copy and the exact menu path under each:
+
+- the **business description**, which now names what the shop actually sells
+  by reading its own categories ("Earrings, necklaces & pendants, rings and
+  bangles & bracelets") - a generated profile that says "quality products at
+  best price" is the reason nobody reads generated profiles;
+- the **website** field (the shop page, not the marketplace home - the person
+  messaging you wants your things);
+- a **greeting** and an **away message** in Hinglish, both carrying the shop
+  link, because a buyer at 1am should not meet silence;
+- the **wa.me chat link**, built from the pickup phone, with a warning to
+  change it in Settings first if WhatsApp lives on another number;
+- the **catalogue**, every live in-stock product with a photo: a short name
+  (a title written for Google is cut off on a phone), the price, the product
+  code, and the **link**;
+- the five **labels** that turn a chat list into an order list, and one
+  warning not to sign up for the paid Business Platform API.
+
+**The link on each catalogue item is the point of the whole tab.** A shopper
+who taps it lands on the product page here, so the order carries an order
+record, a courier booking and returns cover - and it counts as a view on that
+listing's report (§4.62). An order agreed inside a chat has none of that.
+Which is also why there is no "sell on WhatsApp instead" anywhere on the page,
+and why the offered "Chat on WhatsApp" button stays parked on the SHOP page
+only, never on a product page: Amazon, Flipkart and Meesho all keep seller
+chat off the buy path, and a seller who takes the order in chat loses the
+protection the platform exists to give.
+
+Only live, in-stock, photographed products are listed - a catalogue offering
+something sold out costs more than a short one.
