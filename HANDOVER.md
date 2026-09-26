@@ -147,7 +147,11 @@ minutes:
 
 1. `CLAUDE.md` - the rules, each with its reason
 2. `OPS-AND-MANUAL-ACTIONS.md` *(from the pack)* - what has been done outside
-   the code and what is still owed
+   the code and what is still owed. **Start at "THE MAP"**, the section near
+   the top: every outside service, which of the three logins it needs, the
+   click path to the part we actually use, and which env key it feeds. The
+   rest of that file is a diary in date order and parts of it are overtaken -
+   §1 still says Render. The map is the current answer
 3. `WHAT-IS-LEFT.md` - the one list of decided, unfinished work
 4. `FRONTEND-PLAN.md` - the dated entries: why every page looks the way it does
 5. `web/DESIGN.md` - tokens and the rules of the visual system
