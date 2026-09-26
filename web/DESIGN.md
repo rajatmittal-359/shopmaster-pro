@@ -135,11 +135,24 @@ the restraint. The seller and admin panels follow Shopify's admin and Amazon
 Seller Central: a separate application with its own slim bar, never the shop's
 header on top of a dashboard.
 
-Jaipur is in the identity on purpose and with restraint: the mark is a
-jharokha - the arched window Hawa Mahal is five storeys of - lit pink from
-inside on the brand-gradient tile. The city was painted terracotta in 1876 to
-welcome a visitor, and that is why the world calls it the Pink City. No lotus,
-no chakra, no clip-art; the city's own domestic form, and its own colour.
+Jaipur is in the identity on purpose and with restraint - but through the
+COLOUR, not through a building. The mark is a shopping bag with a shop front
+inside it: a scalloped awning and two shutters, which is what says *many shops
+in one place* rather than one shop. It sits on a magenta tile that runs
+`#C21A8D` into `#78095A`, lit from the top-left.
+
+The jharokha went on 26 Sep 2026. It was the honest Jaipur form and it was
+also a building, and a marketplace is not a building; at 16px an arch and a
+ledge read as a generic window rather than as commerce. The city stays in the
+identity where it always mattered: Jaipur was painted terracotta in 1876 to
+welcome a visitor, which is why the world calls it the Pink City, and that
+pink is the whole tile now instead of a light inside an arch. Still no lotus,
+no chakra, no clip-art.
+
+A bag alone was not enough either: Shopify's mark is a bag with an S in it and
+Flipkart's is a bag with an f in it, so a bag plus a letter was taken twice
+over by the two closest references. The shop front inside the bag is what
+makes it ours.
 
 ## Colors
 
@@ -351,9 +364,14 @@ Quality bands are tiny rounded labels: Best / High / Good / Basic.
 
 ### Signature Components
 
-- **The mark**: a jharokha, rendered (gpt-image-2, then cropped to the squircle
-  at 512/192/64/32), with a hand-drawn SVG silhouette as the flat version for
-  invoices and labels.
+- **The mark**: a shopping bag with a shop front inside it - white bag,
+  scalloped awning and two shutters in `--brand-rose #E03B8A`, on a magenta
+  tile (`#C21A8D` to `#78095A`). Rendered in 3D (FLUX.2 klein-9b on
+  Cloudflare, 26 Sep 2026), then recoloured onto brand tokens hue-by-hue with
+  every pixel's lightness left alone, so the render's own shading survives.
+  Finished with a specular sheen, a rim light, a bloom and a vignette, and cut
+  to the squircle at 512/192/180/64/48/32/16. A hand-drawn SVG silhouette is
+  the flat version for invoices and labels.
 - **The product mosaic**: six live product photos, three columns, the middle
   column offset by half a tile so it reads as a collage - on the home hero and
   the sign-in panel.

@@ -2657,3 +2657,63 @@ later**, the draft road that already exists - then "Leave without saving" and
 "Keep editing". Shopify's admin and Amazon's listing form both ask before
 leaving; neither offers to save it for you, which is the one thing we can do
 better.
+
+### 4.57 The mark: the jharokha goes, a shop inside a bag arrives (26 Sep 2026)
+
+Rajat: *"mai sach batau to apni site ka icon kabhi pasand aaya hi nahi"* — and
+then plainly, *"jharokha hi nahi pasand hai"*. Sixteen days after 4.9 shipped
+it. He was right and 4.9's own third argument was the tell: an arch and a
+ledge survive being small, but what they survive AS is a generic window. A
+marketplace is not a building.
+
+**The research, before any drawing.** Flipkart's mark is a shopping bag with a
+blue *f* in it; Shopify's is a bag with an *S* cut out of it. Amazon, Myntra,
+Meesho, Ajio and Nykaa are wordmarks or abstract letters with no icon-only
+mark at all. So the bag is the right idea and *bag plus a letter* is taken
+twice over by the two closest references. What makes it ours is what is
+**inside** the bag: a scalloped awning and two shutters — a shop front. That
+says the thing the product is, which is not one shop but many in one place.
+
+**Nine generated, four drawn, one chosen.** The nine came from
+`flux-1-schnell` on Pollinations (free, unlimited) purely to find the concept;
+Rajat picked the awning-in-a-bag. It was then rendered properly in 3D by
+FLUX.2 klein-9b on Cloudflare's daily neurons — no spend at any point.
+
+**Why it stayed a render.** Apple's app-icon guidance (8 Jun 2026) says the
+opposite: *"let the system handle blurring and other visual effects"*, *"avoid
+soft and feathered edges"*, *"prefer vector graphics"*. That is correct for
+iOS 26, whose Liquid Glass adds its own depth to flat layered art — and it is
+the wrong constraint for us, because the Play Store icon is a flat 512×512
+raster with no system depth and most of this shop's buyers are on Android.
+Raised once, overruled, built as asked.
+
+**Fixing the colour, which was the real complaint** — *"theme color match hi
+nahi kar raha"*. The render had invented `#5E3A7E` and `#ED2A7B`; neither is a
+token. Rather than re-roll the dice, the render is recoloured hue by hue onto
+the tokens with **every pixel's lightness left alone** — lightness is what the
+3D actually is, so the shading and the shadow survive a change of palette.
+The ground is found by flooding in from the middle of each edge of the
+*original* render: there the tile and the awning sit sixty degrees apart, and
+after the recolour they sit one degree apart, at which point the flood walks
+in through the ends of the awning and eats the shop front. It did, once.
+
+**The shade.** Four grounds, then six pinks, then rose against magenta, each
+printed with two measured numbers: white bag against ground (WCAG asks 3:1 for
+icon graphics) and how far the awning stands clear of the tile — below about
+1.3× the shop front dissolves at 32px. Rajat: *"rehndo pink hi badiya hai,
+purple hata do"*, then *"magenta"*. **`#C21A8D` → `#78095A`**, awning and
+shutters `--brand-rose #E03B8A`, bag white. 10.6:1 and 2.60×.
+
+**The finish**, because a flat tile of colour is not an icon: a specular
+sheen, a rim light — bright along the top edge, dark along the bottom, which
+is the thing that makes a tile read as an object — a bloom from the light
+source, and a vignette into the far corner.
+
+Jaipur did not leave; it moved from the shape to the colour, which is where it
+was always doing the work. The city was painted terracotta in 1876 to welcome
+a visitor and that is why the world calls it the Pink City — that pink is now
+the whole tile instead of a light inside an arch.
+
+**Still open:** the `.arch` utility in `globals.css` (E1, 22 Sep) is a page
+motif, not the mark, and was left alone. `scripts/brand/generate-logo.mjs`
+keeps its jharokha prompts as the record of how 4.9 was made.

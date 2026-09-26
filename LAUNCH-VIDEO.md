@@ -37,7 +37,7 @@ works for marketplaces:
 | 3 | 18–30 | Buying is trust | Storefront: product page with the return promise, "Sold by", same-city delivery; checkout in 3 taps |
 | 4 | 30–42 | The order runs itself | Order → courier booked → tracking → delivered; bell + WhatsApp-style notifications |
 | 5 | 42–52 | Money and fairness | Earnings page, invoice, Fair Returns tag on a parcel, "Ask ShopMaster" answering in Hindi |
-| 6 | 52–60 | Close | Logo (the jharokha), the one sentence, `shopmasterpro.in`, "Sell on ShopMaster Pro" |
+| 6 | 52–60 | Close | Logo (the bag with the shop front), the one sentence, `shopmasterpro.in`, "Sell on ShopMaster Pro" |
 
 Rule: **no claims the site does not make.** Nothing about hallmark/purity,
 nothing that names the house shop as the platform.

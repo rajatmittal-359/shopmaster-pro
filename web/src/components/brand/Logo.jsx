@@ -4,68 +4,67 @@ import Image from 'next/image';
  * The ShopMaster Pro mark.
  *
  * WHAT IT IS
- *   A jharokha - the arched window that overhangs the front of almost every old
- *   building in Jaipur, and the thing Hawa Mahal is made of, five storeys of
- *   them - carved sandstone, lit pink from inside, on a tile that runs the
- *   brand gradient: Jaipur pink into royal violet into royal blue.
+ *   A shopping bag with a shop front inside it: a scalloped awning across the
+ *   bag and two shutters below it, white on a magenta tile that runs #C21A8D
+ *   into #78095A and is lit from the top-left.
+ *
+ * WHY NOT A BAG ON ITS OWN
+ *   Because a bag on its own is taken. Shopify's mark is a bag with an S cut
+ *   into it and Flipkart's is a bag with an f in it - the two closest
+ *   references in the business, both using the same construction. The shop
+ *   front inside the bag is the part that is ours, and it says the thing the
+ *   product actually is: not one shop, MANY shops, in one place.
+ *
+ * WHY THE JHAROKHA WENT (26 Sep 2026)
+ *   It was the honest Jaipur form - secular, domestic, the thing Hawa Mahal is
+ *   five storeys of - and it was still a building, and a marketplace is not a
+ *   building. At 16px an arch over a ledge reads as a generic window rather
+ *   than as commerce. Jaipur stays in the identity through the COLOUR, which
+ *   is where it was always doing the work: the city was painted terracotta in
+ *   1876 to welcome a visitor, and that is why the world calls it the Pink
+ *   City. That pink is now the whole tile instead of a light inside an arch.
  *
  * HOW IT WAS MADE
- *   Rendered by gpt-image-2 through Pollinations on 11 Sep 2026, from a prompt
- *   written for a MARK - no text, dark ground, legible at 32px, palette by hex.
- *   Six drafts, two concepts each; this was `jharokha-2`. The prompt and the
- *   export pipeline live in scripts/brand/, so it can be regenerated or
- *   re-exported at any size without anyone redrawing it.
+ *   Rendered in 3D by FLUX.2 klein-9b on Cloudflare (26 Sep 2026), then
+ *   recoloured onto the brand tokens hue by hue - each pixel keeps its own
+ *   LIGHTNESS, which is what the 3D actually is, so the render's shading and
+ *   its shadow survive a change of palette. The ground is found by flooding in
+ *   from the middle of each edge of the original render, where the tile and
+ *   the awning are sixty degrees apart on the wheel; do it after the recolour
+ *   and they are one degree apart, the flood walks in through the ends of the
+ *   awning and eats the shop front.
  *
- *   The hand-drawn SVG jharokha below (LogoMark) is kept as the FLAT version -
- *   one colour, for invoices, courier labels and anywhere a photograph cannot
- *   go. Same window, same proportions, so the two read as one brand.
+ *   Finished with the four things an app icon is built from: a specular sheen,
+ *   a rim light (bright along the top edge, dark along the bottom - this is
+ *   what makes a tile look like an object), a bloom from the light source, and
+ *   a vignette into the far corner.
  *
- * WHY A JHAROKHA
- *   The brief was to connect the mark to Jaipur and to India without it looking
- *   borrowed or fake. Three reasons this is the honest way to do that:
+ * WHY IT IS A PNG AND THE FLAT ONE IS NOT
+ *   Apple's guidance now says to ship flat layered art and let the system add
+ *   depth; that is right for iOS 26 and wrong for us, because the Play Store
+ *   icon is a flat 512x512 raster with no system depth and most of this shop's
+ *   buyers are on Android. So the tile is a render, and LogoMark below is the
+ *   drawn one-colour twin for invoices, courier labels and anywhere a
+ *   photograph cannot go - same bag, same awning, same proportions.
  *
- *   1. It is genuinely his city's own form. Jharokhas are what give Jaipur its
- *      facades. They are secular, domestic architecture - not a monument
- *      borrowed for decoration, and not a national symbol pressed into a logo.
- *   2. It MEANS the right thing. A jharokha is a window you look out of and
- *      others look into, and this is a marketplace: a window onto everything
- *      other people are selling. A doorway is the oldest sign a shop has.
- *   3. It survives being small. An arch and a ledge are two shapes. At 16px
- *      that still reads as a window; a skyline or a palace turns to mud.
- *
- * WHY THE OPENING IS PINK
- *   Jaipur was painted terracotta in 1876, on one man's order, to welcome a
- *   visitor - and that single decision is why the world calls it the Pink City.
- *   It is one of the most successful pieces of city branding ever done, and it
- *   is the correct colour to put inside a Jaipur window. Against deep violet it
- *   also does the job the palette needs: a warm light inside a cool frame,
- *   which is what makes the arch read as LIT rather than as a hole.
- *
- * WHY THE PARCEL WENT
+ * WHY THE PARCEL WENT, BEFORE ANY OF THIS
  *   It was category-neutral, which was right, and anonymous, which was not.
- *   Every logistics company on earth has a box in its logo. This one could not
- *   belong to anybody else.
- *
- * WHY IT IS DRAWN AND NOT A PNG
- *   One file instead of four that drift, no blur on a high-density screen, and
- *   a few hundred bytes inside the HTML rather than a request that has to
- *   finish before the header stops flashing.
+ *   Every logistics company on earth has a box in its logo.
  */
 
-/**
- * The arch, as one path, shared by both marks.
- *
- * Two quadratic curves meeting at a POINT rather than a dome - which is what
- * separates a Rajput-Mughal arch from a Roman one, and it is the whole
- * difference between "Jaipur" and "generic archway".
- */
-const ARCH = 'M15 50 L15 29 Q15 15 32 9 Q49 15 49 29 L49 50 Z';
+/** The bag itself: straight sides, because a taper reads as a basket. */
+const BAG = 'M16 24.5h32v23.6a4.4 4.4 0 0 1-4.4 4.4H20.4a4.4 4.4 0 0 1-4.4-4.4Z';
+
+/** The handle, as a stroke rather than a filled ring, so it holds at 16px. */
+const HANDLE = 'M25 24.5v-3a7 7 0 0 1 14 0v3';
 
 /**
- * The ledge the window sits on. Wider than the arch, because a jharokha
- * PROJECTS from the wall - that overhang is the entire point of one.
+ * The awning: a band across the bag with four scallops cut from its lower
+ * edge. The scallops are the whole signal - a plain rectangle there reads as a
+ * label stuck on a bag, and the shop front disappears.
  */
-const LEDGE = 'M11 50 H53 A1.9 1.9 0 0 1 53 53.8 H11 A1.9 1.9 0 0 1 11 50 Z';
+const AWNING =
+  'M17.6 26.5h28.8v4.6a3.6 3.6 0 0 1-7.2 0 3.6 3.6 0 0 1-7.2 0 3.6 3.6 0 0 1-7.2 0 3.6 3.6 0 0 1-7.2 0Z';
 
 /**
  * The rendered tile, as a picture.
@@ -102,8 +101,14 @@ export function TileMark({ className = '', size = 32, priority = false, ...props
 export function LogoMark({ className = '', ...props }) {
   return (
     <svg viewBox="0 0 64 64" role="img" aria-label="ShopMaster Pro" className={className} {...props}>
-      <path d={ARCH} fill="currentColor" />
-      <path d={LEDGE} fill="currentColor" />
+      <path d={HANDLE} fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
+      {/*
+        In one colour the bag has to be an OUTLINE and the awning the only
+        solid: fill them both and the shop front vanishes into the bag, which
+        is the one thing the mark is for.
+      */}
+      <path d={BAG} fill="none" stroke="currentColor" strokeWidth="4" strokeLinejoin="round" />
+      <path d={AWNING} fill="currentColor" />
     </svg>
   );
 }

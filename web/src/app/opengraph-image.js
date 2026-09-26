@@ -13,7 +13,7 @@ import { GRADIENT, OG_SIZE, markDataUrl } from '@/lib/ogCard';
  *   card for anything that is not a product).
  *
  *   Brand gradient from DESIGN.md (Jaipur pink → royal violet → royal blue),
- *   the jharokha mark, the name, the one-line promise. No category word: the
+ *   the mark, the name, the one-line promise. No category word: the
  *   frame sells variety. 1200×630 is the size WhatsApp, Facebook, LinkedIn
  *   and Slack all read at full width.
  */
