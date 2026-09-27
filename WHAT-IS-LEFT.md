@@ -261,6 +261,29 @@ synonyms collection (jhumka/jhumki/झुमका), Gemini query → filters.
     nothing and unlocks Keyword Planner, whose ranges ("100-1K a month") are a
     second, independent source of evidence beside our own searches. It is a
     manual step - it is on his list in OPS-AND-MANUAL-ACTIONS.md.
+
+    **Wired from code, 27 Sep 2026.** Rajat: "koi api services hai kya enable
+    karke ya env me dalke waha ka koi kaam yahi manage ho jae." Yes.
+    `utils/google/adsAuth.js` + `utils/google/ads.js`, in the same shape as
+    `serviceAuth.js` next door: raw fetch, no client library (google-ads-api
+    drags in gRPC and protobufs, and `npm install` is banned on the laptop).
+    `keywordIdeas()` is the one that matters - it returns India-wide monthly
+    volumes for up to 20 seed phrases, which is the "second source" above.
+    `accounts()` and `health()` exist so the panel can say what is wrong in
+    words. 16 tests, fetch injected, no network.
+
+    Ads authorises a PERSON, not our service account: a personal Gmail cannot
+    do domain-wide delegation, so this is the one Google integration on a
+    refresh token. Minted 27 Sep with OUR client - the first attempt used the
+    OAuth Playground's own client and would have failed with `invalid_grant`
+    months later on the box; the error message now says how to re-mint. Token
+    refresh proven against Google for real, once.
+
+    **Blocked on one thing:** the developer token. A TEST token only reaches
+    TEST accounts, which hold no real volumes; real numbers need BASIC access,
+    which is an application form. Until then every call answers
+    `{ ok: false }` with Google's own sentence and the coach keeps using
+    Search Console + SearchLog alone - which was always the honest floor.
   - *(b) The field does not move; the BUTTON did.* Rajat asked for exactly
     this: "Suggest search words" and the word chips now sit inside 6 · Details,
     in a tinted box directly under the Search words field they write into.
