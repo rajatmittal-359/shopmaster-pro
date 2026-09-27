@@ -15,6 +15,8 @@ const { GROUPS } = require('./searchSynonyms');
  *   keywordEvidence   the words real people typed - on Google for this
  *                     seller's pages (Search Console), in our own search
  *                     box (SearchLog, catches Hinglish Google never shows),
+ *                     how many people in India search the phrase at all
+ *                     (Keyword Planner, via the weekly market brief),
  *                     and the synonym families the catalogue already maps -
  *                     each with a count and a source, so the coach can say
  *                     "searched 14× on ShopMaster this month" instead of
@@ -53,7 +55,7 @@ const keywordEvidence = async ({ sellerId, name = '', categoryName = '', tags = 
     const key = word.toLowerCase().trim();
     if (!key || mine.includes(key) && source === 'family') return;
     const prev = found.get(key);
-    if (!prev || prev.count < count) found.set(key, { word: key, source, count, note });
+    if (!prev || prev.count < count) found.set(key, { word: key, source, count, note, monthly: prev?.monthly });
   };
 
   // 1. Google - what searchers typed to reach this seller's pages, then the site.
@@ -87,9 +89,58 @@ const keywordEvidence = async ({ sellerId, name = '', categoryName = '', tags = 
   // 3. The synonym family - the words the catalogue already treats as the same thing.
   for (const w of family) add(w, 'family', 1, 'Shoppers also type this for the same thing');
 
+  /*
+   * 4. HOW MANY PEOPLE IN INDIA SEARCH IT - the only source here that is not
+   *    about us (27 Sep 2026).
+   *
+   *    The three above can only describe traffic we already have. A shop
+   *    three weeks old has almost none, so the coach was reduced to
+   *    "searched 1x" and synonym guesses - true, but thin.
+   *
+   *    These numbers come from the weekly market brief, NOT from a live
+   *    Keyword Planner call. The form must answer instantly and the
+   *    allowance is a shared resource; the job pays that cost once a week
+   *    for the whole category and every seller in it reads the answer for
+   *    free. A category with no brief yet simply has no fourth source.
+   *
+   *    `monthly` is attached to words the other sources already found as
+   *    well, so a chip can say both things at once - what happened here,
+   *    and how big the phrase is out there.
+   */
+  try {
+    const MarketBrief = require('../models/MarketBrief');
+    const q = String(categoryName || '').trim();
+    const brief = q
+      ? await MarketBrief.findOne({ 'category.name': new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') })
+          .select('words')
+          .lean()
+      : null;
+    for (const w of brief?.words || []) {
+      if (!w.monthly || !relevant(w.word)) continue;
+      const key = String(w.word).toLowerCase().trim();
+      const prev = found.get(key);
+      if (prev) prev.monthly = w.monthly;
+      else if (!mine.includes(key)) {
+        found.set(key, {
+          word: key,
+          source: 'demand',
+          count: w.monthly,
+          note: `${w.monthly.toLocaleString('en-IN')} people in India search this every month (Google)`,
+          monthly: w.monthly,
+        });
+      }
+    }
+  } catch {
+    /* no brief yet - three sources, as before */
+  }
+
+  // Order of trust: our own Google impressions, then our search box, then
+  // India-wide demand, then the synonym family. Demand sits third because a
+  // huge number for a phrase nobody here has ever typed is a lead, not proof.
+  const RANK = { google: 0, shop: 1, demand: 2, family: 3 };
   const words = [...found.values()]
     .filter((w) => !mine.includes(w.word))
-    .sort((a, b) => ({ google: 0, shop: 1, family: 2 })[a.source] - ({ google: 0, shop: 1, family: 2 })[b.source] || b.count - a.count)
+    .sort((a, b) => RANK[a.source] - RANK[b.source] || b.count - a.count)
     .slice(0, 24);
   return { words, google, description: description ? tokens(description).length : 0 };
 };

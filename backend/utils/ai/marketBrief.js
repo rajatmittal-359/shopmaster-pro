@@ -35,7 +35,7 @@ const clean = (w) => String(w || '').trim().toLowerCase().replace(/\s+/g, ' ').s
  * by Search Console impressions - a phrase Google, the site and the model all
  * name is worth more than one any of them names alone.
  */
-const assembleBrief = ({ category, grounded, searchConsole = [], siteSearches = [], bestSellers = [], prices = null, weekOf }) => {
+const assembleBrief = ({ category, grounded, searchConsole = [], siteSearches = [], bestSellers = [], prices = null, adsWords = [], weekOf }) => {
   const words = new Map();
   const add = (word, source, weight = 1) => {
     const key = clean(word);
@@ -48,11 +48,31 @@ const assembleBrief = ({ category, grounded, searchConsole = [], siteSearches = 
   for (const q of searchConsole) add(q.query, 'google', 2 + Math.log10(1 + (q.impressions || 0)));
   for (const t of siteSearches) add(t.term, 'site', 1.5 + Math.log10(1 + (t.count || 0)));
   for (const w of grounded?.words || []) add(w, 'grounded', 1);
+  /*
+   * THE FOURTH SOURCE, AND THE ONLY ONE ABOUT PEOPLE WHO NEVER CAME HERE
+   *   The three above all describe our own traffic: what Google showed for
+   *   OUR pages, what was typed in OUR box, what a model read about the
+   *   category. For a shop with three sellers that is a small, flattering
+   *   mirror - it cannot name a phrase we have never ranked for, which is
+   *   most of them.
+   *
+   *   Keyword Planner is the whole of India. Its weight is kept in the same
+   *   range as the others deliberately: a phrase Google, the site and the
+   *   model all name is still worth more than one with a big number and no
+   *   local evidence. The NUMBER is what matters downstream, not the rank -
+   *   `monthly` is carried on the row for the listing prompt and the
+   *   seller's chips to sort by and to show.
+   */
+  for (const a of adsWords) {
+    add(a.keyword, 'ads', 1.5 + Math.log10(1 + (a.monthly || 0)));
+    const row = words.get(clean(a.keyword));
+    if (row) row.monthly = a.monthly || 0;
+  }
 
   const ranked = [...words.values()]
     .sort((a, b) => b.sources.length - a.sources.length || b.weight - a.weight)
     .slice(0, 20)
-    .map(({ word, sources }) => ({ word, sources }));
+    .map(({ word, sources, monthly }) => (monthly ? { word, sources, monthly } : { word, sources }));
 
   return {
     category: { name: category.name, slug: category.slug },
@@ -76,7 +96,12 @@ const briefToText = (b) => {
   if (b.typicalBenchmark) parts.push(`Google's benchmark price for our listed items in this category averages ₹${b.typicalBenchmark}.`);
   if (b.note) parts.push(b.note);
   if (b.trending?.length) parts.push(`Moving this month: ${b.trending.join(', ')}.`);
-  if (b.words?.length) parts.push(`Words buyers type: ${b.words.map((w) => `${w.word} [${w.sources.join('+')}]`).join(', ')}.`);
+  if (b.words?.length)
+    parts.push(
+      `Words buyers type: ${b.words
+        .map((w) => `${w.word} [${w.sources.join('+')}]${w.monthly ? ` ${w.monthly}/month in India` : ''}`)
+        .join(', ')}.`
+    );
   if (b.bestSellers?.length) parts.push(`Google best sellers in the category: ${b.bestSellers.slice(0, 5).map((x) => `#${x.rank} ${x.title}`).join('; ')}.`);
   if (b.googleQueries?.length) parts.push(`Searches that reached us: ${b.googleQueries.slice(0, 5).map((q) => `${q.query} (${q.impressions} impressions)`).join(', ')}.`);
   return parts.join(' ');
@@ -99,6 +124,27 @@ const groundedFor = async (category, deps = {}) => {
   if (!raw) return null;
   const parsed = parseMarketCheck(raw, null);
   return { ...parsed, trending: Array.isArray(raw.trending) ? raw.trending : [] };
+};
+
+/**
+ * India-wide monthly searches for a category's phrases, or nothing.
+ *
+ * Ads is optional infrastructure: a box without the six GOOGLE_ADS_ vars,
+ * or an access level that withholds the planner, must leave the brief
+ * exactly as it was before - three sources instead of four, never an error
+ * and never a zero pretending to be a measurement.
+ */
+const keywordVolumes = async (seeds, deps = {}) => {
+  try {
+    const ads = deps.ads || require('../google/ads');
+    const out = await ads.keywordIdeas([...new Set(seeds.map((s) => String(s || '').trim().toLowerCase()).filter(Boolean))]);
+    if (!out.ok) return [];
+    // Google returns the whole family, hundreds of it. Keep the head: past
+    // twenty, nothing survives the brief's own cut anyway.
+    return out.rows.filter((r) => r.monthly > 0).slice(0, 25);
+  } catch {
+    return [];
+  }
 };
 
 /**
@@ -145,13 +191,32 @@ const buildBriefs = async (deps = {}) => {
     let grounded = await groundedFor(category, deps).catch(() => null);
     if (!grounded) { await pause(deps.retryMs ?? 20000); grounded = await groundedFor(category, deps).catch(() => null); }
     await pause(deps.pauseMs ?? 4000);
+
+    const catSearchConsole = (sc.rows || []).filter((r) => relevant(r.query)).slice(0, 30);
+    /*
+     * ONE Keyword Planner call per category, once a week - about thirty
+     * operations against a Basic allowance of 15,000 a day. Live calls from
+     * the product form were the obvious alternative and the wrong one: the
+     * numbers move weekly at most, the call costs a second, and a form that
+     * waits is a form Mummy stops using.
+     *
+     * The seeds are what we already believe buyers say, from the three
+     * cheaper sources. Google answers with the rest of the phrase family and
+     * a number against each.
+     */
+    const adsWords = await keywordVolumes(
+      [category.name, ...(grounded?.words || []).slice(0, 8), ...catSearchConsole.slice(0, 6).map((r) => r.query)],
+      deps
+    );
+
     const brief = assembleBrief({
       category,
       grounded,
-      searchConsole: (sc.rows || []).filter((r) => relevant(r.query)).slice(0, 30),
+      searchConsole: catSearchConsole,
       siteSearches: site.filter((r) => relevant(r._id)).map((r) => ({ term: r._id, count: r.count })).slice(0, 30),
       bestSellers: (mi.bestSellers || []).filter((b) => relevant(b.category) || relevant(b.title)),
       prices: mi.prices,
+      adsWords,
       weekOf: week,
     });
     await MarketBrief.updateOne({ 'category.slug': category.slug }, { $set: brief }, { upsert: true });
@@ -160,4 +225,4 @@ const buildBriefs = async (deps = {}) => {
   return { built, skipped, pending: Math.max(0, cats.length - done.size - built), week, marketInsights: mi.enabled ? 'on' : 'not yet enabled by Google', searchConsole: sc.ok ? (sc.rows || []).length : 'not connected' };
 };
 
-module.exports = { briefPrompt, assembleBrief, briefToText, groundedFor, buildBriefs };
+module.exports = { briefPrompt, assembleBrief, briefToText, groundedFor, buildBriefs, keywordVolumes };

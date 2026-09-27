@@ -146,15 +146,28 @@ Fill in the listing. RULES, in order of importance:
  * said, and the words buyers actually type (template seeds + this week's
  * market brief) so the tags are search words, not synonyms of the title.
  */
+/**
+ * Market words arrive either as plain strings (a brief built before
+ * 27 Sep 2026, or a category Keyword Planner had nothing for) or as
+ * `{ word, monthly }`. Both must render, because a catalogue always holds
+ * some of each and a prompt that crashes on the old shape would take the
+ * whole draft down with it.
+ */
+const wordWithDemand = (w) => {
+  if (typeof w === 'string') return w;
+  if (!w?.word) return '';
+  return w.monthly ? `${w.word} (${w.monthly.toLocaleString('en-IN')}/month)` : w.word;
+};
+
 const templateRules = (template, marketWords = []) => {
   const facts = template.attributes.map((a) => `${a.label}${a.type !== 'text' ? ` (one of: ${a.options.join(' / ')})` : a.hint ? ` (e.g. ${a.hint})` : ''}`).join('; ');
-  const words = [...new Set([...(template.seoSeeds || []), ...marketWords])].slice(0, 20);
+  const words = [...new Set([...(template.seoSeeds || []), ...marketWords.map(wordWithDemand)].filter(Boolean))].slice(0, 20);
   return `
 
 CATEGORY RULES - ${template.label}:
 7. "attributes" are the facts a shopper filters on. Read them off the photo and the facts: ${facts}. Leave an attribute EMPTY when it is not visible or stated - never guess.
 8. "productType" is what the item IS in the category's own words${template.productTypes.length ? ` (one of: ${template.productTypes.join(' / ')})` : ''}.
-9. TITLE FORMULA (Flipkart/Amazon style): facts left to right, most-searched first, 6-12 words, no adjectives like "beautiful", no price, no shop name, no word more than twice. Keep the product noun and the colour. Examples of the shape: "Women Pure Cotton Printed Kurta Palazzo Dupatta Set", "Men Grey Cotton Blend Cargo Jogger Trousers", "Cotton Double Flat 144 TC Jaipuri Print Bedsheet with 2 Pillow Covers", "Brass Gold-plated Kundan Maroon Necklace Set", "20000 mAh 35W USB-C Fast Charging Power Bank".
+9. TITLE FORMULA (Flipkart/Amazon style): facts left to right, most-searched first (where a word below carries a "(N/month)" figure, that is how many people in India search it - prefer the bigger one when both fit), 6-12 words, no adjectives like "beautiful", no price, no shop name, no word more than twice. Keep the product noun and the colour. Examples of the shape: "Women Pure Cotton Printed Kurta Palazzo Dupatta Set", "Men Grey Cotton Blend Cargo Jogger Trousers", "Cotton Double Flat 144 TC Jaipuri Print Bedsheet with 2 Pillow Covers", "Brass Gold-plated Kundan Maroon Necklace Set", "20000 mAh 35W USB-C Fast Charging Power Bank".
 10. Bullets follow this order: ${template.bullets.map((b, i) => `${i + 1}) ${b}`).join(' ')}.
 ${template.neverClaim.length ? `11. NEVER say: ${template.neverClaim.join(', ')}.` : ''}${template.mustSay ? ` ALWAYS include ${template.mustSay}.` : ''}
 12. "tags" are search words as Indian shoppers type them (Hinglish welcome: "kurti", "jhumka", "bedsheet double bed"). Prefer these, in this order of importance, plus 3-5 specific to this item: ${words.join(', ') || '(none given)'}.`;

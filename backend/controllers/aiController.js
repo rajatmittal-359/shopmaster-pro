@@ -87,7 +87,18 @@ const templateAndWords = async (categoryId, categoryName) => {
     const MarketBrief = require('../models/MarketBrief');
     const q = String(categoryName || '').toLowerCase();
     const brief = q ? await MarketBrief.findOne({ 'category.name': new RegExp(escapeRe(q), 'i') }).select('words').lean() : null;
-    marketWords = (brief?.words || []).slice(0, 10).map((w) => w.word);
+    /*
+     * SORTED BY DEMAND, NOT BY THE ORDER WE HAPPENED TO COLLECT THEM.
+     *   The listing prompt tells the model "most-searched first". Until
+     *   Keyword Planner (27 Sep 2026) that instruction had nothing behind
+     *   it - the words arrived ranked by how many of OUR sources mentioned
+     *   them, which is agreement, not demand. A word with a real number now
+     *   sorts above one without; ties keep the brief's own order.
+     */
+    marketWords = [...(brief?.words || [])]
+      .sort((a, b) => (b.monthly || 0) - (a.monthly || 0))
+      .slice(0, 10)
+      .map((w) => (w.monthly ? { word: w.word, monthly: w.monthly } : { word: w.word }));
   } catch { /* no brief yet */ }
   return { template, marketWords };
 };
@@ -704,7 +715,10 @@ Answer with ONE JSON object: {"keywords": ["..."], ${sellerWords ? '"fromSeller"
 
     const keywords = [
       ...mine,
-      ...evidence.words.slice(0, 12).map((w) => ({ word: w.word, source: w.source, count: w.count, note: w.note })),
+      // `monthly` rides along on words from ANY source, not only 'demand' -
+      // a phrase Google already showed us can also be a big phrase in India,
+      // and the chip says both.
+      ...evidence.words.slice(0, 12).map((w) => ({ word: w.word, source: w.source, count: w.count, note: w.note, monthly: w.monthly || undefined })),
       ...fromModel.map((k) => ({ word: k, source: 'ai', count: 0, note: 'Suggested by AI from the facts' })),
     ]
       .filter((k) => (seen.has(k.word) ? false : seen.add(k.word)))

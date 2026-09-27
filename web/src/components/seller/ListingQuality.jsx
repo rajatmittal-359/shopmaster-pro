@@ -34,6 +34,15 @@ const FIELD_IDS = { name: 'name', description: 'description', images: 'photos', 
 
 const plain = (html) => String(html || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
 
+/*
+ * "4.4k/mo" rather than "4,400 searches a month in India".
+ *   The chip is a 24px pill on a 390px phone and there may be twenty of
+ *   them; the full sentence lives in the tooltip, where there is room. Below
+ *   a thousand the plain number is already short, so it stays as it is -
+ *   "880/mo" is honest in a way "0.9k/mo" is not.
+ */
+const perMonth = (n) => (n >= 1000 ? `${(n / 1000).toFixed(n >= 10000 ? 0 : 1).replace(/\.0$/, '')}k/mo` : `${n}/mo`);
+
 export default function ListingQuality({ form, photos, productId, categoryLabel, needsSize, textModel, onAddTags, onWords, part = 'bar' }) {
   const listing = useMemo(
     () => ({ ...form, images: photos.map((p) => p.src), category: form.category, needsSize }),
@@ -157,20 +166,22 @@ export default function ListingQuality({ form, photos, productId, categoryLabel,
             {t(kw ? 'Suggest again' : 'Suggest search words')}
           </Button>
         </div>
-        {!kw && <p className="mt-1 text-xs text-muted-foreground">{t('Real searches first (Google, ShopMaster), AI fills the gaps. Tap a word to add it.')}</p>}
+        {!kw && <p className="mt-1 text-xs text-muted-foreground">{t('Real searches first (Google, ShopMaster), with how many people search each one, then AI fills the gaps. Tap a word to add it.')}</p>}
         {kw && (
           <>
             <div className="mt-2 flex flex-wrap gap-1.5">
               {kw.keywords.map((k) => {
                 const have = k.present || (form.tags || []).includes(k.word);
                 // Where the word came from (plan 2.32): G = Google searchers, S = ShopMaster shoppers, ≈ = same-thing word, AI = suggested.
+                // A 'demand' word has no letter - its badge IS the number, which
+                // says more than any letter could (27 Sep 2026).
                 const badge = k.source === 'seller' ? '★' : k.source === 'google' ? 'G' : k.source === 'shop' ? 'S' : k.source === 'family' ? '≈' : 'AI';
                 const badgeClass = k.source === 'seller' ? 'bg-primary/20 text-brand-ink' : k.source === 'google' ? 'bg-sky-500/15 text-sky-800 dark:text-sky-200' : k.source === 'shop' ? 'bg-amber-500/15 text-amber-800 dark:text-amber-200' : 'bg-muted text-muted-foreground';
                 const tip = k.note || (k.source === 'ai' ? 'Suggested by AI from the facts' : '');
                 return have ? (
                   <span key={k.word} title={tip} className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs text-emerald-800 dark:text-emerald-200">
                     <Check className="size-3" /> {k.word}
-                    {k.count > 1 && <span className="opacity-70">· {k.count}</span>}
+                    {k.monthly ? <span className="opacity-70">· {perMonth(k.monthly)}</span> : k.count > 1 ? <span className="opacity-70">· {k.count}</span> : null}
                   </span>
                 ) : (
                   <button
@@ -181,7 +192,12 @@ export default function ListingQuality({ form, photos, productId, categoryLabel,
                     title={tip || 'Add to search words'}
                   >
                     <Plus className="size-3" /> {k.word}
-                    <span className={`ml-0.5 rounded px-1 text-[0.6rem] font-semibold ${badgeClass}`}>{badge}{k.count > 1 ? ` ${k.count}` : ''}</span>
+                    {k.monthly ? (
+                      <span className="ml-0.5 rounded bg-primary/10 px-1 text-[0.6rem] font-semibold text-brand-ink">{perMonth(k.monthly)}</span>
+                    ) : null}
+                    {k.source !== 'demand' && (
+                      <span className={`ml-0.5 rounded px-1 text-[0.6rem] font-semibold ${badgeClass}`}>{badge}{k.count > 1 ? ` ${k.count}` : ''}</span>
+                    )}
                   </button>
                 );
               })}
