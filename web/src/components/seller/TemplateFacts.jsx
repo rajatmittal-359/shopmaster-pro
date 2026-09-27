@@ -19,16 +19,25 @@ import { authedFetch } from '@/lib/client';
  * `template` comes from GET /public/products/categories/:id/template (cached
  * an hour on the server). No category yet → the general questions.
  */
+/**
+ * The category's questions AND the words buyers type in it, from one
+ * request. `words` is `[{ word, monthly?, sources? }]`, biggest first, and
+ * is `[]` for a category the weekly market brief has not reached yet.
+ *
+ * The words arrive here rather than through the AI suggester because the
+ * search-words field should be able to help before the seller asks it to -
+ * and most sellers never press the button (28 Sep 2026).
+ */
 export function useListingTemplate(categoryId) {
-  const [template, setTemplate] = useState(null);
+  const [state, setState] = useState({ template: null, words: [] });
   useEffect(() => {
     let cancelled = false;
     authedFetch(`/public/products/categories/${categoryId || 'none'}/template`)
-      .then((d) => { if (!cancelled) setTemplate(d.template || null); })
-      .catch(() => { if (!cancelled) setTemplate(null); });
+      .then((d) => { if (!cancelled) setState({ template: d.template || null, words: d.words || [] }); })
+      .catch(() => { if (!cancelled) setState({ template: null, words: [] }); });
     return () => { cancelled = true; };
   }, [categoryId]);
-  return template;
+  return state;
 }
 
 export default function TemplateFacts({ template, productType, attributes = {}, onChange, t = (s) => s }) {

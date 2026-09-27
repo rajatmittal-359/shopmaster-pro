@@ -100,7 +100,9 @@ export default function ListingQuality({ form, photos, productId, categoryLabel,
       setKw(data);
       // The field above needs this vocabulary to catch a misspelling of a
       // word real people actually type (Picker's "did you mean").
-      onWords?.((data.keywords || []).map((k) => k.word));
+      // The whole row, not just the word: the form needs the count, the
+      // volume and the note to explain a correction it offers later.
+      onWords?.(data.keywords || []);
     } catch (err) {
       toast.error(err.message);
     } finally {

@@ -181,6 +181,20 @@ export function Picker({
    */
   softMax = null,
   allowCustom = false,
+  /*
+   * WHY A WORD IS WORTH HAVING - a Map from word to
+   * `{ monthly?, note? }`, or nothing (28 Sep 2026).
+   *
+   * The field could already spot a misspelling and ask "Did you mean kundan
+   * choker set?", but the only reason it could give was "People really type
+   * this one" - a claim, and an unfalsifiable one. With Keyword Planner
+   * behind it we can say how many people, and the seller can disagree with
+   * a number in a way they cannot disagree with an assertion.
+   *
+   * Optional everywhere. Every other Picker on the site passes nothing and
+   * reads exactly as it did before.
+   */
+  evidence = null,
   exclusive = EXCLUSIVE,
   placeholder = 'Choose…',
   customHint = 'or type your own',
@@ -201,6 +215,15 @@ export function Picker({
   // Only worth asking about a word being invented; picking one off the list
   // is not a typo.
   const meant = isNew ? nearMiss(typed, options) : null;
+  // "4.4k a month" rather than "4,400 searches a month in India": this sits
+  // on one line under a correction, on a 390px phone.
+  const perMonth = (n) => (n >= 1000 ? `${(n / 1000).toFixed(n >= 10000 ? 0 : 1).replace(/\.0$/, '')}k` : String(n));
+  const why = (word) => {
+    const e = evidence?.get?.(word);
+    if (e?.monthly) return `${perMonth(e.monthly)} people in India search this every month`;
+    if (e?.note) return e.note;
+    return null;
+  };
   // The invented value rides in the list as an ordinary item; the renderer is
   // what marks it "Add …". Base UI's own filter keeps it, since it matches the
   // query exactly.
@@ -346,7 +369,12 @@ export function Picker({
                   <Lightbulb className="size-4 shrink-0 text-amber-600 dark:text-amber-400" aria-hidden />
                   <span className="min-w-0">
                     Did you mean <b>{meant}</b>?
-                    <span className="block text-[0.7rem] text-muted-foreground">People really type this one.</span>
+                    {/* The reason, when we have one that can be checked.
+                        Without it the old sentence stays - it is vague, but
+                        it is not a number we cannot show. */}
+                    <span className="block text-[0.7rem] text-muted-foreground">
+                      {why(meant) || 'People really type this one.'}
+                    </span>
                   </span>
                 </button>
               )}

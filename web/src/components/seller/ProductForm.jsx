@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useRef, useState } from 'react';
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Sparkles, Loader2, Cpu } from 'lucide-react';
 import { authedFetch } from '@/lib/client';
@@ -287,14 +287,37 @@ export default function ProductForm({ productId, copyFromId }) {
   const [faqBusy, setFaqBusy] = useState(false);
   // Market check (21 Sep 2026): { status, data?, message? } - advice beside the price, never applied by itself.
   const [market, setMarket] = useState({ status: 'idle' });
-  // The category's own questions (TemplateFacts); refetched when the category changes.
-  const template = useListingTemplate(form.category);
+  // The category's own questions (TemplateFacts) AND the words buyers type in
+  // it, with volumes; both refetched when the category changes.
+  const { template, words: categoryWords } = useListingTemplate(form.category);
   // Which model writes: 'auto' (Gemini, nano behind it), 'gemini', 'nano'. The
   // same rule as the photo tools - the seller always sees who is doing the work.
   const [textModel, setTextModel] = useState('auto');
   // Everything the suggester found, so the Search words field can offer a
   // real phrase while the seller types and catch a misspelling of one.
   const [suggestedWords, setSuggestedWords] = useState([]);
+  // The same findings with their reasons kept, for `wordEvidence` below.
+  const [suggestedEvidence, setSuggestedEvidence] = useState([]);
+  /*
+   * WHY A WORD IS WORTH ADDING, keyed by the word (28 Sep 2026).
+   *
+   * The field could already catch a misspelling - it offered "Did you mean
+   * kundan choker set?" with the line "People really type this one", which
+   * was a claim and nothing more. We can now say how many of them, and
+   * where that is known from. A correction the seller can check is one they
+   * can refuse on purpose; the old one they could only take on trust.
+   *
+   * The category's words are here from the moment a category is chosen, so
+   * the coaching works for a seller who never presses "Suggest search
+   * words" - which is most of them. The suggester's own findings are merged
+   * over the top when it has run, because those are about THIS product.
+   */
+  const wordEvidence = useMemo(() => {
+    const out = new Map();
+    for (const w of categoryWords) out.set(w.word, { monthly: w.monthly, note: null });
+    for (const k of suggestedEvidence) out.set(k.word, { monthly: k.monthly ?? out.get(k.word)?.monthly, note: k.note });
+    return out;
+  }, [categoryWords, suggestedEvidence]);
   const [ai, setAi] = useState({ status: 'idle' });
   const [usage, setUsage] = useState(null);
   // Whether this shop is registered under GST - decides if the tax fields show at all.
@@ -1291,7 +1314,8 @@ export default function ProductForm({ productId, copyFromId }) {
                * suggester found, so typing "neck" offers the real phrases and
                * a misspelling can be caught against words people really type.
                */
-              options={[...new Set([...(form.tags || []), ...suggestedWords])]}
+              options={[...new Set([...(form.tags || []), ...suggestedWords, ...categoryWords.map((w) => w.word)])]}
+              evidence={wordEvidence}
               value={form.tags || []}
               onChange={(list) => {
                 const before = form.tags || [];
@@ -1319,7 +1343,10 @@ export default function ProductForm({ productId, copyFromId }) {
                 the seller never saw where they went. */}
             <div className="mt-3 rounded-lg border bg-muted/30 p-3">
               <ListingQuality
-                onWords={setSuggestedWords}
+                onWords={(found) => {
+                  setSuggestedWords(found.map((k) => k.word));
+                  setSuggestedEvidence(found);
+                }}
                 part="words"
                 form={form}
                 photos={photos}
