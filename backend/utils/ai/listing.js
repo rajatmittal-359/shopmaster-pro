@@ -97,7 +97,43 @@ const JEWELLERY_WORDS =
 
 const looksLikeJewellery = (...texts) => texts.some((t) => JEWELLERY_WORDS.test(String(t || '')));
 
-const promptFor = ({ name, keywords, price, stock, categoryName, categoryOptions = [], hasImage, template = null, marketWords = [] }) => {
+/*
+ * OUR OWN BEST LISTINGS, SHOWN TO THE MODEL AS SHAPE (27 Sep 2026)
+ *
+ * Rajat asked for fine-tuning. It was checked, not waved away: Gemini's
+ * tuning needs billing and Google Cloud refuses his card; Cloudflare only
+ * SERVES a LoRA, it does not train one, and its LoRA base models are Gemma
+ * 2B/7B, Llama 2 7B and Mistral 7B - all weaker than the Llama 3.3 70B we
+ * already call for free. A tune would have cost money to make the output
+ * worse, and would have chained five fallback roads down to one.
+ *
+ * What a tune actually buys for a job like this is HOUSE STYLE - listings
+ * that look like they came from the same shop. That is obtainable for
+ * nothing: show the model two of our own finished listings from the same
+ * category before it writes. It costs a few hundred tokens, it works
+ * identically on all five roads, and it improves by itself as the catalogue
+ * improves, which a frozen tune never does.
+ *
+ * THE DANGER IS OBVIOUS AND IS GUARDED. An example is a neighbouring
+ * product, not this one. A model that lifts "92.5 sterling silver" from the
+ * example into a brass item has invented a fact in the most convincing way
+ * possible. Rule 2 below says so in the strongest terms the prompt has, and
+ * the examples carry no measurements, no materials and no prices for that
+ * reason - only the title, the opening line and the tags.
+ */
+const examplesBlock = (examples = []) => {
+  if (!examples.length) return '';
+  const shown = examples
+    .map((e, i) => `Example ${i + 1}:\n  Title: ${e.name}\n  Description opens: ${e.opening}\n  Search words: ${(e.tags || []).join(', ')}`)
+    .join('\n');
+  return `
+
+HOUSE STYLE - listings already published by shops on this marketplace, in this same category. Copy the SHAPE: how the title is ordered, how long the description is, how plain the language is, what kind of words are used as tags.
+${shown}
+These are DIFFERENT PRODUCTS. Never take a material, a measurement, a colour, a stone, a count or a price from them - only the shape.`;
+};
+
+const promptFor = ({ name, keywords, price, stock, categoryName, categoryOptions = [], hasImage, template = null, marketWords = [], examples = [] }) => {
   const facts = [
     name ? `Seller's product name: ${name}` : null,
     keywords ? `Seller's keywords: ${keywords}` : null,
@@ -137,7 +173,7 @@ Fill in the listing. RULES, in order of importance:
 5. "color" is ONE primary colour in plain English. "gender" is who it is for; use "unisex" when it
    genuinely is. "size" only if a labelled size is visible or stated.
 
-6. The description is HTML using only <p>, <ul>, <li>, <strong>, <em>. No headings, no links, no styles.${template ? templateRules(template, marketWords) : ''}`;
+6. The description is HTML using only <p>, <ul>, <li>, <strong>, <em>. No headings, no links, no styles.${template ? templateRules(template, marketWords) : ''}${examplesBlock(examples)}`;
 };
 
 /**
@@ -313,4 +349,4 @@ const draftListing = async (input, deps = { generate }) => {
   return { ok: true, draft, warnings, provider: answer.provider || 'gemini', model: answer.model || undefined };
 };
 
-module.exports = { draftListing, promptFor, schemaFor, RESPONSE_SCHEMA, looksLikeJewellery };
+module.exports = { draftListing, promptFor, schemaFor, RESPONSE_SCHEMA, looksLikeJewellery, examplesBlock };

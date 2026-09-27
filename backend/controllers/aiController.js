@@ -79,6 +79,51 @@ const isImageDataUrl = (s) =>
  * picks the category, after which "Write it again" uses the right one.
  */
 const escapeRe = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+/**
+ * Two finished listings from the same category, to show the model the house
+ * style (see utils/ai/listing.js for why this exists instead of a fine-tune).
+ *
+ * "Finished" is judged the way the listing score judges it, because that is
+ * the standard the seller is already held to: three photos or more, five
+ * search words or more, a colour, and a description with some substance.
+ * Newest first - the catalogue's standard rises over time and the examples
+ * should rise with it.
+ *
+ * Returns [] freely: a brand-new category has no good listing to copy, and
+ * showing a bad one would teach the wrong shape.
+ */
+const houseExamples = async (categoryId, excludeId) => {
+  if (!categoryId) return [];
+  try {
+    const Product = require('../models/Product');
+    const rows = await Product.find({
+      category: categoryId,
+      isActive: true,
+      isDeleted: { $ne: true },
+      ...(excludeId ? { _id: { $ne: excludeId } } : {}),
+      'images.2': { $exists: true },
+      'tags.4': { $exists: true },
+      color: { $nin: [null, ''] },
+      description: { $nin: [null, ''] },
+    })
+      .select('name description tags')
+      .sort({ updatedAt: -1 })
+      .limit(8)
+      .lean();
+
+    const words = (html) => String(html || '').replace(/<[^>]*>/g, ' ').trim().split(/\s+/).filter(Boolean);
+    return rows
+      .map((p) => ({ name: p.name, tags: (p.tags || []).slice(0, 8), body: words(p.description) }))
+      .filter((p) => p.body.length >= 60)
+      .slice(0, 2)
+      // One sentence of the description is enough to show the register, and
+      // short enough that there is little for the model to lift.
+      .map((p) => ({ name: p.name, tags: p.tags, opening: `${p.body.slice(0, 22).join(' ')}...` }));
+  } catch {
+    return [];
+  }
+};
 const templateAndWords = async (categoryId, categoryName) => {
   const { templateForCategoryId } = require('../utils/listingTemplate');
   const template = await templateForCategoryId(categoryId);
@@ -219,6 +264,7 @@ const writeListing = async (req, res) => {
     const { remember } = require('../utils/ai/aiCache');
     const photoKey = imageUrl || (imageDataUrl ? `${imageDataUrl.length}:${imageDataUrl.slice(-64)}` : '');
     const { template, marketWords } = await templateAndWords(chosen?._id, chosen?.name);
+    const examples = await houseExamples(chosen?._id, req.body?.productId);
     const result = await remember('listing', req.user._id, { name, keywords, price, cat: chosen?.name, photoKey, textModel, t: template.key, v: 2 }, () => draftListing({
       name,
       keywords,
@@ -230,6 +276,7 @@ const writeListing = async (req, res) => {
       brand: req.seller?.businessName,
       textModel,
       template,
+      examples,
       marketWords,
     }));
 
@@ -307,6 +354,7 @@ const listingFromSpeech = async (req, res) => {
       textModel,
       template: tw.template,
       marketWords: tw.marketWords,
+      examples: await houseExamples(chosen?._id, req.body?.productId),
     });
 
     // Even when every prose model is out, the numbers the person said still land in the form.
