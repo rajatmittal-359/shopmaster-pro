@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { addToCart } from '@/lib/analytics';
 import { announceAdded } from '@/lib/cartEvents';
@@ -177,7 +178,11 @@ export default function BuyBox({
           )}
           {state.status === 'added' && (
             <span className="text-muted-foreground">
-              In your cart. <a href="/cart" className="text-brand-ink underline">View cart</a>
+              {/* next/link, not an anchor: a full page load here throws away
+                  the cart state the shopper just changed, and the rule that
+                  catches it only started firing once the app gained a
+                  root-level dynamic route (27 Sep 2026). */}
+              In your cart. <Link href="/cart" className="text-brand-ink underline">View cart</Link>
             </span>
           )}
         </p>

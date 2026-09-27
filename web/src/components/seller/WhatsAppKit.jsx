@@ -1,6 +1,7 @@
 'use client';
 
-import { Copy, ExternalLink } from 'lucide-react';
+import { useState } from 'react';
+import { Copy, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import PanelCard from '@/components/panel/PanelCard';
 import { Button } from '@/components/ui/button';
@@ -50,6 +51,45 @@ const rupees = (n) => `₹${Number(n || 0).toLocaleString('en-IN', { maximumFrac
  * the same words they searched for. Only a genuinely over-long one is cut,
  * and then on a word boundary.
  */
+/*
+ * SAVING A PRODUCT'S PHOTOS, NOT LINKING TO THEM (27 Sep 2026)
+ *   This button used to open the product page so the seller could
+ *   right-click each photo. Rajat: "photos pe click kar raha hu to product
+ *   pe kyu jaa rahi hai... title ke naam se folder banke saari photos
+ *   download ho jae." Right - the job is six files on the laptop, and a
+ *   detour through a page is five extra clicks per item.
+ *
+ *   Chrome can do exactly what he described: `showDirectoryPicker` asks once
+ *   where to put things, then the page creates a folder named after the
+ *   product and writes every photo into it. Where that does not exist the
+ *   files still arrive, one at a time in Downloads, named
+ *   `<product>-1-main.jpg` so they stay together and in order.
+ *
+ *   Both roads fetch the image first. Cloudinary sends
+ *   `Access-Control-Allow-Origin: *` (checked with curl, not assumed), so a
+ *   blob is allowed - and a blob is also what makes `download` work at all,
+ *   since the attribute is ignored on a cross-origin href.
+ */
+const folderName = (name) =>
+  String(name || 'product')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 50)
+    .replace(/-+$/, '') || 'product';
+
+const saveOne = (blob, filename) => {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  // Revoked on the next tick: revoking immediately can beat the download.
+  setTimeout(() => URL.revokeObjectURL(url), 10_000);
+};
+
 const NAME_MAX = 150;
 const fitName = (name) => {
   const n = String(name || '').trim();
@@ -91,6 +131,8 @@ function CopyRow({ label, value, hint, multiline }) {
 
 export default function WhatsAppKit({ data }) {
   const t = useT();
+  // Which product's photos are being fetched, so the row can say so.
+  const [saving, setSaving] = useState(null);
   const shop = data.businessName || 'our shop';
   const url = data.shopUrl;
   const items = data.catalogue || [];
@@ -159,6 +201,45 @@ export default function WhatsAppKit({ data }) {
    * page is the promise the customer was shown, and a rule typed from memory
    * at 1am is how a shop ends up owing something it never offered.
    */
+  const savePhotos = async (p) => {
+    setSaving(p.url);
+    try {
+      const base = folderName(p.name);
+      const files = [];
+      for (let i = 0; i < (p.images || []).length; i++) {
+        const res = await fetch(p.images[i]);
+        if (!res.ok) throw new Error(`photo ${i + 1} did not download`);
+        const blob = await res.blob();
+        const ext = (blob.type.split('/')[1] || 'jpg').replace('jpeg', 'jpg');
+        files.push({ name: `${i + 1}${i === 0 ? '-main' : ''}.${ext}`, blob });
+      }
+      if (!files.length) {
+        toast.error(t('This listing has no photos yet'));
+        return;
+      }
+
+      if (typeof window !== 'undefined' && window.showDirectoryPicker) {
+        const root = await window.showDirectoryPicker({ mode: 'readwrite' });
+        const dir = await root.getDirectoryHandle(base, { create: true });
+        for (const f of files) {
+          const handle = await dir.getFileHandle(f.name, { create: true });
+          const w = await handle.createWritable();
+          await w.write(f.blob);
+          await w.close();
+        }
+        toast.success(t('{n} photos saved into the folder "{f}"', { n: files.length, f: base }));
+      } else {
+        for (const f of files) saveOne(f.blob, `${base}-${f.name}`);
+        toast.success(t('{n} photos downloading - look in your Downloads folder', { n: files.length }));
+      }
+    } catch (err) {
+      // Closing the folder chooser is a decision, not a failure.
+      if (err?.name !== 'AbortError') toast.error(err.message || t('Could not save the photos'));
+    } finally {
+      setSaving(null);
+    }
+  };
+
   const quickReplies = [
     { code: 'collection', text: `Namaste! Humara poora collection yahan hai:
 ${url}` },
@@ -233,25 +314,39 @@ ${url}` },
                     <span className="text-xs font-medium text-muted-foreground">{i + 1}</span>
                     <span className="font-medium">{fitName(p.name)}</span>
                     <span className="text-sm text-muted-foreground">
-                      {rupees(p.price)}
-                      {p.salePrice ? ` → ${rupees(p.salePrice)}` : ''}
+                      {/*
+                        LABEL EVERY NUMBER WITH THE FIELD IT GOES IN
+                          This read "₹1,100 → ₹850", and Rajat put the wrong
+                          one in the wrong box within a minute: "price likha
+                          tha, copy karke maine price me daal diya... exact
+                          words se zyada sahi rehta hai." He is right. An
+                          arrow between two numbers says which is bigger, not
+                          which field each belongs to, and WhatsApp then
+                          refuses with "Sale price must be less than price"
+                          and no clue which number was wrong.
+                      */}
+                      {t('Price')} {rupees(p.price)}
+                      {p.salePrice ? ` · ${t('Sale price')} ${rupees(p.salePrice)}` : ''}
                     </span>
+                    {!p.salePrice && (
+                      <span className="text-xs text-muted-foreground">· {t('Sale price: leave empty')}</span>
+                    )}
                     {p.sku ? (
-                      <span className="text-xs text-muted-foreground">· {t('code')} {p.sku}</span>
+                      <span className="text-xs text-muted-foreground">· {t('Item code')} {p.sku}</span>
                     ) : (
-                      <span className="text-xs text-muted-foreground">· {t('no code yet')}</span>
+                      <span className="text-xs text-muted-foreground">· {t('Item code: leave empty')}</span>
                     )}
                   </div>
                   <div className="mt-1.5 flex flex-wrap gap-1.5">
                     <Button size="sm" variant="outline" onClick={() => copy(fitName(p.name), t('Name copied'))}>
-                      <Copy className="size-3.5" aria-hidden /> {t('Name')}
+                      <Copy className="size-3.5" aria-hidden /> {t('Item name')}
                     </Button>
                     <Button size="sm" variant="outline" onClick={() => copy(String(p.price), t('Price copied'))}>
-                      <Copy className="size-3.5" aria-hidden /> {t('Price')}
+                      <Copy className="size-3.5" aria-hidden /> {t('Price ₹ (Recommended)')}
                     </Button>
                     {p.salePrice && (
                       <Button size="sm" variant="outline" onClick={() => copy(String(p.salePrice), t('Sale price copied'))}>
-                        <Copy className="size-3.5" aria-hidden /> {t('Sale price')}
+                        <Copy className="size-3.5" aria-hidden /> {t('Sale price ₹')}
                       </Button>
                     )}
                     {p.description && (
@@ -260,15 +355,16 @@ ${url}` },
                       </Button>
                     )}
                     <Button size="sm" variant="outline" onClick={() => copy(p.url, t('Link copied'))}>
-                      <Copy className="size-3.5" aria-hidden /> {t('Link')}
+                      <Copy className="size-3.5" aria-hidden /> {t('Link (optional)')}
                     </Button>
                     {p.sku && (
                       <Button size="sm" variant="outline" onClick={() => copy(p.sku, t('Item code copied'))}>
                         <Copy className="size-3.5" aria-hidden /> {t('Item code')}
                       </Button>
                     )}
-                    <Button size="sm" variant="ghost" render={<a href={p.url} target="_blank" rel="noopener noreferrer" />} nativeButton={false}>
-                      <ExternalLink className="size-3.5" aria-hidden /> {t('photos')}
+                    <Button size="sm" variant="outline" onClick={() => savePhotos(p)} disabled={saving === p.url || !p.photos}>
+                      <Download className="size-3.5" aria-hidden />
+                      {saving === p.url ? t('saving…') : t('{n} photos', { n: p.photos })}
                     </Button>
                   </div>
                 </li>
@@ -290,7 +386,9 @@ ${url}` },
               <p>
                 {t('Country of Origin is REQUIRED on that form - choose')} <b>{items[0]?.origin || 'India'}</b>{t(' for all of these.')}
               </p>
-              <p>{t('Price is the struck-out one and Sale Price is what you charge. Where only one number is shown above, leave Sale Price empty.')}</p>
+              <p>
+                {t('WhatsApp has two price boxes. Put the number labelled "Price" above into "Price ₹ (Recommended)", and the one labelled "Sale price" into "Sale price ₹". Where a row says "Sale price: leave empty", leave that box blank - WhatsApp refuses a sale price that is not lower than the price.')}
+              </p>
               <p>{t('Item name allows 150 characters, so nothing above is cut. Description allows 5000 - the copy button gives you the first part of the one on your product page.')}</p>
               <p>{t('When something sells out, use "Hide this item" rather than deleting it - the photos and the link come straight back.')}</p>
               <p>

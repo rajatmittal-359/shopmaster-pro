@@ -303,6 +303,14 @@ exports.sellerGrow = async (req, res) => {
             .trim()
             .slice(0, 600),
           photos: (p.images || []).length,
+          /*
+           * The image URLs themselves, so the panel can save the photos
+           * straight to a folder instead of sending the seller to the
+           * product page to right-click them one at a time (27 Sep 2026).
+           * Cloudinary serves them with Access-Control-Allow-Origin: *, so
+           * the browser may fetch and write them; checked, not assumed.
+           */
+          images: p.images || [],
           url: `${process.env.FRONTEND_URL || 'https://www.shopmasterpro.in'}/products/${p.slug || p._id}`,
         })),
       shop: {
