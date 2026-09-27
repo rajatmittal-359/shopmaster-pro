@@ -318,9 +318,39 @@ synonyms collection (jhumka/jhumki/झुमका), Gemini query → filters.
     "Google hasn't verified this app" warning from the OAuth consent screen,
     which every customer signing in with Google was seeing.
 
-    **Left:** the six env vars are on the laptop only - they must go on the
-    box before anything in the panel can use this. Then the coach itself
-    (this section, above), which is a build, not a setting.
+    **Wired into the listing path the same night, and live on the box.**
+    The six env vars are on production (`/srv/shopmaster/env/api.env`);
+    `ads.health()` answers `connected: true` from inside the api container.
+
+    The numbers do NOT come from a live call. The weekly market-brief job
+    pays for them once per category - about thirty operations a week against
+    an allowance of 15,000 a day - and stores `monthly` on the word; every
+    seller in that category then reads it instantly and free. A form that
+    pauses for a second is a form Mummy stops using. Same shape Search
+    Console and Merchant Center already use here.
+
+    Two readers, both free: the suggest-words chips (a fourth evidence
+    source, ranked below our own Google impressions and our own search box,
+    because a large number for a phrase nobody here has typed is a lead and
+    not proof), and the listing prompt, whose title rule said "most-searched
+    first" and until now had nothing behind it.
+
+    **Running it on the real catalogue found what the tests could not.**
+    Seeded with three real ring titles, Keyword Planner's biggest answer was
+    "earrings" at 368,000 a month; "Home Decor" came back led by "kitchens
+    designs". Stored, those would have outranked every correct word in the
+    category. `familySieve` now keeps a phrase only if it shares a WHOLE
+    word (crudely stemmed) with the category name or a real product title,
+    with colours, metals and who-wears-it struck out of the anchors -
+    "Rose Gold Pearl Floral Ring" was otherwise admitting "gold earrings".
+
+    `backfillBriefDemand.js` puts figures on briefs already stored rather
+    than waiting for Monday, and repairs an older wound: thirteen briefs
+    held ZERO words, built on a day the grounded model was rate-limited.
+    All thirty now carry words, 16-20 of each with a number.
+
+    **Left:** the coach itself (this section, above) - taking the seller's
+    own word and offering the better one. That is a build, not a setting.
   - *(b) The field does not move; the BUTTON did.* Rajat asked for exactly
     this: "Suggest search words" and the word chips now sit inside 6 · Details,
     in a tinted box directly under the Search words field they write into.
