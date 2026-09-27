@@ -9,6 +9,30 @@ import { serialiseJsonLd } from '@/lib/jsonLd';
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.shopmasterpro.in';
 // lucide dropped the brand glyphs; plain signifiers do the job.
 const LINK_ICON = { instagram: Camera, facebook: Link2, youtube: Video, googleBusiness: MapPin, website: Globe };
+/*
+ * A link is only rendered if it is http(s) (27 Sep 2026, flagged by the
+ * security review while this file was being split out).
+ *
+ * The API already refuses anything else: sellerController parses every link
+ * with `new URL` and then matches the HOSTNAME against a per-field pattern,
+ * and a `javascript:` or `data:` URL has no hostname to match. So this is
+ * not closing an open hole - it is making the page safe on its own, without
+ * depending on a validator three files away staying exactly as strict. The
+ * page is the last place the string is trusted, so it is the right place to
+ * check.
+ *
+ * It also guards the JSON-LD: `sameAs` is a public claim about the shop, and
+ * a junk value there is a different kind of wrong.
+ */
+const safeHref = (raw) => {
+  try {
+    const u = new URL(String(raw));
+    return u.protocol === 'https:' || u.protocol === 'http:' ? u.toString() : null;
+  } catch {
+    return null;
+  }
+};
+
 const LINK_LABEL = { instagram: 'Instagram', facebook: 'Facebook', youtube: 'YouTube', googleBusiness: 'On Google Maps', website: 'Website' };
 
 /**
@@ -70,7 +94,10 @@ export default async function ShopView({ handle }) {
     ...(seller.about ? { description: seller.about } : {}),
     ...(seller.legal?.name && seller.legal.name !== seller.businessName ? { legalName: seller.legal.name } : {}),
     ...(seller.legal?.gstin ? { taxID: seller.legal.gstin } : {}),
-    ...(Object.keys(seller.links || {}).length ? { sameAs: Object.values(seller.links) } : {}),
+    ...(() => {
+      const sameAs = Object.values(seller.links || {}).map(safeHref).filter(Boolean);
+      return sameAs.length ? { sameAs } : {};
+    })(),
     ...(seller.city ? { address: { '@type': 'PostalAddress', addressLocality: seller.city.city, addressRegion: seller.city.state || undefined, addressCountry: 'IN' } } : {}),
     ...(seller.rating ? { aggregateRating: { '@type': 'AggregateRating', ratingValue: seller.rating.average, reviewCount: seller.rating.reviews } } : {}),
     parentOrganization: { '@type': 'Organization', name: 'ShopMaster Pro', url: SITE },
@@ -160,9 +187,11 @@ export default async function ShopView({ handle }) {
           <ul className="mt-3 flex flex-wrap gap-2">
             {Object.entries(seller.links).map(([key, url]) => {
               const Icon = LINK_ICON[key] || Globe;
+              const href = safeHref(url);
+              if (!href) return null;
               return (
                 <li key={key}>
-                  <a href={url} target="_blank" rel="noopener noreferrer me" className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs text-muted-foreground hover:border-brand-ink hover:text-brand-ink">
+                  <a href={href} target="_blank" rel="noopener noreferrer me" className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs text-muted-foreground hover:border-brand-ink hover:text-brand-ink">
                     <Icon className="size-3.5" /> {LINK_LABEL[key] || key}
                   </a>
                 </li>
