@@ -623,6 +623,37 @@ Assistant gaps found in the same pass (problem taxonomy in the chat of 13 Sep): 
 - Re-run the logged-out marketplace navigation research that a session limit cut off (plan §15).
 - **Import a whole variant family** (26 Sep): Amazon gives every colour its own ASIN and its own URL, so one import is one variant - correct as it stands. The offer that could follow: after an import, "this listing has nine more colours - bring them in as one product with colour options?", using `variantGroupId`. Not started; worth it only once a seller with a real variant catalogue joins.
 - The admin's own long dropdowns (Coupons, Categories, Assist logs) could take the seller form's `ui/picker` too (24 Sep). Not done on purpose: it is Rajat's weekend screen on a laptop with a keyboard, so nothing is being lost today.
+- **Three more ways to ground the listing, found while researching the Ads
+  API (27 Sep 2026).** None started - Rajat asked for "everything that helps
+  fill the product", and these are the honest remainder after the ones that
+  were built. Each is free and each is gated on a real need:
+  - *Google's image rules, checked before upload.* Google publishes minimum
+    dimensions, no watermark, no promotional text. We check none of it, so a
+    photo can be rejected in Merchant Center days after the listing goes up.
+    A local check, no API. Gate: it only pays once sellers who are not
+    Mummy are uploading - she is shown her photos on the page anyway.
+  - *Google's required attributes per product category.* Their taxonomy says
+    which attributes matter for which category; our `listingTemplates` are
+    ours, written by hand. Joining the two would make the score honest about
+    what Google actually withholds ranking for. Gate: the existing templates
+    have not yet been shown to be wrong.
+  - *Merchant Center price competitiveness* (`utils/google/marketInsights`)
+    is already coded and answers "not yet enabled by Google" - it switches
+    on by itself once there is traffic. Nothing to build; just do not forget
+    it exists.
+- **Fine-tuning our own model — checked and closed (27 Sep 2026).** Rajat
+  asked twice, so this is written down rather than re-argued each time.
+  Gemini tuning needs billing and Google Cloud refuses his card. Cloudflare
+  only SERVES a LoRA, and its base models (Gemma 2B/7B, Llama 2 7B, Mistral
+  7B) are weaker than the Llama 3.3 70B already on our free fallback chain -
+  it would cost money to make the output worse, and would narrow five roads
+  to one. Shopify does fine-tune for this exact domain, but for category and
+  attribute CLASSIFICATION at tens of millions of predictions a day, where a
+  small owned model is cheaper than a large one; that is a cost argument at
+  a scale we do not have. Our problem is invented facts, and the answer to
+  that is grounding. What a tune would have bought - house style - was built
+  instead as two of our own listings in the prompt. Reopen only if we are
+  ever making millions of calls a month.
 
 ## 6. Live drill — what only the real world can answer
 
