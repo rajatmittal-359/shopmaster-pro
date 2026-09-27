@@ -46,7 +46,12 @@ const PRODUCTS = [
 ];
 
 // A shop page is a URL too (24 Sep 2026): the name, the city and the reviews.
-const SHOPS = [{ _id: 's1', userId: 'u1', updatedAt: new Date('2026-09-20') }];
+// One shop has a short link and one does not - both shapes must come out
+// right, because a shop whose name is Devanagari-only never gets a slug.
+const SHOPS = [
+  { _id: 's1', userId: 'u1', slug: 'charming-jewels', updatedAt: new Date('2026-09-20') },
+  { _id: 's2', userId: 'u2', updatedAt: new Date('2026-09-21') },
+];
 
 beforeEach(() => {
   originals.productFind = Product.find;
@@ -71,15 +76,30 @@ describe('what goes into the sitemap', () => {
   it('lists the home page, the shop, every browsable category, every live product and every shop page', async () => {
     const { xml, counts } = await buildSitemap();
 
-    expect(counts).toMatchObject({ static: 13, categories: 2, products: 1, shops: 1, total: 17 });
+    expect(counts).toMatchObject({ static: 13, categories: 2, products: 1, shops: 2, total: 18 });
     expect(xml).toContain('<loc>https://www.shopmasterpro.in/</loc>');
     expect(xml).toContain('<loc>https://www.shopmasterpro.in/shop</loc>');
     expect(xml).toContain('/products/antique-gold-temple-necklace');
     // The shop page, and the pages that answer "can I trust this place?" -
     // both were reachable only by crawling, which is how /how-we-rank ended up
     // outside the index (24 Sep 2026).
-    expect(xml).toContain('<loc>https://www.shopmasterpro.in/sellers/u1</loc>');
+    expect(xml).toContain('<loc>https://www.shopmasterpro.in/charming-jewels</loc>');
     expect(xml).toContain('<loc>https://www.shopmasterpro.in/how-we-rank</loc>');
+  });
+
+  it('offers the short link, not the long URL that redirects to it', async () => {
+    const { xml } = await buildSitemap();
+
+    // Both URLs work and both pages canonical to the short one. Listing the
+    // long one asks Google to crawl twice to learn what we already knew.
+    expect(xml).not.toContain('/sellers/u1');
+    expect(xml).toContain('<loc>https://www.shopmasterpro.in/charming-jewels</loc>');
+  });
+
+  it('keeps the long URL for a shop that has no short link', async () => {
+    const { xml } = await buildSitemap();
+
+    expect(xml).toContain('<loc>https://www.shopmasterpro.in/sellers/u2</loc>');
   });
 
   it('never offers Google a page it cannot use', async () => {
@@ -111,7 +131,7 @@ describe('what goes into the sitemap', () => {
     const { xml } = await buildSitemap();
 
     const locs = [...xml.matchAll(/<loc>(.*?)<\/loc>/g)].map((m) => m[1]);
-    expect(locs.length).toBe(17);
+    expect(locs.length).toBe(18);
     for (const loc of locs) {
       expect(loc.startsWith('https://www.shopmasterpro.in')).toBe(true);
     }

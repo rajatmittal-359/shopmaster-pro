@@ -126,13 +126,25 @@ const buildSitemap = async () => {
       status: { $ne: 'suspended' },
       ...(hidden.length ? { userId: { $nin: hidden } } : {}),
     })
-    .select('userId updatedAt')
+    .select('userId slug updatedAt')
     .lean();
 
+  /*
+   * THE SHORT LINK IS THE ONE WE ADVERTISE (27 Sep 2026)
+   *   Both /charming-jewels and /sellers/<id> serve the shop, and both pages
+   *   name the short link as their canonical. A sitemap that lists the long
+   *   one is therefore telling Google to fetch a URL that immediately points
+   *   somewhere else - it still gets indexed, under the short link, but the
+   *   crawl is spent twice and the weaker signal is the one we volunteered.
+   *
+   *   A shop with no slug keeps /sellers/<id>. That is not a fallback we are
+   *   embarrassed by: a Devanagari-only shop name has no usable slug at all
+   *   (see utils/sellerSlug.js), and the long URL has always worked.
+   */
   const shopEntries = shops
     .filter((sh) => sh.userId)
     .map((sh) => ({
-      loc: `/sellers/${sh.userId}`,
+      loc: sh.slug ? `/${sh.slug}` : `/sellers/${sh.userId}`,
       priority: '0.60',
       changefreq: 'weekly',
       lastmod: sh.updatedAt,
