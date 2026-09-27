@@ -279,11 +279,48 @@ synonyms collection (jhumka/jhumki/झुमका), Gemini query → filters.
     months later on the box; the error message now says how to re-mint. Token
     refresh proven against Google for real, once.
 
-    **Blocked on one thing:** the developer token. A TEST token only reaches
-    TEST accounts, which hold no real volumes; real numbers need BASIC access,
-    which is an application form. Until then every call answers
-    `{ ok: false }` with Google's own sentence and the coach keeps using
-    Search Console + SearchLog alone - which was always the honest floor.
+    **It works. Real volumes, 27 Sep 2026 evening.** The road there was four
+    steps, and only the first was obvious:
+
+    1. *Developer token* - from Google Ads -> Admin -> API Center, NOT Cloud
+       Console. It came out **Explorer**, which reaches production accounts
+       and looked like a gift. The first real call said otherwise:
+       `This method is not allowed for use with explorer access.` Google's
+       access-levels page names `KeywordPlanIdeaService` by hand in
+       Explorer's restricted list. Campaigns and reporting are open;
+       planning is not - which is the one thing we came for.
+    2. *Brand verification* - a prerequisite for Basic that appears nowhere
+       in the docs, only in a grey box on the upgrade page. Everything at
+       console.cloud.google.com/auth/branding was already filled except the
+       logo; `web/public/brand/mark-192.png` went in and it verified.
+    3. *Apply for Basic* - at console.cloud.google.com/google/ads-apis
+       **/overview**. Without the `/overview` the page renders zero bytes,
+       which cost us an hour of looking for a button that was never on that
+       URL. Approved in minutes, not the week I had predicted.
+    4. *Link the account* - the manager managed nothing; 525-586-3360 had a
+       PENDING invitation that had to be accepted from the child account
+       (Admin -> Access and security -> **Managers** tab; `/aw/security/
+       managers` is not a URL, the tab lives under `/aw/accountaccess/`).
+
+    First real answer, for a Charming Jewels listing:
+
+        4400  kundan choker set
+        3600  bridal kundan jewellery set
+        2900  kundan choker
+        1600  kundan choker necklace
+
+    That top line is the whole argument for having done this: **"kundan
+    choker set" outsells "kundan choker" by 1,500 searches a month**, and
+    nothing we own could have told us. Search Console only knows phrases we
+    already rank for.
+
+    A free side-effect worth keeping: brand verification also clears the
+    "Google hasn't verified this app" warning from the OAuth consent screen,
+    which every customer signing in with Google was seeing.
+
+    **Left:** the six env vars are on the laptop only - they must go on the
+    box before anything in the panel can use this. Then the coach itself
+    (this section, above), which is a build, not a setting.
   - *(b) The field does not move; the BUTTON did.* Rajat asked for exactly
     this: "Suggest search words" and the word chips now sit inside 6 · Details,
     in a tinted box directly under the Search words field they write into.
