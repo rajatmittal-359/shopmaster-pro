@@ -126,6 +126,54 @@ const groundedFor = async (category, deps = {}) => {
   return { ...parsed, trending: Array.isArray(raw.trending) ? raw.trending : [] };
 };
 
+/*
+ * KEEPING GOOGLE'S EXPANSION INSIDE THE CATEGORY (27 Sep 2026)
+ *
+ * Keyword Planner answers a seed with its whole family, and the family is
+ * wider than the shelf. Seeded with three real ring titles, the biggest
+ * phrase it returned was "earrings" at 368,000 a month - true, enormous,
+ * and about a different product. Stored, it would have told the model that
+ * the most-searched word for a ring listing is "earrings".
+ *
+ * So a returned phrase is kept only if it shares a word with the category
+ * name or with one of the seed product titles. Matching is by WHOLE word,
+ * reduced to a crude stem: "earrings" stems to "earring", which is not
+ * "ring", though it contains those letters - the trap the first version
+ * fell into. "gold ring for women" shares "ring" and stays.
+ *
+ * This is deliberately looser than it could be. A phrase only has to touch
+ * ONE word, so "jhumka earrings" survives under Earrings while plain
+ * "jhumka" does not unless something in the shop is named that. Discovery
+ * of genuinely new words is the point of the source; discovery of the wrong
+ * product is not.
+ */
+/*
+ * Words too general to anchor anything. "Rose Gold Pearl Floral Ring" would
+ * otherwise let "gold earrings" into the Rings brief through the word gold,
+ * which is how the second version still leaked - the family is decided by
+ * the NOUN, not by the metal or who wears it.
+ */
+const TOO_GENERAL = new Set([
+  'gold', 'silver', 'rose', 'white', 'black', 'blue', 'green', 'red', 'pink', 'maroon',
+  'women', 'woman', 'men', 'man', 'girl', 'boy', 'kid', 'lady', 'ladie',
+  'set', 'design', 'designs', 'new', 'best', 'online', 'price', 'buy', 'latest', 'style',
+  'plated', 'oxidised', 'antique', 'fancy', 'simple', 'small', 'large', 'mini',
+].map((w) => (w.length > 3 && w.endsWith('s') ? w.slice(0, -1) : w)));
+
+const stem = (w) => (w.length > 3 && w.endsWith('s') ? w.slice(0, -1) : w);
+const wordsOf = (text) =>
+  String(text || '')
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter((w) => w.length > 2)
+    .map(stem);
+
+const familySieve = (anchors = []) => {
+  const allowed = new Set(anchors.flatMap(wordsOf).filter((w) => !TOO_GENERAL.has(w)));
+  if (!allowed.size) return () => true;
+  return (phrase) => wordsOf(phrase).some((w) => allowed.has(w));
+};
+
 /**
  * India-wide monthly searches for a category's phrases, or nothing.
  *
@@ -136,12 +184,16 @@ const groundedFor = async (category, deps = {}) => {
  */
 const keywordVolumes = async (seeds, deps = {}) => {
   try {
+    const list = [...new Set(seeds.map((x) => String(x || '').trim().toLowerCase()).filter(Boolean))];
+    if (!list.length) return [];
     const ads = deps.ads || require('../google/ads');
-    const out = await ads.keywordIdeas([...new Set(seeds.map((s) => String(s || '').trim().toLowerCase()).filter(Boolean))]);
+    const out = await ads.keywordIdeas(list);
     if (!out.ok) return [];
-    // Google returns the whole family, hundreds of it. Keep the head: past
-    // twenty, nothing survives the brief's own cut anyway.
-    return out.rows.filter((r) => r.monthly > 0).slice(0, 25);
+    // Google returns the whole family, hundreds of it. Sieve it back to this
+    // category, then keep the head: past twenty, nothing survives the
+    // brief's own cut anyway.
+    const inFamily = familySieve(list);
+    return out.rows.filter((r) => r.monthly > 0 && inFamily(r.keyword)).slice(0, 25);
   } catch {
     return [];
   }
@@ -204,8 +256,20 @@ const buildBriefs = async (deps = {}) => {
      * cheaper sources. Google answers with the rest of the phrase family and
      * a number against each.
      */
+    // Real titles from this category anchor the expansion; without them
+    // Google answers a jewellery seed with the whole of jewellery.
+    const titles = await Product.find({ category: category._id, isActive: true, isDeleted: { $ne: true } })
+      .select('name')
+      .limit(6)
+      .lean()
+      .catch(() => []);
     const adsWords = await keywordVolumes(
-      [category.name, ...(grounded?.words || []).slice(0, 8), ...catSearchConsole.slice(0, 6).map((r) => r.query)],
+      [
+        category.name,
+        ...titles.map((p) => String(p.name || '').split(/\s+/).slice(0, 4).join(' ')),
+        ...(grounded?.words || []).slice(0, 8),
+        ...catSearchConsole.slice(0, 6).map((r) => r.query),
+      ],
       deps
     );
 
@@ -225,4 +289,4 @@ const buildBriefs = async (deps = {}) => {
   return { built, skipped, pending: Math.max(0, cats.length - done.size - built), week, marketInsights: mi.enabled ? 'on' : 'not yet enabled by Google', searchConsole: sc.ok ? (sc.rows || []).length : 'not connected' };
 };
 
-module.exports = { briefPrompt, assembleBrief, briefToText, groundedFor, buildBriefs, keywordVolumes };
+module.exports = { briefPrompt, assembleBrief, briefToText, groundedFor, buildBriefs, keywordVolumes, familySieve };

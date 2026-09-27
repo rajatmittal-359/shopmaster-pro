@@ -197,7 +197,20 @@ const wordWithDemand = (w) => {
 
 const templateRules = (template, marketWords = []) => {
   const facts = template.attributes.map((a) => `${a.label}${a.type !== 'text' ? ` (one of: ${a.options.join(' / ')})` : a.hint ? ` (e.g. ${a.hint})` : ''}`).join('; ');
-  const words = [...new Set([...(template.seoSeeds || []), ...marketWords.map(wordWithDemand)].filter(Boolean))].slice(0, 20);
+  /*
+   * MEASURED DEMAND LEADS; OUR OWN SEEDS FILL IN BEHIND IT.
+   *   Rule 12 tells the model these are "in this order of importance", and
+   *   until 27 Sep 2026 the order was: our hand-written seoSeeds first, the
+   *   market brief after. That put a curated guess above a measured number
+   *   and, with the list cut at twenty, often pushed the measured ones off
+   *   the end entirely - "gold rings for women (301,000/month)" sat
+   *   eleventh behind seeds nobody had counted.
+   *
+   *   marketWords arrive already sorted by volume, so they go first. The
+   *   seeds keep their value: they cover the phrases Keyword Planner has no
+   *   figure for, and they are category-correct by hand.
+   */
+  const words = [...new Set([...marketWords.map(wordWithDemand), ...(template.seoSeeds || [])].filter(Boolean))].slice(0, 20);
   return `
 
 CATEGORY RULES - ${template.label}:

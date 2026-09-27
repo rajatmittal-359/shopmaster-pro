@@ -97,13 +97,22 @@ describe('an Ads account that is not there costs nothing', () => {
   });
 
   it('drops phrases Google reports as zero, and keeps the head of the list', async () => {
-    const rows = Array.from({ length: 40 }, (_, i) => ({ keyword: `w${i}`, monthly: 40 - i, competition: 'LOW' }));
-    rows.push({ keyword: 'too rare to report', monthly: 0 });
+    // Every phrase shares the seed's word, so the family sieve keeps them
+    // all and only the zero and the ceiling are being tested here.
+    const rows = Array.from({ length: 40 }, (_, i) => ({ keyword: `jewellery ${i}`, monthly: 40 - i, competition: 'LOW' }));
+    rows.push({ keyword: 'jewellery too rare to report', monthly: 0 });
     const ads = { keywordIdeas: async () => ({ ok: true, rows }) };
 
     const out = await keywordVolumes(['jewellery'], { ads });
     expect(out).toHaveLength(25);
-    expect(out.some((r) => r.keyword === 'too rare to report')).toBe(false);
+    expect(out.some((r) => r.keyword.includes('too rare'))).toBe(false);
+  });
+
+  it('throws away an answer that wandered off into another category', async () => {
+    // The real failure: three ring titles came back led by "earrings" at
+    // 368,000 a month. Nothing here should survive the sieve.
+    const ads = { keywordIdeas: async () => ({ ok: true, rows: [{ keyword: 'earrings', monthly: 368000 }] }) };
+    expect(await keywordVolumes(['Rings', 'Oxidised Silver Statement Ring'], { ads })).toEqual([]);
   });
 
   it('sends each seed once, lowercased and trimmed', async () => {
@@ -116,5 +125,78 @@ describe('an Ads account that is not there costs nothing', () => {
     };
     await keywordVolumes(['Jewellery', ' jewellery ', '', 'Kundan Choker'], { ads });
     expect(seen).toEqual(['jewellery', 'kundan choker']);
+  });
+});
+
+describe('keeping Google inside the category', () => {
+  const { familySieve } = require('../utils/ai/marketBrief.js');
+  const RING_SEEDS = ['Rings', 'Rose Gold Pearl Floral Ring', 'Oxidised Silver Statement Ring'];
+
+  it('drops the phrase that nearly poisoned the Rings brief', () => {
+    // Seeded with three real ring titles, the biggest thing Keyword Planner
+    // returned was "earrings" at 368,000 a month. Stored, it would have told
+    // the model the most-searched word for a ring is "earrings".
+    expect(familySieve(RING_SEEDS)('earrings')).toBe(false);
+    expect(familySieve(RING_SEEDS)('gold rings for women')).toBe(true);
+  });
+
+  it('matches whole words, not letters inside them', () => {
+    // "earrings" contains the letters of "rings". The first version used
+    // includes() and let it straight through.
+    expect(familySieve(['Rings'])('earrings')).toBe(false);
+    expect(familySieve(['Rings'])('nose rings')).toBe(true);
+  });
+
+  it('treats a plural as its singular', () => {
+    expect(familySieve(['Rings'])('diamond ring')).toBe(true);
+    expect(familySieve(['Necklaces & Pendants'])('kundan necklace')).toBe(true);
+  });
+
+  it('will not anchor on a colour, a metal or who wears it', () => {
+    // "Rose Gold Pearl Floral Ring" would otherwise admit every gold thing
+    // in the catalogue - which is how "gold earrings" got in on the second try.
+    expect(familySieve(RING_SEEDS)('gold earrings')).toBe(false);
+    expect(familySieve(['Kurtas & Suits', 'Blue Cotton Kurta for Women'])('blue saree')).toBe(false);
+  });
+
+  it('lets everything through when there is nothing to anchor on', () => {
+    // A sieve with no anchors must not silently discard the whole answer.
+    expect(familySieve([])('anything at all')).toBe(true);
+    expect(familySieve(['a', 'of'])('anything at all')).toBe(true);
+  });
+});
+
+describe('what the prompt puts first', () => {
+  const { promptFor } = require('../utils/ai/listing.js');
+  const template = {
+    label: 'Rings',
+    productTypes: [],
+    attributes: [],
+    bullets: ['what it is'],
+    neverClaim: [],
+    seoSeeds: ['artificial jewellery', 'imitation jewellery'],
+  };
+
+  it('leads with the measured words, not our hand-written seeds', () => {
+    const prompt = promptFor({
+      name: 'ring',
+      hasImage: true,
+      template,
+      marketWords: [{ word: 'gold rings for women', monthly: 301000 }, { word: 'rings', monthly: 246000 }],
+    });
+    const rule = prompt.split('\n').find((l) => l.startsWith('12.'));
+
+    expect(rule).toContain('gold rings for women (3,01,000/month)');
+    expect(rule.indexOf('gold rings for women')).toBeLessThan(rule.indexOf('artificial jewellery'));
+  });
+
+  it('still renders a brief built before the numbers existed', () => {
+    // Old briefs stored plain strings. A prompt that threw on them would
+    // take the whole draft down with it.
+    const rule = promptFor({ name: 'ring', hasImage: true, template, marketWords: ['kundan set'] })
+      .split('\n')
+      .find((l) => l.startsWith('12.'));
+    expect(rule).toContain('kundan set');
+    expect(rule).not.toContain('undefined');
   });
 });
