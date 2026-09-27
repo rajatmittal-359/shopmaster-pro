@@ -19,6 +19,11 @@ export const POLICY = {
   handlingDays: [1, 2], // business days to dispatch
   transitDays: [3, 7], // business days in transit
   returnDays: 7, // must equal RETURN_WINDOW_DAYS in backend/utils/payout.js
+  // What a change-of-mind return costs the customer, quoted to Google the
+  // same way `shippingRate` is: a representative figure, because it is the
+  // same courier making the same journey backwards. A fault of ours is free
+  // and is declared separately (lib/productSchema).
+  returnShippingRate: 100,
   refundDays: [5, 7], // business days for money to reach the customer
 };
 

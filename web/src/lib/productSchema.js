@@ -16,6 +16,59 @@ import { POLICY, BUSINESS } from '@/config/policy';
  *   courier on a change of mind. Both are read by Google, and the difference
  *   between them is the kind a payment aggregator calls misrepresentation.
  */
+/**
+ * The return policy Google is told, per product, matching the fair-returns
+ * matrix the product page already prints in words (plan §4.39).
+ *
+ * WHY THIS IS NOT ONE FIXED BLOCK (27 Sep 2026)
+ *   It used to be: a seven-day window with `returnFees: ReturnShippingFees`
+ *   on every product. Two things were wrong with that.
+ *
+ *   It was too harsh. Google was told the customer pays the courier on every
+ *   return, when a wrong, damaged or not-as-described item has always been
+ *   free to send back - that is the law, not a courtesy. Google publishes
+ *   `itemDefectReturnFees` for exactly this, and saying it costs us nothing
+ *   and is true.
+ *
+ *   And it was too generous. A hygiene item - earrings, nose pins - is mode
+ *   N: no change-of-mind return at all. The page says so; the schema
+ *   promised seven days anyway. A promise that lives only in the markup is
+ *   the kind a payment aggregator calls misrepresentation.
+ *
+ *   `returnShippingFeesAmount` is what Google asks for whenever fees are
+ *   declared, and its absence is a warning in Search Console. The figure is
+ *   representative, like `shippingRate`: the same courier, going back.
+ */
+const returnPolicy = (product) => {
+  const mode = product.returnMode || 'R';
+  const base = {
+    '@type': 'MerchantReturnPolicy',
+    applicableCountry: POLICY.shippingCountry,
+    returnMethod: 'https://schema.org/ReturnByMail',
+    // Always free, whatever the mode: a faulty item is the seller's problem.
+    itemDefectReturnFees: 'https://schema.org/FreeReturn',
+  };
+
+  if (mode === 'N') {
+    // No voluntary return. The statutory right to send back a faulty item
+    // survives and is stated above; a window and a fee would both be lies.
+    return { ...base, returnPolicyCategory: 'https://schema.org/MerchantReturnNotPermitted' };
+  }
+
+  const fee = { '@type': 'MonetaryAmount', value: POLICY.returnShippingRate, currency: 'INR' };
+  return {
+    ...base,
+    returnPolicyCategory: 'https://schema.org/MerchantReturnFiniteReturnWindow',
+    merchantReturnDays: POLICY.returnDays,
+    // X is exchange-only; only R gives the money back.
+    refundType: mode === 'X' ? 'https://schema.org/ExchangeRefund' : 'https://schema.org/FullRefund',
+    returnFees: 'https://schema.org/ReturnShippingFees',
+    returnShippingFeesAmount: fee,
+    customerRemorseReturnFees: 'https://schema.org/ReturnShippingFees',
+    customerRemorseReturnShippingFeesAmount: fee,
+  };
+};
+
 export const productSchema = ({ product, url, price, was, inStock }) => {
   // The brand Google sees is the seller's shop, not the person who owns it.
   const brand = product.brand || product.shop?.name || BUSINESS.tradeName;
@@ -80,16 +133,7 @@ export const productSchema = ({ product, url, price, was, inStock }) => {
         },
       },
 
-      hasMerchantReturnPolicy: {
-        '@type': 'MerchantReturnPolicy',
-        applicableCountry: POLICY.shippingCountry,
-        returnPolicyCategory: 'https://schema.org/MerchantReturnFiniteReturnWindow',
-        merchantReturnDays: POLICY.returnDays,
-        returnMethod: 'https://schema.org/ReturnByMail',
-        // NOT FreeReturn. The refund policy says the customer pays the return
-        // courier on a change of mind, and we pay only when the fault is ours.
-        returnFees: 'https://schema.org/ReturnShippingFees',
-      },
+      hasMerchantReturnPolicy: returnPolicy(product),
     },
   };
 
