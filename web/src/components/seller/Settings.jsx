@@ -48,6 +48,7 @@ const formFrom = (settings) => ({
   // The break switch (Etsy's Vacation Mode): a date is kept as yyyy-mm-dd for the input.
   vacation: { on: Boolean(settings.vacation?.on), until: settings.vacation?.until ? String(settings.vacation.until).slice(0, 10) : '', note: settings.vacation?.note || '' },
   links: { instagram: '', facebook: '', googleBusiness: '', youtube: '', website: '', ...(settings.links || {}) },
+  whatsapp: settings.whatsapp || '',
   pickupAddress: {
     contactName: '',
     phone: '',
@@ -107,7 +108,7 @@ export default function SellerSettings() {
       // Only what changed. The server checks a pickup address in full, so
       // sending an untouched empty one would stop a new seller from flipping
       // the delivery switch until they had typed an address.
-      const body = { offersFreeShipping: form.offersFreeShipping, about: form.about, showLocation: form.showLocation, links: form.links };
+      const body = { offersFreeShipping: form.offersFreeShipping, about: form.about, showLocation: form.showLocation, links: form.links, whatsapp: form.whatsapp };
       if (!same(form.vacation, saved.vacation)) body.vacation = { ...form.vacation, until: form.vacation.until || null };
       if (!same(form.pickupAddress, saved.pickupAddress)) body.pickupAddress = form.pickupAddress;
       const data = await authedFetch('/seller/settings', { method: 'PATCH', body });
@@ -135,7 +136,7 @@ export default function SellerSettings() {
   const changedIn = {
     shop: form.offersFreeShipping !== saved.offersFreeShipping || !same(form.vacation, saved.vacation),
     pickup: !same(form.pickupAddress, saved.pickupAddress),
-    web: form.about !== saved.about || form.showLocation !== saved.showLocation || !same(form.links, saved.links),
+    web: form.about !== saved.about || form.showLocation !== saved.showLocation || !same(form.links, saved.links) || form.whatsapp !== saved.whatsapp,
   };
   const changedNames = [changedIn.shop && t('Shop'), changedIn.pickup && t('Pickup address'), changedIn.web && t('On the web')].filter(Boolean);
 
@@ -313,6 +314,33 @@ export default function SellerSettings() {
                     <Field id="about" label="About your shop" hint={`${form.about.length}/600 · ${t("who you are, what you make or sell, since when. It becomes your page's description on Google.")}`}>
                       <Textarea id="about" value={form.about} onChange={(e) => setForm({ ...form, about: e.target.value.slice(0, 600) })} rows={3} placeholder="Family-run handloom shop in Bapu Bazaar, Jaipur, since 1998. Block-printed bedsheets and dupattas made by hand; every piece photographed on the actual item." />
                     </Field>
+                    {/*
+                      The number behind the "Chat on WhatsApp" button on the
+                      shop page. Its own field rather than one of the links
+                      below, because those are URLs published as schema.org
+                      sameAs and a phone number is neither (27 Sep 2026).
+                      Opt-in on purpose: the pickup address phone is a
+                      courier contact and is never published.
+                    */}
+                    <Field
+                      id="whatsapp"
+                      label={t('WhatsApp number')}
+                      hint={t('Shown publicly as a "Chat on WhatsApp" button on your shop page. Leave it empty for no button. 10 digits, or with 91 in front.')}
+                    >
+                      <Input
+                        id="whatsapp"
+                        value={form.whatsapp || ''}
+                        onChange={(e) => setForm({ ...form, whatsapp: e.target.value })}
+                        placeholder="98765 43210"
+                        className="h-10"
+                        inputMode="tel"
+                      />
+                    </Field>
+                    {settings.slug && (
+                      <Field id="shortlink" label={t('Your short link')} hint={t('Put this in your WhatsApp profile, your Google listing, your Instagram bio and on your parcels.')}>
+                        <Input id="shortlink" readOnly value={`www.shopmasterpro.in/${settings.slug}`} className="h-10" />
+                      </Field>
+                    )}
                     <div className="grid gap-4 sm:grid-cols-2">
                       {[
                         ['instagram', 'Instagram', 'instagram.com/yourshop'],

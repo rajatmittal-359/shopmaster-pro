@@ -1830,6 +1830,13 @@ exports.getSettings = async (req, res) => {
         bankSet: Boolean(seller.bankDetails && seller.bankDetails.accountNumber && seller.bankDetails.ifscCode),
         about: seller.about || '',
         links: seller.links || {},
+        /*
+         * The shop's short link (27 Sep 2026). A shop whose name yields
+         * nothing usable has none, and keeps its /sellers/<id> URL, which
+         * has always worked - see utils/sellerSlug for the reserved list.
+         */
+        slug: seller.slug || null,
+        whatsapp: seller.whatsapp || '',
         showLocation: Boolean(seller.showLocation),
         vacation: seller.vacation || { on: false, until: null, note: '' },
 
@@ -1871,7 +1878,7 @@ exports.getSettings = async (req, res) => {
  * @returns {Promise<{error?:string, changed:string[], aboutHeld:string|null}>}
  */
 const applyShopSettings = async (seller, body = {}, opts = {}) => {
-  const { offersFreeShipping, pickupAddress, about, links, showLocation, vacation, shiprocketNickname, aiUnlimited, homeTreatment } = body;
+  const { offersFreeShipping, pickupAddress, about, links, showLocation, vacation, shiprocketNickname, aiUnlimited, homeTreatment, whatsapp } = body;
   const changed = [];
   let aboutHeld = null;
 
@@ -1967,6 +1974,34 @@ const applyShopSettings = async (seller, body = {}, opts = {}) => {
     }
   }
 
+  /*
+   * The WhatsApp number behind the shop page's chat button.
+   *
+   * Kept out of `links` on purpose: those are URLs, validated per host and
+   * published as schema.org `sameAs`. A phone number is neither a URL nor a
+   * profile, and putting one in sameAs would be telling Google something
+   * untrue about the shop.
+   *
+   * Digits only. A ten-digit number gets 91 in front of it, because that is
+   * what a seller types and wa.me will not accept. Anything that is not a
+   * plausible Indian mobile is refused rather than silently published as a
+   * button that opens a chat with nobody.
+   */
+  if (whatsapp !== undefined) {
+    const digits = String(whatsapp || '').replace(/\D/g, '');
+    if (!digits) {
+      if (seller.whatsapp) changed.push('WhatsApp number');
+      seller.whatsapp = '';
+    } else {
+      const full = digits.length === 10 ? `91${digits}` : digits;
+      if (!/^91[6-9]\d{9}$/.test(full)) {
+        return { error: 'That does not look like a WhatsApp number - 10 digits, or with 91 in front', changed, aboutHeld };
+      }
+      if (seller.whatsapp !== full) changed.push('WhatsApp number');
+      seller.whatsapp = full;
+    }
+  }
+
   if (pickupAddress) {
     const p = pickupAddress;
     /*
@@ -2018,6 +2053,8 @@ exports.updateSettings = async (req, res) => {
         bankSet: Boolean(seller.bankDetails && seller.bankDetails.accountNumber && seller.bankDetails.ifscCode),
         about: seller.about || '',
         links: seller.links || {},
+        slug: seller.slug || null,
+        whatsapp: seller.whatsapp || '',
         showLocation: Boolean(seller.showLocation),
         vacation: seller.vacation || { on: false, until: null, note: '' },
       },

@@ -25,18 +25,30 @@ const Product = require('../models/Product');
 const Category = require('../models/Category');
 
 /**
- * GET /api/public/sellers/:userId
+ * GET /api/public/sellers/:handle
  *
- * Keyed on the USER id, because that is what a product carries and what the
- * product page already exposes.
+ * The handle is the USER id - what a product carries and what the product
+ * page already exposes - or the shop's SLUG, which is what the short link
+ * www.shopmasterpro.in/charming-jewels resolves with (27 Sep 2026).
+ *
+ * The id is tried first and only when the handle actually looks like one, so
+ * a slug can never cost a wasted ObjectId cast, and a 24-character hex shop
+ * name could never shadow a real id.
  */
-router.get('/:userId', async (req, res) => {
+router.get('/:handle', async (req, res) => {
   try {
-    const { userId } = req.params;
+    const handle = String(req.params.handle || '');
+    const byId = /^[0-9a-f]{24}$/i.test(handle);
 
-    const seller = await Seller.findOne({ userId })
-      .select('businessName isApproved status createdAt about links showLocation pickupAddress aboutModeration vacation application.legalName application.gstin application.gstMode application.enrolmentNumber gstNumber')
+    const FIELDS =
+      'userId slug whatsapp businessName isApproved status createdAt about links showLocation pickupAddress aboutModeration vacation application.legalName application.gstin application.gstMode application.enrolmentNumber gstNumber';
+
+    const seller = await Seller.findOne(byId ? { userId: handle } : { slug: handle.toLowerCase() })
+      .select(FIELDS)
       .lean();
+
+    // Everything below keys off the user id, whichever way the shop was found.
+    const userId = seller ? String(seller.userId) : handle;
 
     /*
      * A shop that was never approved, or has been suspended, is not a page.
@@ -90,6 +102,15 @@ router.get('/:userId', async (req, res) => {
     return res.json({
       seller: {
         id: userId,
+        // The short link, when the shop has one. The page makes it the
+        // canonical URL so Google indexes the pretty address, not the id.
+        slug: seller.slug || null,
+        /*
+         * Digits only, and only if the seller typed them into Settings
+         * knowing they would be published. This is NOT pickupAddress.phone -
+         * that is a courier contact and stays off this endpoint.
+         */
+        whatsapp: seller.whatsapp || '',
         businessName: seller.businessName,
         sellingSince: seller.createdAt,
         about: seller.aboutModeration?.status === 'held' || seller.aboutModeration?.status === 'removed' ? '' : seller.about || '',

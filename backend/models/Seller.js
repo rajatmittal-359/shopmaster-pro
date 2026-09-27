@@ -173,6 +173,31 @@ const sellerSchema = new mongoose.Schema(
       at: { type: Date, default: null },
     },
     about: { type: String, trim: true, maxlength: 600, default: '' },
+
+    /*
+     * The shop's short link: www.shopmasterpro.in/<slug> (27 Sep 2026).
+     *
+     * `sparse` because a shop whose name yields nothing usable - Devanagari
+     * only, or a reserved word - simply has no slug, and its /sellers/<id>
+     * URL keeps working exactly as before. A unique index over many nulls
+     * would refuse the second such shop, which is why it must be sparse.
+     *
+     * Minted by utils/sellerSlug, which owns the reserved list. Never derive
+     * one anywhere else: the root namespace is shared with the site's own
+     * pages and there must be one place that knows which names are taken.
+     */
+    slug: { type: String, trim: true, lowercase: true, unique: true, sparse: true, index: true },
+
+    /*
+     * The number a "Chat on WhatsApp" button opens - digits only, with the
+     * country code.
+     *
+     * Deliberately NOT `pickupAddress.phone`. That one is a courier's contact
+     * and is kept off the public endpoint on purpose; this is a separate
+     * field the seller fills in knowing it will be published, and an empty
+     * one simply means no button. Opt-in, never inherited.
+     */
+    whatsapp: { type: String, trim: true, default: '' },
     links: {
       instagram: { type: String, trim: true, default: '' },
       facebook: { type: String, trim: true, default: '' },

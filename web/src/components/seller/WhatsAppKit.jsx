@@ -121,7 +121,8 @@ export default function WhatsAppKit({ data }) {
     a.click();
     URL.revokeObjectURL(a.href);
   };
-  const phone = data.shop?.phone || '';
+  // The number the seller published in Settings, not a guess at one.
+  const phone = data.shop?.whatsapp || '';
   const city = data.shop?.city || '';
   /*
    * "necklaces, earrings and rings", from the shop's own categories - a
@@ -197,11 +198,16 @@ ${url}` },
             multiline
             hint={t('Tools → Away message → Outside business hours. A buyer at 1am should not meet silence.')}
           />
+          {!waLink && (
+            <p className="py-3 text-sm text-muted-foreground">
+              {t('Add your WhatsApp number in Settings → Your shop on the web, and your chat link and the "Chat on WhatsApp" button on your shop page both appear here.')}
+            </p>
+          )}
           {waLink && (
             <CopyRow
               label={t('Your chat link')}
               value={waLink}
-              hint={t('Put this in your Instagram bio, your Google Business Profile and on your parcels - it opens a chat with you, no number to type. It is built from the phone on your pickup address; if WhatsApp is on a different number, change it in Settings first.')}
+              hint={t('Put this in your Instagram bio, your Google Business Profile and on your parcels - it opens a chat with you, no number to type.')}
             />
           )}
         </div>

@@ -3231,3 +3231,50 @@ product form, All products and Orders: no horizontal scroll on any.
 The lesson worth keeping: a page that will not shrink usually is not the
 fault of the thing you just added. `min-width: auto` on flex and grid items
 is the default, and it is almost never what a responsive layout wants.
+
+### 4.68 A shop gets a name in the URL, and a way to be asked (27 Sep 2026)
+
+Two of the three things left over from the WhatsApp night, both Rajat's yes.
+
+**The short link.** A shop lived at `/sellers/6a93cf88fbb4f39f4a6d5618`, and
+that string was about to go into a WhatsApp Business profile, a Google
+Business Profile, an Instagram bio and onto parcel slips. Nobody types it and
+it makes a family shop look like a database row. Shops now have a slug and
+live at **`www.shopmasterpro.in/charming-jewels`**.
+
+*The reserved list is the whole risk.* The link is at the ROOT, so a shop's
+slug and a page of the site share one namespace. Next gives a static route
+priority over a dynamic one, so a shop that minted the slug "cart" would not
+break /cart - it would be quietly unreachable, with Settings showing the
+seller a link that goes somewhere else. Nothing throws; the seller finds out
+from a customer. So `utils/sellerSlug` refuses every route we have, every
+policy page, everything a browser asks for on its own (`robots`, `_next`,
+`well-known`), and a generous list of pages we have not built - losing "blog"
+as a slug costs a shop nothing, losing /blog costs a rebuild. 11 tests.
+
+*Both URLs still work, and only one is canonical.* `/sellers/<id>` is what
+product pages link to and what Google already indexed, so it renders the same
+view rather than redirecting - but the canonical on both is the short link.
+Verified: both 200, both canonical to `/charming-jewels`, a nonsense path
+404s, and `/cart` still wins.
+
+A shop whose name yields nothing usable - Devanagari only - simply has no
+slug and keeps the id URL. `slugify` returning '' is a real case, not an edge.
+
+**Chat on WhatsApp, on the shop page only.** An order agreed inside a chat has
+no order record, no courier booking and no returns cover, so the button must
+never sit beside a Buy button competing with it. On the SHOP page it does the
+opposite job: this is where a shopper decides whether a stranger in Jaipur is
+real, and being able to ask is what settles that. Amazon, Flipkart and Meesho
+all keep seller chat off the buy path. Verified: rendered on the shop page,
+zero matches on a product page.
+
+*No API, no BSP, no bill.* `wa.me` is a plain link. The WhatsApp Business
+Platform - Gupshup, Twilio, WATI - exists to send business-initiated
+messages, and is a different decision (WHAT-IS-LEFT §3d).
+
+*The number is opt-in.* `Seller.whatsapp`, typed in Settings knowing it will
+be public, and deliberately NOT `pickupAddress.phone`, which is a courier
+contact the public endpoint has always withheld. It is kept out of `links`
+too: those are URLs published as schema.org `sameAs`, and a phone number is
+neither a URL nor a profile.

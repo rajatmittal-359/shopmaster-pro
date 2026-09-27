@@ -255,7 +255,12 @@ exports.sellerGrow = async (req, res) => {
       total: steps.length,
       next: steps.find((s) => !s.done) || null,
       steps,
-      shopUrl: `${process.env.FRONTEND_URL || 'https://www.shopmasterpro.in'}/sellers/${sellerId}`,
+      /*
+       * The short link when the shop has one - this URL is what the WhatsApp
+       * kit hands over to be pasted into a profile, a Google listing and onto
+       * parcels, so it should be the one a person can read (27 Sep 2026).
+       */
+      shopUrl: `${process.env.FRONTEND_URL || 'https://www.shopmasterpro.in'}${seller && seller.slug ? `/${seller.slug}` : `/sellers/${sellerId}`}`,
       businessName: (seller && seller.businessName) || '',
       /*
        * EVERYTHING THE WHATSAPP BUSINESS SETUP NEEDS, ALREADY FILLED IN
@@ -301,7 +306,12 @@ exports.sellerGrow = async (req, res) => {
           url: `${process.env.FRONTEND_URL || 'https://www.shopmasterpro.in'}/products/${p.slug || p._id}`,
         })),
       shop: {
-        phone: (seller && seller.pickupAddress && seller.pickupAddress.phone) || (seller && seller.phone) || '',
+        /*
+         * The number the seller PUBLISHED, not the courier contact on the
+         * pickup address. The kit used to guess with the pickup phone and
+         * warn about it; there is a proper opt-in field now (Seller.whatsapp).
+         */
+        whatsapp: (seller && seller.whatsapp) || '',
         city: (seller && seller.pickupAddress && seller.pickupAddress.city) || '',
         /*
          * What this shop actually sells, in its own categories - so the
