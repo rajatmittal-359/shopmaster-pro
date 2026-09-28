@@ -423,7 +423,7 @@ export default function ProductForm({ productId, copyFromId }) {
         ...(first?.kind === 'new' ? { imageDataUrl: first.src } : {}),
         textModel,
       };
-      const { draft, warnings, usage: u, writtenBy } = await authedFetch('/seller/ai/listing-from-speech', { method: 'POST', body });
+      const { draft, warnings, usage: u, writtenBy } = await authedFetch('/seller/ai/listing-from-speech', { method: 'POST', body, timeoutMs: 120_000 });
       setForm((f) => ({
         ...f,
         name: draft.name || f.name,
@@ -463,7 +463,7 @@ export default function ProductForm({ productId, copyFromId }) {
         ...(first?.kind === 'new' ? { imageDataUrl: first.src } : {}),
         textModel,
       };
-      const { draft, warnings, usage: u, writtenBy } = await authedFetch('/seller/ai/listing', { method: 'POST', body });
+      const { draft, warnings, usage: u, writtenBy } = await authedFetch('/seller/ai/listing', { method: 'POST', body, timeoutMs: 120_000 });
       setForm((f) => ({
         ...f,
         name: draft.name || f.name,
@@ -616,9 +616,11 @@ export default function ProductForm({ productId, copyFromId }) {
 
     try {
       if (productId) {
-        await authedFetch(`/seller/products/${productId}`, { method: 'PATCH', body });
+        // Photographs travel in this body to Cloudinary, so it is the slowest
+        // call the panel makes; three minutes before we call it stuck.
+        await authedFetch(`/seller/products/${productId}`, { method: 'PATCH', body, timeoutMs: 180_000 });
       } else {
-        await authedFetch('/seller/products', { method: 'POST', body });
+        await authedFetch('/seller/products', { method: 'POST', body, timeoutMs: 180_000 });
         if (copyFromId && body.variantGroupId) {
           await authedFetch(`/seller/products/${copyFromId}`, {
             method: 'PATCH',
@@ -1033,7 +1035,7 @@ export default function ProductForm({ productId, copyFromId }) {
               onClick={async () => {
                 setMarket({ status: 'loading' });
                 try {
-                  const data = await authedFetch('/seller/ai/market', { method: 'POST', body: { name: form.name, categoryName: categories.find((c) => c._id === form.category)?.label, material: form.material, color: form.color, price: form.price } });
+                  const data = await authedFetch('/seller/ai/market', { method: 'POST', timeoutMs: 120_000, body: { name: form.name, categoryName: categories.find((c) => c._id === form.category)?.label, material: form.material, color: form.color, price: form.price } });
                   setMarket({ status: 'done', data });
                 } catch (e) {
                   setMarket({ status: 'error', message: e.message });

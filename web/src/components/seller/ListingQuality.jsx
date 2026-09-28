@@ -83,6 +83,7 @@ export default function ListingQuality({ form, photos, productId, categoryLabel,
     try {
       const first = photos[0];
       const data = await authedFetch('/seller/ai/keywords', {
+        timeoutMs: 120_000,
         method: 'POST',
         body: {
           name: form.name,

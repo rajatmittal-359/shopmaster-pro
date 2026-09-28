@@ -57,7 +57,29 @@ const refreshOnce = () => {
   return refreshing;
 };
 
-export async function authedFetch(path, { method = 'GET', body, headers: extraHeaders, ...rest } = {}) {
+/*
+ * NO REQUEST WAITS FOR EVER (28 Sep 2026)
+ *
+ *   Rajat filled in a product, pressed "List it", and the button said
+ *   "Saving…" and kept saying it. Nothing was wrong with the form and
+ *   nothing appeared in any log, because the request never finished and so
+ *   never failed: `fetch` has no timeout of its own, and a connection that
+ *   is accepted and then abandoned - a container restarting under a deploy,
+ *   a phone losing its data mid-upload - hangs until the browser gives up,
+ *   which can be minutes.
+ *
+ *   The form is written correctly for a rejection: `catch` puts the message
+ *   on screen and frees the button. It was never given one. So the fix is
+ *   to make a stuck request into an ordinary error, and say the one thing
+ *   the seller actually needs to know - whether it saved.
+ *
+ *   The default is generous because some of these calls legitimately take
+ *   their time: a listing draft is a model call, and a save carries the
+ *   photographs to Cloudinary. Callers that know they are slower say so.
+ */
+const DEFAULT_TIMEOUT_MS = 60_000;
+
+export async function authedFetch(path, { method = 'GET', body, headers: extraHeaders, timeoutMs = DEFAULT_TIMEOUT_MS, signal, ...rest } = {}) {
   const send = () =>
     fetch(`${apiBase}${path}`, {
       method,
@@ -65,14 +87,32 @@ export async function authedFetch(path, { method = 'GET', body, headers: extraHe
       headers: headersFor(body, extraHeaders),
       ...(body ? { body: JSON.stringify(body) } : {}),
       ...rest,
+      // A caller's own signal still works; the timeout is added to it.
+      signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(timeoutMs)]) : AbortSignal.timeout(timeoutMs),
     });
 
-  let res = await send();
+  const attempt = async () => {
+    try {
+      return await send();
+    } catch (err) {
+      if (err?.name !== 'TimeoutError' && err?.name !== 'AbortError') throw err;
+      const error = new Error(
+        method === 'GET'
+          ? 'The server did not answer in time. Check your connection and try again.'
+          : 'The server did not answer in time. It may or may not have gone through - reload the page before trying again.'
+      );
+      error.code = 'timeout';
+      error.status = 0;
+      throw error;
+    }
+  };
+
+  let res = await attempt();
 
   if (res.status === 401) {
     const data = await res.clone().json().catch(() => ({}));
     if (data.code === 'expired' || data.code === 'no_session') {
-      if (await refreshOnce()) res = await send();
+      if (await refreshOnce()) res = await attempt();
     }
     if (res.status === 401) {
       const again = await res.clone().json().catch(() => ({}));
