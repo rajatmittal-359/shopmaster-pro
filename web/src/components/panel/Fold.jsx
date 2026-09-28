@@ -29,7 +29,7 @@ const KEY = (id) => `smp.fold.${id}`;
  * way, all shut, whatever the seller happened to open while filling the last
  * one. Editing an existing product is the opposite case and keeps the memory.
  */
-export default function Fold({ id, title, summary, lead, badge, defaultOpen = true, foldOnPhone = false, remember = true, aside, children, className = '' }) {
+export default function Fold({ id, title, summary, lead, badge, defaultOpen = true, foldOnPhone = false, remember = true, step = null, aside, children, className = '' }) {
   const [open, setOpen] = useState(defaultOpen);
   const [ready, setReady] = useState(false);
   const ref = useRef(null);
@@ -45,7 +45,13 @@ export default function Fold({ id, title, summary, lead, badge, defaultOpen = tr
         // On a phone, sections after the first two start folded with their
         // summary (Baymard: an accordion halves a mobile form's perceived
         // length); a saved choice or a jump link still opens them.
-        else if (foldOnPhone && window.matchMedia('(max-width: 639px)').matches) setOpen(false);
+        //
+        // Not while a sequence is running, though. This effect lands in a
+        // microtask, AFTER the step effect below has opened the current
+        // card, so without this guard the four `foldOnPhone` cards would
+        // open and shut again on a phone - and the phone is the one place
+        // the sequence matters most.
+        else if (!step && foldOnPhone && window.matchMedia('(max-width: 639px)').matches) setOpen(false);
       } catch {
         /* private mode */
       }
@@ -54,7 +60,7 @@ export default function Fold({ id, title, summary, lead, badge, defaultOpen = tr
     return () => {
       cancelled = true;
     };
-  }, [id, foldOnPhone, remember]);
+  }, [id, foldOnPhone, remember, step]);
 
   // A jump link (the score panel's "fix this") targets a field inside a folded
   // section: open before the page scrolls, or the scroll lands on nothing.
@@ -66,6 +72,28 @@ export default function Fold({ id, title, summary, lead, badge, defaultOpen = tr
     window.addEventListener('smp:reveal', onReveal);
     return () => window.removeEventListener('smp:reveal', onReveal);
   }, []);
+
+  /*
+   * A SEQUENCE, WHEN THE PARENT IS RUNNING ONE (28 Sep 2026)
+   *
+   *   `step` is 'current' | 'done' | 'ahead', and only the add-a-product form
+   *   passes it (see lib/formSteps). While it is set this fold follows the
+   *   flow: the section being filled is open, the ones before and after are
+   *   shut. Every other Fold on the site passes nothing and keeps its own
+   *   state exactly as before.
+   *
+   *   THE GUARD IS THE IMPORTANT PART. "Done" arrives the instant the last
+   *   field of a section is filled, which is usually while the seller is
+   *   still typing in it - a title becomes a title on the first keystroke.
+   *   Closing the card under their hands would be the worst thing this
+   *   change could do, so a section holding the focus is never moved; it
+   *   settles on the next change, once they have gone elsewhere.
+   */
+  useEffect(() => {
+    if (!step) return;
+    if (ref.current?.contains(document.activeElement)) return;
+    setOpen(step === 'current');
+  }, [step]);
 
   const toggle = () => {
     const next = !open;

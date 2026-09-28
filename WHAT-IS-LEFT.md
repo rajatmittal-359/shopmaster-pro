@@ -290,11 +290,39 @@ synonyms collection (jhumka/jhumki/झुमका), Gemini query → filters.
     Cost: a second navigation mode to keep honest, and the listing score has
     to stay reachable from every step. Backend: no.
 
-  **Recommendation: A**, with **B first if he wants the cheap read.** A is
-  the only one backed by a tested distinction rather than a preference, it
-  leaves alone the half nobody complained about, and it reuses machinery that
-  already exists. C is worth doing after A if the phone still feels wrong.
-  **Not built - waiting on the letter.**
+  **Rajat picked A, 28 Sep 2026. Built the same evening.**
+  `web/src/lib/formSteps.js` - `currentStep` (the first section not done,
+  never an optional one) and `stepStateOf` (done / current / ahead). The
+  sections list is hoisted so the rail and the flow read ONE array: a second
+  copy is how the rail comes to tick a section the flow still holds the
+  seller on. `Fold` takes a `step` prop and follows it; every other Fold on
+  the site passes nothing and behaves exactly as before.
+
+  Three things that only showed up in the building:
+
+  - **A card must never close under the seller's hands.** "Done" arrives on
+    the keystroke that completes a section - a title is a title at the first
+    letter - so the card would shut while they were still typing the
+    description. `Fold` refuses to move a section that holds the focus; it
+    settles once they have gone elsewhere.
+  - **The phone nearly lost the whole thing.** The existing `foldOnPhone`
+    logic runs in a microtask, i.e. AFTER the step effect, so on a phone the
+    four folding cards opened and shut again. It now stands aside while a
+    sequence is running - and the phone is where the sequence matters most.
+  - **A section that sets its own `defaultOpen` keeps it.** The FAQs card is
+    badged Optional and chose to stay shut; the flow does not overrule a
+    section that has said what it wants.
+
+  11 tests on the pure logic (`backend/tests/formSteps.test.mjs`, imported
+  across the boundary like validate.js), including the two that would go
+  wrong quietly: a gap left behind is not skipped, and the flow never stops
+  on an optional section. **Not verified in a browser** - `next build` and
+  `next dev` are banned on the laptop (CLAUDE.md), so the first morning's
+  look at add-a-product on a phone is Rajat's.
+
+  **B and C stay available**: B (just open the first card) is what A
+  supersedes; C (Etsy's real phone stepper) is worth doing if A still feels
+  wrong on the phone.
 
 - **The search-word coach: take the seller's OWN word and make it the right one (Rajat, 26 Sep 2026).**
   *"Seller ko pata hota hai product kya hai, lekin self-doubt hota hai - kya yahi acha word hai market me, is word ki kya value hai, chalega ya nahi. Us chakkar me vo ghabra ke kuch nahi likhta."*

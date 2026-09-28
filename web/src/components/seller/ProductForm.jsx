@@ -7,6 +7,7 @@ import { authedFetch } from '@/lib/client';
 import { toast } from 'sonner';
 import { getCategories } from '@/lib/api';
 import { validateProduct } from '@/lib/validate';
+import { currentStep, stepStateOf } from '@/lib/formSteps';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -205,6 +206,26 @@ function Field({ id, label, hint, aside, req = false, children, className = '' }
  */
 const EditingContext = createContext(false);
 
+/**
+ * While ADDING, which section is the one to be on (lib/formSteps).
+ *
+ * Rajat, 26 Sep: "inme 7-8 cards chevron wale thode noisy feel dete hai" -
+ * and on a new product every card was shut, so each summary was its
+ * empty-state nudge and the seller met seven chevrons and seven pieces of
+ * advice before doing anything. Baymard's accordion finding is specifically
+ * that the INLINE accordion (ad-hoc open/close, no order) is the one that
+ * fails and the SEQUENTIAL one works, so this turns add into the sequential
+ * one: the section being filled is open, finished ones collapse to what was
+ * entered, and the ones not reached yet stay quiet.
+ *
+ * Empty while EDITING, which keeps that half exactly as it is - Shopify's
+ * product page, every section open, change one field and save. Nobody has
+ * complained about it, and NN/g are explicit that a wizard "becomes annoying
+ * and overly controlling" when used repeatedly. Changing a price is the
+ * definition of repeated.
+ */
+const StepContext = createContext({ sections: [], current: null });
+
 /*
  * NEW product: every card shut, every time. EDIT: open, and remembered.
  *
@@ -233,7 +254,28 @@ const EditingContext = createContext(false);
 function Card({ id, title, lead, aside, summary, defaultOpen, foldOnPhone = false, badge, req = false, children }) {
   const t = useT();
   const editing = useContext(EditingContext);
+  const flow = useContext(StepContext);
   const key = id || String(title).toLowerCase().replace(/[^a-z0-9]+/g, '-');
+
+  /*
+   * Where this card sits in the add sequence, or null when there is no
+   * sequence - editing, or a card that sets its own `defaultOpen` (the FAQs
+   * card is badged Optional and stays shut by its own choice; the flow must
+   * not overrule a section that has said what it wants).
+   */
+  const step = editing || defaultOpen !== undefined || !flow.sections.length
+    ? null
+    : stepStateOf(flow.sections, key, flow.current);
+
+  /*
+   * A section not yet reached says NOTHING. Its summary would be the
+   * empty-state nudge - "No photo yet", "No price · stock?" - and seven of
+   * those at once is the noise this whole change is about. A finished one
+   * keeps its summary, which is Baymard's actual rule: collapse into the
+   * data that was entered, because people scan the summary instead of
+   * reopening the section.
+   */
+  const shown = step === 'ahead' ? null : summary;
   /*
    * `req` puts the same asterisk on a whole SECTION that `Field` puts on one
    * input - used by Photos, which has no single field to mark and which
@@ -251,7 +293,7 @@ function Card({ id, title, lead, aside, summary, defaultOpen, foldOnPhone = fals
       id={key}
       title={t(title)}
       lead={typeof lead === 'string' ? t(lead) : lead}
-      summary={summary}
+      summary={shown}
       aside={aside}
       badge={
         mark && badge ? (
@@ -261,8 +303,11 @@ function Card({ id, title, lead, aside, summary, defaultOpen, foldOnPhone = fals
           </>
         ) : (mark ?? badge)
       }
-      defaultOpen={defaultOpen ?? editing}
+      // The first card of a new listing is open from the start; the rest
+      // follow `step`. Editing is untouched - `editing` opens them all.
+      defaultOpen={defaultOpen ?? (step ? step === 'current' : editing)}
       remember={editing}
+      step={step}
       foldOnPhone={foldOnPhone}
     >
       {children}
@@ -564,6 +609,37 @@ export default function ProductForm({ productId, copyFromId }) {
    * Words, not a status dropdown - the seller is told what happens, not asked
    * to understand a state machine.
    */
+  /*
+   * ONE LIST, READ BY BOTH THE RAIL AND THE FLOW (28 Sep 2026).
+   *
+   *   The rail's tick and "is this section done" are the same question, and
+   *   were computed in one place already. Now the add sequence asks it too
+   *   (lib/formSteps), so the list is hoisted rather than written twice: a
+   *   second copy is how the rail comes to tick a section the flow still
+   *   holds the seller on.
+   *
+   *   `optional` is new and only FAQs carry it - a section nobody is
+   *   required to fill must never be the step the seller is held at.
+   */
+  const sections = useMemo(
+    () => [
+      { id: 'photos', label: t('Photos'), done: photos.length > 0 },
+      { id: 'words', label: t('Words'), done: Boolean(form.name && form.description) },
+      { id: 'category-card', label: t('Category'), done: Boolean(form.category) },
+      ...(template ? [{ id: 'facts-card', label: t('Facts'), done: Object.values(form.attributes || {}).some((v) => v && String(v).length) }] : []),
+      { id: 'price-card', label: t('Price'), done: Boolean(form.price) && form.stock !== '' && form.stock !== undefined },
+      // Search words live in this card too, so they count towards its tick.
+      { id: 'details', label: t('Details'), done: Boolean(form.color || form.size || form.material || (form.tags || []).length) },
+      { id: 'faqs', label: t('Questions'), done: (form.faqs || []).some((x) => x.q && x.a), optional: true },
+    ],
+    [t, photos.length, form.name, form.description, form.category, template, form.attributes, form.price, form.stock, form.color, form.size, form.material, form.tags, form.faqs]
+  );
+
+  // Null while editing: that half stays Shopify's page, every section open.
+  const currentId = useMemo(() => (productId ? null : currentStep(sections)), [productId, sections]);
+
+  const stepValue = useMemo(() => ({ sections, current: currentId }), [sections, currentId]);
+
   const submit = async (e, asDraft = false) => {
     e.preventDefault();
     if (asDraft && !String(form.name || '').trim()) {
@@ -774,6 +850,7 @@ export default function ProductForm({ productId, copyFromId }) {
 
   return (
     <EditingContext.Provider value={Boolean(productId)}>
+      <StepContext.Provider value={stepValue}>
       {/*
         noValidate, and the reason is not taste (28 Sep 2026).
           The cards in this form are `hidden` when collapsed, and a `required`
@@ -883,21 +960,7 @@ export default function ProductForm({ productId, copyFromId }) {
         listing score or making an edit walk seven steps. See FormRail.jsx for
         the three references that decided it.
       */}
-      <FormRail
-        sections={[
-          { id: 'photos', label: t('Photos'), done: photos.length > 0 },
-          { id: 'words', label: t('Words'), done: Boolean(form.name && form.description) },
-          { id: 'category-card', label: t('Category'), done: Boolean(form.category) },
-          ...(template ? [{ id: 'facts-card', label: t('Facts'), done: Object.values(form.attributes || {}).some((v) => v && String(v).length) }] : []),
-          { id: 'price-card', label: t('Price'), done: Boolean(form.price) && form.stock !== '' && form.stock !== undefined },
-          // Search words live in this card too, so they count towards its tick.
-          { id: 'details', label: t('Details'), done: Boolean(form.color || form.size || form.material || (form.tags || []).length) },
-          { id: 'faqs', label: t('Questions'), done: (form.faqs || []).some((x) => x.q && x.a) },
-          // Every chip is now a step that can be filled and ticked. The
-          // read-outs left the sequence on 27 Sep 2026 - the Google preview
-          // went under the description, the verdicts under the health bar.
-        ]}
-      />
+      <FormRail sections={sections} />
 
       {/* 1. MEDIA */}
       <Card
@@ -1655,6 +1718,7 @@ export default function ProductForm({ productId, copyFromId }) {
         </p>
       </div>
       </form>
+      </StepContext.Provider>
     </EditingContext.Provider>
   );
 }
