@@ -62,6 +62,31 @@ copy(path.join(ROOT, 'ENV'), path.join(OUT, 'project', 'ENV'), 'ENV (local | pro
 copy(path.join(ROOT, 'backend', '.env'), path.join(OUT, 'project', 'backend.env'), 'backend/.env');
 copy(path.join(ROOT, 'web', '.env.local'), path.join(OUT, 'project', 'web.env.local'), 'web/.env.local');
 
+/*
+ * The two other env files (added 29 Sep 2026, the night before the move).
+ *
+ * `.env.real` and `.env.seed` were missed on the first pass because the list
+ * above was written from memory of which files get edited, not from what is
+ * actually gitignored. Both hold a live MONGO_URI, JWT_SECRET and the
+ * Cloudinary secret - they point at different databases, which is the whole
+ * reason they exist separately. Optional() rather than copy(): a machine that
+ * never had them should not be told something is missing.
+ */
+const optional = (from, to, label) => {
+  if (fs.existsSync(from)) copy(from, to, label);
+};
+optional(path.join(ROOT, 'backend', '.env.real'), path.join(OUT, 'project', 'backend.env.real'), 'backend/.env.real');
+optional(path.join(ROOT, 'backend', '.env.seed'), path.join(OUT, 'project', 'backend.env.seed'), 'backend/.env.seed');
+
+/*
+ * The PROJECT's own Claude settings - `.claude/settings.json` and
+ * `.claude/settings.local.json`, both gitignored. Small, and they carry the
+ * permission and hook choices made over weeks. `.claude/project-rules/` is
+ * NOT here on purpose: that one IS tracked, so `git clone` brings it.
+ */
+optional(path.join(ROOT, '.claude', 'settings.json'), path.join(OUT, 'project', 'claude-settings.json'), 'project .claude/settings.json');
+optional(path.join(ROOT, '.claude', 'settings.local.json'), path.join(OUT, 'project', 'claude-settings.local.json'), 'project .claude/settings.local.json');
+
 // ------------------------------------------------------------ Claude's memory
 const projectDir = findProjectDir();
 if (projectDir) {
@@ -75,9 +100,33 @@ if (projectDir) {
   missing.push("Claude's project folder under ~/.claude/projects");
 }
 
-// The three project skills are user-level, so the repo does not carry them.
-for (const skill of ['frontend', 'backend', 'database']) {
+/*
+ * The three project skills are user-level, so the repo does not carry them.
+ *
+ * `synced/` is deliberately NOT packed (checked 29 Sep 2026): it is the
+ * account's own synced skills - the Backrr blog and LinkedIn ones - and they
+ * come back by themselves the moment the Mac signs in as tech@backrr.com.
+ * Carrying them would put another account's work in a pack full of this
+ * project's keys. Anything else that appears beside the three IS packed, and
+ * named, so a skill added later cannot be lost in silence.
+ */
+const PROJECT_SKILLS = ['frontend', 'backend', 'database'];
+const NOT_OURS = ['synced'];
+for (const skill of PROJECT_SKILLS) {
   copy(path.join(CLAUDE, 'skills', skill), path.join(OUT, 'claude', 'skills', skill), `skill /${skill}`);
+}
+try {
+  const extra = fs
+    .readdirSync(path.join(CLAUDE, 'skills'), { withFileTypes: true })
+    // `.git` first of all: the skills folder is itself a repository, and
+    // without this it packs 44 KB of git objects and calls it a skill.
+    .filter((d) => d.isDirectory() && !d.name.startsWith('.') && !PROJECT_SKILLS.includes(d.name) && !NOT_OURS.includes(d.name))
+    .map((d) => d.name);
+  for (const skill of extra) {
+    copy(path.join(CLAUDE, 'skills', skill), path.join(OUT, 'claude', 'skills', skill), `skill /${skill} (found beside the three)`);
+  }
+} catch {
+  /* no user-level skills folder at all */
 }
 copy(path.join(CLAUDE, 'settings.json'), path.join(OUT, 'claude', 'settings.json'), 'Claude settings.json');
 

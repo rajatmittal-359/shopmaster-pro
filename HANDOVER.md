@@ -1,7 +1,10 @@
 # Moving ShopMaster Pro to the Mac
 
-Rajat's runbook. Written 26 September 2026; Claude keeps it up to date as the
-project changes, so read it fresh on the day rather than from memory.
+Rajat's runbook. Written 26 September 2026, **checked against the machine and
+corrected 29 September** — the pack was missing two env files and the
+project's own Claude settings, and was quietly packing `.git` as if it were a
+skill. Claude keeps this up to date as the project changes, so read it fresh
+on the day rather than from memory.
 
 `git clone` brings the code and the reasoning. It does **not** bring the
 secrets, your own checklist, or anything Claude has learned - and that second
@@ -19,8 +22,16 @@ half is what makes a new session useful on day one instead of in week three.
   cd "c:/Users/Admin/Documents/my project/shopmaster-pro"
   node scripts/handover-pack.js
   ```
-  It prints what it packed. It should end with `private/`, the checklist, three
-  env files, 28 memory files and three skills. About 14 MB.
+  It prints what it packed, and that printout **is** the check. As of
+  29 Sep 2026 it should list `private/`, the checklist, **five** env files
+  (`ENV`, `backend/.env`, `backend/.env.real`, `backend/.env.seed`,
+  `web/.env.local`), the project's two `.claude/settings*.json`, **32** memory
+  files and **three** skills — about **17 MB**.
+
+  If a line says *(found beside the three)*, a fourth skill appeared since
+  this was written; it is packed and named on purpose so it cannot be lost
+  quietly. If anything appears under **Not found on this machine**, read it
+  before carrying on.
 
 - [ ] **2. Check nothing is left behind in git**
   ```bash
@@ -60,10 +71,18 @@ half is what makes a new session useful on day one instead of in week three.
   cp -R $P/project/private .
   cp $P/project/OPS-AND-MANUAL-ACTIONS.md .
   cp $P/project/ENV .
-  cp $P/project/backend.env   backend/.env
-  cp $P/project/web.env.local web/.env.local
+  cp $P/project/backend.env       backend/.env
+  cp $P/project/backend.env.real  backend/.env.real     # if present
+  cp $P/project/backend.env.seed  backend/.env.seed     # if present
+  cp $P/project/web.env.local     web/.env.local
+  mkdir -p .claude
+  cp $P/project/claude-settings.json       .claude/settings.json
+  cp $P/project/claude-settings.local.json .claude/settings.local.json
   chmod 600 private/*.pem
   ```
+  `.env.real` and `.env.seed` point at different databases from `.env` —
+  that is why they exist separately. `.claude/project-rules/` is **not** in
+  this list because it is tracked: the clone already brought it.
   `chmod` matters: macOS refuses an SSH key that other users could read.
 
 - [ ] **3. Dependencies - you run these, not Claude**
@@ -104,8 +123,8 @@ half is what makes a new session useful on day one instead of in week three.
 
   | Check | Command | Expected |
   |---|---|---|
-  | tests | `cd backend && npm test` | 1335 passed, no database needed |
-  | the site builds | `cd web && npm run build` | clean |
+  | tests | `cd backend && npm test` | **1527 passed** (29 Sep), no database needed. Two "Unhandled Rejection / EnvironmentTeardownError" lines are known vitest worker noise, not failures |
+  | the site builds | `cd web && npm run build` | clean — **and this is also the test of whether the Windows build rule still applies.** On this laptop `next build` went runaway and survived `taskkill /F`, a parent kill and a reboot, poisoning node *and* git, which is why CLAUDE.md forbids it. That was a Windows fault. Run it **once** on the Mac and watch it: if it completes normally, tell Claude and the rule becomes Windows-only. If it hangs, kill it and let CI keep doing the builds |
   | the box answers | `ssh -i private/LightsailDefaultKey-ap-south-1.pem ubuntu@13.207.140.197 "docker ps"` | three containers up |
   | the live site | `curl -s -o /dev/null -w "%{http_code}" https://www.shopmasterpro.in` | 200 |
   | Claude remembers | ask it *"is project me npm install ka kya niyam hai?"* | it says you run them, without reading a file |
@@ -130,14 +149,26 @@ project:
 
 | | |
 |---|---|
-| `memory/` (28 files) | what Claude has learned about how you work: no `npm install` here, commit at milestones, the business-goal gate, which account is which |
+| `memory/` (32 files) | what Claude has learned about how you work: no `npm install` here, commit at milestones, the business-goal gate, which account is which, what the shop actually sells |
 | `skills/{frontend,backend,database}` | the three project skills. They are user-level, so the repo never had them - without these `/frontend` and `/backend` do not exist |
 | `settings.json`, `plugins.txt`, `mcp-servers.json` | the tools and how they were wired |
 
-**Left out on purpose:** `node_modules` (reinstall), and the session
-transcripts (~700 MB). A new session does not read transcripts; the memory
-files and the documents are what carry the knowledge. `--history` adds them if
-you ever want the raw archive on a drive.
+**Left out on purpose:**
+
+- `node_modules` — reinstall.
+- the session transcripts (~700 MB). A new session does not read transcripts;
+  the memory files and the documents are what carry the knowledge. `--history`
+  adds them if you ever want the raw archive on a drive.
+- `~/.claude/skills/synced/` — the **account's** synced skills (the Backrr
+  blog and LinkedIn ones), not this project's. They reappear by themselves
+  once the Mac signs in as tech@backrr.com, and they have no business sitting
+  in a pack full of ShopMaster keys.
+- `.playwright-mcp/` — browser screenshots and console logs, all disposable.
+  The one thing in there worth keeping, the brand kit, has a copy in
+  `private/charming-jewels-brand/` (four OFL fonts, `brandkit.py`,
+  `identity.py`, `cover.py`, `logos.py`, and the chosen marks), so the CJ
+  logo and cover can be regenerated on the Mac with Pillow and nothing else.
+- `web/brand-drafts/` — 1.1 MB of superseded drafts.
 
 # What travels by itself
 
@@ -171,6 +202,15 @@ skills read before they do anything.
   `npm run server` and `npm run web` work unchanged.
 - **Docker is not needed locally** - it runs on the Lightsail box; the laptop
   only needs Node.
+- **You will have to sign into Google again for the browser checks.** The
+  Playwright profile on Windows held the live sessions for the two accounts
+  (the 6908 seller login that owns the Business Profile, and 359 for the
+  consoles). That profile is deliberately not in the pack: it is a logged-in
+  session, which is worse to carry than a key because it cannot be rotated.
+  Sign in yourself on the Mac when a browser check first needs it - Claude
+  never logs in for you, and the Chrome extension stays banned.
+- **`next build` is worth retesting** rather than assumed - see the check
+  table above.
 
 # If something is missing later
 
