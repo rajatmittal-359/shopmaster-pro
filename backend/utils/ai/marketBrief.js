@@ -220,6 +220,32 @@ const planQueue = (cats, thisWeek = []) => {
  * Build and store a brief for every category that has live products (the
  * ones a seller or the assistant can be asked about). Returns a summary line.
  */
+/**
+ * What our own search box was asked, over the last `days` days.
+ *
+ * A HELPER FOR ONE LINE, AND THE REASON IS A BUG (28 Sep 2026)
+ *   This used to sit inline and matched `createdAt`. `models/SearchLog` is
+ *   declared `{ timestamps: false }`, so there is no such field and the
+ *   `$match` could never hit a document: every brief since the job was
+ *   written was built from three sources while believing it had four, and
+ *   the one silently lost was the only one that is OUR OWN BUYERS rather
+ *   than Google's idea of India. Nothing failed - an aggregate that matches
+ *   nothing returns [], which reads exactly like "nobody has searched yet".
+ *
+ *   It is a named export now so a test can hold the pipeline against
+ *   `SearchLog.schema` and fail the day it filters on a field the model
+ *   does not have. A comment would not have caught it; this does.
+ *
+ *   `day` is the YYYY-MM-DD IST string the rows are keyed by, and it is
+ *   what `utils/googleReadiness.js` has always matched on.
+ */
+const siteSearchPipeline = (days = 28) => [
+  { $match: { day: { $gte: new Date(Date.now() - days * 86400000).toISOString().slice(0, 10) } } },
+  { $group: { _id: '$term', count: { $sum: '$count' } } },
+  { $sort: { count: -1 } },
+  { $limit: 200 },
+];
+
 const buildBriefs = async (deps = {}) => {
   const Product = require('../../models/Product');
   const Category = require('../../models/Category');
@@ -235,8 +261,26 @@ const buildBriefs = async (deps = {}) => {
   const week = weekOf.toISOString().slice(0, 10);
 
   const sc = await require('../google/searchConsole').queries({ days: 28, limit: 250 }).catch(() => ({ rows: [] }));
-  const since = new Date(Date.now() - 28 * 86400000);
-  const site = await SearchLog.aggregate([{ $match: { createdAt: { $gte: since } } }, { $group: { _id: '$term', count: { $sum: '$count' } } }, { $sort: { count: -1 } }, { $limit: 200 }]).catch(() => []);
+  /*
+   * THE SITE'S OWN SEARCHES HAD NEVER REACHED A BRIEF (found 28 Sep 2026)
+   *
+   *   This matched `createdAt`, and `models/SearchLog` is declared
+   *   `{ timestamps: false }` - there is no such field, so the `$match`
+   *   could not hit a single document. Every weekly brief since the job was
+   *   written has been built from three sources while believing it had
+   *   four, and the one it silently lost is the only source that is OUR OWN
+   *   BUYERS rather than Google's idea of India.
+   *
+   *   Nothing failed and nothing was logged: an aggregate that matches
+   *   nothing returns [], which reads exactly like "nobody searched yet".
+   *   Proven against the dev database before the fix - `createdAt` gave 0
+   *   terms, `day` gave 3 ("jhumka", "toe ring", "one").
+   *
+   *   `day` is the YYYY-MM-DD IST string the rows are actually keyed by,
+   *   and it is what `utils/googleReadiness.js` has always matched on. Same
+   *   field, same shape, one less way for the two to disagree.
+   */
+  const site = await SearchLog.aggregate(siteSearchPipeline(28)).catch(() => []);
   const mi = await require('../google/marketInsights').marketInsights().catch(() => ({ enabled: false, bestSellers: [], prices: new Map() }));
 
   const tokens = (s) => String(s || '').toLowerCase().split(/[^a-z0-9ऀ-ॿ]+/).filter((t) => t.length > 2);
@@ -323,4 +367,4 @@ const buildBriefs = async (deps = {}) => {
   return { built, skipped, pending: Math.max(0, queue.length - built), week, marketInsights: mi.enabled ? 'on' : 'not yet enabled by Google', searchConsole: sc.ok ? (sc.rows || []).length : 'not connected' };
 };
 
-module.exports = { briefPrompt, assembleBrief, briefToText, groundedFor, buildBriefs, keywordVolumes, familySieve, planQueue };
+module.exports = { briefPrompt, assembleBrief, briefToText, groundedFor, buildBriefs, keywordVolumes, familySieve, planQueue, siteSearchPipeline };

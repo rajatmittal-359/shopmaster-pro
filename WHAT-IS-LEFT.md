@@ -77,6 +77,8 @@ a page — the React app defined these in its services and no screen used them.
 
 | 2.71 | **A deploy serves 502s to whoever is mid-request, including Googlebot.** Same Caddy log, same minute as the icon deploy: `dial tcp 172.18.0.3:3000: connect: connection refused`, then `lookup web on 127.0.0.11:53: server misbehaving`. Caddy holds the old container's IP while `release.sh` recreates `web`, so for a few seconds every request 502s - and the requests that caught it were **Googlebot's**. Repeated 502s on a crawl are an indexing risk, not just an ugly log. `release.sh` already waits for both health checks, so the containers are fine; the gap is Caddy's own upstream resolution. Fix: give Caddy a dynamic upstream (`reverse_proxy { dynamic a { name web port 3000 refresh 1s } }`) or a short `lb_try_duration` so it retries through the swap instead of failing. ~~**Needs a box step**~~ ✅ **done 26 Sep 2026, commit `cef2306`** - `deploy/Caddyfile` now uses `dynamic a { name web port 3000 refresh 1s }` with `lb_try_duration 10s` / `lb_try_interval 250ms`, and no box visit was needed after all: the deploy workflow pulls the Caddyfile from `main` on every release and `release.sh` validates it before reloading (a config that does not parse is left alone rather than taking the site down). Live since the next deploy - verified 28 Sep: the share-pack commit's markup is being served. The row stayed open here by oversight. | ✅ |
 
+| 2.75 | ~~**The weekly brief's own-search source had never once run**~~ ✅ 28 Sep 2026. `buildBriefs` read our own search box with `$match: { createdAt: { $gte: since } }`, and `models/SearchLog` is declared `{ timestamps: false }` - there is no such field, so the match could not hit a single document. Every brief since the job was written was built from THREE sources while its own comment said four, and the one silently lost is the only source that is our own buyers rather than Google's idea of India. It failed the way the worst bugs fail: an aggregate matching nothing returns `[]`, which is indistinguishable from "nobody has searched yet" - true enough for a shop this young that the empty result looked correct for weeks. Proven against the dev database before the fix (`createdAt` → 0 terms, `day` → 3: jhumka, toe ring, one). Now matched on `day`, the YYYY-MM-DD IST string the rows are keyed by and the field `utils/googleReadiness.js` has always used. The query is an exported `siteSearchPipeline(days)` so the test can hold it against `SearchLog.schema` and fail the day it filters on a field the model does not have - a comment would not have caught this; that does. 4 tests. | ✅ |
+
 | 2.72 | ~~**The description writer called everything jewellery**~~ ✅ 26 Sep 2026. `utils/productCopy.js` opened its prompt with *"You are writing for an Indian online JEWELLERY shop... sells IMITATION jewellery"* and rule 3 ordered the model to say so - for every product, whatever it was. Left over from when the shop sold only jewellery, and against the rule in CLAUDE.md that nothing in the frame may name a category. **Live effect: 19 products were on the site announcing they were imitation jewellery, including a Laptop Backpack 25L, a 65W GaN charger, Wireless Over-Ear Headphones, a Banarasi Silk Saree and Leather Formal Derby shoes.** Caught by reading the drafts before `--apply`, not by a test. Fix: the prompt now reads its rules from `config/listingTemplates.js` - `mustSay` (jewellery only), each category's own `neverClaim`, and occasion language that fits the product; the frame says "marketplace in Jaipur" and names no category. The draft script populates `category.parentCategory`, without which every product resolved to `general` and jewellery would have quietly LOST its required line. New `--wrong` flag redrafts only the contradictions instead of all 53. 11 tests on the prompt itself (no quota, no flake). Catalogue after: 53 products, 0 boilerplate, 19 claiming imitation jewellery and all 19 genuinely jewellery, 0 jewellery missing it. | ✅ |
 
 | 2.73 | ~~**Audit the two sellers' live listings**~~ ✅ audited 26 Sep 2026, `node scripts/audit-listings.js` (read-only, public API, no credentials - production is a different database and the laptop has no connection to it because the read-only Atlas user `smp_read` was never created; see below). **28 live products, no blockers.** Nothing is broken or misleading. What the numbers actually say: **Charming Jewels (Mummy, 6) is the better data entry** - 2.8 photographs each, highlights, search words and the full jewellery facts (plating, stone type, closure, set contents, length) filled on every one, descriptions 77+ words. **All in one (Rahul, 22) is thin** - 1.1 photographs each, 20 of 22 with a single photograph, 21 of 22 with no weight. Ranked by what it costs us: (1) **weight missing on 24 of 28** - every courier quote for them is a guess and we absorb the difference, which is money, not tidiness; (2) **20 single-photograph listings** - the largest conversion lever on the page; ~~(3) brand spelt two ways on the house shop~~ **✅ fixed on production 26 Sep** - `backend/fixSellerBrand.js --fill-empty --apply` run on the box: 3 case fixes, 2 empty filled, and the live feed now sends one brand, `"Charming Jewels"` 6x, where it used to send two spellings. The empties were filled because the feed was ALREADY sending the shop name for them, so the database disagreed with what Google was being told; (4) 18 missing a template attribute (mostly electronics `warranty`); (5) FAQs absent on 27 - that is the field an AI answer quotes, so it is the AEO gap specifically. Feeds verified against the live XML: every item carries a brand, all 22 of Rahul's send `identifier_exists=no` correctly, and `google_product_category` is varied and right (Jewelry > Necklaces, Clothing > Pants, Toys > Remote Control Toys). **Not fixed on purpose** - most of it is the sellers' own work and overwriting it silently is the wrong move. Rajat decides what to ask them for. | ✅ audited |
@@ -370,16 +372,55 @@ synonyms collection (jhumka/jhumki/झुमका), Gemini query → filters.
   Console join so the correction can carry "seen 12 times in searches that
   reached your shop".
 
-  **Also open, small:** `components/ui/picker.jsx` is not translated - its
-  strings ("remove one first", "Did you mean", the count line) stay English
-  when the panel is switched to Hindi. Pre-existing, but Mummy uses that
-  switch.
+  ~~**Also open, small:** `components/ui/picker.jsx` is not translated~~
+  ✅ 28 Sep 2026 - all fourteen of its own sentences go through `t()` now
+  ("Did you mean", "remove one first", "{n} is a good number", the chip and
+  Clear labels), with Hindi and Hinglish for each. Callers always passed a
+  translated placeholder; what the component wrote itself never followed.
 
-  **Scheduled: next session.** Rajat chose "next session, properly" over a
-  quick version - the coach needs the gate, a reference pass, and backend work
-  (joining Search Console queries and `SearchLog` into one evidence lookup
-  behind a near-miss check). Building it half-way would print exactly the kind
-  of invented confidence this feature exists to remove.
+  **Built 28 Sep 2026, and smaller than it looked.** The gate: goal =
+  liquidity and seller retention (a listing with no search words is a listing
+  nobody finds); the research above already named the reference (Etsy, not
+  Amazon - correct the spelling, never store it); what breaks otherwise = the
+  field stays empty out of spelling doubt.
+
+  The backend lookup this row asked for turned out to exist already:
+  `utils/googleReadiness.js` `keywordEvidence` has joined Search Console,
+  `SearchLog`, India-wide demand and the synonym family into one ranked list
+  since plan 2.32. What was missing was the MATCHER, and the honest way to
+  find out what was wrong with it was to run it against the 600 real phrases
+  the weekly job has stored. Two failures, neither guessable from the code:
+
+  - a TRANSPOSITION cost two edits, so "jhumak" for "jhumka" - the commonest
+    typo there is - fell outside a six-letter word's budget. Damerau scores
+    it one.
+  - the briefs hold "earrings" and not "earring", so "earing" was two edits
+    from anything written down. Indexing the crude singular beside each word
+    fixed it WITHOUT widening the edit budget, and widening the budget is the
+    change that starts "correcting" words that were already right.
+
+  Measured on those 600 phrases: **9 of 10 real misspellings corrected,
+  including Rajat's own "artifcial", and 0 of 10 correctly-spelt words
+  touched.** The second number is the one that matters - missing a
+  misspelling costs one word, but telling a seller they are wrong about their
+  own trade costs the feature.
+
+  `web/src/lib/searchWordCoach.js` holds it, tested from
+  `backend/tests/searchWordCoach.test.mjs` across the boundary (25 tests) -
+  the same arrangement as `lib/validate.js`, because a copy would drift.
+  Candidates are ranked by which KIND of evidence is behind them, not by
+  which number is biggest, and a word somebody wrote beats a stem we derived.
+  No evidence means no sentence: `evidenceLine` returns '' rather than
+  dressing a zero up.
+
+  **Still open, and it waits on traffic rather than on code:** the correction
+  can only say "seen 12 times in searches that reached your shop" once
+  Search Console has queries for this shop to join, and today it has almost
+  none. `keywordEvidence` already reaches those rows the moment they exist;
+  what is not built is a free per-form endpoint to carry them into the field
+  before the seller presses the AI button. Worth building when there is
+  traffic to put in it, and not before - an evidence line with nothing behind
+  it is the invented confidence this feature exists to remove.
 
 ### 3b. A page per product: "how is this listing doing" (Rajat's idea, 27 Sep 2026)
 

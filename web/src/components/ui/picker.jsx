@@ -4,6 +4,8 @@ import * as React from "react";
 import { Combobox } from "@base-ui/react/combobox";
 import { cn } from "cn";
 import { Check, ChevronDown, Lightbulb, Plus, X } from "lucide-react";
+import { useT } from "@/lib/i18n";
+import { coachWord, lexiconFrom } from "@/lib/searchWordCoach";
 
 /**
  * Picker - ONE control for "choose from a list", however long the list is.
@@ -63,42 +65,24 @@ const same = (a, b) => String(a).trim().toLowerCase() === String(b).trim().toLow
  * has ever typed here goes in as written, which is the honest outcome: the
  * full coach with a real lexicon is WHAT-IS-LEFT §3.
  */
-const distance = (a, b) => {
-  if (Math.abs(a.length - b.length) > 3) return 99;
-  let prev = [...Array(b.length + 1).keys()];
-  for (let i = 1; i <= a.length; i++) {
-    const row = [i];
-    for (let j = 1; j <= b.length; j++) {
-      row[j] = Math.min(prev[j] + 1, row[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
-    }
-    prev = row;
-  }
-  return prev[b.length];
-};
-
-/** The closest known word to what was typed, if it is close enough to mean it. */
-const nearMiss = (typed, words) => {
-  const t = String(typed).trim().toLowerCase();
-  // Under five letters almost everything is within one edit of something.
-  if (t.length < 5) return null;
-  let best = null;
-  for (const w of words) {
-    const word = String(w).toLowerCase();
-    if (word === t) return null; // typed exactly - nothing to correct
-    // Compare against each word of a phrase too, so "artifcial" can find
-    // "artificial jewellery" and "necklase" can find "necklace set".
-    const parts = [word, ...word.split(/\s+/)];
-    for (const part of parts) {
-      if (part.length < 5) continue;
-      const d = distance(t, part);
-      // One edit for a short word, two once it is long enough that two typos
-      // are still obviously the same word.
-      const allowed = t.length >= 8 ? 2 : 1;
-      if (d > 0 && d <= allowed && (!best || d < best.d)) best = { word, d };
-    }
-  }
-  return best?.word || null;
-};
+/*
+ * THE MATCHER MOVED OUT (28 Sep 2026)
+ *
+ *   This file used to hold its own Levenshtein and its own `nearMiss`. They
+ *   were the honest half of the search-word coach (plan §4.63) and they were
+ *   beaten by real data: run against the 600 phrases the weekly market-brief
+ *   job has actually stored, plain Levenshtein scored a TRANSPOSITION as two
+ *   edits - so "jhumak" for "jhumka", the commonest typo there is, fell
+ *   outside a six-letter word's budget - and the lexicon holds "earrings"
+ *   and not "earring", so "earing" was two edits from anything written down.
+ *
+ *   `lib/searchWordCoach` is Damerau, indexes the crude singular beside each
+ *   word, and ranks candidates by which KIND of evidence is behind them
+ *   rather than by which number is biggest. It lives in lib/ because
+ *   `backend/tests/searchWordCoach.test.mjs` imports it - the same
+ *   arrangement as lib/validate.js, and for the same reason: judgement like
+ *   this has to be held to examples, and a copy of it would drift.
+ */
 
 /*
  * ENTER inside this field means "that one", never "save the listing" (24 Sep
@@ -205,6 +189,15 @@ export function Picker({
   'aria-label': ariaLabel,
 }) {
   const [query, setQuery] = React.useState('');
+
+  /*
+   * The panel has a language switch and Mummy uses it, but every sentence
+   * this component writes itself was baked in English - "remove one first",
+   * "Did you mean", the count line. Callers already pass a translated
+   * placeholder and hint; the rest never followed (WHAT-IS-LEFT §3).
+   */
+  const t = useT();
+
   const chosen = multiple ? asArray(value) : value || '';
   const count = multiple ? chosen.length : 0;
   const full = multiple && max != null && count >= max;
@@ -214,15 +207,26 @@ export function Picker({
   const isNew = allowCustom && typed.length > 0 && !options.some((o) => same(o, typed));
   // Only worth asking about a word being invented; picking one off the list
   // is not a typo.
-  const meant = isNew ? nearMiss(typed, options) : null;
+  /*
+   * `hit.from` is offered, not `hit.correction`: the phrase the word was
+   * found in is what the field has always put in, and a phrase is the better
+   * search word anyway - Etsy's own guidance is multi-word tags. The single
+   * corrected word is what the matcher REACHED it by, and it is not what the
+   * seller gets.
+   */
+  const hit = isNew ? coachWord(typed, lexiconFrom(options, evidence)) : null;
+  const meant = hit?.from || null;
   // "4.4k a month" rather than "4,400 searches a month in India": this sits
   // on one line under a correction, on a 390px phone.
   const perMonth = (n) => (n >= 1000 ? `${(n / 1000).toFixed(n >= 10000 ? 0 : 1).replace(/\.0$/, '')}k` : String(n));
   const why = (word) => {
     const e = evidence?.get?.(word);
-    if (e?.monthly) return `${perMonth(e.monthly)} people in India search this every month`;
+    if (e?.monthly) return t('{n} people in India search this every month', { n: perMonth(e.monthly) });
     if (e?.note) return e.note;
-    return null;
+    // The matcher's own sentence, when the evidence Map has nothing - it
+    // names WHERE the number came from, which is the difference between
+    // advice a seller can weigh and a machine telling them they are wrong.
+    return hit?.evidence || null;
   };
   // The invented value rides in the list as an ordinary item; the renderer is
   // what marks it "Add …". Base UI's own filter keeps it, since it matches the
@@ -306,7 +310,7 @@ export function Picker({
                       {v}
                       <Combobox.ChipRemove
                         className="grid size-5 place-items-center rounded-full text-muted-foreground hover:bg-primary/20 hover:text-foreground"
-                        aria-label={`Remove ${v}`}
+                        aria-label={t('Remove {v}', { v })}
                       >
                         <X className="size-3" aria-hidden />
                       </Combobox.ChipRemove>
@@ -341,7 +345,7 @@ export function Picker({
               {chosen ? (
                 <Combobox.Clear
                   className="ml-auto grid size-6 shrink-0 place-items-center rounded-full text-muted-foreground hover:bg-accent hover:text-foreground"
-                  aria-label="Clear"
+                  aria-label={t('Clear')}
                 >
                   <X className="size-4" aria-hidden />
                 </Combobox.Clear>
@@ -368,18 +372,18 @@ export function Picker({
                 >
                   <Lightbulb className="size-4 shrink-0 text-amber-600 dark:text-amber-400" aria-hidden />
                   <span className="min-w-0">
-                    Did you mean <b>{meant}</b>?
+                    {t('Did you mean')} <b>{meant}</b>?
                     {/* The reason, when we have one that can be checked.
                         Without it the old sentence stays - it is vague, but
                         it is not a number we cannot show. */}
                     <span className="block text-[0.7rem] text-muted-foreground">
-                      {why(meant) || 'People really type this one.'}
+                      {why(meant) || t('People really type this one.')}
                     </span>
                   </span>
                 </button>
               )}
               <Combobox.Empty className="px-2 py-3 text-sm text-muted-foreground">
-                {allowCustom ? 'Type it and press Enter to add it.' : 'Nothing matches that.'}
+                {allowCustom ? t('Type it and press Enter to add it.') : t('Nothing matches that.')}
               </Combobox.Empty>
               <Combobox.List>
                 {(item) => {
@@ -405,12 +409,12 @@ export function Picker({
                         )}
                       </span>
                       <span className="min-w-0 flex-1">
-                        {fresh ? <>Add &ldquo;{item}&rdquo;</> : item}
+                        {fresh ? <>{t('Add')} &ldquo;{item}&rdquo;</> : item}
                       </span>
                       {/* A row that cannot be taken has to say so where the
                           finger is, not in a line under the field nobody is
                           looking at while the list is open. */}
-                      {blocked && <span className="shrink-0 text-[0.65rem] text-muted-foreground">remove one first</span>}
+                      {blocked && <span className="shrink-0 text-[0.65rem] text-muted-foreground">{t('remove one first')}</span>}
                     </Combobox.Item>
                   );
                 }}
@@ -427,15 +431,15 @@ export function Picker({
           {max != null && (
             <>
               {count}/{max}
-              {full ? ' · remove one to add another' : ''}
+              {full ? ` · ${t('remove one to add another')}` : ''}
             </>
           )}
           {/* The soft target never says "x/13", because that reads as a wall.
               It says how many there are, and what the number to aim at is. */}
           {softMax != null && (
             <>
-              {count} {count === 1 ? 'word' : 'words'}
-              {over ? ` · ${softMax} is usually enough, but your own words are always worth adding` : ` · ${softMax} is a good number`}
+              {count} {count === 1 ? t('word') : t('words')}
+              {over ? ` · ${t('{n} is usually enough, but your own words are always worth adding', { n: softMax })}` : ` · ${t('{n} is a good number', { n: softMax })}`}
             </>
           )}
           {(max != null || softMax != null) && allowCustom && !full ? ' · ' : ''}
