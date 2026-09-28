@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import AgreementConsent from '@/components/seller/AgreementConsent';
 import Turnstile, { turnstileEnabled } from '@/components/common/Turnstile';
+import { validateRegister, isValid, RULES } from '@/lib/validate';
 
 /**
  * Creating an account, in two steps on one page.
@@ -32,8 +33,19 @@ export default function RegisterForm({ next = '/', verifyEmail = '' }) {
   const [state, setState] = useState({ status: 'idle' });
   // The bot check's token (plan 2.28); '' until the widget passes, and the button waits for it.
   const [turnstileToken, setTurnstileToken] = useState('');
+  /*
+   * Shown only after the first attempt. Marking a name too short while the
+   * person is still typing the second letter is the form arguing with them;
+   * `lib/validate` holds the rules, the same ones the API enforces.
+   */
+  const [errors, setErrors] = useState({});
 
-  const set = (key) => (e) => setForm({ ...form, [key]: e.target.value });
+  const set = (key) => (e) => {
+    setForm({ ...form, [key]: e.target.value });
+    // Once a field has been called wrong, it stops being wrong the moment it
+    // is right - waiting for another submit to clear it reads as ignoring them.
+    if (errors[key]) setErrors({ ...errors, [key]: undefined });
+  };
 
   const post = async (path, body) => {
     const res = await fetch(`${apiBase}${path}`, {
@@ -49,6 +61,18 @@ export default function RegisterForm({ next = '/', verifyEmail = '' }) {
 
   const register = async (e) => {
     e.preventDefault();
+
+    const found = validateRegister(form);
+    if (!isValid(found)) {
+      setErrors(found);
+      setState({ status: 'idle' });
+      // The first broken box gets the cursor, so a long form does not have to
+      // be hunted through on a phone.
+      document.getElementById(Object.keys(found)[0])?.focus();
+      return;
+    }
+    setErrors({});
+
     setState({ status: 'sending' });
     try {
       const data = await post('/auth/register', { ...form, turnstileToken });
@@ -137,13 +161,32 @@ export default function RegisterForm({ next = '/', verifyEmail = '' }) {
     );
   }
 
+  /*
+   * One sentence under one box, in the words the API would have used for the
+   * same mistake - see lib/validate. The browser's own bubble is turned off
+   * (`noValidate`) so there is never a second, differently worded complaint
+   * about the field a person has already been told about.
+   */
+  const problem = (field) =>
+    errors[field] ? (
+      <p id={`${field}-error`} className="mt-1 text-sm text-destructive">
+        {errors[field]}
+      </p>
+    ) : null;
+
+  const boxProps = (field) => ({
+    'aria-invalid': errors[field] ? true : undefined,
+    'aria-describedby': errors[field] ? `${field}-error` : undefined,
+  });
+
   return (
-    <form onSubmit={register} className="space-y-4">
+    <form onSubmit={register} className="space-y-4" noValidate>
       <div>
         <label htmlFor="name" className="text-sm font-medium">
           Name
         </label>
-        <Input id="name" required autoComplete="name" value={form.name} onChange={set('name')} className={input} />
+        <Input id="name" required autoComplete="name" value={form.name} onChange={set('name')} className={input} {...boxProps('name')} />
+        {problem('name')}
       </div>
 
       <div>
@@ -158,7 +201,9 @@ export default function RegisterForm({ next = '/', verifyEmail = '' }) {
           value={form.email}
           onChange={set('email')}
           className={input}
+          {...boxProps('email')}
         />
+        {problem('email')}
       </div>
 
       <div>
@@ -169,12 +214,14 @@ export default function RegisterForm({ next = '/', verifyEmail = '' }) {
           id="password"
           type="password"
           required
-          minLength={6}
+          minLength={RULES.password.min}
           autoComplete="new-password"
           value={form.password}
           onChange={set('password')}
           className={input}
+          {...boxProps('password')}
         />
+        {problem('password')}
       </div>
 
       {/*

@@ -2997,6 +2997,24 @@ Verified in the browser: three shopper visits count three; the seller's own
 two visits count zero; one page load fires exactly one beacon. 1342 backend
 tests green.
 
+**The three that were missing, added 28 Sep 2026.** Etsy's Stats is views, a
+trend, traffic sources and favourites; ours had the first one only.
+
+- **The trend.** `summariseViews` returns a point for every day in the
+  window, the empty ones included - drawn from only the days that HAVE rows,
+  two spikes with a quiet week between them read as one flat, healthy line,
+  which is a lie told with true numbers. One `<polyline>` over a fixed
+  viewBox: no chart library for twenty-eight numbers, and it scales to any
+  width with no resize listener. The scale starts at zero.
+- **Where the visits came from.** Five bars - shared · search · our own pages
+  · typed · elsewhere. The bucket is decided **in the browser** and only the
+  word is sent, so the referring URL never reaches us; the API takes it
+  through an allow-list rather than sanitising it. Views from before today
+  have no bucket, and the page says "of 40 visits, 12 are split here" rather
+  than drawing the rest as direct. Bars, not a pie, because five shares are
+  read off a row of bars in one glance.
+- **Saved.** The number that explains views without sales.
+
 ### 4.63 The cap was refusing the seller's own knowledge (27 Sep 2026)
 
 Rajat tested the Search words field the way a seller would, and found the

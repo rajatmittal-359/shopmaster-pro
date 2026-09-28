@@ -36,6 +36,16 @@ const softUserId = (req) => {
 };
 
 /**
+ * The five buckets a visit can fall into, and the only five words accepted
+ * from the browser. An allow-list, not a sanitiser: anything else becomes
+ * `direct`, so a crafted body can add noise to one number and can never put
+ * an arbitrary string - a URL, a script, somebody's session id - into the
+ * database or into a seller's report page.
+ */
+const SOURCES = ['direct', 'site', 'search', 'social', 'other'];
+const bucket = (from) => (SOURCES.includes(String(from)) ? String(from) : 'direct');
+
+/**
  * Count one opening of a product page. Never throws: a beacon is not worth an
  * error anybody sees. Returns nothing - the caller answers 204 either way, so
  * a shopper can never tell whether they were counted.
@@ -53,7 +63,13 @@ const countView = async (productId, req) => {
 
     await ProductView.updateOne(
       { productId: product._id, day: istDay() },
-      { $inc: { count: 1 }, $setOnInsert: { sellerId: product.sellerId } },
+      {
+        // Both in one write: the total stays the total whatever happens to
+        // the split, so a bucket that is ever wrong cannot make "page opened"
+        // wrong as well.
+        $inc: { count: 1, [`sources.${bucket(req?.body?.from)}`]: 1 },
+        $setOnInsert: { sellerId: product.sellerId },
+      },
       { upsert: true }
     );
   } catch {
@@ -70,12 +86,41 @@ const countView = async (productId, req) => {
 const summariseViews = (rows = [], days = 28, now = new Date()) => {
   const from = istDay(new Date(now.getTime() - (days - 1) * 86400000));
   const total = rows.reduce((n, r) => n + (r.count || 0), 0);
-  const recent = rows.filter((r) => r.day >= from).reduce((n, r) => n + (r.count || 0), 0);
-  return { total, recent, days };
+  const inWindow = rows.filter((r) => r.day >= from);
+  const recent = inWindow.reduce((n, r) => n + (r.count || 0), 0);
+
+  /*
+   * EVERY DAY IN THE WINDOW, INCLUDING THE EMPTY ONES (28 Sep 2026)
+   *
+   *   A trend line drawn from the rows that exist is a lie about the shape:
+   *   three views on Monday and three on Friday with nothing between reads
+   *   as a flat, healthy line instead of two spikes. Days with no row are
+   *   zeroes, and a zero is the fact.
+   */
+  const daily = [];
+  for (let i = days - 1; i >= 0; i -= 1) {
+    const day = istDay(new Date(now.getTime() - i * 86400000));
+    daily.push({ day, count: inWindow.find((r) => r.day === day)?.count || 0 });
+  }
+
+  /*
+   * The split covers the WINDOW, not all time, for the same reason the trend
+   * line does: what a seller can still act on. Rows written before 28 Sep
+   * have a total and no split at all, so `counted` says how many of the
+   * window's views were bucketed - the page prints the split over that
+   * number rather than implying the rest were direct.
+   */
+  const sources = { direct: 0, site: 0, search: 0, social: 0, other: 0 };
+  for (const row of inWindow) {
+    for (const key of Object.keys(sources)) sources[key] += row.sources?.[key] || 0;
+  }
+  const counted = Object.values(sources).reduce((a, b) => a + b, 0);
+
+  return { total, recent, days, daily, sources, counted };
 };
 
-/** Total ever, and the last `days` days, for one product. */
+/** Total ever, the last `days` days, the day-by-day line and the split. */
 const viewsFor = async (productId, days = 28) =>
-  summariseViews(await ProductView.find({ productId }).select('day count').lean(), days);
+  summariseViews(await ProductView.find({ productId }).select('day count sources').lean(), days);
 
 module.exports = { countView, viewsFor, summariseViews, istDay };

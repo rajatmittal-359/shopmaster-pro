@@ -64,6 +64,20 @@ exports.productReport = async (req, res) => {
 
     const views = await viewsFor(productId, 28);
 
+    /*
+     * FAVOURITES, THE THIRD NUMBER ETSY'S PAGE IS MADE OF (28 Sep 2026)
+     *
+     *   A saved listing is the strongest signal short of an order: somebody
+     *   meant to come back. It is also the number that explains a listing
+     *   with views and no sales - saved eleven times and never bought reads
+     *   as a price problem, not a photograph problem.
+     *
+     *   One document per shopper holds their whole list, so this is a count
+     *   of PEOPLE, which is what the word means. The index on
+     *   `items.productId` is what keeps it from walking every wishlist.
+     */
+    const favourites = await require('../models/Wishlist').countDocuments({ 'items.productId': productId });
+
     // No caching at all. The first version used max-age=120 and the page
     // showed 0 views while the database already held one - a report a seller
     // refreshes to watch a number move must never answer from yesterday.
@@ -83,6 +97,11 @@ exports.productReport = async (req, res) => {
       shop: shop ? { name: shop.businessName, path: shop.slug ? `/${shop.slug}` : `/sellers/${sellerId}` } : null,
       sales: sales || { units: 0, revenue: 0, orders: 0, lastSoldAt: null, firstSoldAt: null },
       views,
+      favourites,
+      // The split started on 28 Sep, a day after the counter itself. A view
+      // from the 27th is in `views.total` and in no bucket, and the page
+      // says which window the split covers rather than quietly dropping it.
+      sourcesSince: '2026-09-28',
       // The counter started on 27 Sep 2026; anything listed before that has
       // views only from then. The page prints this rather than implying the
       // number covers the listing's whole life.

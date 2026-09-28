@@ -29,6 +29,33 @@ const productViewSchema = new mongoose.Schema(
     sellerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     day: { type: String, required: true }, // YYYY-MM-DD, IST
     count: { type: Number, default: 0 },
+
+    /*
+     * WHERE THOSE VIEWS CAME FROM (28 Sep 2026)
+     *
+     *   Etsy's per-listing Stats is mostly Traffic Sources, and it is the
+     *   half a seller can act on: a forward that worked is worth repeating,
+     *   search words that bring nobody are worth rewriting. `count` alone
+     *   cannot tell them which.
+     *
+     *   Five named numbers rather than a Map or a free-text string, because
+     *   the set is closed and a schema that accepts anything is a schema that
+     *   will eventually hold a URL. `web/src/components/product/ViewPing`
+     *   decides the bucket in the browser and sends ONLY the word - the
+     *   referring address never reaches us at all, so there is nothing here
+     *   to leak or to scrub later.
+     *
+     *   They sum to `count` for rows written after today; older rows have
+     *   the total and zeroes, which the report page states rather than
+     *   drawing as "100% direct".
+     */
+    sources: {
+      direct: { type: Number, default: 0 }, // typed, bookmarked, or a link that sent no referrer
+      site: { type: Number, default: 0 }, // our own shop, search or category pages
+      search: { type: Number, default: 0 }, // Google and the other engines
+      social: { type: Number, default: 0 }, // WhatsApp, Instagram, Facebook and the rest
+      other: { type: Number, default: 0 }, // a real referrer that is none of the above
+    },
   },
   { timestamps: false, versionKey: false }
 );

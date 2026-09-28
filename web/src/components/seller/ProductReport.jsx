@@ -43,6 +43,97 @@ import SharePack from '@/components/seller/SharePack';
 const rupees = (n) => `₹${Number(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
 const onDay = (d) => new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 
+/*
+ * THE LINE, AND WHY IT IS DRAWN BY HAND (28 Sep 2026)
+ *
+ *   Twenty-eight numbers. A charting library for that is a download a seller
+ *   on Jaipur mobile data pays for and a dependency to keep current; the
+ *   whole thing is one <polyline> over a fixed viewBox, which scales to any
+ *   width without a resize listener.
+ *
+ *   The scale starts at zero and the busiest day is the top. A line that
+ *   rescales to its own minimum makes three views look like a good week, and
+ *   the point of the shape is to tell a good week from a quiet one.
+ */
+function Trend({ daily = [], label, t }) {
+  const peak = Math.max(1, ...daily.map((d) => d.count));
+  if (daily.length < 2) return null;
+
+  const W = 100;
+  const H = 28;
+  const points = daily
+    .map((d, i) => `${((i / (daily.length - 1)) * W).toFixed(2)},${(H - (d.count / peak) * H).toFixed(2)}`)
+    .join(' ');
+  const busiest = daily.reduce((a, b) => (b.count > a.count ? b : a), daily[0]);
+
+  return (
+    <div>
+      <svg
+        viewBox={`0 0 ${W} ${H}`}
+        preserveAspectRatio="none"
+        className="h-12 w-full text-brand-ink"
+        role="img"
+        aria-label={label}
+      >
+        <polyline
+          points={points}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1"
+          strokeLinejoin="round"
+          strokeLinecap="round"
+          vectorEffect="non-scaling-stroke"
+        />
+      </svg>
+      <div className="mt-1 flex justify-between text-xs text-muted-foreground">
+        <span>{onDay(daily[0].day)}</span>
+        {busiest.count > 0 && (
+          <span className="tabular-nums">{t('{n} on {d}', { n: busiest.count, d: onDay(busiest.day) })}</span>
+        )}
+        <span>{onDay(daily[daily.length - 1].day)}</span>
+      </div>
+    </div>
+  );
+}
+
+/*
+ * WHERE THE VISITS CAME FROM - Etsy's Traffic Sources, and the part of their
+ * per-listing Stats a seller actually acts on. Bars rather than a pie: five
+ * shares are read off a row of bars in one glance and off a pie in none.
+ */
+const SOURCE_LABEL = {
+  social: 'Shared - WhatsApp, Instagram',
+  search: 'Google and other search',
+  site: 'Our own shop pages',
+  direct: 'Typed or tapped a link',
+  other: 'Somewhere else',
+};
+
+function Sources({ sources = {}, counted = 0, t }) {
+  if (!counted) return null;
+  const rows = Object.entries(sources)
+    .filter(([, n]) => n > 0)
+    .sort((a, b) => b[1] - a[1]);
+
+  return (
+    <ul className="mt-2 space-y-2">
+      {rows.map(([key, n]) => (
+        <li key={key} className="text-sm">
+          <div className="flex items-baseline justify-between gap-3">
+            <span>{t(SOURCE_LABEL[key] || key)}</span>
+            <span className="tabular-nums text-muted-foreground">
+              {n} · {Math.round((n / counted) * 100)}%
+            </span>
+          </div>
+          <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-muted">
+            <div className="h-full rounded-full bg-brand-ink" style={{ width: `${(n / counted) * 100}%` }} />
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 function Stat({ label, value, note }) {
   return (
     <div>
@@ -93,7 +184,7 @@ export default function ProductReport({ productId }) {
   if (error) return <p className="text-sm text-destructive">{error}</p>;
   if (!data) return <Skeleton className="h-64 w-full" />;
 
-  const { sales, views, viewsSince } = data;
+  const { sales, views, viewsSince, favourites = 0, sourcesSince } = data;
   const categoryLabel = product.category?.name;
   const ring = score >= 80 ? '#059669' : score >= 50 ? '#d97706' : '#dc2626';
   const tone = score >= 80 ? 'text-emerald-700 dark:text-emerald-300' : score >= 50 ? 'text-amber-700 dark:text-amber-300' : 'text-destructive';
@@ -134,7 +225,7 @@ export default function ProductReport({ productId }) {
 
       {/* MONEY AND VISITORS - the reason a seller opens this page at all. */}
       <PanelCard title={t('What this listing has done')}>
-        <div className="grid grid-cols-2 gap-5 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-5 sm:grid-cols-5">
           <Stat label={t('Sold')} value={sales.units} note={sales.orders ? t('in {n} orders', { n: sales.orders }) : t('no orders yet')} />
           <Stat label={t('Earned')} value={rupees(sales.revenue)} note={t('at the price paid')} />
           <Stat
@@ -142,8 +233,46 @@ export default function ProductReport({ productId }) {
             value={views.recent}
             note={views.total > views.recent ? t('last 28 days · {n} in all', { n: views.total }) : t('last 28 days')}
           />
+          {/*
+            Saved is the strongest signal short of an order - somebody meant to
+            come back. It is also what explains views without sales: saved
+            eleven times and never bought is a price, not a photograph.
+          */}
+          <Stat
+            label={t('Saved')}
+            value={favourites}
+            note={favourites ? t('people kept it') : t('nobody yet')}
+          />
           <Stat label={t('Stock left')} value={product.stock} note={product.stock === 0 ? t('nothing to sell') : null} />
         </div>
+
+        {views.daily?.length > 1 && (
+          <div className="mt-5 border-t pt-4">
+            <p className="text-sm font-medium">{t('Visits, day by day')}</p>
+            <div className="mt-2">
+              <Trend daily={views.daily} label={t('Visits over the last 28 days')} t={t} />
+            </div>
+          </div>
+        )}
+
+        {views.counted > 0 && (
+          <div className="mt-5 border-t pt-4">
+            <p className="text-sm font-medium">{t('Where those visits came from')}</p>
+            <Sources sources={views.sources} counted={views.counted} t={t} />
+            {views.counted < views.recent && (
+              // Never drawn as "the rest were direct" - they were simply
+              // opened before we started splitting them.
+              <p className="mt-2 text-xs text-muted-foreground">
+                {t('Of {n} visits, {c} are split here - we began recording this on {d}.', {
+                  n: views.recent,
+                  c: views.counted,
+                  d: onDay(sourcesSince || viewsSince),
+                })}
+              </p>
+            )}
+          </div>
+        )}
+
         <p className="mt-4 text-xs text-muted-foreground">
           {sales.lastSoldAt ? t('Last sold {d}. ', { d: onDay(sales.lastSoldAt) }) : ''}
           {t('Cancelled items are not counted. Your own visits and known bots are not counted as page opens; counting began {d}.', { d: onDay(viewsSince) })}

@@ -29,6 +29,35 @@ import { apiBase } from '@/lib/api';
  */
 const pinged = new Set();
 
+/*
+ * WHERE THE VISIT CAME FROM (28 Sep 2026)
+ *
+ *   Etsy's per-listing Stats is mostly Traffic Sources, and it is the part a
+ *   seller acts on: "the WhatsApp forward worked, the search words did not".
+ *   Our report page had views with no such split (WHAT-IS-LEFT 3b).
+ *
+ *   The BUCKET is worked out here and only the bucket is sent - one of five
+ *   words. The referring URL never leaves the browser, so nothing about where
+ *   a shopper had been reaches our database or our logs, and the seller still
+ *   learns the only thing they can act on.
+ */
+const SOCIAL = /(^|\.)(whatsapp|instagram|facebook|fb|m\.me|t\.co|twitter|x|pinterest|youtube|linkedin|threads|snapchat|telegram)\./;
+const SEARCH = /(^|\.)(google|bing|duckduckgo|yahoo|yandex|ecosia|brave|search\.marginalia)\./;
+
+const cameFrom = () => {
+  try {
+    const ref = document.referrer;
+    if (!ref) return 'direct'; // typed, bookmarked, or a link with no referrer - a WhatsApp tap often lands here
+    const host = new URL(ref).hostname.toLowerCase();
+    if (host === window.location.hostname) return 'site'; // our own shop, search or a category page
+    if (SEARCH.test(`${host}.`)) return 'search';
+    if (SOCIAL.test(`${host}.`)) return 'social';
+    return 'other';
+  } catch {
+    return 'direct';
+  }
+};
+
 export default function ViewPing({ productId }) {
   useEffect(() => {
     if (!productId || pinged.has(productId)) return;
@@ -40,7 +69,8 @@ export default function ViewPing({ productId }) {
       // counted; X-Requested-With because the API refuses cookie-carrying
       // writes without it (lib/client).
       credentials: 'include',
-      headers: { 'X-Requested-With': 'fetch' },
+      headers: { 'X-Requested-With': 'fetch', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ from: cameFrom() }),
       keepalive: true,
     }).catch(() => {});
   }, [productId]);

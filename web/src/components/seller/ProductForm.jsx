@@ -6,6 +6,7 @@ import { Sparkles, Loader2, Cpu, X } from 'lucide-react';
 import { authedFetch } from '@/lib/client';
 import { toast } from 'sonner';
 import { getCategories } from '@/lib/api';
+import { validateProduct } from '@/lib/validate';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -602,6 +603,39 @@ export default function ProductForm({ productId, copyFromId }) {
     // passes and "abcd" does not.
     if (!asDraft && !(toNumber(form.price) > 0)) return refuse('Put a selling price on it.', 'price');
     if (!asDraft && toNumber(form.stock) === null) return refuse('Say how many you have.', 'stock');
+
+    /*
+     * AND THEN THE RULES THE DATABASE ITSELF HOLDS (28 Sep 2026)
+     *
+     *   The checks above are about a field being EMPTY, and they are worded
+     *   for a seller. `lib/validate` is the other half: the shapes and the
+     *   ranges - a name under 3 characters, a description over 1000, half a
+     *   unit of stock, a price above the MRP, a 31 kg parcel. Those used to
+     *   reach the server and come back a 400 with one line above the button
+     *   and no card opened, which on a form of eight folded sections is a
+     *   hunt.
+     *
+     *   Same module, same words as the API: see the parity block in
+     *   backend/tests/formValidation.test.mjs, which reads both sides and
+     *   goes red if they ever stop agreeing.
+     */
+    const CARD = {
+      name: 'name', description: 'words', category: 'category-card',
+      price: 'price', mrp: 'price', salePrice: 'price', stock: 'stock', weight: 'weight',
+    };
+    /*
+     * The description is measured AS IT IS SENT - rich-text HTML and all -
+     * because `body` below spreads `form` straight out and the model counts
+     * that same string. Stripping the tags here first was the drift this
+     * whole module exists to remove: a 990-character description with markup
+     * would have passed in the browser and been refused by the server. The
+     * check that the text is not merely empty markup is the separate one
+     * above, which does strip.
+     */
+    const broken = validateProduct(form, { draft: asDraft });
+    const first = Object.keys(broken)[0];
+    if (first) return refuse(broken[first], CARD[first]);
+
     setState({ status: 'saving' });
 
     /*

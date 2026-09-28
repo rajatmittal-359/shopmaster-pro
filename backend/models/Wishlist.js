@@ -31,6 +31,14 @@ const wishlistSchema = new mongoose.Schema(
 
 
 
+/*
+ * "How many people saved this?" - the per-product report asks it (28 Sep
+ * 2026) and one document holds a whole shopper's list, so without this the
+ * count walks every wishlist in the database. Cheap now with six accounts,
+ * and the kind of thing that is never noticed until it is slow.
+ */
+wishlistSchema.index({ 'items.productId': 1 });
+
 const Wishlist = mongoose.model('Wishlist', wishlistSchema);
 
 module.exports = Wishlist;

@@ -5,6 +5,7 @@ import { authedFetch } from '@/lib/client';
 import { apiBase } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { validateAddress, isValid, RULES } from '@/lib/validate';
 
 /**
  * Choosing where it goes, and adding a new one without leaving the page.
@@ -39,7 +40,12 @@ const EMPTY = {
   zipCode: '',
 };
 
-const PIN_OK = /^[1-9]\d{5}$/;
+/*
+ * The same regex the Address model validates with, imported rather than
+ * written out again - it used to be a second copy here, and a copy is the
+ * thing `backend/tests/formValidation.test.mjs` exists to stop.
+ */
+const PIN_OK = RULES.pin.pattern;
 
 /**
  * Asks India Post (/api/pincode) and the courier (/delivery) about a PIN code
@@ -62,6 +68,8 @@ export default function AddressPicker({ addresses, selectedId, onSelect, onAdded
   const [form, setForm] = useState(EMPTY);
   const [state, setState] = useState({ status: 'idle' });
   const [answer, setAnswer] = useState({ zip: '', status: 'idle' });
+  // Field → the one sentence to show under it; empty until they press save.
+  const [errors, setErrors] = useState({});
 
   useEffect(() => {
     if (!PIN_OK.test(form.zipCode)) return undefined;
@@ -80,11 +88,25 @@ export default function AddressPicker({ addresses, selectedId, onSelect, onAdded
   // What to show for the PIN typed right now: an answer for it, "looking" while it is on its way, nothing otherwise.
   const pin = answer.zip === form.zipCode ? answer : { status: PIN_OK.test(form.zipCode) ? 'looking' : 'idle' };
 
-  const set = (key) => (e) => setForm({ ...form, [key]: e.target.value });
+  const set = (key) => (e) => {
+    setForm({ ...form, [key]: e.target.value });
+    if (errors[key]) setErrors({ ...errors, [key]: undefined });
+  };
   const cannotSave = pin.status === 'unknown' || pin.serviceable === false;
 
   const save = async (e) => {
     e.preventDefault();
+
+    // Checked here in the words the API would use, so a refused address says
+    // which box is wrong instead of one red line above the button.
+    const found = validateAddress(form);
+    if (!isValid(found)) {
+      setErrors(found);
+      document.getElementById(Object.keys(found)[0])?.focus();
+      return;
+    }
+    setErrors({});
+
     setState({ status: 'saving' });
     try {
       const data = await authedFetch('/customer/addresses', { method: 'POST', body: form });
@@ -98,6 +120,19 @@ export default function AddressPicker({ addresses, selectedId, onSelect, onAdded
   };
 
   const field = 'mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring';
+
+  /* One sentence under one box, worded exactly as the API words it. */
+  const problem = (name) =>
+    errors[name] ? (
+      <p id={`${name}-error`} className="mt-1 text-xs text-destructive">
+        {errors[name]}
+      </p>
+    ) : null;
+
+  const boxProps = (name) => ({
+    'aria-invalid': errors[name] ? true : undefined,
+    'aria-describedby': errors[name] ? `${name}-error` : undefined,
+  });
 
   return (
     <section className="rounded-xl border border-border p-4">
@@ -135,7 +170,7 @@ export default function AddressPicker({ addresses, selectedId, onSelect, onAdded
           Add another address
         </Button>
       ) : (
-        <form onSubmit={save} className="mt-4 space-y-3">
+        <form onSubmit={save} className="mt-4 space-y-3" noValidate>
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
               <label htmlFor="label" className="text-sm">Name this address</label>
@@ -153,9 +188,14 @@ export default function AddressPicker({ addresses, selectedId, onSelect, onAdded
                   pattern="[6-9][0-9]{9}"
                   title="10 digits, starting 6-9"
                   value={form.phoneNumber}
-                  onChange={(e) => setForm({ ...form, phoneNumber: e.target.value.replace(/\D/g, '').slice(0, 10) })}
+                  onChange={(e) => {
+                    setForm({ ...form, phoneNumber: e.target.value.replace(/\D/g, '').slice(0, 10) });
+                    if (errors.phoneNumber) setErrors({ ...errors, phoneNumber: undefined });
+                  }}
+                  {...boxProps('phoneNumber')}
                 />
               </div>
+              {problem('phoneNumber')}
             </div>
           </div>
 
@@ -170,18 +210,25 @@ export default function AddressPicker({ addresses, selectedId, onSelect, onAdded
                 autoComplete="postal-code"
                 pattern="[1-9][0-9]{5}"
                 value={form.zipCode}
-                onChange={(e) => setForm({ ...form, zipCode: e.target.value.replace(/\D/g, '').slice(0, 6) })}
+                onChange={(e) => {
+                  setForm({ ...form, zipCode: e.target.value.replace(/\D/g, '').slice(0, 6) });
+                  if (errors.zipCode) setErrors({ ...errors, zipCode: undefined });
+                }}
                 className="mt-1"
-                aria-describedby="pinHelp"
+                aria-describedby={errors.zipCode ? 'zipCode-error' : 'pinHelp'}
+                aria-invalid={errors.zipCode ? true : undefined}
               />
+              {problem('zipCode')}
             </div>
             <div>
               <label htmlFor="city" className="text-sm">City / town</label>
-              <Input id="city" required value={form.city} onChange={set('city')} className="mt-1" autoComplete="address-level2" />
+              <Input id="city" required value={form.city} onChange={set('city')} className="mt-1" autoComplete="address-level2" {...boxProps('city')} />
+              {problem('city')}
             </div>
             <div>
               <label htmlFor="state" className="text-sm">State</label>
-              <Input id="state" required value={form.state} onChange={set('state')} className="mt-1" autoComplete="address-level1" />
+              <Input id="state" required value={form.state} onChange={set('state')} className="mt-1" autoComplete="address-level1" {...boxProps('state')} />
+              {problem('state')}
             </div>
           </div>
           <p id="pinHelp" aria-live="polite" className="min-h-5 text-xs">
@@ -198,11 +245,13 @@ export default function AddressPicker({ addresses, selectedId, onSelect, onAdded
 
           <div>
             <label htmlFor="street" className="text-sm">House / flat, building, street</label>
-            <Input id="street" required value={form.street} onChange={set('street')} className="mt-1" autoComplete="address-line1" placeholder="12, Shanti Niketan, MI Road" />
+            <Input id="street" required value={form.street} onChange={set('street')} className="mt-1" autoComplete="address-line1" placeholder="12, Shanti Niketan, MI Road" {...boxProps('street')} />
+            {problem('street')}
           </div>
           <div>
             <label htmlFor="landmark" className="text-sm">Landmark <span className="text-muted-foreground">(optional)</span></label>
-            <Input id="landmark" value={form.landmark} onChange={set('landmark')} className="mt-1" maxLength={80} placeholder="Near Hawa Mahal gate" />
+            <Input id="landmark" value={form.landmark} onChange={set('landmark')} className="mt-1" maxLength={RULES.landmark.max} placeholder="Near Hawa Mahal gate" {...boxProps('landmark')} />
+            {problem('landmark')}
           </div>
 
           <div className="flex items-center gap-3">

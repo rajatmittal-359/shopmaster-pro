@@ -56,7 +56,13 @@ describe('summariseViews - the window', () => {
   });
 
   it('counts a listing with no views at all as zero, not as missing', () => {
-    expect(summariseViews([], 28, NOW)).toEqual({ total: 0, recent: 0, days: 28 });
+    const v = summariseViews([], 28, NOW);
+    expect(v.total).toBe(0);
+    expect(v.recent).toBe(0);
+    expect(v.days).toBe(28);
+    // A new listing still gets a full line of zeroes to draw, not an empty one.
+    expect(v.daily).toHaveLength(28);
+    expect(v.counted).toBe(0);
   });
 
   it('never reports more in the window than in all time', () => {
@@ -71,5 +77,88 @@ describe('summariseViews - the window', () => {
     expect(istDay(new Date('2026-09-27T20:30:00Z'))).toBe('2026-09-28');
     const v = summariseViews([{ day: '2026-09-28', count: 4 }], 28, new Date('2026-09-28T20:30:00Z'));
     expect(v.recent).toBe(4);
+  });
+});
+
+/**
+ * THE TREND LINE AND THE SPLIT (28 Sep 2026)
+ *
+ *   Both are drawn, so both fail quietly when they are wrong: a line with the
+ *   empty days missing has the wrong SHAPE while every number on the page is
+ *   right, and a split that silently counts un-bucketed views as "direct"
+ *   would tell a seller their WhatsApp forwards did nothing.
+ */
+describe('summariseViews - the day-by-day line', () => {
+  it('has one point per day in the window, oldest first, ending today', () => {
+    const v = summariseViews([{ day: '2026-09-27', count: 5 }], 28, NOW);
+
+    expect(v.daily).toHaveLength(28);
+    expect(v.daily[0].day).toBe('2026-08-31');
+    expect(v.daily[27].day).toBe('2026-09-27');
+  });
+
+  it('fills a day with no row as zero rather than leaving it out', () => {
+    // Two spikes with a quiet week between them. Drawn from only the rows
+    // that exist, this would read as a flat, healthy line.
+    const v = summariseViews(
+      [
+        { day: '2026-09-20', count: 9 },
+        { day: '2026-09-27', count: 9 },
+      ],
+      28,
+      NOW
+    );
+
+    expect(v.daily.filter((d) => d.count === 0)).toHaveLength(26);
+    expect(v.daily.at(-1)).toEqual({ day: '2026-09-27', count: 9 });
+  });
+
+  it('leaves older views out of the line but keeps them in the total', () => {
+    const v = summariseViews([{ day: '2026-01-01', count: 40 }, { day: '2026-09-27', count: 2 }], 28, NOW);
+
+    expect(v.daily.reduce((n, d) => n + d.count, 0)).toBe(2);
+    expect(v.total).toBe(42);
+  });
+});
+
+describe('summariseViews - where the visits came from', () => {
+  const row = (day, count, sources) => ({ day, count, sources });
+
+  it('adds the buckets up across the window', () => {
+    const v = summariseViews(
+      [
+        row('2026-09-27', 5, { social: 3, search: 2 }),
+        row('2026-09-26', 4, { social: 1, site: 3 }),
+      ],
+      28,
+      NOW
+    );
+
+    expect(v.sources).toEqual({ direct: 0, site: 3, search: 2, social: 4, other: 0 });
+    expect(v.counted).toBe(9);
+  });
+
+  it('ignores the split on rows older than the window, as the line does', () => {
+    const v = summariseViews([row('2026-01-01', 40, { social: 40 })], 28, NOW);
+
+    expect(v.counted).toBe(0);
+    expect(v.sources.social).toBe(0);
+  });
+
+  it('does not pretend an un-split view was direct', () => {
+    // Rows from before the split existed carry a count and no `sources`.
+    const v = summariseViews([{ day: '2026-09-27', count: 6 }], 28, NOW);
+
+    expect(v.recent).toBe(6);
+    expect(v.counted).toBe(0);
+    expect(v.sources.direct).toBe(0);
+    // `counted` below `recent` is the page's cue to say so out loud rather
+    // than drawing a bar chart of nothing.
+    expect(v.counted).toBeLessThan(v.recent);
+  });
+
+  it('never claims more split views than views', () => {
+    const v = summariseViews([row('2026-09-27', 5, { social: 3, search: 2 })], 28, NOW);
+    expect(v.counted).toBeLessThanOrEqual(v.recent);
   });
 });
