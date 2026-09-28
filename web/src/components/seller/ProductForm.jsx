@@ -67,6 +67,17 @@ import { useT } from '@/lib/i18n';
 /* An exempt account has no cap: show ∞, not a blank. */
 const left = (n) => (n === null || n === undefined ? '∞' : n);
 
+/**
+ * "₹1,250", " 1250 " and "1250" are all 1250. An empty box is null - never
+ * 0, which is a price - and anything that is not a number is null too, so a
+ * typo is refused by name instead of arriving at the server as NaN.
+ */
+const toNumber = (v) => {
+  if (v === '' || v === null || v === undefined) return null;
+  const n = Number(String(v).replace(/[₹,\s]/g, ''));
+  return Number.isFinite(n) ? n : null;
+};
+
 const EMPTY = {
   returnMode: '',
   faqs: [],
@@ -584,6 +595,11 @@ export default function ProductForm({ productId, copyFromId }) {
       return refuse('Write a description - it is what the shopper reads before deciding.', 'words');
     }
     if (!asDraft && !form.category) return refuse('Choose a category.', 'category-card');
+    // Price and stock were the browser's job until `noValidate`; they are
+    // ours now, and they check the NUMBER rather than the text, so "1,250"
+    // passes and "abcd" does not.
+    if (!asDraft && !(toNumber(form.price) > 0)) return refuse('Put a selling price on it.', 'price');
+    if (!asDraft && toNumber(form.stock) === null) return refuse('Say how many you have.', 'stock');
     setState({ status: 'saving' });
 
     const body = {
@@ -591,17 +607,30 @@ export default function ProductForm({ productId, copyFromId }) {
       status: asDraft ? 'draft' : 'active',
       returnMode: form.returnMode || null,
       faqs: (form.faqs || []).filter((x) => x && x.q && x.a),
-      price: Number(form.price),
-      mrp: form.mrp === '' ? undefined : Number(form.mrp),
-      stock: Number(form.stock),
-      lowStockThreshold: Number(form.lowStockThreshold) || 10,
+      /*
+        EMPTY IS NOT ZERO, AND A CLEARED BOX MUST CLEAR THE FIELD.
+          `Number('')` is 0, so saving a draft with no price stored a ₹0
+          product that "List it" would then happily publish. And `mrp` and
+          `weight` went out as `undefined`, which JSON.stringify drops - so a
+          seller who cleared an MRP typed in by mistake could never get rid
+          of it, and was locked out by "The selling price cannot be above the
+          MRP" with no way back. null is sent now, and the backend already
+          knew what to do with it.
+      */
+      price: toNumber(form.price),
+      mrp: toNumber(form.mrp),
+      stock: toNumber(form.stock),
+      lowStockThreshold: form.lowStockThreshold === '' || form.lowStockThreshold === null ? 10 : Number(form.lowStockThreshold),
       // '' = the rulebook's dispatch time; a number = made to order, shown on the page.
       processingDays: form.processingDays === '' || form.processingDays === null ? null : Number(form.processingDays),
-      weight: form.weight === '' ? undefined : Number(form.weight),
+      weight: toNumber(form.weight),
       hsn: form.hsn ?? '',
       gstRate: form.gstRate === '' || form.gstRate === null || form.gstRate === undefined ? null : Number(form.gstRate),
-      size: form.size || undefined,
-      variantGroupId: form.variantGroupId || undefined,
+      // '' and null rather than undefined: the backend clears on both
+      // (sellerController `size || undefined`, `variantGroupId || null`) and
+      // can do nothing at all with a key that never arrives.
+      size: form.size ?? '',
+      variantGroupId: form.variantGroupId || null,
       material: form.material ?? '',
       productType: form.productType ?? '',
       attributes: form.attributes || {},
@@ -674,7 +703,17 @@ export default function ProductForm({ productId, copyFromId }) {
 
   return (
     <EditingContext.Provider value={Boolean(productId)}>
-      <form onSubmit={submit} className="max-w-3xl space-y-5">
+      {/*
+        noValidate, and the reason is not taste (28 Sep 2026).
+          The cards in this form are `hidden` when collapsed, and a `required`
+          input inside a hidden subtree is invalid AND unfocusable. The
+          browser then refuses to submit, cannot show its bubble, and says
+          nothing: Rajat pressed "List it" with 5 - Price and stock still
+          shut and the page did not even make a request. Our own checks below
+          are better anyway - they open the card, scroll to the field and say
+          what is missing in words.
+      */}
+      <form onSubmit={submit} noValidate className="max-w-3xl space-y-5">
       {copyFromId && (
         <p className="rounded-xl border bg-muted/40 p-3 text-sm text-muted-foreground">
           Another size or colour of the same product. Everything is copied except the size, the stock
@@ -711,6 +750,8 @@ export default function ProductForm({ productId, copyFromId }) {
                 setImporting((i) => ({ ...i, busy: true, error: '' }));
                 try {
                   const r = await authedFetch('/seller/ai/import', {
+                    // Fetches someone else's page AND runs a model.
+                    timeoutMs: 120_000,
                     method: 'POST',
                     body: { url: importing.url.trim(), categoryId: form.category || undefined },
                   });
@@ -1445,7 +1486,7 @@ export default function ProductForm({ productId, copyFromId }) {
               onClick={async () => {
                 setFaqBusy(true);
                 try {
-                  const r = await authedFetch('/seller/ai/faqs', { method: 'POST', body: { name: form.name, description: form.description, categoryName: categories.find((c) => c._id === form.category)?.label, material: form.material, color: form.color, size: form.size, returnMode: form.returnMode || categories.find((c) => c._id === form.category)?.returnMode || 'R', textModel } });
+                  const r = await authedFetch('/seller/ai/faqs', { method: 'POST', timeoutMs: 120_000, body: { name: form.name, description: form.description, categoryName: categories.find((c) => c._id === form.category)?.label, material: form.material, color: form.color, size: form.size, returnMode: form.returnMode || categories.find((c) => c._id === form.category)?.returnMode || 'R', textModel } });
                   const have = new Set((form.faqs || []).map((x) => x.q.trim().toLowerCase()));
                   const fresh = (r.faqs || []).filter((x) => !have.has(x.q.trim().toLowerCase()));
                   setForm((f) => ({ ...f, faqs: [...(f.faqs || []).filter((x) => x.q || x.a), ...fresh].slice(0, 6) }));

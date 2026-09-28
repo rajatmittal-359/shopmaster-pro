@@ -840,7 +840,11 @@ const marketCheck = async (req, res) => {
 
 const draftFaqs = async (req, res) => {
   try {
-    const exempt = await isExempt(req.user._id);
+    // `isExempt` reads req.user.role, req.capabilities and req.seller - it was
+    // being handed an ObjectId here alone, and so always answered false. An
+    // exempt shop saw "infinity drafts left" beside a button that refused
+    // them at sixty (28 Sep 2026). Every other call site passes `req`.
+    const exempt = await isExempt(req);
     const usage = await usageFor(req.user._id, exempt);
     if (!exempt && usage.remaining.texts === 0) {
       return res.status(429).json({ message: `You have used today's ${CAPS.textsPerSellerPerDay} AI drafts. It resets at midnight.`, usage });

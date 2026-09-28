@@ -44,7 +44,14 @@ const CATALOGUE_TTL = 300;
 
 const get = async (path, { revalidate = CATALOGUE_TTL, tags } = {}) => {
   try {
-    const res = await fetch(`${API}${path}`, { next: { revalidate, ...(tags ? { tags } : {}) } });
+    /*
+     * A timeout here too (28 Sep 2026). `authedFetch` got one when a save
+     * hung with the button stuck on "Saving…", but the product form's FIRST
+     * call is this one - the category tree - and a hang here leaves the whole
+     * page on "Loading…" for ever with no way back. Fifteen seconds is
+     * generous for a cached catalogue read.
+     */
+    const res = await fetch(`${API}${path}`, { next: { revalidate, ...(tags ? { tags } : {}) }, signal: AbortSignal.timeout(15_000) });
     /*
      * 404 is an ANSWER, not a failure: the API sends it for a category slug
      * that does not exist. Collapsing it into null would make the page show

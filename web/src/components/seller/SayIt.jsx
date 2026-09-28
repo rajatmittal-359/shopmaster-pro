@@ -123,7 +123,25 @@ export default function SayIt({ value, onChange, busy, onSubmit }) {
         {Boolean(value) && (
           <button
             type="button"
-            onClick={() => onChange('')}
+            /*
+             * Clearing STOPS the microphone first (28 Sep 2026).
+             *   `base.current` is the text the session started from, and the
+             *   engine replays its whole transcript on every result. Emptying
+             *   the box mid-sentence therefore did nothing: the next word
+             *   brought the cleared sentence back with it. Stopping ends that
+             *   session, so the next press starts from the empty box - which
+             *   is what pressing a cross plainly means.
+             */
+            onClick={() => {
+              try {
+                recognition.current?.stop();
+              } catch {
+                /* already stopped */
+              }
+              setListening(false);
+              base.current = '';
+              onChange('');
+            }}
             aria-label={t('Clear and start again')}
             title={t('Clear and start again')}
             className="grid size-10 shrink-0 place-items-center rounded-full border text-muted-foreground hover:bg-accent"

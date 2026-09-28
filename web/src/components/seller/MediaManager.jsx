@@ -255,7 +255,9 @@ export default function MediaManager({
       };
       if (photo.kind === "new") body.imageDataUrl = photo.src;
       else body.imageUrl = photo.src;
+      // The slowest call the panel makes - a model redrawing a photograph.
       const result = await authedFetch(`${base}/ai/image`, {
+        timeoutMs: 180_000,
         method: "POST",
         body,
       });

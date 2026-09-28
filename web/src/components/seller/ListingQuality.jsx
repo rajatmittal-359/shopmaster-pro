@@ -164,7 +164,17 @@ export default function ListingQuality({ form, photos, productId, categoryLabel,
               different about the box: these are words with evidence behind
               them, not a second place to type. */}
           <p className="text-sm font-medium">{t('Words people actually typed')}</p>
-          <Button type="button" size="sm" variant="outline" onClick={suggest} disabled={kwBusy || !form.name}>
+          {/*
+            () => suggest(), NOT onClick={suggest} (28 Sep 2026).
+              `suggest` grew a `sellerWords` parameter when the say-it box
+              arrived, and this button had been handing it the click event
+              ever since - harmless while the function took nothing, fatal
+              afterwards. The event went into the request body, JSON.stringify
+              met its circular `view` reference, and the seller got
+              "Converting circular structure to JSON" instead of any words.
+              The button had simply stopped working.
+          */}
+          <Button type="button" size="sm" variant="outline" onClick={() => suggest()} disabled={kwBusy || !form.name}>
             {kwBusy ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
             {t(kw ? 'Suggest again' : 'Suggest search words')}
           </Button>
