@@ -635,6 +635,41 @@ exports.deleteProduct = async (req, res) => {
   }
 };
 
+/**
+ * Undo a delete.
+ *
+ * WHY THIS EXISTS (28 Sep 2026)
+ *   House rule 6: a confirmation for what cannot be undone, an Undo for
+ *   everything else. Deleting a product was already soft - it sets
+ *   `isDeleted` and nothing is thrown away - but there was no road back, so
+ *   the panel had to choose between a nagging dialog and a mistake that
+ *   looked permanent. This is the road back, and it is why the delete needs
+ *   no dialog.
+ *
+ *   It deliberately does NOT use `sellerCatalogueFilter`: that filter exists
+ *   to hide deleted products, which is exactly the one we are looking for.
+ *   The `sellerId` match still does the guarding - a seller can only undo
+ *   their own.
+ *
+ *   It comes back HIDDEN, not live. The seller pressed delete; putting the
+ *   product straight back on the storefront would be a second decision they
+ *   never made. It returns to the catalogue where "Show in shop" is one tap.
+ */
+exports.restoreProduct = async (req, res) => {
+  try {
+    const product = await Product.findOne({ sellerId: req.user._id, _id: req.params.productId });
+    if (!product) return res.status(404).json({ message: 'Product not found' });
+    if (!product.isDeleted) return res.json({ message: 'That product was not deleted', product });
+
+    product.isDeleted = false;
+    product.isActive = false;
+    await product.save();
+    res.json({ message: 'Product restored', product });
+  } catch (error) {
+    sendError(res, error);
+  }
+};
+
 // Update stock manually
 exports.updateStock = async (req, res) => {
   try {

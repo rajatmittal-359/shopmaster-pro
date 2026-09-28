@@ -47,6 +47,8 @@ router.get('/analytics', getSellerAnalytics);
 router.post('/products', requireApprovedSeller, addProduct);
 router.patch('/products/:productId', requireApprovedSeller, updateProduct);
 router.delete('/products/:productId', requireApprovedSeller, deleteProduct);
+// The Undo behind that delete - see sellerController.restoreProduct.
+router.post('/products/:productId/restore', requireApprovedSeller, require('../controllers/sellerController').restoreProduct);
 router.patch('/products/:productId/stock', requireApprovedSeller, updateStock);
 
 router.patch('/orders/:orderId/status', requireApprovedSeller, updateOrderStatus);

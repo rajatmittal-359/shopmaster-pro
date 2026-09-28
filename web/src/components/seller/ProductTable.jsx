@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { ChartNoAxesColumn, ExternalLink, Eye, EyeOff, ImagePlus, MessageCircle, MoreHorizontal, Pencil, Plus, Search } from 'lucide-react';
+import { ChartNoAxesColumn, ExternalLink, Eye, EyeOff, ImagePlus, MessageCircle, MoreHorizontal, Pencil, Plus, Search, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { authedFetch } from '@/lib/client';
 import { Badge } from '@/components/ui/badge';
@@ -158,6 +158,53 @@ export default function ProductTable() {
    * Hide or show without opening the editor. Reversible, so no confirmation -
    * an Undo on the toast, as the house rule says for anything not costly.
    */
+  /*
+   * DELETE, WITH A WAY BACK (28 Sep 2026)
+   *
+   *   Rajat: "delete karne ka option nahi dikhta kahin bhi." He was right -
+   *   the endpoint has existed all along and nothing in the panel called it,
+   *   so a seller who listed the wrong thing could only HIDE it and live
+   *   with it sitting in their list for ever.
+   *
+   *   No confirmation dialog, on purpose. House rule 6 asks for a dialog
+   *   only where nothing can be undone; this delete is soft and the restore
+   *   route exists for exactly this toast. A dialog on every delete trains
+   *   people to dismiss dialogs.
+   *
+   *   The row leaves the list at once and comes back if the server refuses,
+   *   the same way hiding already works here. Restored products come back
+   *   HIDDEN - pressing delete was a decision, and putting it straight back
+   *   on the storefront would be a second one nobody made.
+   */
+  const removeProduct = async (product) => {
+    const before = products;
+    setProducts((list) => list.filter((p) => p._id !== product._id));
+    try {
+      await authedFetch(`/seller/products/${product._id}`, { method: 'DELETE' });
+      toast(`${product.name} deleted`, {
+        // Longer than the default: this is the only road back, and reading a
+        // product name takes a moment before you realise it was the wrong one.
+        duration: 12000,
+        description: 'It comes back hidden, not on the shop.',
+        action: {
+          label: 'Undo',
+          onClick: async () => {
+            try {
+              await authedFetch(`/seller/products/${product._id}/restore`, { method: 'POST' });
+              setProducts(before.map((p) => (p._id === product._id ? { ...p, isActive: false } : p)));
+              toast.success(`${product.name} is back`);
+            } catch (e) {
+              toast.error(e.message || 'Could not bring it back');
+            }
+          },
+        },
+      });
+    } catch (err) {
+      setProducts(before);
+      toast.error(err.message || 'Could not delete it');
+    }
+  };
+
   const toggleActive = async (product, next = !product.isActive) => {
     const before = products;
     setProducts((list) => list.map((p) => (p._id === product._id ? { ...p, isActive: next } : p)));
@@ -351,6 +398,10 @@ export default function ProductTable() {
                       <DropdownMenuItem onClick={() => toggleActive(product)}>
                         {product.isActive ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                         {t(product.isActive ? 'Hide from shop' : 'Show in shop')}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => removeProduct(product)} className="text-destructive">
+                        <Trash2 className="size-4" />
+                        {t('Delete')}
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
