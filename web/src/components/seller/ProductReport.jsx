@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import PanelCard from '@/components/panel/PanelCard';
 import GoogleStatus from '@/components/seller/GoogleStatus';
+import SharePack from '@/components/seller/SharePack';
 
 /**
  * One listing's report: everything ABOUT the product, none of the product.
@@ -199,6 +200,15 @@ export default function ProductReport({ productId }) {
 
       <PanelCard title={t('Google, right now')}>
         {google ? <GoogleStatus google={google} /> : <Skeleton className="h-32 w-full" />}
+      </PanelCard>
+
+      {/*
+        Last on the page on purpose: the report says how the listing is
+        doing, and this is what the seller does about it. Reading first,
+        acting second (28 Sep 2026).
+      */}
+      <PanelCard title={t('Share this product')}>
+        <SharePack product={product} shop={data?.shop} />
       </PanelCard>
     </div>
   );

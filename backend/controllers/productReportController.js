@@ -68,8 +68,19 @@ exports.productReport = async (req, res) => {
     // showed 0 views while the database already held one - a report a seller
     // refreshes to watch a number move must never answer from yesterday.
     res.set('Cache-Control', 'private, no-store');
+    /*
+     * The shop's own name and short link travel with the report because the
+     * share pack prints them onto the picture (web/src/lib/shareImage). One
+     * indexed read here beats a second round trip from the panel.
+     */
+    const shop = await require('../models/Seller')
+      .findOne({ userId: sellerId })
+      .select('businessName slug')
+      .lean();
+
     res.json({
       product,
+      shop: shop ? { name: shop.businessName, path: shop.slug ? `/${shop.slug}` : `/sellers/${sellerId}` } : null,
       sales: sales || { units: 0, revenue: 0, orders: 0, lastSoldAt: null, firstSoldAt: null },
       views,
       // The counter started on 27 Sep 2026; anything listed before that has
