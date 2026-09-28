@@ -90,6 +90,9 @@ router.get('/market-briefs', async (req, res) => {
 router.get('/coupons', adminCtrl.listCoupons);
 router.post('/coupons', adminCtrl.createCoupon);
 router.patch('/coupons/:couponId/toggle', adminCtrl.toggleCoupon);
+// Deleted outright when never used, archived when it has been - see the
+// comment on `archivedAt` in models/Coupon.
+router.delete('/coupons/:couponId', adminCtrl.deleteCoupon);
 
 // Analytics
 router.get('/analytics', getAnalytics);

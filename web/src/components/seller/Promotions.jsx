@@ -77,6 +77,32 @@ export default function Promotions() {
     }
   };
 
+  /*
+   * Delete is the admin's rule, applied to the seller's own coupons: one
+   * nobody used really goes, one that has been used is archived so the
+   * orders that carry the code keep something that explains it. The
+   * confirmation is required because the first case cannot be undone
+   * (28 Sep 2026).
+   */
+  const remove = async (c) => {
+    const used = c.usedCount || 0;
+    const ok = window.confirm(
+      used
+        ? `${c.code} has been used ${used} time${used === 1 ? '' : 's'}. It will be archived - those orders keep their record and nobody can use the code again. Continue?`
+        : `${c.code} has never been used. Delete it completely?`
+    );
+    if (!ok) return;
+    try {
+      const d = await authedFetch(`/seller/coupons/${c._id}`, { method: 'DELETE' });
+      // The row goes either way - deleted outright, or archived out of the
+      // list. There is no reload to wait for.
+      setCoupons((list) => (list || []).filter((x) => x._id !== c._id));
+      toast.success(d.message || `${c.code} removed`);
+    } catch (e) {
+      toast.error(e.message || 'Could not remove it');
+    }
+  };
+
   const toggle = async (c) => {
     try {
       const d = await authedFetch(`/seller/coupons/${c._id}/toggle`, { method: 'PATCH' });
@@ -182,6 +208,9 @@ export default function Promotions() {
                 </div>
                 <Button size="sm" variant="outline" onClick={() => toggle(c)}>
                   Pause
+                </Button>
+                <Button size="sm" variant="ghost" className="text-destructive" onClick={() => remove(c)}>
+                  Delete
                 </Button>
               </li>
             ))}

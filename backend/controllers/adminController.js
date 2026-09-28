@@ -1083,7 +1083,7 @@ const Coupon = require('../models/Coupon');
  */
 exports.listCoupons = async (req, res) => {
   try {
-    const coupons = await Coupon.find({}).sort({ createdAt: -1 }).limit(200);
+    const coupons = await Coupon.find({ archivedAt: null }).sort({ createdAt: -1 }).limit(200);
 
     res.json({
       success: true,
@@ -1165,6 +1165,42 @@ exports.createCoupon = async (req, res) => {
  * still exists. Switching it off stops it being used without erasing what
  * already happened under it.
  */
+/**
+ * Delete a coupon - really, when it has never been spent.
+ *
+ * @param {object} filter  narrows it to what this caller is allowed to touch
+ *                         (the admin: any; a seller: their own)
+ */
+const removeCoupon = async (filter, res) => {
+  const Coupon = require('../models/Coupon');
+  const coupon = await Coupon.findOne({ ...filter, archivedAt: null });
+  if (!coupon) return res.status(404).json({ message: 'Coupon not found' });
+
+  if (!coupon.usedCount) {
+    await coupon.deleteOne();
+    return res.json({ success: true, deleted: true, message: 'Coupon deleted' });
+  }
+
+  coupon.archivedAt = new Date();
+  coupon.isActive = false;
+  await coupon.save();
+  return res.json({
+    success: true,
+    archived: true,
+    usedCount: coupon.usedCount,
+    message: `Used ${coupon.usedCount} time${coupon.usedCount === 1 ? '' : 's'} - kept for those orders, and it can never be redeemed again.`,
+  });
+};
+exports.removeCoupon = removeCoupon;
+
+exports.deleteCoupon = async (req, res) => {
+  try {
+    await removeCoupon({ _id: req.params.couponId }, res);
+  } catch (error) {
+    sendError(res, error);
+  }
+};
+
 exports.toggleCoupon = async (req, res) => {
   try {
     const { couponId } = req.params;

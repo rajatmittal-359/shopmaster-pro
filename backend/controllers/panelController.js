@@ -104,7 +104,7 @@ const couponView = (c) => ({
 
 exports.sellerCoupons = async (req, res) => {
   try {
-    const coupons = await Coupon.find({ fundedBy: 'seller', sellerId: req.user._id }).sort({ createdAt: -1 }).lean();
+    const coupons = await Coupon.find({ fundedBy: 'seller', sellerId: req.user._id, archivedAt: null }).sort({ createdAt: -1 }).lean();
     res.json({ coupons: coupons.map(couponView) });
   } catch (error) {
     sendError(res, error);
@@ -146,6 +146,16 @@ exports.createSellerCoupon = async (req, res) => {
   } catch (error) {
     if (error.code === 11000) return res.status(409).json({ message: 'That code is already in use - choose another' });
     if (error.name === 'ValidationError') return res.status(400).json({ message: Object.values(error.errors)[0]?.message || 'Check the coupon' });
+    sendError(res, error);
+  }
+};
+
+/** A seller may remove their OWN coupon, on the same terms as the admin. */
+exports.deleteSellerCoupon = async (req, res) => {
+  try {
+    const { removeCoupon } = require('./adminController');
+    await removeCoupon({ _id: req.params.couponId, fundedBy: 'seller', sellerId: req.user._id }, res);
+  } catch (error) {
     sendError(res, error);
   }
 };

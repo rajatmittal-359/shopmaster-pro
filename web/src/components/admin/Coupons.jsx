@@ -312,6 +312,34 @@ export default function Coupons() {
               >
                 {coupon.isActive ? "Switch off" : "Switch on"}
               </Button>
+              {/*
+                DELETE, AND IT SAYS WHICH KIND IT WILL BE (28 Sep 2026)
+                  A coupon nobody ever used really goes - an order stores
+                  `couponCode` as text, so nothing dangles. One that HAS been
+                  used is archived instead: the orders keep the code, but this
+                  row is the only record of what the code MEANT, and throwing
+                  that away makes an old order unexplainable.
+
+                  House rule 6 wants a confirmation for what cannot be undone,
+                  and a real delete cannot. So there is one, and it says in
+                  advance which of the two is about to happen.
+              */}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-destructive"
+                onClick={() => {
+                  const used = coupon.usedCount || 0;
+                  const ok = window.confirm(
+                    used
+                      ? `${coupon.code} has been used ${used} time${used === 1 ? "" : "s"}. It will be archived: those orders keep their record and the code can never be redeemed again. Continue?`
+                      : `${coupon.code} has never been used. Delete it completely?`,
+                  );
+                  if (ok) run(() => authedFetch(`/admin/coupons/${coupon._id}`, { method: "DELETE" }));
+                }}
+              >
+                Delete
+              </Button>
             </li>
           ))}
         </ul>

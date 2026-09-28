@@ -125,6 +125,26 @@ const couponSchema = new mongoose.Schema(
     /** Turned off by hand, without deleting the record the orders point at. */
     isActive: { type: Boolean, default: true },
 
+    /*
+     * ARCHIVED, FOR A COUPON THAT HAS BEEN SPENT (28 Sep 2026)
+     *
+     *   A coupon nobody ever used is deleted outright - an order records
+     *   `couponCode` as TEXT, not a reference (models/Order), so nothing
+     *   dangles. That was a deliberate choice when Order was written and it
+     *   is what makes a real delete safe here.
+     *
+     *   One that HAS been used is archived instead. The orders keep the
+     *   code either way, but the row is the only record of what the code
+     *   meant - the percentage, the cap, who made it, when. Throwing that
+     *   away makes an old order unexplainable. Shopify draws the same line
+     *   for anything money has touched.
+     *
+     *   Archiving also sets `isActive: false`, and `utils/applyCoupon`
+     *   refuses an inactive coupon, so an archived code can never be
+     *   redeemed again without any further guard.
+     */
+    archivedAt: { type: Date, default: null },
+
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   },
   { timestamps: true }
