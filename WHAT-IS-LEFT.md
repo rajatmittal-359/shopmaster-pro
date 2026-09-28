@@ -212,6 +212,64 @@ synonyms collection (jhumka/jhumki/झुमका), Gemini query → filters.
   reference it comes from and what it costs us, and one recommendation.
   **Nothing is built until Rajat picks a letter.**
 
+  **This row was already half-answered when it was written, and nobody closed
+  it.** `components/seller/FormRail.jsx` was built the same day (26 Sep) and
+  its WHY block holds exactly the reference pass this row asks for - Shopify
+  one scrolling page, Amazon tabs and their cost, Material having archived
+  the Stepper - and the rail is live in the form with all seven sections and
+  a tick each. So the shape question is not open ground; it is "is the rail
+  enough".
+
+  **Re-checked against the market on 28 Sep, and the answer held - with two
+  findings the first pass missed:**
+
+  - **Etsy does both, split by screen.** Desktop is one scrolling form with a
+    jump-nav of seven named sections (their own words: "there are 7 tabs in
+    the listing form you must fill out before you can publish", one Publish
+    button, Save as Draft beside it). The **mobile app is a real Next/Back
+    stepper** over the same data. That is the closest precedent we have to
+    Mummy on a phone, and it says the phone may legitimately differ from the
+    desktop - which our `foldOnPhone` already half-does.
+  - **Baymard's objection to accordions is not noise, it is "what will get
+    saved".** Their tested quotes are *"Do I need to save the changes before
+    I open another tab?"* and *"will it submit all sections including the
+    collapsed ones?"*. Their rule, and this is the actionable one: a
+    collapsed step must **collapse into a summary of the entered data**, not
+    just its heading - participants "routinely scanned the summaries" rather
+    than reopening. **Our `Card` already takes a `summary` prop and only the
+    Category card passes one.** Six of the seven collapse to a bare title.
+  - Nobody keeps a completeness score INSIDE the form: Amazon's Listing
+    Quality Dashboard is a separate page, Etsy has no score, Shopify has
+    Draft/Active and nothing else. Our rail-plus-score is a deliberate
+    small-marketplace difference, and the research gives no reason to drop
+    it.
+  - Amazon's one idea worth stealing: a **Required / All attributes** scope
+    switch that re-renders the whole form, which does the add-vs-edit job
+    without a second form. Its one warning, from its own sellers: never let a
+    field be optional on create and mandatory on edit.
+
+  **The three options, and the recommendation. Rajat picks a letter.**
+
+  - **A. Keep the rail, give every card a summary** (Baymard's rule, Etsy's
+    section list). Six one-line summaries - "3 photos", "₹275 · 12 in stock",
+    "Gold · Free size" - so a shut card still answers what is in it. Cost:
+    small, no new component, no shape change. Backend: no.
+  - **B. A + a phone stepper.** Desktop stays the scrolling page with the
+    rail; the phone gets Etsy's Next/Back over the same sections. Cost:
+    a second navigation mode to keep honest, and the listing score has to
+    stay reachable from every step. Backend: no.
+  - **C. A + Amazon's scope switch** - "Just the basics / Everything",
+    hiding the optional cards until asked. Cost: the risk NN/g names, that
+    people never find what is behind the second level; and our optional
+    fields (weight, FAQs, facts) are exactly the ones that earn money.
+    Backend: no.
+
+  **Recommendation: A.** It is the only one backed by a tested finding rather
+  than a preference, it is the cheapest, and it attacks what Rajat actually
+  complained about - a wall of chevrons that say nothing. B is worth doing
+  after A if the phone still feels wrong to him; C fights our own listing
+  score. **Not built - waiting on the letter.**
+
 - **The search-word coach: take the seller's OWN word and make it the right one (Rajat, 26 Sep 2026).**
   *"Seller ko pata hota hai product kya hai, lekin self-doubt hota hai - kya yahi acha word hai market me, is word ki kya value hai, chalega ya nahi. Us chakkar me vo ghabra ke kuch nahi likhta."*
 
@@ -413,10 +471,24 @@ synonyms collection (jhumka/jhumki/झुमका), Gemini query → filters.
   No evidence means no sentence: `evidenceLine` returns '' rather than
   dressing a zero up.
 
-  **Still open, and it waits on traffic rather than on code:** the correction
-  can only say "seen 12 times in searches that reached your shop" once
-  Search Console has queries for this shop to join, and today it has almost
-  none. `keywordEvidence` already reaches those rows the moment they exist;
+  **What the headline number does NOT mean, measured properly afterwards.**
+  Those 9-of-10 were against the WHOLE 600-phrase lexicon. In the form the
+  seller sees one category's words, and `marketBrief.js:74` keeps only the
+  **top 20 per brief** - so each of those misspellings is corrected in
+  exactly ONE of the thirty categories: the right one. That is the correct
+  behaviour (a seller listing a power bank should not be offered "jhumka"),
+  but it means coverage is thin, and **the lever is the cap, not the
+  matcher**. `categoryWords` already asks for 40 and the writer stores 20 -
+  the reader is willing to take twice what the writer keeps. Raising
+  `.slice(0, 20)` costs nothing (the Ads call for that category has already
+  been paid for) and roughly doubles what the coach can catch. Not changed
+  unattended: it changes what every seller sees in the suggestions, and it
+  only takes effect when the weekly job next runs.
+
+  **Also still open, and it waits on traffic rather than on code:** the
+  correction can only say "seen 12 times in searches that reached your shop"
+  once Search Console has queries for this shop to join, and today it has
+  almost none. `keywordEvidence` already reaches those rows the moment they exist;
   what is not built is a free per-form endpoint to carry them into the field
   before the seller presses the AI button. Worth building when there is
   traffic to put in it, and not before - an evidence line with nothing behind
