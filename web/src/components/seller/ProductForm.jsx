@@ -587,7 +587,9 @@ export default function ProductForm({ productId, copyFromId }) {
         requestAnimationFrame(() => document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
       }
       setState({ status: 'error', message });
-      return undefined;
+      // false, not undefined: the leave-dialog needs to know it did NOT save
+      // before it closes itself and lets the seller walk away (28 Sep 2026).
+      return false;
     };
 
     if (!asDraft && photos.length === 0) return refuse('Add at least one photograph.', 'photos');
@@ -602,9 +604,36 @@ export default function ProductForm({ productId, copyFromId }) {
     if (!asDraft && toNumber(form.stock) === null) return refuse('Say how many you have.', 'stock');
     setState({ status: 'saving' });
 
+    /*
+     * SAVING NEVER CHANGES WHETHER THE PRODUCT IS ON THE SITE (28 Sep 2026)
+     *
+     *   Every save used to send `status`, so "Save changes" published
+     *   whatever it touched: a product the seller had hidden came back on
+     *   the storefront, and a draft went live under a button that says
+     *   "Save changes". The other way round was worse - "Save for later" on
+     *   a live listing took it off the site, out of search, out of the feed
+     *   and out of the sitemap, silently.
+     *
+     *   Shopify admin and Seller Central both keep these apart: status is
+     *   its own control and Save only saves. That is also this project's own
+     *   rule - what happens is what the seller asked for.
+     *
+     *   So `status` is sent in exactly two cases: a NEW product, where the
+     *   button chosen is the decision, and an existing DRAFT pressed with
+     *   the primary button, which is what "List it" means. Otherwise both
+     *   `status` and `isActive` are left out, and the backend does the right
+     *   thing on its own - its own comment says "a product that is already
+     *   listed and sends no status is edited as before".
+     *
+     *   Hiding a live product stays where it always was and where it is
+     *   plainly labelled: Products → ⋯ → Hide from shop.
+     */
+    const wasDraft = form.status === 'draft';
+    const nextStatus = !productId ? (asDraft ? 'draft' : 'active') : wasDraft && !asDraft ? 'active' : undefined;
+
     const body = {
       ...form,
-      status: asDraft ? 'draft' : 'active',
+      ...(nextStatus ? { status: nextStatus } : {}),
       returnMode: form.returnMode || null,
       faqs: (form.faqs || []).filter((x) => x && x.q && x.a),
       /*
@@ -642,6 +671,12 @@ export default function ProductForm({ productId, copyFromId }) {
       // A data URL replaces, null removes, undefined keeps - the server's contract.
       video: video.next ? video.next : video.removed ? null : undefined,
     };
+    if (!nextStatus) {
+      delete body.status;
+      // Left out for the same reason: if the shop was hidden from another
+      // tab while this form was open, saving here must not undo that.
+      delete body.isActive;
+    }
 
     try {
       if (productId) {
@@ -687,8 +722,10 @@ export default function ProductForm({ productId, copyFromId }) {
 
       router.push('/seller/products');
       router.refresh();
+      return true;
     } catch (err) {
       setState({ status: 'error', message: err.message });
+      return false;
     }
   };
 
@@ -1520,11 +1557,17 @@ export default function ProductForm({ productId, copyFromId }) {
               type="button"
               disabled={state.status === 'saving'}
               onClick={async (e) => {
-                await submit(e, true);
-                setLeaving(null);
+                /*
+                 * It used to close whatever happened - including when the
+                 * save was refused ("Give it a name first") or the network
+                 * failed. The seller walked away believing it was kept, and
+                 * the only word to the contrary was an aria-live line at the
+                 * foot of a very long form (28 Sep 2026).
+                 */
+                if (await submit(e, true)) setLeaving(null);
               }}
             >
-              {state.status === 'saving' ? t('Saving…') : t('Save for later')}
+              {state.status === 'saving' ? t('Saving…') : productId && form.status !== 'draft' ? t('Save changes') : t('Save for later')}
             </Button>
             <Button type="button" variant="outline" onClick={leaveNow}>
               {t('Leave without saving')}
@@ -1536,12 +1579,26 @@ export default function ProductForm({ productId, copyFromId }) {
         </DialogContent>
       </Dialog>
 
+      {/*
+        THE BUTTONS SAY WHAT THEY DO, AND THERE ARE THREE CASES (28 Sep 2026)
+          new product      Save for later (draft)   ·  List it (goes live)
+          editing a draft  Save draft (stays draft) ·  List it (goes live)
+          editing a listed Save changes (stays exactly as it is)
+                           product
+          A live listing has no "Save for later" any more. It used to be
+          there and it took the product off the site without saying so -
+          out of the storefront, out of search, out of the feed. Taking a
+          listing down is a real decision and it has a plainly labelled home
+          already: Products → ⋯ → Hide from shop.
+      */}
       <div className="sticky bottom-0 z-10 -mx-1 flex flex-wrap items-center gap-3 border-t bg-background/95 px-1 py-3 backdrop-blur">
-        <Button type="button" variant="outline" size="lg" disabled={state.status === 'saving'} onClick={(e) => submit(e, true)}>
-          {t('Save for later')}
-        </Button>
+        {(!productId || form.status === 'draft') && (
+          <Button type="button" variant="outline" size="lg" disabled={state.status === 'saving'} onClick={(e) => submit(e, true)}>
+            {productId ? t('Save draft') : t('Save for later')}
+          </Button>
+        )}
         <Button type="submit" disabled={state.status === 'saving'} size="lg">
-          {state.status === 'saving' ? t('Saving…') : productId ? t('Save changes') : t('List it')}
+          {state.status === 'saving' ? t('Saving…') : productId && form.status !== 'draft' ? t('Save changes') : t('List it')}
         </Button>
         <Button type="button" onClick={() => (dirty ? setLeaving('cancel') : router.push('/seller/products'))} variant="ghost">
           Cancel
@@ -1554,7 +1611,10 @@ export default function ProductForm({ productId, copyFromId }) {
           seller could catch in one click.
         */}
         <p className="basis-full text-xs text-muted-foreground sm:basis-auto">
-          <span className="text-destructive">*</span> {t('needed to list · “Save for later” keeps a draft without them')}
+          <span className="text-destructive">*</span>{' '}
+          {productId && form.status !== 'draft'
+            ? t('needed to list · this product is already on the site and saving keeps it there')
+            : t('needed to list · “Save for later” keeps a draft without them')}
         </p>
         <p aria-live="polite" className="text-sm">
           {state.status === 'error' && <span className="text-destructive">{state.message}</span>}
