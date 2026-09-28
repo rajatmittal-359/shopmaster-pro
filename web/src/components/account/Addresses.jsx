@@ -131,7 +131,7 @@ export default function Addresses() {
         open={removing}
         onOpenChange={setRemoving}
         title="Remove this address"
-        description="Orders already sent to it keep their own copy, so nothing about them changes."
+        description="If an order was sent to it, we keep it for that order alone - it leaves your address book either way."
         confirmLabel="Remove it"
         destructive
         busy={state.status === 'working'}

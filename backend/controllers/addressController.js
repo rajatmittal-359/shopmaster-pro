@@ -44,7 +44,9 @@ exports.addAddress = async (req, res) => {
 // ✅ GET MY ADDRESSES
 exports.getMyAddresses = async (req, res) => {
   try {
-    const addresses = await Address.find({ userId: req.user._id });
+    // A retired address is not part of the address book any more; it only
+    // still exists for the orders that point at it.
+    const addresses = await Address.find({ userId: req.user._id, retiredAt: null });
     res.json({ success: true, addresses });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -63,7 +65,8 @@ exports.updateAddress = async (req, res) => {
     const checked = await require('../utils/addressCheck').checkAddress(pickEditable(req.body));
     if (checked.error) return res.status(400).json({ message: checked.error });
     const address = await Address.findOneAndUpdate(
-      { _id: req.params.id, userId: req.user._id },
+      // A retired address is out of the book - it cannot be edited either.
+      { _id: req.params.id, userId: req.user._id, retiredAt: null },
       checked.value,
       { new: true, runValidators: true }
     );
@@ -83,6 +86,27 @@ exports.deleteAddress = async (req, res) => {
   try {
     if (!mongoose.isValidObjectId(req.params.id)) {
       return res.status(400).json({ message: "Invalid address id" });
+    }
+
+    /*
+     * An address an order points at is RETIRED, never deleted - see the
+     * comment on `retiredAt` in models/Address. Anything else really goes.
+     */
+    const Order = require("../models/Order");
+    const usedByAnOrder = await Order.exists({ shippingAddressId: req.params.id });
+
+    if (usedByAnOrder) {
+      const address = await Address.findOneAndUpdate(
+        { _id: req.params.id, userId: req.user._id, retiredAt: null },
+        { $set: { retiredAt: new Date(), isDefault: false } },
+        { new: true }
+      );
+      if (!address) return res.status(404).json({ message: "Address not found" });
+      return res.json({
+        success: true,
+        retired: true,
+        message: "Address removed. It is kept only for the orders already sent to it.",
+      });
     }
 
     // Scoped to the authenticated customer, as above.

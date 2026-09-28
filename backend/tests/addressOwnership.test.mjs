@@ -43,6 +43,7 @@ beforeEach(() => {
   originals.create = Address.create;
   originals.cartFindOne = Cart.findOne;
   originals.orderCreate = Order.create;
+  originals.orderExists = Order.exists;
   originals.startSession = mongoose.startSession;
 
   queries = [];
@@ -72,6 +73,13 @@ beforeEach(() => {
     Object.assign(addressStore, update);
     return chainableQuery(addressStore);
   });
+  /*
+   * Deleting an address now asks whether an order points at it - one that
+   * does is retired rather than removed, because the order has no copy of
+   * it and the parcel still has to be shipped (28 Sep 2026). These cases
+   * are about OWNERSHIP, so nothing here is referenced by an order.
+   */
+  Order.exists = vi.fn(async () => null);
   Address.findOneAndDelete = vi.fn((filter) => {
     queries.push({ op: 'findOneAndDelete', filter });
     return chainableQuery(matches(filter) ? addressStore : null);
@@ -103,6 +111,7 @@ afterEach(() => {
   Address.create = originals.create;
   Cart.findOne = originals.cartFindOne;
   Order.create = originals.orderCreate;
+  Order.exists = originals.orderExists;
   mongoose.startSession = originals.startSession;
 });
 

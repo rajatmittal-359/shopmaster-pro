@@ -154,6 +154,7 @@ exports.createRazorpayOrder = async (req, res) => {
     const address = await Address.findOne({
       _id: shippingAddressId,
       userId: req.user.id,
+      retiredAt: null,
     }).session(session);
 
     if (!address) {

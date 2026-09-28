@@ -208,6 +208,9 @@ exports.checkout = async (req, res) => {
     const address = await Address.findOne({
       _id: shippingAddressId,
       userId: req.user._id,
+      // A retired address may still be read by an OLD order; it may never
+      // be chosen for a new one.
+      retiredAt: null,
     }).session(session);
 
     if (!address) {
@@ -1069,6 +1072,7 @@ exports.previewTotals = async (req, res) => {
     const address = await Address.findOne({
       _id: shippingAddressId,
       userId: req.user._id,
+      retiredAt: null,
     });
 
     if (!address) {

@@ -46,6 +46,28 @@ const addressSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+
+    /*
+     * RETIRED, NOT DELETED (28 Sep 2026)
+     *
+     *   An order keeps only `shippingAddressId` - there is no copy of the
+     *   address on the order itself. The invoice reads it for place of
+     *   supply, the courier booking reads it to collect the parcel, and
+     *   `sellerController` refuses to ship at all with "Delivery address is
+     *   missing" when it cannot be found.
+     *
+     *   So a customer tidying up their address book could make their own
+     *   pending order unshippable, and the dialog told them it was safe:
+     *   "orders already sent to it keep their own copy" - which was simply
+     *   not true.
+     *
+     *   An address no order points at is still deleted outright. One that
+     *   an order points at is retired: gone from the address book and from
+     *   every checkout, kept for the order that needs it. The same rule
+     *   `deleteMe` already followed, and the same rule Shopify states for
+     *   anything money has touched.
+     */
+    retiredAt: { type: Date, default: null },
   },
   { timestamps: true }
 );
