@@ -114,20 +114,53 @@ jobs:
           # --max-time 300 because the FIRST request has to wake a sleeping
           # free-tier service, which takes about 40 seconds before any work
           # starts. --retry covers the wake-up timing out on the first attempt.
-          code=$(curl -sS -o response.json -w '%{http_code}' \
-            --max-time 300 --retry 2 --retry-delay 30 --retry-all-errors \
-            -X POST "$API/api/jobs/$JOB" \
-            -H "x-job-token: $TOKEN")
+          call() {
+            curl -sS -o response.json -w '%{http_code}' \
+              --max-time 300 --retry 2 --retry-delay 30 --retry-all-errors \
+              -X POST "$API/api/jobs/$JOB$1" \
+              -H "x-job-token: $TOKEN"
+          }
 
-          echo "HTTP $code"
-          cat response.json || true
-          echo
+          check() {
+            echo "HTTP $1"
+            cat response.json || true
+            echo
+            # Anything but 200 fails the run, so a job that has quietly stopped
+            # working becomes an email rather than a silence.
+            if [ "$1" != "200" ]; then
+              echo "::error::Job $JOB failed with HTTP $1"
+              exit 1
+            fi
+          }
 
-          # Anything but 200 fails the run, so a job that has quietly stopped
-          # working becomes an email rather than a silence.
-          if [ "$code" != "200" ]; then
-            echo "::error::Job $JOB failed with HTTP $code"
-            exit 1
+          # MARKET BRIEF IS ASKED SEVERAL TIMES, IN SMALL BITES (28 Sep 2026).
+          #
+          # It builds one brief per category, each needing a grounded model
+          # call that rate-limits per minute. Twelve of those run past curl's
+          # 300 seconds, so the run was reported as a failure - and the retry
+          # then started the work again - although every brief had in fact
+          # been written. Sixteen minutes, three attempts, a red cross, and
+          # twelve correct briefs in the database.
+          #
+          # The job has always been resumable: it returns `pending`, and a
+          # category already briefed this week is skipped. So we ask for five
+          # at a time until nothing is pending. Each call finishes well inside
+          # the timeout, a real failure still turns the run red, and the
+          # ceiling stops a broken `pending` from looping forever.
+          if [ "$JOB" = "market-brief" ]; then
+            for round in 1 2 3 4 5 6 7 8; do
+              code=$(call "?max=5")
+              check "$code"
+              pending=$(jq -r '.result.pending // 0' response.json)
+              built=$(jq -r '.result.built // 0' response.json)
+              echo "round $round: built $built, $pending still pending"
+              # Nothing left, or nothing moved - either way there is no point
+              # asking again. A stuck job is not made better by repetition.
+              if [ "$pending" = "0" ] || [ "$built" = "0" ]; then break; fi
+            done
+          else
+            code=$(call "")
+            check "$code"
           fi
 
   # The knowledge base (Ask ShopMaster's RAG) is built from the repo's own

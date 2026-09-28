@@ -73,7 +73,17 @@ const JOBS = {
   // One-off / occasional: fill product facts on listings that predate the category templates (jobs/backfillListings).
   'backfill-listings': { run: (q = {}) => require('../jobs/backfillListings').backfill({ mode: q.mode === 'rewrite' ? 'rewrite' : 'fill', max: Number(q.max) || 25, deps: { again: q.again === '1' } }), requires: 'GEMINI_API_KEY', detached: true },
   'tidy-tags': { run: () => require('../jobs/backfillListings').tidyTags() },
-  'market-brief': { run: () => require('../utils/ai/marketBrief').buildBriefs(), requires: 'GEMINI_API_KEY' },
+  /*
+   * `max` is how many categories one CALL builds, not how many exist.
+   * The job is resumable, and the caller (scheduled-jobs.yml) now asks
+   * repeatedly until `pending` reaches zero - because a single call that
+   * builds all thirty runs past curl's 300-second patience and the run is
+   * reported as a failure although every brief was written (28 Sep 2026).
+   */
+  'market-brief': {
+    run: (q = {}) => require('../utils/ai/marketBrief').buildBriefs({ max: Math.min(Math.max(Number(q.max) || 12, 1), 12) }),
+    requires: 'GEMINI_API_KEY',
+  },
   /*
    * Plan 2.23: the assistant's fixed exam, kept as an EvalRun for the trend on
    * /admin/ask. Weekly, Sunday night after the re-index - eleven real answers
