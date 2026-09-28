@@ -13,6 +13,95 @@ half is what makes a new session useful on day one instead of in week three.
 
 ---
 
+# IF CLAUDE IS READING THIS BECAUSE RAJAT SAID "SET IT UP"
+
+This is Rajat's plan (29 Sep 2026, his words): clone the repo, carry the
+`handover` folder over on a USB, drop it on the Mac Desktop, then hand you
+this file and say *padh le aur setup kar de*.
+
+So by the time you read this he has **already** done: the clone, the pack,
+the transfer, and installing Claude Code and signing in — because you could
+not exist without that last one. Sections A and B below still describe those
+steps; read them for context, do not redo them.
+
+**Find the pack first.** He said Desktop, so try `~/Desktop/handover`, then
+`~/Downloads/handover`, then `ls /Volumes/*/handover`. Everything below uses
+`$P` for whatever you find. Read `$P/MANIFEST.md` before anything else — it
+lists what was actually packed and, under **Not found on this machine**,
+what was not.
+
+## Every file in the pack, and where it goes
+
+Nothing in the pack stays in the pack. `$P` is the pack, `$R` is the cloned
+repo, `$D` is this project's folder under `~/.claude/projects/` — find that
+one with `ls`, never by guessing, because it is built from the clone path.
+
+| From the pack | Goes to | Note |
+|---|---|---|
+| `project/private/` | `$R/private/` | then `chmod 600 $R/private/*.pem` — macOS refuses a key others can read |
+| `project/OPS-AND-MANUAL-ACTIONS.md` | `$R/OPS-AND-MANUAL-ACTIONS.md` | his checklist; **start at A0**, the festival plan |
+| `project/ENV` | `$R/ENV` | the local \| prod switch |
+| `project/backend.env` | `$R/backend/.env` | note the rename |
+| `project/backend.env.real` | `$R/backend/.env.real` | if present — a different database |
+| `project/backend.env.seed` | `$R/backend/.env.seed` | if present — a different database |
+| `project/web.env.local` | `$R/web/.env.local` | note the rename |
+| `project/claude-settings.json` | `$R/.claude/settings.json` | `mkdir -p $R/.claude` first |
+| `project/claude-settings.local.json` | `$R/.claude/settings.local.json` | |
+| `claude/memory/` | `$D/memory/` | 32 files. **Needs the restart below** |
+| `claude/skills/*` | `~/.claude/skills/` | one folder per skill. **Needs the restart** |
+| `claude/settings.json` | `~/.claude/settings.json` | the USER-level one — different file from the two above |
+| `claude/plugins.txt` | nowhere — it is a list to act on | section B6 |
+| `claude/mcp-servers.json` | nowhere — read the Firecrawl URL out of it | section B6 |
+| `MANIFEST.md` | nowhere — read it first | says what was really packed |
+
+Not in the pack because the clone already brought it:
+`.claude/project-rules/{frontend,backend,database}.md`. If those three are
+missing, something went wrong with the clone, not with the pack.
+
+## Then
+
+1. **Verify** — the six checks in section B7, except `npm ci`, which is his.
+   Report what each one actually printed, including anything that failed.
+2. **Tell him to restart** — the sentence is below, and it is not optional.
+
+## What you must NOT do
+
+- **Never run `npm install` or `npm ci`.** Standing project rule, in
+  CLAUDE.md, with its reason. Ask him to run them and wait.
+- **Never sign into Google, or any account, as him.** If a check needs a
+  login, stop and tell him. The Chrome extension stays banned.
+- **`next build`**: do not run it unprompted. The check table explains why
+  and treats it as an experiment he chooses to run.
+- **Do not `git add` the pack, `private/`, `OPS-AND-MANUAL-ACTIONS.md` or any
+  `.env`.** All are gitignored for good reason, and the pack is full of live
+  keys.
+- **Do not delete the pack.** That is his call, after the checks pass
+  (A5, B8).
+
+## The restart — say this, do not skip it
+
+Copying `memory/` into place does **not** load it into the session doing the
+copying. Memory is read when a session starts. So once the files are in
+place, tell him in as many words:
+
+> Memory aur skills copy ho gaye. Ab Claude ko band karke dobara kholo —
+> tabhi ye load honge. Restart ke baad test: mujhse poochho *"is project me
+> npm install ka kya niyam hai?"* — agar main bina file padhe jawab dun, sab
+> theek hai.
+
+The same applies to the two `.claude/settings*.json` files and to the three
+skills. Until the restart, `/frontend` does not exist and you do not know
+this project.
+
+## Plugins and MCP
+
+Section B6. `claude plugin marketplace add` and `claude mcp add` change the
+running client's own configuration; run them only if he asks, and expect to
+restart afterwards either way. `$P/claude/plugins.txt` is the list and
+`$P/claude/mcp-servers.json` has the Firecrawl URL.
+
+---
+
 # Your steps, in order
 
 ## A · On the Windows laptop (10 minutes, any time before the reset)
