@@ -200,3 +200,52 @@ describe('what the prompt puts first', () => {
     expect(rule).not.toContain('undefined');
   });
 });
+
+describe('which categories a run works on', () => {
+  const { planQueue } = require('../utils/ai/marketBrief.js');
+  const cats = [{ slug: 'rings' }, { slug: 'earrings' }, { slug: 'sarees' }, { slug: 'shirts' }];
+
+  it('starts with the categories that have no brief at all', () => {
+    const { queue } = planQueue(cats, [
+      { category: { slug: 'rings' }, band: { low: 500 } },
+      { category: { slug: 'earrings' }, band: null },
+    ]);
+    // sarees and shirts have nothing; earrings has words but no band.
+    expect(queue.map((c) => c.slug)).toEqual(['sarees', 'shirts', 'earrings']);
+  });
+
+  it('skips only a brief that is actually complete', () => {
+    const { skipped } = planQueue(cats, [
+      { category: { slug: 'rings' }, band: { low: 500 } },
+      { category: { slug: 'earrings' }, band: { low: 0 } },
+    ]);
+    expect(skipped).toBe(1);
+  });
+
+  it('never starves the unbriefed behind a category the model keeps refusing', () => {
+    /*
+     * THE BUG THIS EXISTS FOR (28 Sep 2026). "Done" used to mean "briefed
+     * this week AND carrying a price band". On production the grounded
+     * model refuses every call, so no brief ever got a band, so nothing was
+     * ever done - and eight consecutive runs rebuilt the same first five
+     * categories while fifteen others were never touched once.
+     */
+    const bandless = cats.map((c) => ({ category: { slug: c.slug }, band: null }));
+    const more = [...cats, { slug: 'kurtas' }, { slug: 'watches' }];
+    const { queue } = planQueue(more, bandless);
+
+    // The two that have nothing come first, ahead of every band-less one.
+    expect(queue.slice(0, 2).map((c) => c.slug)).toEqual(['kurtas', 'watches']);
+    expect(queue).toHaveLength(6);
+  });
+
+  it('has nothing to do when every brief is complete', () => {
+    const done = cats.map((c) => ({ category: { slug: c.slug }, band: { low: 100 } }));
+    expect(planQueue(cats, done)).toEqual({ queue: [], skipped: 4 });
+  });
+
+  it('treats a first run, with no briefs at all, as everything to do', () => {
+    expect(planQueue(cats, []).queue).toHaveLength(4);
+    expect(planQueue(cats).queue).toHaveLength(4);
+  });
+});

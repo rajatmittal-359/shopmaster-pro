@@ -200,6 +200,23 @@ const keywordVolumes = async (seeds, deps = {}) => {
 };
 
 /**
+ * Which categories this run should work on, in which order.
+ *
+ * @param {Array<{slug:string}>} cats          categories with live products
+ * @param {Array<{category:{slug:string}, band?:{low?:number}}>} thisWeek  briefs already stored for this week
+ * @returns {{queue:Array, skipped:number}}
+ */
+const planQueue = (cats, thisWeek = []) => {
+  const briefed = new Map(thisWeek.map((b) => [b.category?.slug, Number(b.band?.low) > 0]));
+  const complete = new Set([...briefed].filter(([, hasBand]) => hasBand).map(([slug]) => slug));
+  return {
+    // Nothing at all first, then a brief that is only missing its band.
+    queue: [...cats.filter((c) => !briefed.has(c.slug)), ...cats.filter((c) => briefed.has(c.slug) && !complete.has(c.slug))],
+    skipped: cats.filter((c) => complete.has(c.slug)).length,
+  };
+};
+
+/**
  * Build and store a brief for every category that has live products (the
  * ones a seller or the assistant can be asked about). Returns a summary line.
  */
@@ -223,19 +240,36 @@ const buildBriefs = async (deps = {}) => {
   const mi = await require('../google/marketInsights').marketInsights().catch(() => ({ enabled: false, bestSellers: [], prices: new Map() }));
 
   const tokens = (s) => String(s || '').toLowerCase().split(/[^a-z0-9ऀ-ॿ]+/).filter((t) => t.length > 2);
-  // Resumable: a category already briefed this week with a grounded answer is
-  // left alone, so a rerun after a rate limit fills only the gaps.
-  const done = new Set((await MarketBrief.find({ weekOf: week, 'band.low': { $gt: 0 } }).select('category.slug').lean()).map((b) => b.category.slug));
+
+  /*
+   * WHAT COUNTS AS DONE, AND THE STARVATION IT USED TO CAUSE (28 Sep 2026)
+   *
+   *   The rule was "briefed this week AND carrying a price band", so that a
+   *   run cut short by a rate limit could come back and fill the band in.
+   *   Good intent, and it starved everything behind it: on production the
+   *   grounded model refuses every call at the moment, so NO brief gets a
+   *   band, so nothing is ever done, so every run rebuilt the same first
+   *   five categories and the fifteen behind them were never reached.
+   *   Eight rounds of the new caller made that visible - `built: 5,
+   *   pending: 15`, identical, eight times.
+   *
+   *   Now there are two queues and they are worked in order. A category
+   *   with NO brief for this week is first: it has nothing at all and the
+   *   words alone are worth having. A category whose brief lacks a band is
+   *   second: it already carries its words, and the band is the only thing
+   *   missing. So a bad Gemini day costs the band, never the coverage.
+   */
+  const thisWeek = await MarketBrief.find({ weekOf: week }).select('category.slug band.low').lean();
+  const { queue, skipped } = planQueue(cats, thisWeek);
+
   const pause = (ms) => new Promise((ok) => setTimeout(ok, ms));
   let built = 0;
-  let skipped = 0;
   // At most a dozen grounded calls per run (about five minutes with the pauses):
   // a request-driven job must finish inside the proxy's patience; the rest
   // are picked up by the next run because the build is resumable.
   const MAX_PER_RUN = deps.max ?? 12;
   let left = MAX_PER_RUN;
-  for (const category of cats) {
-    if (done.has(category.slug)) { skipped += 1; continue; }
+  for (const category of queue) {
     if (left-- <= 0) break;
     const catTokens = tokens(category.name);
     const relevant = (text) => catTokens.some((t) => String(text || '').toLowerCase().includes(t));
@@ -286,7 +320,7 @@ const buildBriefs = async (deps = {}) => {
     await MarketBrief.updateOne({ 'category.slug': category.slug }, { $set: brief }, { upsert: true });
     built += 1;
   }
-  return { built, skipped, pending: Math.max(0, cats.length - done.size - built), week, marketInsights: mi.enabled ? 'on' : 'not yet enabled by Google', searchConsole: sc.ok ? (sc.rows || []).length : 'not connected' };
+  return { built, skipped, pending: Math.max(0, queue.length - built), week, marketInsights: mi.enabled ? 'on' : 'not yet enabled by Google', searchConsole: sc.ok ? (sc.rows || []).length : 'not connected' };
 };
 
-module.exports = { briefPrompt, assembleBrief, briefToText, groundedFor, buildBriefs, keywordVolumes, familySieve };
+module.exports = { briefPrompt, assembleBrief, briefToText, groundedFor, buildBriefs, keywordVolumes, familySieve, planQueue };

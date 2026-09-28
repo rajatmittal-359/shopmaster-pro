@@ -148,15 +148,21 @@ jobs:
           # the timeout, a real failure still turns the run red, and the
           # ceiling stops a broken `pending` from looping forever.
           if [ "$JOB" = "market-brief" ]; then
+            was=""
             for round in 1 2 3 4 5 6 7 8; do
               code=$(call "?max=5")
               check "$code"
               pending=$(jq -r '.result.pending // 0' response.json)
               built=$(jq -r '.result.built // 0' response.json)
               echo "round $round: built $built, $pending still pending"
-              # Nothing left, or nothing moved - either way there is no point
-              # asking again. A stuck job is not made better by repetition.
-              if [ "$pending" = "0" ] || [ "$built" = "0" ]; then break; fi
+              # Nothing left, nothing built, or the queue did not move: stop.
+              # That last one caught a real bug on 28 Sep - the job rebuilt
+              # the same five categories eight times because "done" meant
+              # "has a price band" and the grounded model was refusing every
+              # call, so nothing ever became done. Fixed in the job, but the
+              # caller should never be the thing that loops on a mistake.
+              if [ "$pending" = "0" ] || [ "$built" = "0" ] || [ "$pending" = "$was" ]; then break; fi
+              was="$pending"
             done
           else
             code=$(call "")
