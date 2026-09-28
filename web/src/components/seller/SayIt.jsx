@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Mic, Square } from 'lucide-react';
+import { Mic, Square, X } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { useT } from '@/lib/i18n';
 
@@ -101,6 +101,15 @@ export default function SayIt({ value, onChange, busy, onSubmit }) {
       <p className="mt-0.5 text-xs text-muted-foreground">
         {t('Hindi, Hinglish, anything - spelling does not matter. Say what it is, what it is made of, and when people wear it.')}
       </p>
+      {/*
+        The same sentence as the box in 2 - Words, deliberately word for
+        word. Two mics in one form that behave differently is the thing
+        Rajat could not predict; saying the rule twice in the same words is
+        cheaper than making him remember which is which (28 Sep 2026).
+      */}
+      <p className="mt-0.5 text-xs text-muted-foreground">
+        {t('Speak again to add to the end. Nothing is sent until you press the button.')}
+      </p>
       <div className="mt-2 flex items-start gap-2">
         <Textarea
           id="sayit"
@@ -111,6 +120,17 @@ export default function SayIt({ value, onChange, busy, onSubmit }) {
           placeholder={t('green kundan ka necklace set hai, shaadi aur festival me pehnte hain, meena work hai')}
           className="flex-1"
         />
+        {Boolean(value) && (
+          <button
+            type="button"
+            onClick={() => onChange('')}
+            aria-label={t('Clear and start again')}
+            title={t('Clear and start again')}
+            className="grid size-10 shrink-0 place-items-center rounded-full border text-muted-foreground hover:bg-accent"
+          >
+            <X className="size-4" aria-hidden />
+          </button>
+        )}
         {canHear && (
           <button
             type="button"

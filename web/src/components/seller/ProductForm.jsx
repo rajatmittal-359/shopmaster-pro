@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Sparkles, Loader2, Cpu } from 'lucide-react';
+import { Sparkles, Loader2, Cpu, X } from 'lucide-react';
 import { authedFetch } from '@/lib/client';
 import { toast } from 'sonner';
 import { getCategories } from '@/lib/api';
@@ -823,8 +823,27 @@ export default function ProductForm({ productId, copyFromId }) {
         summary={form.name ? t('{name} · {n} words', { name: form.name.slice(0, 60), n: String(form.description || '').replace(/<[^>]*>/g, ' ').trim().split(/\s+/).filter(Boolean).length }) : t('Title and description - or say it, or let AI write it from the photo')}
         aside={
           <div className="flex shrink-0 items-center gap-2">
-            {/* Say it: the mic writes the numbers and the words at once. */}
-            <MicButton role="seller" language={lang === 'en' ? 'auto' : lang} onText={listFromSpeech} label={t('Say the product, price and stock')} />
+            {/*
+              SPEAKING ADDS TO THE BOX. IT DOES NOT ACT (28 Sep 2026).
+                This used to hand the transcript straight to the model the
+                moment the seller stopped talking, and show it back as a
+                read-only "Heard:" line. Rajat asked the question that
+                proved it wrong: "ek baar bol diya to dubara bolenge to kya
+                hoga - aage jodega, beech me jodega, ya poora dubara
+                bharega?" Nobody could tell, because nothing on screen said,
+                and the two mics in this form did not even agree.
+
+                One rule now, and it is written under the box: speaking
+                always adds to the end, nothing is ever replaced, and the
+                model runs only when the seller presses the button. A
+                mistake costs an edit instead of a draft from the day's cap.
+            */}
+            <MicButton
+              role="seller"
+              language={lang === 'en' ? 'auto' : lang}
+              onText={(text) => setHeard((was) => `${was ? `${was} ` : ''}${text}`.replace(/\s+/g, ' ').trim())}
+              label={t('Say the product, price and stock')}
+            />
             <Button
               type="button"
               variant="outline"
@@ -843,9 +862,41 @@ export default function ProductForm({ productId, copyFromId }) {
             ✦ {t('A photo, a few words, or just say it (mic) - any language - and the AI fills 2 to 5')}
           </Label>
           {heard && (
-            <p className="mt-1.5 rounded-md bg-background px-2 py-1 text-xs text-muted-foreground">
-              {t('Heard')}: <span className="text-foreground">“{heard}”</span>
-            </p>
+            <div className="mt-1.5 rounded-md border bg-background p-2">
+              <div className="flex items-start gap-2">
+                <Textarea
+                  id="heard"
+                  rows={2}
+                  value={heard}
+                  onChange={(e) => setHeard(e.target.value)}
+                  aria-label={t('What you said')}
+                  className="flex-1 text-sm"
+                />
+                <button
+                  type="button"
+                  onClick={() => setHeard('')}
+                  aria-label={t('Clear and start again')}
+                  title={t('Clear and start again')}
+                  className="grid size-8 shrink-0 place-items-center rounded-full border text-muted-foreground hover:bg-accent"
+                >
+                  <X className="size-4" aria-hidden />
+                </button>
+              </div>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => listFromSpeech(heard)}
+                  disabled={ai.status === 'writing' || !heard.trim()}
+                >
+                  {ai.status === 'writing' ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
+                  {ai.status === 'writing' ? t('Filling…') : t('Fill the form from this')}
+                </Button>
+                <span className="text-xs text-muted-foreground">
+                  {t('Speak again to add to the end. Nothing is sent until you press the button.')}
+                </span>
+              </div>
+            </div>
           )}
           <Input
             id="keywords"
