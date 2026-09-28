@@ -144,7 +144,40 @@ describe('what never leaves the server', () => {
    */
   it('shows the seller-of-record line: legal name, address and GSTIN - never the phone or PAN', async () => {
     const res = await request(app).get(`/api/public/sellers/${USER_ID}`);
-    expect(res.body.seller.legal).toEqual({ name: 'Meera Jewels', address: '12, Test Lane', gstin: 'GSTIN1234567', enrolled: '' });
+    expect(res.body.seller.legal).toEqual({
+      name: 'Meera Jewels',
+      address: '12, Test Lane',
+      gstin: 'GSTIN1234567',
+      enrolled: '',
+      postal: { street: '12, Test Lane', locality: '', region: '', postalCode: '' },
+    });
+  });
+
+  /*
+   * `postal` carries the same four parts as `address`, apart, for the shop
+   * page's schema.org PostalAddress (29 Sep 2026). The test that matters is
+   * that it stays the SAME address: the moment the two disagree, the website
+   * and the Google Business Profile stop matching, and the entity match is
+   * the whole reason the field exists.
+   */
+  it('sends the address unjoined as well, and the two say the same thing', async () => {
+    seed({
+      seller: {
+        ...FULL_SELLER,
+        pickupAddress: { phone: '9876500001', address1: 'C-13, Hari Marg', city: 'Jaipur', state: 'Rajasthan', pincode: '302019' },
+      },
+    });
+
+    const { legal } = (await request(app).get(`/api/public/sellers/${USER_ID}`)).body.seller;
+
+    expect(legal.postal).toEqual({ street: 'C-13, Hari Marg', locality: 'Jaipur', region: 'Rajasthan', postalCode: '302019' });
+    expect(legal.address).toBe('C-13, Hari Marg, Jaipur Rajasthan 302019');
+    for (const part of Object.values(legal.postal)) expect(legal.address).toContain(part);
+  });
+
+  it('never sends the pickup phone, even inside postal', async () => {
+    const { legal } = (await request(app).get(`/api/public/sellers/${USER_ID}`)).body.seller;
+    expect(JSON.stringify(legal)).not.toContain('9876500001');
   });
 });
 

@@ -126,6 +126,26 @@ router.get('/:handle', async (req, res) => {
           name: seller.application?.legalName || seller.businessName,
           // Rule 6(5)(a)-(b): the seller's geographic address, on the platform.
           address: [seller.pickupAddress?.address1, [seller.pickupAddress?.city, seller.pickupAddress?.state, seller.pickupAddress?.pincode].filter(Boolean).join(' ')].filter(Boolean).join(', '),
+          /*
+           * The SAME address, unjoined (29 Sep 2026).
+           *
+           * Nothing new is exposed - these are the four parts that the line
+           * above already prints. They are sent apart because the shop page
+           * puts them into schema.org PostalAddress, and a single joined
+           * string is the one shape structured data cannot use: Google
+           * matches a website to a Business Profile on street, locality and
+           * postcode as separate fields, and a shop whose site and Profile
+           * agree on all three is the entity match the whole local result
+           * rests on. Parsing the joined string back apart with a regex was
+           * the alternative, and it would break on the first address with a
+           * comma in its street line - which is most of them.
+           */
+          postal: {
+            street: seller.pickupAddress?.address1 || '',
+            locality: seller.pickupAddress?.city || '',
+            region: seller.pickupAddress?.state || '',
+            postalCode: seller.pickupAddress?.pincode || '',
+          },
           gstin: seller.application?.gstin || seller.gstNumber || '',
           enrolled: !seller.application?.gstin && !seller.gstNumber && seller.application?.gstMode === 'enrolment' ? (require('../utils/kyc').checkEnrolment(seller.application.enrolmentNumber).state || 'their state') : '',
         },

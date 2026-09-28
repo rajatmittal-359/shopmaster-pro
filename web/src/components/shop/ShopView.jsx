@@ -5,34 +5,11 @@ import ProductCard from '@/components/product/ProductCard';
 import Stars from '@/components/product/Stars';
 import { Globe, MapPin, Link2, Camera, Video, MessageCircle } from 'lucide-react';
 import { serialiseJsonLd } from '@/lib/jsonLd';
+import { buildShopSchema, safeHref, shopPath } from '@/lib/shopSchema';
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.shopmasterpro.in';
 // lucide dropped the brand glyphs; plain signifiers do the job.
 const LINK_ICON = { instagram: Camera, facebook: Link2, youtube: Video, googleBusiness: MapPin, website: Globe };
-/*
- * A link is only rendered if it is http(s) (27 Sep 2026, flagged by the
- * security review while this file was being split out).
- *
- * The API already refuses anything else: sellerController parses every link
- * with `new URL` and then matches the HOSTNAME against a per-field pattern,
- * and a `javascript:` or `data:` URL has no hostname to match. So this is
- * not closing an open hole - it is making the page safe on its own, without
- * depending on a validator three files away staying exactly as strict. The
- * page is the last place the string is trusted, so it is the right place to
- * check.
- *
- * It also guards the JSON-LD: `sameAs` is a public claim about the shop, and
- * a junk value there is a different kind of wrong.
- */
-const safeHref = (raw) => {
-  try {
-    const u = new URL(String(raw));
-    return u.protocol === 'https:' || u.protocol === 'http:' ? u.toString() : null;
-  } catch {
-    return null;
-  }
-};
-
 const LINK_LABEL = { instagram: 'Instagram', facebook: 'Facebook', youtube: 'YouTube', googleBusiness: 'On Google Maps', website: 'Website' };
 
 /**
@@ -55,21 +32,30 @@ const since = (iso) =>
   new Date(iso).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
 
 /**
- * The canonical address of a shop: its short link when it has one, the id
- * URL when it does not. Both routes render this same view, so without one
- * canonical Google would see two pages with identical content and pick for
- * us (27 Sep 2026).
+ * THE CITY GOES IN THE TITLE (29 Sep 2026)
+ *
+ *   The title was the shop's name and nothing else, which answers the search
+ *   "charming jewels" and no other. What people actually type was measured
+ *   rather than guessed: Google's own autocomplete for "jewellery shop near
+ *   me" returns "jewellery shop jaipur" first, and every shop query in that
+ *   list carries a city or a locality. A shop's name on its own is the one
+ *   search nobody makes until they already know the shop.
+ *
+ *   It stays GENERIC on purpose. No trade word is added here - what a shop
+ *   sells belongs in the seller's own About, which the seller writes, not in
+ *   a template that would tell Google the same thing about a shop selling
+ *   shoes. Same rule the site frame follows (layout.js).
  */
-export const shopPath = (seller) => (seller?.slug ? `/${seller.slug}` : `/sellers/${seller?.id}`);
-
 export async function shopMetadata(handle) {
   const data = await getSeller(handle);
 
   if (!data?.seller) return { title: 'Shop not found' };
 
+  const { businessName, city, about, productCount } = data.seller;
+
   return {
-    title: data.seller.businessName,
-    description: data.seller.about || `${data.seller.businessName} sells on ShopMaster Pro - ${data.seller.productCount} products, delivered across India with 7-day returns.`,
+    title: city ? `${businessName}, ${city.city}` : businessName,
+    description: about || `${businessName} sells on ShopMaster Pro - ${productCount} products, delivered across India with 7-day returns.`,
     alternates: { canonical: shopPath(data.seller) },
   };
 }
@@ -83,25 +69,7 @@ export default async function ShopView({ handle }) {
 
   const { seller, products } = data;
 
-  // The shop as an Organization Google can join to the seller's own profiles
-  // (sameAs) - the one line of structured data that is about the SELLER,
-  // not the platform. Only what the page shows in words.
-  const shopSchema = {
-    '@context': 'https://schema.org',
-    '@type': 'OnlineStore',
-    name: seller.businessName,
-    url: `${SITE}${shopPath(seller)}`,
-    ...(seller.about ? { description: seller.about } : {}),
-    ...(seller.legal?.name && seller.legal.name !== seller.businessName ? { legalName: seller.legal.name } : {}),
-    ...(seller.legal?.gstin ? { taxID: seller.legal.gstin } : {}),
-    ...(() => {
-      const sameAs = Object.values(seller.links || {}).map(safeHref).filter(Boolean);
-      return sameAs.length ? { sameAs } : {};
-    })(),
-    ...(seller.city ? { address: { '@type': 'PostalAddress', addressLocality: seller.city.city, addressRegion: seller.city.state || undefined, addressCountry: 'IN' } } : {}),
-    ...(seller.rating ? { aggregateRating: { '@type': 'AggregateRating', ratingValue: seller.rating.average, reviewCount: seller.rating.reviews } } : {}),
-    parentOrganization: { '@type': 'Organization', name: 'ShopMaster Pro', url: SITE },
-  };
+  const shopSchema = buildShopSchema(seller, SITE);
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8">
