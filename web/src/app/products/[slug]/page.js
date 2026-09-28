@@ -37,6 +37,47 @@ const plain = (html) => String(html || '').replace(/<[^>]*>/g, ' ').replace(/\s+
  *                               edited title broke the link Google had.
  *   there is no such product ->  a real 404.
  */
+/*
+ * THE PICTURE WHATSAPP ACTUALLY SHOWS (28 Sep 2026)
+ *
+ *   Rajat shared a necklace on WhatsApp and got a card with the title, the
+ *   description and no photograph - "image nahi dikhegi to koi kaise
+ *   lega". The tag was there and the file was fine: 200, JPEG, 147 KB,
+ *   1200x800, 1.3 s. What was missing was everything AROUND it.
+ *
+ *   WhatsApp will not wait to download and measure an image it has not been
+ *   told the size of; without og:image:width and height it falls back to the
+ *   small card with a favicon, which is exactly what he saw. And 1200x800 is
+ *   3:2, while the large card is cut for 1.91:1 - so even when it renders,
+ *   the sides of a necklace get cropped away.
+ *
+ *   So: declare the dimensions, and ask Cloudinary for the shape the card
+ *   wants. `c_pad,b_white` adds white margins rather than cropping - a
+ *   necklace photographed on white loses nothing and stays whole - and
+ *   `q_auto,f_jpg` brings 147 KB down to a size that arrives before the
+ *   fetcher gives up.
+ *
+ *   Anything that is not a Cloudinary URL is passed through untouched, with
+ *   no dimensions claimed, because a size we have not verified is worse than
+ *   none.
+ */
+const OG_W = 1200;
+const OG_H = 630;
+
+const shareImage = (url, alt) => {
+  const marker = '/image/upload/';
+  const at = String(url || '').indexOf(marker);
+  if (at < 0) return { url, alt };
+  const transform = `w_${OG_W},h_${OG_H},c_pad,b_white,f_jpg,q_auto`;
+  return {
+    url: `${url.slice(0, at + marker.length)}${transform}/${url.slice(at + marker.length)}`,
+    width: OG_W,
+    height: OG_H,
+    type: 'image/jpeg',
+    alt,
+  };
+};
+
 export async function generateMetadata({ params }) {
   const { slug } = await params;
   const product = await getProduct(slug);
@@ -52,13 +93,18 @@ export async function generateMetadata({ params }) {
     alternates: { canonical: path },
     openGraph: {
       title: product.name,
-      description: plain(product.description).slice(0, 200),
+      /*
+       * The price leads the card. The share message is now just the link -
+       * that is the only way WhatsApp reliably draws the big picture - so
+       * everything a person needs to decide has to be ON the card.
+       */
+      description: `₹${Number(price).toLocaleString('en-IN')} · ${plain(product.description)}`.slice(0, 200),
       url: `${SITE}${path}`,
       type: 'website',
       siteName: 'ShopMaster Pro',
       locale: 'en_IN',
       // A product without a photo still gets the brand card, not a bare link.
-      images: product.images?.length ? [{ url: product.images[0] }] : ['/opengraph-image'],
+      images: product.images?.length ? [shareImage(product.images[0], product.name)] : ['/opengraph-image'],
     },
     other: { 'product:price:amount': String(price), 'product:price:currency': 'INR' },
   };
@@ -303,7 +349,7 @@ export default async function ProductPage({ params }) {
           )}
 
           {/* The product travels on WhatsApp - the OG card above is what arrives. */}
-          <ShareButtons url={`${SITE}/products/${product.slug || product._id}`} name={product.name} price={price} />
+          <ShareButtons url={`${SITE}/products/${product.slug || product._id}`} name={product.name} />
 
           {/* Baymard: 60% of shoppers look for the return policy ON the product
               page, 15% abandon over an unsatisfactory one - and 44% of sites do

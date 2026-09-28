@@ -15,15 +15,30 @@ import { Button } from '@/components/ui/button';
  * on a laptop the WhatsApp link opens WhatsApp Web, and Copy link is always
  * there. No tracking parameters: the person is sharing, not being tracked.
  */
-export default function ShareButtons({ url, name, price }) {
+export default function ShareButtons({ url, name }) {
   const [copied, setCopied] = useState(false);
-  const text = `${name}${price ? ` - ₹${Number(price).toLocaleString('en-IN')}` : ''} on ShopMaster Pro`;
-  const wa = `https://wa.me/?text=${encodeURIComponent(`${text}\n${url}`)}`;
+  /*
+   * THE LINK GOES ALONE (28 Sep 2026)
+   *
+   *   This used to send "Name - ₹275 on ShopMaster Pro" and then the link,
+   *   and WhatsApp drew no card at all - Rajat: "image nahi dikhegi to koi
+   *   kaise lega". A message PREFILLED through wa.me?text=, or handed to
+   *   navigator.share with both `text` and `url`, arrives as ordinary typed
+   *   text, and WhatsApp only builds a preview for a link it sees pasted.
+   *   Send the URL by itself and the card comes back - photograph, name,
+   *   and now the price, which moved into og:description for this reason.
+   *
+   *   The words are not lost, they moved somewhere better: a card with the
+   *   necklace in it does more than a line of text ever did.
+   */
+  const wa = `https://wa.me/?text=${encodeURIComponent(url)}`;
 
   const share = async () => {
     if (typeof navigator !== 'undefined' && navigator.share) {
       try {
-        await navigator.share({ title: name, text, url });
+        // No `text`: Android concatenates title, text and url into one typed
+        // message, which is the thing that kills the preview.
+        await navigator.share({ title: name, url });
         return;
       } catch {
         /* dismissed - fall through to the WhatsApp link */
