@@ -236,8 +236,12 @@ synonyms collection (jhumka/jhumki/झुमका), Gemini query → filters.
     collapsed ones?"*. Their rule, and this is the actionable one: a
     collapsed step must **collapse into a summary of the entered data**, not
     just its heading - participants "routinely scanned the summaries" rather
-    than reopening. **Our `Card` already takes a `summary` prop and only the
-    Category card passes one.** Six of the seven collapse to a bare title.
+    than reopening. **Checked properly on 28 Sep: all seven cards already pass
+    a summary and it already shows entered data** - "3 photos - first is the
+    main one", "₹275 · 12 in stock", "Gold · Free size". An earlier note here
+    claimed only the Category card had one; that was a bad grep (the prop
+    sits a line below `<Card id=`), and it is corrected here rather than
+    quietly deleted, because a recommendation was built on it.
   - Nobody keeps a completeness score INSIDE the form: Amazon's Listing
     Quality Dashboard is a separate page, Etsy has no score, Shopify has
     Draft/Active and nothing else. Our rail-plus-score is a deliberate
@@ -248,27 +252,49 @@ synonyms collection (jhumka/jhumki/झुमका), Gemini query → filters.
     without a second form. Its one warning, from its own sellers: never let a
     field be optional on create and mandatory on edit.
 
-  **The three options, and the recommendation. Rajat picks a letter.**
+  **So what is actually wrong, read again with the summaries accounted for.**
+  `Card` opens `defaultOpen ?? editing`, so:
 
-  - **A. Keep the rail, give every card a summary** (Baymard's rule, Etsy's
-    section list). Six one-line summaries - "3 photos", "₹275 · 12 in stock",
-    "Gold · Free size" - so a shut card still answers what is in it. Cost:
-    small, no new component, no shape change. Backend: no.
-  - **B. A + a phone stepper.** Desktop stays the scrolling page with the
-    rail; the phone gets Etsy's Next/Back over the same sections. Cost:
-    a second navigation mode to keep honest, and the listing score has to
-    stay reachable from every step. Backend: no.
-  - **C. A + Amazon's scope switch** - "Just the basics / Everything",
-    hiding the optional cards until asked. Cost: the risk NN/g names, that
-    people never find what is behind the second level; and our optional
-    fields (weight, FAQs, facts) are exactly the ones that earn money.
-    Backend: no.
+  - **EDIT**: every card open, and the seller's own open/shut choice
+    remembered. Nobody has complained about this half, and the research says
+    not to touch it - Shopify's edit page is exactly this.
+  - **ADD**: every card SHUT. Seven collapsed rows, and because nothing is
+    filled yet, each summary is its empty-state nudge - "No photo yet", "Not
+    chosen", "No price · stock?", "Choose a category first". Seven chevrons
+    and seven sentences of advice before the seller has done anything. That
+    is the screen Rajat called noisy, and summaries are not the fix for it,
+    because on this screen they ARE the noise.
 
-  **Recommendation: A.** It is the only one backed by a tested finding rather
-  than a preference, it is the cheapest, and it attacks what Rajat actually
-  complained about - a wall of chevrons that say nothing. B is worth doing
-  after A if the phone still feels wrong to him; C fights our own listing
-  score. **Not built - waiting on the letter.**
+  And Baymard's distinction, read properly, names it: they separate the
+  **inline** accordion (ad-hoc open/close, no order) from the **sequential**
+  accordion (a flow). Inline is the one that tested badly; sequential worked,
+  because "users perceive accordion steps as separate pages" and each
+  finished step collapses into what was entered. **Our add flow is the inline
+  one.**
+
+  **The three options, corrected. Rajat picks a letter.**
+
+  - **A. Make ADD sequential; leave EDIT exactly as it is.** The first card
+    opens, the rest stay listed with their summary but inert until the one
+    before them is done, and finishing one opens the next. Edit keeps
+    today's all-open, remembered, jump-anywhere behaviour. Reuses the rail's
+    own per-section `done` test, so the flow and the rail cannot disagree.
+    Cost: an inert state on `Fold`, and `Card` has to know whether the
+    section before it is done. Backend: no.
+  - **B. Just open the first card on add**, leaving the other six shut. One
+    line. It tests whether the complaint was only "nothing is open" before
+    anything larger is built. Backend: no.
+  - **C. Etsy's split**: desktop stays the scrolling page with the rail, the
+    phone gets a real Next/Back stepper over the same sections. Closest to
+    what Rajat first asked for, and Etsy's own mobile app does exactly this.
+    Cost: a second navigation mode to keep honest, and the listing score has
+    to stay reachable from every step. Backend: no.
+
+  **Recommendation: A**, with **B first if he wants the cheap read.** A is
+  the only one backed by a tested distinction rather than a preference, it
+  leaves alone the half nobody complained about, and it reuses machinery that
+  already exists. C is worth doing after A if the phone still feels wrong.
+  **Not built - waiting on the letter.**
 
 - **The search-word coach: take the seller's OWN word and make it the right one (Rajat, 26 Sep 2026).**
   *"Seller ko pata hota hai product kya hai, lekin self-doubt hota hai - kya yahi acha word hai market me, is word ki kya value hai, chalega ya nahi. Us chakkar me vo ghabra ke kuch nahi likhta."*
