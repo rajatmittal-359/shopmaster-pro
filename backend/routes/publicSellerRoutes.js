@@ -17,6 +17,7 @@
  *   whole document would leak all of it the first time somebody added a field.
  */
 const express = require('express');
+const { availabilityOf } = require('../utils/availability');
 
 const router = express.Router();
 
@@ -73,7 +74,11 @@ router.get('/:handle', async (req, res) => {
     const shopBreak = require('../utils/vacation').breakOf(seller);
     const [products, count, rating] = await Promise.all([
       shopBreak ? [] : Product.find(filter)
-        .select('name slug price salePrice saleStartsAt saleEndsAt mrp images avgRating totalReviews')
+        // `stock` and `reserved` are what ProductCard reads to decide between
+        // the buy buttons and "Out of stock" - without them every card on a
+        // shop page reads 0 and says the shop has nothing. The product page
+        // already prints "2 left", so neither number is new in public.
+        .select('name slug price salePrice saleStartsAt saleEndsAt mrp images avgRating totalReviews stock reserved')
         .sort({ createdAt: -1 })
         .limit(24)
         .lean(),
@@ -159,7 +164,15 @@ router.get('/:handle', async (req, res) => {
             }
           : null,
       },
-      products,
+      /*
+       * The ANSWER, not the raw inputs (utils/availability). Every card
+       * used to subtract `stock - reserved` itself, in five different
+       * components, and a query that forgot either field turned a shop
+       * full of stock into a shop that said "Out of stock". The two raw
+       * numbers still travel: the seller's own panel prints how many are
+       * held in checkouts, which is real work, not a display detail.
+       */
+      products: products.map((product) => ({ ...product, availability: availabilityOf(product) })),
     });
   } catch (error) {
     console.error('PUBLIC SELLER ERROR:', error.message);

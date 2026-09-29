@@ -15,6 +15,7 @@ import PanelCard from '@/components/panel/PanelCard';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { scoreListing } from '@/lib/listingScore';
 import { useT } from '@/lib/i18n';
+import { availableOf } from '@/lib/availability';
 
 /**
  * Everything this seller has listed, and the one number they change daily.
@@ -46,7 +47,7 @@ import { useT } from '@/lib/i18n';
  */
 const money = (n) => `₹${Number(n || 0).toLocaleString('en-IN')}`;
 
-const sellable = (p) => Math.max(0, (p.stock || 0) - (p.reserved || 0));
+const sellable = (p) => availableOf(p);
 
 /*
  * A draft (23 Sep 2026) is a listing saved half-finished with "Save for

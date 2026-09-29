@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { priceOf } from '@/lib/pricing';
+import { availableOf } from '@/lib/availability';
 import CardActions from '@/components/product/CardActions';
 import Stars from '@/components/product/Stars';
 
@@ -37,7 +38,7 @@ export default function ProductCard({ product, sizes = '(max-width: 768px) 50vw,
   const { price, was, percentOff } = priceOf(product);
   const [image, second] = product.images || [];
   const href = `/products/${product.slug || product._id}`;
-  const available = Math.max(0, (product.stock || 0) - (product.reserved || 0));
+  const available = availableOf(product);
   const reviews = Number(product.totalReviews) || 0;
 
   return (

@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import Image from 'next/image';
+import { availableOf } from '@/lib/availability';
 
 /**
  * The other colours and sizes of the same thing.
@@ -22,7 +23,6 @@ import Image from 'next/image';
  *   elsewhere for a size we simply do not have today. Shown-but-unavailable
  *   ends the search here, and it is what every large shop does.
  */
-const availableOf = (v) => Math.max(0, (v.stock || 0) - (v.reserved || 0));
 
 const boxClass = (current, available) =>
   current

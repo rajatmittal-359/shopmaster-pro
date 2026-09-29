@@ -7,6 +7,7 @@ import { authedFetch } from '@/lib/client';
 import { useSession } from '@/lib/session';
 import { Button } from '@/components/ui/button';
 import NotForThisAccount from '@/components/common/NotForThisAccount';
+import { availableOf } from '@/lib/availability';
 
 /**
  * The basket.
@@ -138,7 +139,7 @@ export default function CartView({ freeAbove = 0 }) {
       <ul className="divide-y divide-border">
         {items.map((item) => {
           const product = item.productId;
-          const stock = Math.max(0, (product.stock || 0) - (product.reserved || 0));
+          const stock = availableOf(product);
 
           return (
             <li key={product._id} className="flex gap-4 py-4">

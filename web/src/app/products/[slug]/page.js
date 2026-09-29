@@ -12,6 +12,7 @@ import ShareButtons from '@/components/product/ShareButtons';
 import TrackView from '@/components/analytics/TrackView';
 import PincodeCheck from '@/components/product/PincodeCheck';
 import ProductCard from '@/components/product/ProductCard';
+import { availableOf } from '@/lib/availability';
 import Stars from '@/components/product/Stars';
 import ReviewForm from '@/components/product/ReviewForm';
 import SizePicker from '@/components/product/SizePicker';
@@ -136,7 +137,7 @@ export default async function ProductPage({ params }) {
   if (product.slug && product.slug !== slug) permanentRedirect(`/products/${product.slug}`);
 
   const { price, was, percentOff, wasIsMrp } = priceOf(product);
-  const available = Math.max(0, (product.stock || 0) - (product.reserved || 0));
+  const available = availableOf(product);
   const inStock = product.isActive && available > 0;
   const path = `/products/${product.slug || product._id}`;
 

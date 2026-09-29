@@ -203,3 +203,52 @@ describe('shops that are not open', () => {
     expect(res.status).toBe(404);
   });
 });
+
+/**
+ * THE FIELDS THE CARD NEEDS (30 Sep 2026)
+ *
+ *   The shop page draws every product with the SAME `ProductCard` the rest of
+ *   the site uses, and on 22 Sep that card grew "Add to cart" and "Buy now"
+ *   under it. From that day the card decides what to draw from
+ *   `stock - reserved`; a product arriving without those two fields reads as
+ *   0 and the card says "Out of stock" with no buttons.
+ *
+ *   This route's select was written on 9 Sep, when the card was a plain tile
+ *   that needed neither. Nothing threw - a missing field is `undefined`, and
+ *   `undefined || 0` is 0 - and "Out of stock" is a plausible enough thing to
+ *   read that nobody looking at the page saw a bug. Every product on every
+ *   shop page was unbuyable for eight days.
+ *
+ *   Asserting the RESPONSE would not have caught it: the mocks here ignore
+ *   what `.select()` is handed. So the contract itself is the test - this
+ *   route must ask the database for what the card reads.
+ */
+describe('the fields the product card needs', () => {
+  const selectFor = async () => {
+    let asked = '';
+    Product.find = vi.fn(() => ({
+      select: (fields) => {
+        asked = fields;
+        return { sort: () => ({ limit: () => ({ lean: async () => [] }) }) };
+      },
+    }));
+    await request(app).get(`/api/public/sellers/${USER_ID}`);
+    return asked;
+  };
+
+  it('asks for stock and reserved, which decide the buy buttons', async () => {
+    const asked = await selectFor();
+
+    expect(asked.split(/\s+/)).toEqual(expect.arrayContaining(['stock', 'reserved']));
+  });
+
+  it('sends the answer too, so no component has to subtract for itself', async () => {
+    // utils/availability owns this. Five components each doing their own
+    // `stock - reserved` is how the shop page came to lie about its stock.
+    seed({ products: [{ _id: 'p1', name: 'A ring', stock: 5, reserved: 2, lowStockThreshold: 3 }] });
+
+    const res = await request(app).get(`/api/public/sellers/${USER_ID}`);
+
+    expect(res.body.products[0].availability).toEqual({ available: 3, state: 'low', inStock: true });
+  });
+});
