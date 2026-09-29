@@ -74,16 +74,22 @@ The three project skills live in `~/.claude/skills/{frontend,backend,database}`
 - Base UI: `Menu.GroupLabel` outside a `Menu.Group` throws; `Button render={<Link/>}` needs `nativeButton={false}`.
 - Lightning CSS drops hand-written `backdrop-filter`; use `@apply backdrop-blur-lg backdrop-saturate-150`.
 - `react-hooks/set-state-in-effect`: fetch in a promise chain inside the effect, never `setState` synchronously in its body.
-- Bash heredocs eat backslashes on this machine; write files with the Write tool or python.
-- **Never run `next build` on this laptop.** It goes runaway and the process
-  survives `taskkill /F`, `Stop-Process -Force` and killing its parent - then
-  it poisons node AND git (a killed `git commit` leaves `refs/heads/main.lock`
-  behind and every later git write fails). It also tells you nothing new:
-  CI's `e2e` job already builds `web/` on every push and the deploy waits for
-  the whole workflow, so a build that does not compile can never reach the
-  site. Verify here with lint + `npm test`; let CI do the build. Same for
-  `git commit -F -` with a heredoc - it hangs; write the message to a file
-  and use `git commit -F <file>`.
+- This is a Mac (since 30 Sep 2026), so two old Windows workarounds are gone:
+  heredocs keep their backslashes (tested), and `git commit -F -` no longer
+  hangs. `timeout` does **not** exist here - it is GNU coreutils, not macOS.
+- **Do not run `next build` unless Rajat asks.** On the old Windows laptop it
+  went runaway and survived `taskkill /F`, `Stop-Process -Force` and killing
+  its parent - then it poisoned node AND git (a killed `git commit` left
+  `refs/heads/main.lock` behind and every later git write failed). **Not yet
+  retested on the Mac (30 Sep 2026)**, so the ban stands until it is. It also
+  tells you nothing new: CI's `e2e` job already builds `web/` on every push
+  and the deploy waits for the whole workflow, so a build that does not
+  compile can never reach the site. Verify here with lint + `npm test`; let
+  CI do the build.
+- The Playwright profile did **not** come over from Windows - it held live
+  Google sessions, which are worse to carry than a key because they cannot be
+  rotated. Chromium is installed (30 Sep 2026), but the first browser check
+  that needs Google will need Rajat to sign in himself. Never log in for him.
 - AI image quotas are real money-shaped: Cloudflare 10k neurons/day (the only daily free edit source), Pollinations has **no** daily grant, HF ≈3 edits/month. Test with mocks; heavy models 2–3 real calls a day at most.
 - Gemini text: `gemini-3.5-flash` pinned with retry; image generation needs billing (his card is refused by Google Cloud).
 - Reading the outside web (`backend/utils/research`): Gemini `url_context` is FREE and reads most pages - **Firecrawl only** when the page blocks Google (amazon.in does) or when the photographs are needed. Key is Rajat's personal account: 1,000 credits/month, resets the 26th; 25 reads a day, cached, counted in `AiUsage.research`.

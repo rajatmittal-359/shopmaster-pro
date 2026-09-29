@@ -282,6 +282,19 @@ skills read before they do anything.
 # What is different on a Mac
 
 - **The SSH key needs `chmod 600`** or ssh refuses it. Windows did not care.
+- **Git's identity has to be set again, per repository.** `git clone` does
+  not carry `.git/config`, and this machine's global identity is the office
+  one (`rajat.mittal@wedigtech.com`). Every one of the 572 commits before
+  the move is `Rajat Mittal <rajatmittal359@gmail.com>`, so the first commit
+  here would have broken that and put an employer's address on a public
+  personal repo, permanently. Set it on the repo, never globally, so other
+  projects on this Mac keep the office identity:
+  ```bash
+  git config --local user.name "Rajat Mittal"
+  git config --local user.email "rajatmittal359@gmail.com"
+  ```
+  Done 30 Sep 2026. Check it with `git config user.email` before the first
+  commit on any new machine.
 - **Bash is the real shell**, so two old workarounds stop applying: the
   PowerShell detours, and "heredocs eat backslashes" - that was a
   Git-Bash-on-Windows fault.
