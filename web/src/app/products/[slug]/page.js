@@ -12,7 +12,7 @@ import ShareButtons from '@/components/product/ShareButtons';
 import TrackView from '@/components/analytics/TrackView';
 import PincodeCheck from '@/components/product/PincodeCheck';
 import ProductCard from '@/components/product/ProductCard';
-import { availableOf } from '@/lib/availability';
+import { availabilityOf, availableOf } from '@/lib/availability';
 import Stars from '@/components/product/Stars';
 import ReviewForm from '@/components/product/ReviewForm';
 import SizePicker from '@/components/product/SizePicker';
@@ -293,7 +293,7 @@ export default async function ProductPage({ params }) {
 
           {/* Only when it is genuinely low. "Only 12 left" on a shelf of 12 is
               the manufactured urgency the CCPA guidelines call a dark pattern. */}
-          {inStock && available <= (product.lowStockThreshold || 3) && (
+          {availabilityOf(product).state === 'low' && (
             <p className="text-sm font-medium text-destructive">Only {available} left</p>
           )}
 

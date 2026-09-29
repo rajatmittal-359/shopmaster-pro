@@ -15,7 +15,7 @@ import PanelCard from '@/components/panel/PanelCard';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { scoreListing } from '@/lib/listingScore';
 import { useT } from '@/lib/i18n';
-import { availableOf } from '@/lib/availability';
+import { availabilityOf, availableOf } from '@/lib/availability';
 
 /**
  * Everything this seller has listed, and the one number they change daily.
@@ -98,7 +98,9 @@ function StatusBadge({ product }) {
   if (!product.isActive) return <Badge variant="outline">{t('Hidden')}</Badge>;
   const left = sellable(product);
   if (left === 0) return <Badge variant="destructive">{t('Out of stock')}</Badge>;
-  if (left <= (product.lowStockThreshold || 10)) {
+  // `|| 10` used to live here and swallowed a deliberate 0 - lib/availability
+  // owns the rule now, including "0 means the seller wants no warning".
+  if (availabilityOf(product).state === 'low') {
     return <Badge className="bg-amber-500/10 text-amber-700 dark:text-amber-300">{t('Low · {n} left', { n: left })}</Badge>;
   }
   return <Badge className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-300">{t('Live')}</Badge>;

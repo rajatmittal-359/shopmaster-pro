@@ -555,7 +555,10 @@ productSchema.pre('validate', async function pricesMustBeHonest() {
 });
 
 productSchema.virtual('isLowStock').get(function () {
-  return this.stock <= this.lowStockThreshold;
+  // One answer for the whole app (utils/availability): counted against what can
+  // actually be promised, not what is on the shelf, and silent when the seller
+  // set the threshold to 0 to say they want no warning.
+  return require('../utils/availability').availabilityOf(this).state === 'low';
 });
 
 // Indexes

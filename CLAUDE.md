@@ -77,11 +77,17 @@ The three project skills live in `~/.claude/skills/{frontend,backend,database}`
 - This is a Mac (since 30 Sep 2026), so two old Windows workarounds are gone:
   heredocs keep their backslashes (tested), and `git commit -F -` no longer
   hangs. `timeout` does **not** exist here - it is GNU coreutils, not macOS.
-- **Do not run `next build` unless Rajat asks.** On the old Windows laptop it
-  went runaway and survived `taskkill /F`, `Stop-Process -Force` and killing
-  its parent - then it poisoned node AND git (a killed `git commit` left
-  `refs/heads/main.lock` behind and every later git write failed). **Not yet
-  retested on the Mac (30 Sep 2026)**, so the ban stands until it is. It also
+- **`next dev` is fine on this Mac - tested 30 Sep 2026.** Started both servers
+  (`npm run server` + `npm run web`), served the shop page at 390px, then
+  `pkill`ed them: four processes gone, `pgrep` empty, ports free, git with no
+  `.lock` and a clean status. The Windows disease did not travel. Use it for
+  visual verification; kill it when finished rather than leaving it running.
+- **`next build` still unrun here.** On the old Windows laptop it went runaway
+  and survived `taskkill /F`, `Stop-Process -Force` and killing its parent -
+  then it poisoned node AND git (a killed `git commit` left
+  `refs/heads/main.lock` behind and every later git write failed). Given that
+  `next dev` behaved, it very probably behaves too - but it has not been
+  watched on this machine, so Rajat runs it the first time. It also
   tells you nothing new: CI's `e2e` job already builds `web/` on every push
   and the deploy waits for the whole workflow, so a build that does not
   compile can never reach the site. Verify here with lint + `npm test`; let

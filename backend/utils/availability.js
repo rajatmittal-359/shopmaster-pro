@@ -45,6 +45,18 @@ const LOW_STOCK_DEFAULT = 10;
  * @param {{stock?: number, reserved?: number, lowStockThreshold?: number}} product
  * @returns {{available: number, state: 'out'|'low'|'in', inStock: boolean}}
  */
+/**
+ * The seller's own number, with 0 kept as an answer rather than read as
+ * absence. Exported because the seller panel and the admin's low-stock list
+ * have to agree with the badge a shopper's card draws.
+ */
+const thresholdOf = (product) => {
+  const raw = product?.lowStockThreshold;
+  if (raw === null || raw === undefined || raw === '') return LOW_STOCK_DEFAULT;
+  const n = Number(raw);
+  return Number.isFinite(n) && n >= 0 ? n : LOW_STOCK_DEFAULT;
+};
+
 const availabilityOf = (product) => {
   const stock = Number(product?.stock) || 0;
   const reserved = Number(product?.reserved) || 0;
@@ -52,12 +64,22 @@ const availabilityOf = (product) => {
 
   // The threshold counts against what can be promised, not what is on the
   // shelf: 12 on hand with 10 held is a shop with two to sell.
-  const threshold = Number(product?.lowStockThreshold) || LOW_STOCK_DEFAULT;
+  //
+  // ZERO MEANS NEVER, AND ZERO IS NOT MISSING
+  //   A seller who stocks one of everything wants no warning at all, and the
+  //   threshold already has an off switch: nothing with stock can sit at or
+  //   below zero. But `Number(0) || 10` is 10, which is the same falsy
+  //   coercion that made the shop page call a full shop empty - so a
+  //   deliberate 0 and a field nobody filled have to be told apart here
+  //   rather than collapsed.
+  const threshold = thresholdOf(product);
 
   // A word, never a colour or a bare number - the checklist's P1 rule, and
   // the thing that lets a card say "2 left" and a feed say "in stock" from
   // the same source.
-  const state = available === 0 ? 'out' : available <= threshold ? 'low' : 'in';
+  // Out is a fact and is always said. Low is a warning, and a threshold of 0
+  // is the seller saying they do not want one.
+  const state = available === 0 ? 'out' : threshold > 0 && available <= threshold ? 'low' : 'in';
 
   return { available, state, inStock: available > 0 };
 };
@@ -72,4 +94,4 @@ const availabilityOf = (product) => {
 const withAvailability = (products) =>
   (products || []).map((product) => ({ ...product, availability: availabilityOf(product) }));
 
-module.exports = { availabilityOf, withAvailability, LOW_STOCK_DEFAULT };
+module.exports = { availabilityOf, withAvailability, thresholdOf, LOW_STOCK_DEFAULT };

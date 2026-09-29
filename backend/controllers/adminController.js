@@ -718,9 +718,18 @@ exports.getAnalytics = async (req, res) => {
     const topSellers = topSellersAgg;
     
     // ---------- GLOBAL LOW STOCK LIST ----------
+    // Counted the way every other surface counts it (utils/availability):
+    // against what can be promised, not the shelf, and skipping the sellers
+    // who set the threshold to 0 because they stock one of everything and a
+    // permanent warning tells nobody anything.
     const lowStockProducts = await Product.find({
       isActive: true,
-      $expr: { $lte: ['$stock', '$lowStockThreshold'] }
+      $expr: {
+        $and: [
+          { $gt: [{ $ifNull: ['$lowStockThreshold', 10] }, 0] },
+          { $lte: [{ $subtract: ['$stock', { $ifNull: ['$reserved', 0] }] }, { $ifNull: ['$lowStockThreshold', 10] }] },
+        ],
+      },
     })
     .populate('sellerId', 'name email')
     .populate('category', 'name')

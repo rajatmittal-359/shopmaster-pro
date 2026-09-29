@@ -1309,10 +1309,30 @@ export default function ProductForm({ productId, copyFromId }) {
           <Field id="weight" label="Parcel weight (kg)" hint="The courier is quoted on this. Guessing low costs you the difference at the door.">
             <Input id="weight" inputMode="decimal" value={form.weight ?? ''} onChange={set('weight')} className="h-10" />
           </Field>
-          <Field id="lowStockThreshold" label="Warn me at">
+          {/*
+            WHY THIS SAYS WHAT IT DOES, AND WHY 0 IS ALLOWED (30 Sep 2026)
+              Rajat: a seller who stocks exactly one of everything had a
+              warning firing on every product they own, for ever - and a
+              warning that is always on is the background, not a warning.
+              Shopify has no built-in low-stock flag; its apps set a number per
+              product and its reports default to "less than 10 units". None of
+              them ship a separate off switch, because the threshold is its own:
+              nothing with stock sits at or below zero.
+
+              The hint also admits the part the label never did - this number
+              is what decides whether a SHOPPER is told how few are left. A
+              seller turning off their own warning is also turning that off,
+              and they should know it before they do.
+          */}
+          <Field
+            id="lowStockThreshold"
+            label="Warn me at"
+            hint="0 = never warn me. Below this your product list says Low, and the product page tells shoppers how few are left. Leave 10 if unsure."
+          >
             <Input
               id="lowStockThreshold"
               inputMode="numeric"
+              min="0"
               value={form.lowStockThreshold ?? 10}
               onChange={set('lowStockThreshold')}
               className="h-10"

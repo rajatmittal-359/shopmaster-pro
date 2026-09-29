@@ -76,3 +76,37 @@ describe('attaching it to a list on the way out', () => {
     expect(withAvailability(undefined)).toEqual([]);
   });
 });
+
+/**
+ * ZERO MEANS NEVER (30 Sep 2026)
+ *
+ *   Rajat: some sellers stock exactly one of everything. For them a warning at
+ *   10 fires on every product they own, for ever - and a warning that is always
+ *   on is not a warning, it is the background.
+ *
+ *   Shopify has no built-in low-stock flag at all; its apps set a threshold per
+ *   product and its reports default to "less than 10 units". Nobody ships a
+ *   separate off switch, because the threshold already has one: zero. Nothing
+ *   with stock can be at or below zero, so the warning simply never fires.
+ *
+ *   The catch is that `Number(x) || 10` turns a deliberate 0 back into 10 -
+ *   the same falsy-coercion that cost us the shop page. Missing and zero are
+ *   different answers and have to stay different.
+ */
+describe('zero means never warn', () => {
+  it('never says low when the seller asked for no warning', () => {
+    expect(availabilityOf({ stock: 1, lowStockThreshold: 0 }).state).toBe('in');
+    expect(availabilityOf({ stock: 99, lowStockThreshold: 0 }).state).toBe('in');
+  });
+
+  it('still says out at zero stock, because that is a fact and not a warning', () => {
+    expect(availabilityOf({ stock: 0, lowStockThreshold: 0 }).state).toBe('out');
+  });
+
+  it('tells a deliberate zero apart from a missing value', () => {
+    // The bug this guards: `Number(0) || 10` is 10.
+    expect(availabilityOf({ stock: 5, lowStockThreshold: 0 }).state).toBe('in');
+    expect(availabilityOf({ stock: 5 }).state).toBe('low');
+    expect(availabilityOf({ stock: 5, lowStockThreshold: null }).state).toBe('low');
+  });
+});

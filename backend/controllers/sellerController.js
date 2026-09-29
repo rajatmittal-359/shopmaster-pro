@@ -115,7 +115,8 @@ const sellerMoneyFor = (order, sellerId) => {
  * job and the storefront badge. The seller dashboard previously used '<' and
  * therefore disagreed with its own low-stock list.
  */
-const isLowStock = (product) => product.stock <= product.lowStockThreshold;
+const isLowStock = (product) => availabilityOf(product).state === 'low';
+const { availabilityOf } = require('../utils/availability');
 
 /**
  * Record a seller-initiated manual stock change in the inventory audit trail.
@@ -711,7 +712,7 @@ exports.updateStock = async (req, res) => {
     res.json({
       message: 'Stock updated successfully',
       product,
-      lowStockAlert: product.stock <= product.lowStockThreshold,
+      lowStockAlert: availabilityOf(product).state === 'low',
     });
   } catch (error) {
     sendError(res, error);

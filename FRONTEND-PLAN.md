@@ -3347,3 +3347,42 @@ ours.
 Playwright is not pointed at the live site, so this went out on lint plus a
 structural check of the deployed HTML. It wants a real look on a phone.
 
+
+### 4.70 A warning that is always on is the background (30 Sep 2026)
+
+Rajat: *"seller aese bhi hote hai ki kisi ke paas har product sirf 1 hi hota
+hai"* — and for that seller "Warn me at 10" fires on every product they own,
+for ever.
+
+**What the market does.** Shopify has **no built-in low-stock flag at all**;
+it comes from apps, which set a threshold **per product**, and Shopify's own
+low-stock reports default to *"less than 10 units"* — the same 10 we had.
+Nobody ships a separate off switch, because the threshold is its own: nothing
+holding stock can sit at or below zero, so **0 means the warning never fires**.
+
+**Why it did not already work.** Typing 0 was allowed by the form and thrown
+away by every reader: `product.lowStockThreshold || 10` turns 0 into 10, and
+the product page's `|| 3` did the same. The identical falsy coercion that made
+the shop page call a full shop empty a few hours earlier — `Number(0) || 10`
+is 10, and missing is not the same answer as zero.
+
+**What changed.** `thresholdOf` in `utils/availability` (and its mirror in
+`lib/availability`) keeps 0 as an answer and only falls back when the field is
+genuinely absent; `state` is never `low` when the threshold is 0, while `out`
+is still always said, because running out is a fact and not a warning. The
+three hand-written comparisons — the seller's badge, the shopper's *"Only n
+left"*, the admin's global list — now all ask the same function, and the
+admin's Mongo query counts `stock - reserved` like everything else instead of
+the raw shelf.
+
+**And the label finally says what it does.** The field had no hint at all,
+while the `weight` field beside it explains itself. It now reads: *"0 = never
+warn me. Below this your product list says Low, and the product page tells
+shoppers how few are left. Leave 10 if unsure."* That second sentence admits
+something the label had never mentioned — this one number also decides whether
+a **shopper** is told how few are left. A seller switching off their own
+warning is switching that off too, and they should know before they do.
+
+Left for later, in §4 of the open list: splitting the two jobs into two
+controls. At three sellers that is a cure ahead of the disease.
+

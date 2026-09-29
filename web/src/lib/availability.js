@@ -30,6 +30,21 @@
 /** Matches LOW_STOCK_DEFAULT in backend/utils/availability.js and the model. */
 export const LOW_STOCK_DEFAULT = 10;
 
+/**
+ * ZERO MEANS NEVER, AND ZERO IS NOT MISSING
+ *   A seller who stocks one of everything wants no low-stock warning, and the
+ *   threshold is already its own off switch: nothing with stock sits at or
+ *   below zero. But `Number(0) || 10` is 10 - the falsy coercion that made the
+ *   shop page call a full shop empty - so a deliberate 0 and an unfilled field
+ *   are told apart, not collapsed. Mirrors backend/utils/availability.
+ */
+export const thresholdOf = (product) => {
+  const raw = product?.lowStockThreshold;
+  if (raw === null || raw === undefined || raw === '') return LOW_STOCK_DEFAULT;
+  const n = Number(raw);
+  return Number.isFinite(n) && n >= 0 ? n : LOW_STOCK_DEFAULT;
+};
+
 export const availabilityOf = (product) => {
   const sent = product?.availability;
   if (sent && typeof sent.available === 'number') return sent;
@@ -37,11 +52,13 @@ export const availabilityOf = (product) => {
   const stock = Number(product?.stock) || 0;
   const reserved = Number(product?.reserved) || 0;
   const available = Math.max(0, stock - reserved);
-  const threshold = Number(product?.lowStockThreshold) || LOW_STOCK_DEFAULT;
+  const threshold = thresholdOf(product);
 
   return {
     available,
-    state: available === 0 ? 'out' : available <= threshold ? 'low' : 'in',
+    // Out is a fact and is always said. Low is a warning, and 0 is the seller
+    // saying they do not want one.
+    state: available === 0 ? 'out' : threshold > 0 && available <= threshold ? 'low' : 'in',
     inStock: available > 0,
   };
 };
