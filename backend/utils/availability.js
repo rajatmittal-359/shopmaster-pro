@@ -62,4 +62,14 @@ const availabilityOf = (product) => {
   return { available, state, inStock: available > 0 };
 };
 
-module.exports = { availabilityOf, LOW_STOCK_DEFAULT };
+/**
+ * The same answer attached to a list on its way out of an endpoint.
+ *
+ * Deliberately NOT folded into `withShop`: that helper puts a shop's name on a
+ * product, and a storefront list wanting both is not a reason to make one of
+ * them quietly do the other's job. Callers say what they are attaching.
+ */
+const withAvailability = (products) =>
+  (products || []).map((product) => ({ ...product, availability: availabilityOf(product) }));
+
+module.exports = { availabilityOf, withAvailability, LOW_STOCK_DEFAULT };

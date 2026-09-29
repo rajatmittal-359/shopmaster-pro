@@ -60,3 +60,19 @@ describe('what is actually available to promise', () => {
     expect(availabilityOf({ stock: 12, reserved: 10, lowStockThreshold: 3 }).state).toBe('low');
   });
 });
+
+describe('attaching it to a list on the way out', () => {
+  const { withAvailability } = require('../utils/availability');
+
+  it('answers for every product without touching what was already there', () => {
+    const [ring] = withAvailability([{ _id: 'p1', name: 'A ring', stock: 4, reserved: 1 }]);
+
+    expect(ring.name).toBe('A ring');
+    expect(ring.availability).toEqual({ available: 3, state: 'low', inStock: true });
+  });
+
+  it('survives an endpoint that returned nothing', () => {
+    expect(withAvailability([])).toEqual([]);
+    expect(withAvailability(undefined)).toEqual([]);
+  });
+});

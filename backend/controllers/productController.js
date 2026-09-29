@@ -9,6 +9,7 @@
  * after it. Every handler's own WHY block travelled with it.
  */
 const { withShop } = require('../utils/shopNames');
+const { withAvailability, availabilityOf } = require('../utils/availability');
 const { searchProductIds, inSearchOrder } = require('../utils/atlasSearch');
 const { withoutHiddenSellers, hiddenSellerIds } = require('../utils/hiddenSellers');
 const mongoose = require('mongoose');
@@ -193,7 +194,7 @@ exports.listProducts = async (req, res) => {
     res.json({
       // Each with its shop's name - the page says "Sold by <shop name>",
       // never the owner's name. One extra query for the whole page.
-      products: await withShop(products),
+      products: withAvailability(await withShop(products)),
       totalPages: Math.ceil(total / numericLimit),
       currentPage: numericPage,
       total,
@@ -327,7 +328,7 @@ exports.byIds = async (req, res) => {
     if (!ids.length) return res.json({ products: [] });
     const base = await withoutHiddenSellers({ _id: { $in: ids }, isActive: true, isDeleted: { $ne: true }, stock: { $gt: 0 } });
     const found = await Product.find(base).populate('category', 'name slug').lean();
-    return res.json({ products: inSearchOrder(found, ids) });
+    return res.json({ products: withAvailability(inSearchOrder(found, ids)) });
   } catch (error) {
     return res.status(500).json({ message: error.message });
   }
@@ -553,7 +554,7 @@ exports.getProduct = async (req, res) => {
     // The attribute labels beside the values, so the page prints "Base material", not "baseMaterial".
     const { TEMPLATES } = require('../config/listingTemplates');
     const templateLabels = Object.fromEntries((TEMPLATES[product.templateKey] || TEMPLATES.general).attributes.map((a) => [a.key, a.label]));
-    res.json({ product: { ...withShopName, shop: { ...withShopName.shop, break: shopBreak }, returnMode, returnModeLabel: MODE_LABEL[returnMode], templateLabels }, variants });
+    res.json({ product: { ...withShopName, shop: { ...withShopName.shop, break: shopBreak }, availability: availabilityOf(withShopName), returnMode, returnModeLabel: MODE_LABEL[returnMode], templateLabels }, variants: withAvailability(variants) });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -588,7 +589,7 @@ exports.similarProducts = async (req, res) => {
       const more = await Product.find({ ...base, category: product.category, _id: { $nin: [product._id, ...docs.map((d) => d._id)] } }).sort({ avgRating: -1, totalReviews: -1 }).limit(8 - docs.length).select('name slug price salePrice saleEndsAt mrp images avgRating totalReviews sellerId category color').lean();
       docs = [...docs, ...more];
     }
-    res.json({ products: await withShop(docs), via });
+    res.json({ products: withAvailability(await withShop(docs)), via });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

@@ -14,7 +14,7 @@ exports.getWishlist = async (req, res) => {
        * ObjectId URL, and without the sale fields it prints the pre-sale price
        * beside a product the shop has already discounted.
        */
-      .populate('items.productId', 'name slug price salePrice saleStartsAt saleEndsAt mrp images stock lowStockThreshold isActive');
+      .populate('items.productId', 'name slug price salePrice saleStartsAt saleEndsAt mrp images stock reserved lowStockThreshold isActive avgRating totalReviews');
 
     if (!wishlist) {
       wishlist = await Wishlist.create({ userId: req.user._id, items: [] });
@@ -64,7 +64,7 @@ exports.addToWishlist = async (req, res) => {
       await wishlist.save();
     }
 
-    await wishlist.populate('items.productId', 'name slug price salePrice saleStartsAt saleEndsAt mrp images stock lowStockThreshold isActive');
+    await wishlist.populate('items.productId', 'name slug price salePrice saleStartsAt saleEndsAt mrp images stock reserved lowStockThreshold isActive avgRating totalReviews');
 
     res.status(201).json({
       message: alreadyExists ? 'Already in wishlist' : 'Added to wishlist',
@@ -91,7 +91,7 @@ exports.removeFromWishlist = async (req, res) => {
     );
 
     await wishlist.save();
-    await wishlist.populate('items.productId', 'name slug price salePrice saleStartsAt saleEndsAt mrp images stock lowStockThreshold isActive');
+    await wishlist.populate('items.productId', 'name slug price salePrice saleStartsAt saleEndsAt mrp images stock reserved lowStockThreshold isActive avgRating totalReviews');
 
     res.json({
       message: 'Item removed from wishlist',
