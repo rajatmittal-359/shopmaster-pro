@@ -31,7 +31,31 @@ Liquidity · Trust · Seller recruitment · October 2026 cutover. Stage: one Atl
   `Payout`: `{sellerId, createdAt}` · `AiUsage`: `{scope, key, day}` unique ·
   `AiProviderState`: `{provider, period}` unique · `SellerCharge`: `{sellerId, payoutId}` · **Atlas Search** `products_search` on `products` (name autocomplete+text, description, tags, color, brand; filters isActive, category, sellerId; numbers price/avgRating/totalReviews) — `utils/atlasSearch.js`; `npm run search-index` (`ensureSearchIndex.js`, idempotent) gives any fresh database the index; free tier allows 3. **Atlas Vector Search** `knowledge_vec` on `knowledgechunks` (vector 768 cosine + filter `audience`) — `npm run knowledge` (`indexKnowledge.js`, idempotent by hash) builds chunks + index; `KnowledgeChunk` also has a normal text index (fallback). **Atlas Vector Search** `products_vec` on `products.vector` (768 cosine; filters isActive/category/sellerId) — `npm run vectors:products` (`indexProducts.js`, hash-checked); `vector`/`vectorHash` are `select:false`. **All three free Search slots are now used** (`products_search`, `knowledge_vec`, `products_vec`) — a fourth needs M10. `AssistLog` TTL 90 days.
 
-**Environments (decided 12 Sep 2026):** today's `shopmaster_pro` (57 products, orders, payouts, 6 sellers — realistic test data Rajat wants to keep) becomes the **dev** database at cutover; production starts clean as `shopmaster_prod` (`seed.js --minimal` + `npm run search-index`), reached only through Render's env with an Atlas user scoped to that one database. Until cutover `shopmaster_pro` is still what the domain serves — treat it as live. `seed.js --reset` refuses both names without `--i-mean-production`. M0 has no backups: `npm run backup` weekly until M10 at cutover.
+**Environments — the cutover HAS happened (checked against the machines, 30 Sep 2026).**
+The plan below was written on 12 Sep in the future tense; this is what is actually true now.
+
+| Where | Database | How it is reached |
+|---|---|---|
+| **Production** | `shopmaster_prod` | `/srv/shopmaster/env/api.env` on the Lightsail box (`NODE_ENV=production`, `FRONTEND_URL=https://www.shopmasterpro.in`). **Render is gone** - the 12 Sep note saying "reached only through Render's env" is dead |
+| **Dev / this laptop** | `shopmaster_pro` | `backend/.env`, which `ENV=local` uses. 29 collections: knowledgechunks 726, categories 191, notifications 128, authevents 74, sessions 64, products 59, assistlogs 35, marketbriefs 30, inventories 28, orders 26, aiusages 18, users 13. This is the realistic test data Rajat kept, and it is **no longer what the domain serves** |
+| `.env.real`, `.env.seed` | `shopmaster_pro_v2` | **Orphans.** Nothing in the code reads either file - only `scripts/handover-pack.js` copies them - and the database has **0 collections**. Leftovers from an older workflow. Delete both once Rajat confirms, and drop them from the pack |
+
+`seed.js --reset` still refuses both real names without `--i-mean-production`.
+M0 has no Atlas backups, and none are needed: `.github/workflows/backup.yml`
+exports every collection nightly at 21:00 UTC, encrypted, 90-day retention.
+
+**The AI side, in one place.** Embeddings are **`gemini-embedding-001`, 768
+dimensions**, on the free Gemini key, and `utils/ai/embed.js` is the only
+module that calls it (`EMBED_MODEL` overrides the name). Two of the three
+Atlas indexes are vector indexes over those 768 floats:
+`knowledge_vec` on `knowledgechunks` (726 rows - the assistant's RAG corpus,
+filtered by `audience`) and `products_vec` on `products.vector` (59 rows, used
+by `similarProducts` through `utils/productVectors.js`). `vector`/`vectorHash`
+are `select: false`, so no route can leak them by accident. `AssistLog` (35
+rows) is what the assistant was asked; `MarketBrief` (30) is the research
+cache.
+
+
 - **Category tree** uses the array-of-ancestors pattern (`ancestors`,
   `parentCategory`); products must sit on a leaf (`validateLeafCategory`).
 - **Reservation is a field, not a collection**: `reservationStatus` /
