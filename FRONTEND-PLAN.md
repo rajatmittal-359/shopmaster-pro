@@ -3296,3 +3296,54 @@ be public, and deliberately NOT `pickupAddress.phone`, which is a courier
 contact the public endpoint has always withheld. It is kept out of `links`
 too: those are URLs published as schema.org `sameAs`, and a phone number is
 neither a URL nor a profile.
+
+### 4.69 The shop page put its paperwork in front of its stock (30 Sep 2026)
+
+Rajat, on his own phone at one in the morning: the first screen of
+`/charming-jewels` is text and nothing else, and people do not read that much
+— they leave.
+
+He was right, and the research is not close. NN/g: **79% of users scan** a new
+page rather than read it, only 16% read word by word, and more than **42% of
+viewing time goes to the top 20%** of a page whatever its length. Baymard is
+blunter for mobile commerce — the buying content belongs above long brand copy,
+and anything that pushes the primary content off the first screen is a
+**navigation failure**, their words.
+
+What was on that first screen: the shop's name, three meta lines, the About
+paragraph, two link chips, the seller-of-record line with the GST standing, and
+the entire returns paragraph. Seven blocks. Not one product.
+
+**Why this page in particular.** It is where the Google Business Profile's
+*Website* button lands. Somebody arriving has just read the name, rating and
+hours in the panel and tapped through to see the goods; the panel's 233
+interactions all funnel here. The page answered with paperwork.
+
+**What it is now.** The same shape the visitor just used in the panel — name,
+the few facts that decide trust (rating, product count, city), an action row,
+then the goods:
+
+- the header keeps the name, the break note, and a single meta line. *Selling
+  here since* moved down: it is trust detail, not a deciding fact
+- **Chat on WhatsApp and the profile links are one action row**, the way the
+  panel puts Website / Directions / Call together. WhatsApp stays on the shop
+  page and never on a product page, for the reason in 4.68 — a deal agreed in
+  a chat has no order record, no courier booking and no returns cover
+- the product grid comes next, on the first screen on a 390px phone
+- **About this shop** now holds the About, selling-since, the seller-of-record
+  line and the returns paragraph, under the products. None of it was dropped:
+  the legal line is what the Consumer Protection (E-Commerce) Rules 2020 ask a
+  marketplace to show, and the returns line answers the real question about
+  buying from a stranger. Both are read by people who have already decided to
+  look, and they read better there than in front of the stock
+
+**One thing the audit caught.** The action row's buttons were 36px tall.
+That passes WCAG 2.2's 24px web minimum and fails our own checklist, which
+asks for 44px on the customer side — `min-h-11` now, with the 8px between them
+that adjacent touch targets need. Where two rules disagree, the stricter one is
+ours.
+
+**Not verified in a browser.** `next dev` is banned on this machine and
+Playwright is not pointed at the live site, so this went out on lint plus a
+structural check of the deployed HTML. It wants a real look on a phone.
+
