@@ -2,6 +2,7 @@ const Order = require('../models/Order');
 const Product = require('../models/Product');
 const Seller = require('../models/Seller');
 const Payout = require('../models/Payout');
+const { lowStockMatch } = require('../utils/availability');
 const User = require('../models/User');
 const Review = require('../models/Review');
 const sendSafeEmail = require('../utils/sendSafeEmail');
@@ -37,7 +38,7 @@ const gather = async () => {
     Order.countDocuments({ 'fulfilments.disputeStatus': 'open' }),
     Seller.countDocuments({ isApproved: { $ne: true }, kycStatus: { $ne: 'rejected' } }),
     Payout.countDocuments({ status: 'pending' }),
-    Product.countDocuments({ isActive: true, isDeleted: { $ne: true }, $expr: { $lte: ['$stock', '$lowStockThreshold'] } }),
+    Product.countDocuments({ isActive: true, isDeleted: { $ne: true }, ...lowStockMatch() }),
     Product.find({ isActive: true, isDeleted: { $ne: true } }).select('name images description category color gender ageGroup brand weight tags').lean(),
     Review.countDocuments({ createdAt: { $gte: since } }),
     User.countDocuments({ role: 'customer', createdAt: { $gte: since } }),

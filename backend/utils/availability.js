@@ -94,4 +94,31 @@ const availabilityOf = (product) => {
 const withAvailability = (products) =>
   (products || []).map((product) => ({ ...product, availability: availabilityOf(product) }));
 
-module.exports = { availabilityOf, withAvailability, thresholdOf, LOW_STOCK_DEFAULT };
+/**
+ * The same rule, written for Mongo so a query can ask it.
+ *
+ * WHY IT IS HERE RATHER THAN IN EACH QUERY
+ *   Three places ask the database "who is low" - the admin's global list, the
+ *   weekly digest, and the job that mails each seller. All three had written
+ *   `$lte: ['$stock', '$lowStockThreshold']` by hand, which counts the shelf
+ *   rather than what can be promised, and disagrees with the badge the seller
+ *   sees on the same product. `jobs/lowStock.js` says it best in its own
+ *   comment: "Two copies of who is low on stock would be two answers
+ *   eventually." It was right, and this is the one copy.
+ *
+ *   Reads the same way as availabilityOf: against stock minus reserved, and
+ *   silent when the seller set the threshold to 0 to say they want no warning.
+ */
+const lowStockMatch = () => {
+  const threshold = { $ifNull: ['$lowStockThreshold', LOW_STOCK_DEFAULT] };
+  return {
+    $expr: {
+      $and: [
+        { $gt: [threshold, 0] },
+        { $lte: [{ $subtract: ['$stock', { $ifNull: ['$reserved', 0] }] }, threshold] },
+      ],
+    },
+  };
+};
+
+module.exports = { availabilityOf, withAvailability, thresholdOf, lowStockMatch, LOW_STOCK_DEFAULT };

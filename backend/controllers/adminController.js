@@ -1,5 +1,6 @@
 // backend/controllers/adminController.js
 const { sendError } = require('../utils/apiError');
+const { lowStockMatch } = require('../utils/availability');
 // Mail bodies are plain sentences typed by the admin - escaped once, here.
 const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const mongoose = require('mongoose');
@@ -724,12 +725,7 @@ exports.getAnalytics = async (req, res) => {
     // permanent warning tells nobody anything.
     const lowStockProducts = await Product.find({
       isActive: true,
-      $expr: {
-        $and: [
-          { $gt: [{ $ifNull: ['$lowStockThreshold', 10] }, 0] },
-          { $lte: [{ $subtract: ['$stock', { $ifNull: ['$reserved', 0] }] }, { $ifNull: ['$lowStockThreshold', 10] }] },
-        ],
-      },
+      ...lowStockMatch(),
     })
     .populate('sellerId', 'name email')
     .populate('category', 'name')

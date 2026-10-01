@@ -110,3 +110,29 @@ describe('zero means never warn', () => {
     expect(availabilityOf({ stock: 5, lowStockThreshold: null }).state).toBe('low');
   });
 });
+
+/**
+ * The Mongo side of the same rule.
+ *
+ *   Tests never connect to a database here (the project's rule), so the thing
+ *   worth asserting is the SHAPE of the expression: that it counts against
+ *   stock minus reserved rather than the raw shelf, and that a threshold of 0
+ *   is read as "no warning" rather than as a threshold of zero. Those are the
+ *   two things the three hand-written copies got wrong.
+ */
+describe('asking the database the same question', () => {
+  const { lowStockMatch } = require('../utils/availability');
+
+  it('counts against what can be promised, not the shelf', () => {
+    const json = JSON.stringify(lowStockMatch());
+
+    expect(json).toContain('$subtract');
+    expect(json).toContain('$reserved');
+  });
+
+  it('skips the sellers who asked for no warning', () => {
+    const [guard] = lowStockMatch().$expr.$and;
+
+    expect(guard).toEqual({ $gt: [{ $ifNull: ['$lowStockThreshold', 10] }, 0] });
+  });
+});

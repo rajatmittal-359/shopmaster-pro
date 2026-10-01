@@ -1,6 +1,7 @@
 const Product = require('../models/Product');
 const sendEmail = require('../utils/sendEmail');
 const { lowStockEmail } = require('../utils/emailTemplates');
+const { lowStockMatch } = require('../utils/availability');
 
 /**
  * Tell each seller which of their products are running out.
@@ -24,7 +25,7 @@ const runLowStockAlerts = async () => {
   const lowStock = await Product.find({
     isActive: true,
     isDeleted: { $ne: true },
-    $expr: { $lte: ['$stock', '$lowStockThreshold'] },
+    ...lowStockMatch(),
   }).populate('sellerId');
 
   /*
