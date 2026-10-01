@@ -2,6 +2,7 @@ const Order = require('../models/Order');
 const Product = require('../models/Product');
 const Seller = require('../models/Seller');
 const Payout = require('../models/Payout');
+const { getPayableSummary } = require('../utils/payout');
 const { lowStockMatch } = require('../utils/availability');
 const User = require('../models/User');
 const Review = require('../models/Review');
@@ -33,10 +34,20 @@ const actionable = { $or: [{ paymentMethod: { $ne: 'razorpay' } }, { paymentStat
 
 const gather = async () => {
   const since = new Date(Date.now() - 7 * 86400000);
-  const [orders, disputesOpen, pendingSellers, payoutsDue, lowStock, products, newReviews, newCustomers] = await Promise.all([
+  const [orders, disputesOpen, pendingSellers, payable, payoutsUnpaid, lowStock, products, newReviews, newCustomers] = await Promise.all([
     Order.find({ createdAt: { $gte: since }, ...actionable }).select('totalAmount paymentStatus status cancelledBy items fulfilments createdAt').lean(),
     Order.countDocuments({ 'fulfilments.disputeStatus': 'open' }),
     Seller.countDocuments({ isApproved: { $ne: true }, kycStatus: { $ne: 'rejected' } }),
+    /*
+     * TWO DIFFERENT QUESTIONS, AND THIS ASKED THE WRONG ONE (1 Oct 2026)
+     *   The line below used to be `Payout.countDocuments({ status: 'pending' })`
+     *   under a heading that read "payouts to release". Those are not the same
+     *   thing: that count is payouts ALREADY CREATED and not yet marked paid.
+     *   Money that has cleared the return window and has no payout yet - the
+     *   thing the admin actually has to act on - was counted nowhere, so a week
+     *   where nobody pressed the button reported a cheerful zero.
+     */
+    getPayableSummary(),
     Payout.countDocuments({ status: 'pending' }),
     Product.countDocuments({ isActive: true, isDeleted: { $ne: true }, ...lowStockMatch() }),
     Product.find({ isActive: true, isDeleted: { $ne: true } }).select('name images description category color gender ageGroup brand weight tags').lean(),
@@ -86,7 +97,9 @@ const gather = async () => {
     returns,
     disputesOpen,
     pendingSellers,
-    payoutsDue,
+    payableSellers: payable.length,
+    payableTotal: Math.round(payable.reduce((n, r) => n + Number(r.netPayable || 0), 0)),
+    payoutsUnpaid,
     lowStock,
     weak,
     products: products.length,
@@ -101,7 +114,8 @@ const render = (d) => {
   const needs = [
     d.disputesOpen && [`${d.disputesOpen} dispute${d.disputesOpen > 1 ? 's' : ''} open - a decision is yours`, `${site}/admin/orders`],
     d.pendingSellers && [`${d.pendingSellers} seller${d.pendingSellers > 1 ? 's' : ''} waiting for approval`, `${site}/admin/sellers`],
-    d.payoutsDue && [`${d.payoutsDue} payout${d.payoutsDue > 1 ? 's' : ''} to release`, `${site}/admin/payouts`],
+    d.payableSellers && [`₹${d.payableTotal.toLocaleString('en-IN')} ready for ${d.payableSellers} seller${d.payableSellers > 1 ? 's' : ''}`, `${site}/admin/payouts`],
+    d.payoutsUnpaid && [`${d.payoutsUnpaid} payout${d.payoutsUnpaid > 1 ? 's' : ''} created but not marked paid`, `${site}/admin/payouts`],
     d.lowStock && [`${d.lowStock} product${d.lowStock > 1 ? 's' : ''} low on stock`, `${site}/admin/products`],
     d.weak && [`${d.weak} weak listing${d.weak > 1 ? 's' : ''} (score under 60)`, `${site}/admin/products`],
   ].filter(Boolean);
