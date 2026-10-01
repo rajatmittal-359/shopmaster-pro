@@ -73,6 +73,7 @@ const run = async () => {
   const bangles = await need('Meenakari Bangle Set of 4');
   const serum = await need('Vitamin C Face Serum 30ml');
   const saree = await need('Kanjivaram Bridal Saree');
+  const banarasi = await need('Banarasi Silk Saree with Blouse');
   const bracelet = await need('Rose Gold Chain Bracelet');
   const payal = await need('Silver Ghungroo Payal Pair');
   const lipstick = await need('Matte Liquid Lipstick');
@@ -355,6 +356,43 @@ const run = async () => {
     });
     await SellerCharge.create({ sellerId: jhumka.sellerId, kind: 'seller_cancel', amount: RULES.cancelPenalty, note: `${MESSY}: claimed by payout`, payoutId: p._id, claimedAt: daysAgo(28) });
   }
+
+  /*
+   * 9b. The case the payout screen could never be seen without.
+   *
+   *   Money becomes payable only once THAT seller's parcel has been delivered
+   *   AND the 7-day return window has closed on it - so nothing in a fresh
+   *   database is ever payable, and the admin's Payouts page has nothing to
+   *   show. Waiting a week to look at a screen is not a test.
+   *
+   *   Deliberately an outside seller: getPayableSummary skips the platform's
+   *   own shop, because paying yourself is not a payout. Iyer Silks has bank
+   *   details and an 8% commission, so this one order walks the whole road -
+   *   payable, create the payout, read the account to pay, mark it paid with
+   *   its reference, and the seller's own statement shows it.
+   */
+  await order('Delivered 9 days ago, return window shut, never paid out - the money an outside seller is waiting for', {
+    customer: c3,
+    lines: [line(banarasi)],
+    daysBack: 14,
+    paymentMethod: 'razorpay',
+    paymentStatus: 'paid',
+    status: 'delivered',
+    razorpayOrderId: `order_${MESSY}PAY001`,
+    razorpayPaymentId: `pay_${MESSY}PAY001`,
+    deliveredAt: daysAgo(9),
+    fulfil: shipped('DLV' + MESSY + '0013', 12, {
+      status: 'delivered',
+      deliveredAt: daysAgo(9),
+      courierStatus: 'Delivered',
+      courierStatusAt: daysAgo(9),
+      scans: [
+        { at: daysAgo(12), activity: 'Picked up', location: 'Jaipur' },
+        { at: daysAgo(10), activity: 'Reached destination hub', location: 'Chennai' },
+        { at: daysAgo(9), activity: 'Delivered', location: 'Chennai' },
+      ],
+    }),
+  });
 
   // 10. A suspended seller - their products must vanish from the shop, their panel must say why.
   if (!partnerSeller) skipped.push('suspension (already suspended or no partner with products)');
