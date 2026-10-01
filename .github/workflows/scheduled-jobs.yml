@@ -47,6 +47,11 @@ on:
     # Daily 04:45 UTC = 10:15 IST - the bag reminder (jobs/cartReminder): bags
     # left 20-48 hours ago, one note per person per week, mid-morning.
     - cron: '45 4 * * *'
+    # Tuesdays 04:00 UTC = 09:30 IST - raise the week's payouts (jobs/raisePayouts).
+    # A seller's money is released seven days after delivery; this is the sweep
+    # that turns "released" into a payout somebody can actually transfer, so the
+    # schedule belongs to the system rather than to anyone's memory.
+    - cron: '0 4 * * 2'
     # Sunday 22:00 UTC = 03:30 IST Monday - the quiet hour. Re-embeds products
     # that changed (plan 2.17) and, when the secrets exist, the knowledge base.
     - cron: '0 22 * * 0'
@@ -88,6 +93,8 @@ jobs:
             echo "name=catalogue-sweep" >> "$GITHUB_OUTPUT"
           elif [ "${{ github.event.schedule }}" = "45 4 * * *" ]; then
             echo "name=cart-reminder" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event.schedule }}" = "0 4 * * 2" ]; then
+            echo "name=raise-payouts" >> "$GITHUB_OUTPUT"
           elif [ "${{ github.event.schedule }}" = "15 3 * * 1" ]; then
             echo "name=market-brief" >> "$GITHUB_OUTPUT"
           elif [ "${{ github.event.schedule }}" = "0 22 * * 0" ]; then

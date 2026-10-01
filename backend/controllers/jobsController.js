@@ -43,6 +43,13 @@ const JOBS = {
     requires: 'SHIPROCKET_API_EMAIL',
   },
   'low-stock': { run: () => lowStock.runLowStockAlerts() },
+  /*
+   * Tuesday's sweep (1 Oct 2026): raise a payout for every seller whose money
+   * has cleared the return window. It does not move money - Route is behind the
+   * RBI's ₹40 lakh turnover floor - so it raises the payout and tells the admin
+   * it is waiting. The undo is clean: failing a payout releases its lines.
+   */
+  'raise-payouts': { run: () => require('../jobs/raisePayouts').raisePayouts() },
   // Monday's three things for every seller (plan 2.25). No model, no key needed.
   'growth-note': { run: () => growthNote.sendGrowthNotes() },
   // Thursday's catalogue sweep (plan 2.25/2.32): listing facts, three per seller. No model.
