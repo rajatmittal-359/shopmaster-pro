@@ -3386,3 +3386,70 @@ warning is switching that off too, and they should know before they do.
 Left for later, in §4 of the open list: splitting the two jobs into two
 controls. At three sellers that is a cure ahead of the disease.
 
+
+### 4.71 Both sides can see the proof; only one side could read the other's case (2 Oct 2026)
+
+Rajat asked for OTP on every delivery - *"kam se kam proof rahega ki deliver kiya
+hai"* - and then the harder half: *"customer bol de andar khali tha to?"*
+
+Two complaints, and they need different answers. **An OTP proves the parcel
+reached that person. It says nothing about what was inside it.** Shiprocket
+offers neither as a seller setting (checked: Shipment Features, the VAS page,
+Courier Selection, and their own documentation), so the question became what we
+already have.
+
+**Most of it, as it turned out.** `fulfilment.podUrl` - the courier's delivery
+photo - is captured on every tracking sweep. `fulfilment.packProof` - the
+seller's photo of the packed item with its tag, taken before the courier - has
+an endpoint, a picker in the seller panel, a place in the admin's order view, a
+seat in `receiptVerdict`, a line in the decision agent's brief, and a
+`packProofRate` in `utils/risk.js` that flags a shop below 50%. Both sides are
+already asked to show their working.
+
+Two things were wrong, and this entry is both.
+
+**One. The customer could not see the delivery photo.** The seller could, the
+admin could, the decision agent was told about it. The buyer - the person
+standing in a hallway wondering where the parcel went - was the only one who
+could not. Amazon shows it on the order, and most of what it answers never
+becomes a complaint: a family member took it in, or it went to a neighbour, and
+seeing the doorway reminds them. It now sits under the stepper on a delivered
+parcel, with the date, a full-size link, and a plain line pointing at
+*Something's wrong* if the door is not theirs. Neutral wording: it is a record,
+not an argument.
+
+**Two. The buyer was being sent the seller's defence.** This was the real find.
+`getOrderDetails` and `getMyOrders` replied with the whole Order document, so
+every field of a fulfilment reached the customer - including
+`disputeSellerNote`, `disputeSellerEvidence`, the seller's `packProof`, their
+`receiptCheck`, the `cancelPenalty` that seller had been charged, and
+`disputeBrief`, which is the decision agent's recommendation and confidence
+**written for the admin**. A buyer arguing a dispute could read the other side's
+case and the advice the admin had been given, before the admin had decided.
+
+**It was never a decision - git says so.** `res.json({ order })` was written on
+**6 Dec 2025**, when a fulfilment carried a status, an AWB, a courier and some
+dates, and sending the whole document was a fair thing to do. The sensitive
+fields all arrived together **nine months later**, on 13 Sep 2026, in the Fair
+Returns commit (`949bb26`) that gave disputes two sides. Nobody reopened the
+December line, so each new field quietly joined a payload written long before it.
+The proof that nobody meant to send them: **no customer page reads any of them** -
+the seller panel draws `packProof`, the admin panel draws it, the buyer's pages
+never did. They were only ever in the JSON, where a network tab shows them.
+
+This is the same illness as the four hand-written copies of the low-stock
+threshold found on 30 Sep: a decision made once, and copies that grow afterwards
+with nothing joining them back up.
+
+`utils/parcelView.js` now shapes it, as an **allowlist** rather than a denylist -
+and that choice is the whole point. A denylist would leak the next field somebody
+adds, on the day they add it, exactly as this one did. An allowlist keeps a new
+field private until somebody decides otherwise. Eleven tests in
+`tests/parcelView.test.mjs`; the full suite is 164 files / 1567 tests, green.
+
+**Three. The warning moved to where the decision is.** The Pack proof panel asks
+before shipping, but a seller scrolling past it to *Book courier and ship* got no
+signal at the one second it still mattered - once the parcel is with the courier
+the photo can never be taken. The warning now sits under that button when the
+proof is missing, in the same bargain the panel strikes: the shop is not blocked,
+it is told what it is giving up.

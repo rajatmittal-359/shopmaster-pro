@@ -20,6 +20,7 @@ const Address = require('../models/Address');
 const { applyInventoryChange } = require("./inventoryController");
 const { cancelOrderFor, canCancelOrder, cancellableItemIds } = require('../utils/cancelOrder');
 const { customerMayDispute } = require('../utils/deliveryTruth');
+const { orderForCustomer } = require('../utils/parcelView');
 const refunds = require('../utils/refund');
 const InventoryLog = require("../models/Inventory");
 
@@ -454,8 +455,11 @@ exports.getMyOrders = async (req, res) => {
       // canCancel travels with each order for the same reason the details page
       // gets it: the list was drawing a Cancel button on shipped parcels the
       // API would refuse. See canCancelOrder.
+      // orderForCustomer shapes each parcel: the seller's dispute defence, the
+      // admin's brief, the pack photo and the seller's penalty are not the
+      // buyer's to read. See utils/parcelView.js.
       orders: orders.map((order) => ({
-        ...order.toObject(),
+        ...orderForCustomer(order),
         canCancel: canCancelOrder(order),
       })),
     });
@@ -549,7 +553,10 @@ exports.getOrderDetails = async (req, res) => {
 
     res.json({
       success: true,
-      order,
+      // Shaped, not raw: a buyer arguing a dispute was being sent the seller's
+      // written defence and the decision agent's recommendation to the admin.
+      // utils/parcelView.js says what may travel, as an allowlist.
+      order: orderForCustomer(order),
       sellers: withTax,
       canReturn,
       returnWindowClosesAt,
@@ -595,7 +602,9 @@ exports.cancelOrder = async (req, res) => {
         .json({ success: false, message: result.message });
     }
 
-    return res.json({ success: true, message: result.message, order });
+    // Shaped like every other order the customer is sent - a cancel reply was
+    // the third door out of here and had the same hole. See utils/parcelView.js.
+    return res.json({ success: true, message: result.message, order: orderForCustomer(order) });
   } catch (err) {
     console.error('CANCEL ORDER ERROR:', err.message);
     return res.status(500).json({ message: err.message });

@@ -352,11 +352,28 @@ export default function SellerOrderDetail({ orderId }) {
         <h2 className="font-semibold">What you can do</h2>
         <div className="mt-3 flex flex-wrap gap-2">
           {!shipped && ['pending', 'processing'].includes(order.status) && (
-            <Button
-              onClick={() => setBooking(true)}
-            >
-              Book courier and ship
-            </Button>
+            <div className="w-full">
+              <Button
+                onClick={() => setBooking(true)}
+              >
+                Book courier and ship
+              </Button>
+              {/*
+                The warning belongs HERE, not only in the Pack proof panel above.
+
+                The panel asks; this is the moment the asking stops mattering,
+                because once the parcel is with the courier the photo can never
+                be taken. A seller scrolling to the button had been given no
+                signal at the one second it was still possible. Said plainly and
+                once - the shop is not blocked, it is told what it is giving up,
+                which is the same bargain the panel above strikes.
+              */}
+              {!order.packProof && (
+                <p className="mt-2 max-w-prose text-xs text-amber-700 dark:text-amber-300">
+                  {t('No pack proof on this parcel. Once the courier has it you cannot take one. If the customer says "empty box" or "wrong item", you will have nothing to show and the refund is decided on their photos alone.')}
+                </p>
+              )}
+            </div>
           )}
           {order.podUrl && (
             <a href={order.podUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center rounded-md border px-3 py-1.5 text-sm hover:bg-muted">{t('Courier’s delivery proof')}</a>

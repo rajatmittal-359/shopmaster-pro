@@ -87,6 +87,48 @@ a page — the React app defined these in its services and no screen used them.
 
 | 2.74 | ~~**Read-only Atlas user so production can be inspected**~~ ✅ 26 Sep 2026. `smp_read` created with the built-in **Only read any database** role, `MONGO_URI_READ` in `private/api.env.prod`, and the laptop's IP put on the access list by EDITING the stale entry rather than adding a second one - the old home IP was still permitted and is now gone. Verified end to end, not assumed: connected to `shopmaster_prod`, 28 collections, products 28 / sellers 2 / users 6 (products matches the audit exactly), and a deliberate write probe was **refused by Atlas** - so the user is read-only in fact, not just in its label. Note for later: home broadband rotates, so that row needs editing again when it changes; the box's own `13.207.140.197/32` is separate and must never be removed. | ✅ |
 
+### ~~2.81 The customer never sees the delivery photo~~ ✅ DONE 2 Oct 2026 — see FRONTEND-PLAN §4.71, which also closes a leak found on the way: the buyer was being sent the seller's dispute defence and the admin's brief
+
+Found 2 Oct 2026 while checking whether we were defenceless against *"I never
+got it"* - and finding we are not. `fulfilment.podUrl` is captured by
+`trackingReconcile`, and the **seller** sees it (`seller/OrderDetail.jsx:361`),
+the **admin** sees it (`admin/Orders.jsx:204`), and the decision agent is told
+about it (`decisionAgent.js:88`).
+
+**The customer is the only one who never sees it.** `customerController` does not
+send `podUrl` and no customer page reads it.
+
+Amazon shows the buyer the delivery photo on the order itself, and it settles a
+whole class of complaint before it becomes one: the parcel was taken in by a
+family member, or left with a neighbour, and the photo reminds them. Every one of
+those that reaches a dispute costs an admin's evening and a seller's payout hold.
+
+The work is small: add `podUrl` to the customer order payload and show it under
+the Delivered line as "Delivered - see the courier's photo". Do not show the
+courier's *signature* capture if it carries another person's name - the photo is
+the useful half.
+
+### 2.78 Ask Shiprocket to cover the parcels that are NOT covered today
+
+Found 2 Oct 2026 while auditing Shiprocket, from Rajat's question: *"1000 tak ke
+product bhi rakhte hai, sahi secure delivery honi chahiye."*
+
+**Auto Secure is ON but only covers shipments above ₹2,500**, and that threshold
+is fixed - the settings page offers Deactivate and nothing else. So a ₹1,000
+necklace ships today with **no cover at all**, which is most of what this shop
+sells.
+
+Shiprocket does sell **"Selective Cover"**: per-shipment protection, chosen at
+*Ship Now* as Secured / Unsecured. The panel has it; `shiprocketBooking.js` does
+**not** ask for it - the payload carries no insurance flag.
+
+The work: confirm the field name in Shiprocket's create-order API (likely
+`is_insurance_opt`, unverified - check apidocs.shiprocket.in, do not guess), then
+send it for orders above a threshold we choose, with the premium visible to the
+seller before they ship. Worth pricing first: on a ₹1,000 parcel the premium may
+cost more than the risk, in which case the honest answer is good packing plus the
+tamper seal, not insurance. **Decide after seeing the premium, not before.**
+
 ## 2b. Google visibility — the full list, decided 12 Sep 2026
 
 Rajat: *"Google pe product har factor me win kare… sab chahiye jo free me

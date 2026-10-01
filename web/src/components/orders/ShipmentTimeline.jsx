@@ -198,6 +198,43 @@ export default function ShipmentTimeline({ order, fulfilment }) {
         </ol>
       )}
 
+      {/*
+        The courier's own photo of the delivery.
+
+        WHY IT IS HERE AND WAS NOT BEFORE
+          `podUrl` has been captured on every tracking sweep for a long time,
+          and the seller and the admin could both see it. The customer - the one
+          person who might be standing in a hallway wondering where their parcel
+          went - was the only one who could not. Amazon shows the buyer this
+          photo on the order itself, and most of what it answers never becomes a
+          complaint: a family member took it in, or it was left with a neighbour,
+          and seeing the doorway reminds them.
+
+          Shown only once delivered, and only when the courier actually recorded
+          something. The wording stays neutral - it is a record, not an argument
+          - and "Something's wrong" is still right there if the photo is of a
+          door they do not recognise.
+      */}
+      {parcel.status === 'delivered' && parcel.podUrl && (
+        <div className="flex items-start gap-3 rounded-md border bg-muted/40 p-3">
+          <a
+            href={parcel.podUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block size-14 shrink-0 overflow-hidden rounded-md border bg-background"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={parcel.podUrl} alt="" className="size-full object-cover" />
+          </a>
+          <p className="text-xs text-muted-foreground">
+            <strong className="block text-sm font-medium text-foreground">The courier&rsquo;s delivery photo</strong>
+            Taken when the parcel was handed over{parcel.deliveredAt ? ` on ${onDay(parcel.deliveredAt)}` : ''}.
+            {' '}<a href={parcel.podUrl} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2">Open it full size</a>.
+            If this is not your door, use <em>Something&rsquo;s wrong</em> below.
+          </p>
+        </div>
+      )}
+
       {(sorted.length > 0 || next) && (
         <ol className="relative">
           {next && (
