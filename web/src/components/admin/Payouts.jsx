@@ -45,6 +45,17 @@ export default function Payouts() {
   const [state, setState] = useState({ status: "loading" });
   const [reference, setReference] = useState({});
   const [failing, setFailing] = useState(null);
+  /*
+   * THE ACCOUNT NUMBER, ASKED FOR RATHER THAN SHOWN (1 Oct 2026)
+   *   Nothing in this panel could tell the admin where to send the money - the
+   *   number was reachable only by opening the database by hand. It is now a
+   *   deliberate request per payout, behind the same step-up password that
+   *   guards marking one paid, and the server writes an audit row each time.
+   *   Kept out of the list on purpose: a number that renders on every visit is
+   *   a number on every screen behind the admin.
+   */
+  const [bank, setBank] = useState({});
+  const [copied, setCopied] = useState("");
 
   const load = async () => {
     const [owed, past] = await Promise.all([
@@ -187,6 +198,80 @@ export default function Payouts() {
                     {payout.status}
                   </p>
                 </div>
+
+                {payout.status === "pending" && !bank[payout._id] && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="mt-3"
+                    onClick={() =>
+                      run(async () => {
+                        const d = await authedFetch(
+                          `/admin/payouts/${payout._id}/bank`,
+                        );
+                        setBank((b) => ({ ...b, [payout._id]: d.bank }));
+                      })
+                    }
+                  >
+                    Where do I send it?
+                  </Button>
+                )}
+
+                {bank[payout._id] && (
+                  <dl className="mt-3 grid gap-2 rounded-lg border border-border p-3 text-sm sm:grid-cols-2">
+                    {[
+                      ["Name on the account", bank[payout._id].accountHolderName],
+                      ["Account number", bank[payout._id].accountNumber],
+                      ["IFSC", bank[payout._id].ifscCode],
+                      [
+                        "Bank",
+                        [bank[payout._id].bankName, bank[payout._id].branch]
+                          .filter(Boolean)
+                          .join(" · "),
+                      ],
+                    ]
+                      .filter(([, v]) => v)
+                      .map(([label, value]) => (
+                        <div key={label} className="min-w-0">
+                          <dt className="text-xs text-muted-foreground">
+                            {label}
+                          </dt>
+                          <dd className="flex items-center gap-2">
+                            {/* tabular-nums so an account number can be read
+                                digit by digit against a banking app. */}
+                            <span className="truncate font-mono tabular-nums">
+                              {value}
+                            </span>
+                            <button
+                              type="button"
+                              className="shrink-0 text-xs text-brand-ink underline"
+                              onClick={() => {
+                                navigator.clipboard
+                                  ?.writeText(String(value))
+                                  .then(() =>
+                                    setCopied(`${payout._id}:${label}`),
+                                  )
+                                  .catch(() => {});
+                              }}
+                            >
+                              {copied === `${payout._id}:${label}`
+                                ? "copied"
+                                : "copy"}
+                            </button>
+                          </dd>
+                        </div>
+                      ))}
+                    {bank[payout._id].ifscWarning && (
+                      /* The IFSC could not be looked up when it was saved, so
+                         nobody has confirmed the branch exists. Said here
+                         rather than discovered when the transfer bounces. */
+                      <p className="sm:col-span-2 text-xs text-amber-700 dark:text-amber-300">
+                        This IFSC was never confirmed against the bank list -
+                        check it before sending.
+                      </p>
+                    )}
+                  </dl>
+                )}
 
                 {payout.status === "pending" && (
                   <div className="mt-3 flex flex-wrap items-center gap-2">

@@ -149,6 +149,67 @@ exports.failPayout = async (req, res) => {
  * Three numbers a seller actually needs: what has been paid, what is owed and
  * ready, and what is still inside the return window.
  */
+/**
+ * The bank account to pay, shown to the admin one payout at a time.
+ *
+ * WHY THIS IS A SEPARATE CALL AND NOT A FIELD ON THE LIST
+ *   `getMyPayoutDetails` masks the number even for the seller who owns it -
+ *   "never echo a full account number back over the wire" - and that instinct
+ *   is right for a list that renders on every visit to the Payouts page. But
+ *   the admin has to type the number into a banking app for the money to move,
+ *   and a number nobody can read is a payout nobody can make. Today it is
+ *   reachable only by opening the database by hand, which is worse than this
+ *   in every way: unlogged, unguarded, and the whole collection at once.
+ *
+ *   So: one payout at a time, asked for deliberately, behind the same step-up
+ *   password that already guards marking a payout paid, and written to the
+ *   audit trail. The number is never part of any list response.
+ *
+ * WHAT IS RECORDED
+ *   An AuthEvent (`bank_details_viewed`) with the payout and the seller. It is
+ *   append-only and expires with the rest after 180 days. If an account number
+ *   is ever disputed, there is a record of who looked and when.
+ */
+exports.getPayoutBankDetails = async (req, res) => {
+  try {
+    const payout = await Payout.findById(req.params.payoutId).select('sellerId businessName netPayable').lean();
+    if (!payout) return res.status(404).json({ success: false, message: 'No such payout' });
+
+    const profile = await Seller.findOne({ userId: payout.sellerId }).select('bankDetails').lean();
+    const bank = profile?.bankDetails || {};
+
+    if (!bank.accountNumber || !bank.ifscCode) {
+      // Said plainly, because the admin's next move is to ask the seller - not
+      // to wonder whether the page is broken.
+      return res.status(409).json({
+        success: false,
+        message: `${payout.businessName} has not entered bank details yet. They add them under Payments in their panel.`,
+      });
+    }
+
+    require('../utils/auth/session').record('bank_details_viewed', req.user._id, req, {
+      payoutId: String(payout._id),
+      sellerId: String(payout.sellerId),
+    });
+
+    return res.json({
+      success: true,
+      amount: payout.netPayable,
+      businessName: payout.businessName,
+      bank: {
+        accountHolderName: bank.accountHolderName || '',
+        accountNumber: bank.accountNumber,
+        ifscCode: bank.ifscCode,
+        bankName: bank.bankName || '',
+        branch: bank.branch || '',
+        ifscWarning: bank.ifscLookupFailed || '',
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 exports.getMyEarnings = async (req, res) => {
   try {
     const sellerId = req.user._id;

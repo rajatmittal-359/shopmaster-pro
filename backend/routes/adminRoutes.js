@@ -21,6 +21,7 @@ const {
   getPayableSellers,
   createPayout,
   listPayouts,
+  getPayoutBankDetails,
   settlePayout,
   failPayout,
 } = require('../controllers/payoutController');
@@ -101,6 +102,9 @@ router.get('/analytics', getAnalytics);
 router.get('/payouts/payable', getPayableSellers);
 router.get('/payouts', listPayouts);
 router.post('/payouts', createPayout);
+// The account number the money goes to: deliberate, step-upped and audited -
+// see getPayoutBankDetails for why it is not a field on the list above.
+router.get('/payouts/:payoutId/bank', requireRecentAuth, getPayoutBankDetails);
 router.patch('/payouts/:payoutId/paid', requireRecentAuth, settlePayout);
 router.patch('/payouts/:payoutId/failed', failPayout);
 
