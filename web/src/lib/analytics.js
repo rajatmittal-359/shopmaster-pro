@@ -29,6 +29,63 @@ export const GA_ID = (process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || '').trim();
 // .trim(): a CI variable left as a single space (GitHub refuses an empty one) must still mean "off".
 export const PIXEL_ID = (process.env.NEXT_PUBLIC_META_PIXEL_ID || '').trim();
 
+/**
+ * The shop's own traffic, labelled rather than thrown away.
+ *
+ * WHY (2 Oct 2026)
+ *   GA4 was reading 183 sessions a month, 65% of them Direct, averaging **24
+ *   events and nearly five minutes** each - and the single most-viewed page on
+ *   the whole site was "Products · Seller · ShopMaster Pro". No shopper behaves
+ *   like that. It was the shop itself: Rajat and his mother working in the
+ *   seller and admin panels all day, on the live site.
+ *
+ *   GoogleAnalytics.jsx already refused to load on localhost for exactly this
+ *   reason - "a day of building pages never counts as forty visitors" - but the
+ *   panels are used on PRODUCTION, where that guard does not reach.
+ *
+ * WHY LABELLED AND NOT DROPPED
+ *   The first version of this simply did not send the event. Rajat's objection
+ *   killed it, and he was right: *"bhale hi jhel lenge apna traffic, lekin pata
+ *   nahi chalega ki apni site pe kaun kitna aata hai - dhokha nahi hona
+ *   chahiye."* A dropped event is gone forever; there is no way to look at it
+ *   later, and no way to check the filter is not hiding real people.
+ *
+ *   So the event still goes to GA4, carrying `traffic_type: 'internal'`. The
+ *   property already has a data filter on that exact parameter - *exclude events
+ *   where traffic_type matches internal* - so the reports stay honest, and
+ *   switching that filter off shows the shop's own usage again whenever anybody
+ *   wants it. Nothing is lost; it is only sorted.
+ *
+ * WHY NOT GA4's IP-BASED INTERNAL FILTER
+ *   Rajat asked the right question: *"kya pata kaunse device me chalenge"*. A
+ *   laptop, his phone, his mother's phone, mobile data, a home connection whose
+ *   IP changes - an IP list is wrong the week it is written. This is decided by
+ *   the path and by who is signed in, which is true on every device, forever.
+ *
+ * CAREFUL WITH THE PREFIXES
+ *   `/sellers` is the PUBLIC shop directory and `/sell` is the public "become a
+ *   seller" page. A naive `startsWith('/seller')` would quietly mark both as
+ *   internal - two real storefront pages - so each panel root is matched exactly
+ *   or with its trailing slash.
+ */
+const PANEL_ROOTS = ['/admin', '/seller'];
+
+export const isPanelPath = (pathname) => {
+  if (typeof pathname !== 'string') return false;
+  return PANEL_ROOTS.some((root) => pathname === root || pathname.startsWith(`${root}/`));
+};
+
+/**
+ * Is this the shop looking at its own site?
+ *
+ * Two ways in, because the path alone misses the bigger half: the panels are
+ * obviously internal, but Rajat and his mother also browse the STOREFRONT -
+ * checking a product page, opening their own shop - and that is counted as a
+ * visitor unless who is signed in is taken into account.
+ */
+export const isInternalTraffic = (pathname, { isSeller = false, isAdmin = false } = {}) =>
+  isPanelPath(pathname) || Boolean(isSeller) || Boolean(isAdmin);
+
 const gtag = (...args) => {
   // No gtag on localhost (GoogleAnalytics.jsx never loads it there), so this is a no-op in dev.
   if (!GA_ID || typeof window === 'undefined' || typeof window.gtag !== 'function') return;

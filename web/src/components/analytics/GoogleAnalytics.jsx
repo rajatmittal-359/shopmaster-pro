@@ -3,7 +3,8 @@
 import { useEffect } from 'react';
 import Script from 'next/script';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { GA_ID } from '@/lib/analytics';
+import { GA_ID, isInternalTraffic } from '@/lib/analytics';
+import { useSession } from '@/lib/session';
 import { readConsent, useConsent, useOnRealHost } from '@/lib/consent';
 
 /**
@@ -48,6 +49,8 @@ export default function GoogleAnalytics() {
   const searchParams = useSearchParams();
   const realHost = useOnRealHost();
   const consent = useConsent();
+  // Who is looking: a signed-in seller or admin is the shop, not a customer.
+  const { canSell, isAdmin } = useSession();
 
   useEffect(() => {
     if (!GA_ID || !realHost || window.gtag) return;
@@ -65,12 +68,24 @@ export default function GoogleAnalytics() {
   useEffect(() => {
     if (!GA_ID || !realHost || typeof window.gtag !== 'function') return;
     const query = searchParams?.toString();
+    /*
+     * The shop looking at its own site is still SENT, but marked.
+     *
+     * The panels and the signed-in seller or admin were 65% of every session,
+     * averaging 24 events each, which made every other number meaningless. They
+     * are not dropped, though - `traffic_type: 'internal'` lets GA4's own data
+     * filter take them out of the reports while the events stay in the property,
+     * so the shop's own usage can always be looked at again. See
+     * isInternalTraffic.
+     */
+    const internal = isInternalTraffic(pathname, { isSeller: canSell, isAdmin });
     window.gtag('event', 'page_view', {
       page_path: query ? `${pathname}?${query}` : pathname,
       page_location: window.location.href,
       page_title: document.title,
+      ...(internal ? { traffic_type: 'internal' } : {}),
     });
-  }, [pathname, searchParams, realHost]);
+  }, [pathname, searchParams, realHost, canSell, isAdmin]);
 
   if (!GA_ID || !realHost) return null;
 

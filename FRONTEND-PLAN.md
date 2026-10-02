@@ -3453,3 +3453,64 @@ signal at the one second it still mattered - once the parcel is with the courier
 the photo can never be taken. The warning now sits under that button when the
 proof is missing, in the same bargain the panel strikes: the shop is not blocked,
 it is told what it is giving up.
+
+### 4.72 GA4 was counting the shop as its own customers (2 Oct 2026)
+
+Rajat opened Analytics and Merchant Center and asked whether the numbers were
+real. They were not.
+
+**What the property actually said.** 183 sessions in a month, and the shape gave
+it away: **Direct 65%**, averaging **24 events and 4m 51s per session**. The most
+viewed page on the whole site was *"Products · Seller · ShopMaster Pro"*. No
+shopper types a URL and then performs twenty-four actions. It was Rajat and his
+mother working in the panels, on the live site, all day. Organic Search (52
+sessions, 21 events each) is partly the same - he searches his own shop on Google
+to check it. The only traffic that looks like strangers is Referral: 7 sessions,
+38 seconds, 9 events. So of 183 sessions, perhaps ten were real.
+
+And the same doubt reaches Merchant Center, which reported its **first click
+ever** (1). There is no internal-traffic filter there at all, so that click is
+very possibly his own.
+
+**Why the obvious fix was the wrong one.** GA4 ships an Internal Traffic filter,
+and it matches on **IP**. Rajat asked the question that killed it: *"kya pata
+kaunse device me chalenge"* - his laptop, his phone, his mother's phone, mobile
+data, a home connection with a changing IP. An IP list is stale the week it is
+written.
+
+**So the filter is a path, not a device** - and, after Rajat pushed back, a
+**label rather than a deletion.** The first version simply did not send the
+event. He refused it: *"bhale hi jhel lenge apna traffic, lekin pata nahi chalega
+ki apni site pe kaun kitna aata hai - dhokha nahi hona chahiye."* He was right; a
+dropped event is gone, and there is then no way to check the rule is not hiding
+real people.
+
+`isInternalTraffic` in `lib/analytics.js` now decides, and `GoogleAnalytics.jsx`
+**still sends the page_view**, carrying `traffic_type: 'internal'`. Two ways in,
+because the path alone misses the bigger half: anything under `/admin` or
+`/seller`, **and** any page at all while a seller or admin is signed in - which
+covers the shop's own people browsing the storefront, something no path check
+could catch.
+
+**And the GA4 filter stays in Testing, deliberately.** The property already had a
+data filter on exactly this parameter. Checking Google's behaviour reversed the
+obvious move: **Testing marks matching events and keeps them; Active discards
+them permanently**, from reports and from BigQuery, irreversibly. Setting it
+Active would have reintroduced the very loss Rajat objected to. Left in Testing,
+every event is stored and labelled, and both views - everything, or customers
+only - are a dimension away.
+
+`GoogleAnalytics.jsx` had already refused to load on localhost for exactly this
+reason - its comment reads *"a day of building pages never counts as forty
+visitors"* - but the panels are used on **production**, where that guard never
+reached. Half the defence existed; this is the other half.
+
+**The trap in it**, worth keeping in mind for anything similar: `/sellers` is the
+public shop directory and `/sell` is the public "become a seller" page. A plain
+`startsWith('/seller')` would have silently stopped counting two real storefront
+pages. Each panel root is therefore matched exactly or with its trailing slash,
+and the predicate was checked against all fifteen cases including those two.
+
+Ecommerce events were checked and are **not** at fault: `view_item`,
+`add_to_cart`, `begin_checkout` and `purchase` all fire correctly from
+`lib/analytics.js`. Key events reading 0 simply means nothing has been bought yet.

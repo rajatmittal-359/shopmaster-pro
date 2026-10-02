@@ -108,6 +108,63 @@ the Delivered line as "Delivered - see the courier's photo". Do not show the
 courier's *signature* capture if it carries another person's name - the photo is
 the useful half.
 
+### 2.82 Same-day is wired to a simulator
+
+Found 2 Oct 2026. `shipmentBooking.js:57` sends `deliveryOption === 'same_day'`
+to `borzo.bookSameDay`, and Borzo has never left its **test host** - `BORZO_ENV`
+unset means `robotapitest-in.borzodelivery.com`, which `utils/borzo.js` describes
+itself as a simulator that answers happily while nothing is collected.
+
+**Nothing is at risk today, and that part IS by design.** `utils/shipping.js:418`
+checks `borzo.isPending()` and, while Borzo sits on its test host, offers
+`same_day_soon` instead - *"Same-day delivery, Coming soon in Jaipur"*, with
+`available: false` - and the WHY block beside it names three separate places a
+request for it is refused. It even removes itself the day `BORZO_ENV` turns
+production, so nobody has to remember to delete a promise. This is well done and
+should not be undone.
+
+So this row is about the promise, not a bug: the page says *coming soon in
+Jaipur*, and nothing is coming until one of the two routes below is taken.
+
+Two ways out, and the second is probably better:
+
+1. Take Borzo live (`BORZO_ENV=production`, real token) - a second vendor, a
+   second key, a second wallet to keep topped up.
+2. **Move same-day to Shiprocket Quick.** Already live on the same account by
+   SSO, already shares the wallet, pickup already saved. One vendor instead of
+   two. Needs two answers first (both in OPS): does it serve Jaipur in working
+   hours, and does it have an API - the panel is a manual form, and without an
+   API it cannot be booked from code.
+
+Until one of those is settled the page keeps saying *coming soon*, which is
+honest - but it has been saying it for a while, and a promise with no date is
+how a trust story quietly stops being one.
+
+### 2.83 Pack proof should be a video, not a photo
+
+Researched 2 Oct 2026, asking what other Indian sellers actually do about return
+fraud. The answer was not what this project assumed.
+
+**The industry's primary defence is an order-ID-linked packing VIDEO.** Meesho
+contests a WFR (wrong forward return) with it; Flipkart's Seller Protection Fund
+takes it as the evidence in a 14-day claim window; the named fraud types it
+answers are the **empty box return** and **swap fraud**. Branded jewellery sellers
+add insurance and tamper-proof packing, and the cleverest trick found belongs to
+**Mia by Tanishq**: a tamper-proof sticker is packed *inside* the box, and the
+buyer seals the return with it **in front of the courier**.
+
+Against that list we have the photo (`fulfilment.packProof`), Shiprocket's
+dispatch weight, and Auto Secure above ₹2,500. The gap is the video, and it is
+the one the whole industry leans on - a photo shows one instant, a video shows
+the item, the count, its condition and the shipping label in a single
+uninterrupted take, which is what makes it hard to argue with.
+
+The work: let the seller record a short clip instead of (or as well as) the
+photo, stored against the order like `packProof` already is, and shown beside the
+buyer's evidence when a claim is judged. Worth checking the storage cost first -
+Cloudinary charges for video differently - and capping length hard, maybe 15
+seconds, since the AWB label and the item in the box is all it has to show.
+
 ### 2.78 Ask Shiprocket to cover the parcels that are NOT covered today
 
 Found 2 Oct 2026 while auditing Shiprocket, from Rajat's question: *"1000 tak ke
