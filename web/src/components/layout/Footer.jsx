@@ -45,6 +45,18 @@ export default async function Footer() {
             ))}
           </address>
 
+          {/* The one line on this site a stranger can verify for themselves:
+              udyamregistration.gov.in → Print/Verify takes this number and
+              returns the business. Sits where a GSTIN would, which is where
+              Indian buyers and sellers look for it. Nothing renders until an
+              admin saves one - no invented number. */}
+          {BUSINESS.udyam ? (
+            <p className="mt-3 text-muted-foreground">
+              Udyam (MSME) registration{' '}
+              <span className="font-medium text-foreground">{BUSINESS.udyam}</span>
+            </p>
+          ) : null}
+
           <p className="mt-3">
             <a href={BUSINESS.phoneHref} className="text-brand-ink hover:underline">
               {BUSINESS.phone}

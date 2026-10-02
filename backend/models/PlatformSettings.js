@@ -41,6 +41,21 @@ const settingsSchema = new mongoose.Schema(
       hours: { type: String, trim: true, default: '' },
       gstin: { type: String, trim: true, default: '' },
       /*
+       * The operator's Udyam (MSME) registration - UDYAM-RJ-17-0692439, taken
+       * 2 Oct 2026. It is NOT a substitute for a GSTIN and never fills that
+       * field: Udyam says the business exists, a GSTIN says it is inside the
+       * tax system. It is here because a stranger deciding whether to pay a
+       * shop they have never heard of looks for exactly this - a number that
+       * can be checked against a government register - and because the MSMED
+       * Act's 45-day payment protection is only claimable by a business that
+       * states its registration.
+       *
+       * Uppercased on the way in so the footer never prints a half-typed
+       * "udyam-rj-…". Empty until an admin fills it; the footer simply says
+       * nothing rather than inventing a number.
+       */
+      udyam: { type: String, trim: true, uppercase: true, default: '' },
+      /*
        * The Consumer Protection (E-Commerce) Rules 2020, rule 4(4)-(5): every
        * e-commerce entity names a grievance officer (and a nodal contact
        * resident in India), displays name, designation and contact, acknowledges

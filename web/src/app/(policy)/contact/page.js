@@ -39,6 +39,15 @@ export default async function ContactPage() {
           ))}
           <span>({BUSINESS.landmark})</span>
         </address>
+        {/* Checkable, not just stated: udyamregistration.gov.in → Print/Verify
+            turns this number back into the business. The same block Razorpay's
+            website check and Google Merchant Center read. */}
+        {BUSINESS.udyam ? (
+          <p className="mt-2 text-sm text-muted-foreground">
+            Udyam (MSME) registration{' '}
+            <span className="font-medium text-foreground">{BUSINESS.udyam}</span>
+          </p>
+        ) : null}
         {/* The map, Google's keyless embed: no API key, no billing account,
             no quota - the same iframe Google's own "Share → Embed a map"
             hands out. A shop people can find on a map is one people trust. */}

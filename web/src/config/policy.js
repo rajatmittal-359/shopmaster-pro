@@ -51,6 +51,33 @@ export const BUSINESS = {
   email: process.env.NEXT_PUBLIC_BUSINESS_EMAIL || 'hello@example.com',
   hours: 'Monday to Saturday, 10am - 7pm IST',
   /**
+   * The operator's Udyam (MSME) registration number, from admin Settings.
+   *
+   * WHY IT IS SHOWN AT ALL (2 Oct 2026)
+   *   Until today the footer could say who we are and where, but nothing a
+   *   stranger could CHECK. Udyam is the one number on this site that can be
+   *   verified against a government register (udyamregistration.gov.in →
+   *   Print/Verify), by a buyer who has never heard of the shop and by a
+   *   seller deciding whether to hand us their stock and their money.
+   *
+   * WHERE, AND WHY ONLY THERE
+   *   Indian practice puts it exactly where a GSTIN would sit - the footer's
+   *   identity block and the Contact page, the same two places Razorpay's
+   *   website check and Google Merchant Center read. It is deliberately NOT
+   *   on the seller's invoice: there the SELLER is the supplier and we print
+   *   on their behalf, so the operator's registration has no business on it
+   *   (CLAUDE.md rule one - the platform is not any of its sellers).
+   *
+   * IT IS NOT A GSTIN, AND NEVER FILLS THAT FIELD
+   *   Udyam says the business exists; a GSTIN says it is inside the tax
+   *   system. Where a form asks for a GSTIN the honest answer stays "not
+   *   registered", which is what /terms and the shop pages already say.
+   *
+   * Empty by default: a number is never invented, the block simply does not
+   * render until an admin saves one.
+   */
+  udyam: '',
+  /**
    * The PLATFORM's own profiles elsewhere on the web, for the Organization
    * schema's `sameAs`. None yet - and deliberately no env fallback any more:
    * until 21 Sep 2026 NEXT_PUBLIC_SAME_AS carried the house shop's Instagram,
@@ -110,6 +137,7 @@ export const businessFrom = (settings) => {
     addressLines: [line1, cityLine, 'India'],
     landmark: pick(b.address2, BUSINESS.landmark),
     hours: pick(b.hours, BUSINESS.hours),
+    udyam: pick(b.udyam, BUSINESS.udyam),
     // Rule 4, E-Commerce Rules 2020 - filled in /admin/settings; pages say
     // "not yet named" rather than inventing one.
     grievance: b.grievanceName ? { name: b.grievanceName, designation: b.grievanceDesignation || 'Grievance Officer', email: b.grievanceEmail || pick(b.email, BUSINESS.email), phone: b.grievancePhone || phone } : null,

@@ -184,6 +184,23 @@ export default function PlatformSettings() {
                   <Field id="gstin" label="GSTIN (if any)">
                     <Input id="gstin" value={b.gstin} onChange={set('business', 'gstin')} />
                   </Field>
+                  {/* Shown in the footer and on Contact, where a GSTIN would sit.
+                      It is not a GSTIN and does not fill that field above. */}
+                  <Field
+                    id="udyam"
+                    label="Udyam (MSME) registration"
+                    hint="Printed in the footer and on Contact - the one number a stranger can check for themselves."
+                  >
+                    <Input
+                      id="udyam"
+                      // A settings doc saved before this field existed has no
+                      // key; without the fallback React flips the input from
+                      // uncontrolled to controlled on first keystroke.
+                      value={b.udyam || ''}
+                      onChange={set('business', 'udyam')}
+                      placeholder="UDYAM-XX-00-0000000"
+                    />
+                  </Field>
                 </div>
                 {/* Rule 4 of the E-Commerce Rules 2020: a named officer, shown on the
                     site, who acknowledges within 48 hours and resolves within a month. */}
