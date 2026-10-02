@@ -165,6 +165,47 @@ buyer's evidence when a claim is judged. Worth checking the storage cost first -
 Cloudinary charges for video differently - and capping length hard, maybe 15
 seconds, since the AWB label and the item in the box is all it has to show.
 
+### 2.84 Same-day can only ever pick up from ONE shop
+
+Found 2 Oct 2026, from Rajat's question: *"Borzo me sirf Charming Jewels thodi,
+aur koi Jaipur ka seller bhi to bhej sakta hai."* He is right, and the code
+cannot do it.
+
+`shipmentBooking.js:58` hands Shiprocket a per-seller `opts.pickupLocation` -
+that path is already multi-seller - but gives `borzo.bookSameDay` nothing.
+`utils/borzo.js` then builds the pickup from **two environment variables**,
+`BORZO_PICKUP_ADDRESS` and `BORZO_PICKUP_PHONE`, and hardcodes the pickup
+contact as **"ShopMaster Pro"**. `utils/shipping.js:81` decides whether to offer
+same-day at all by comparing the customer's PIN against one global
+`SHIPROCKET_PICKUP_PINCODE`.
+
+So every same-day booking, whoever sold the item, sends a rider to the one
+address in the env - the house shop. **A second Jaipur seller's order would be
+collected from a shop that does not have it**, and the rider would have nobody
+to call, because the contact name is the platform rather than the seller. The
+nobody-loses test fails on the seller's side, and it fails silently: the quote
+succeeds, the booking succeeds, only the pickup is wrong.
+
+Nothing is broken today because Borzo is off in production (§2.82) and every
+seller is the house shop. Both of those stop being true at the same moment.
+
+The work, in the order it has to happen:
+1. Pass the seller's pickup address and phone into `bookSameDay` the way
+   `pickupLocation` already reaches Shiprocket, and use the **seller's** name as
+   the pickup contact.
+2. Make `isLocalDelivery` compare the customer's PIN against **that seller's**
+   pickup PIN, not a global one.
+3. A basket spanning two sellers cannot be one Borzo booking - decide whether
+   same-day is offered per fulfilment or withdrawn for mixed baskets.
+
+**This is also the answer to "which other cities".** Borzo runs in nine -
+Jaipur, Mumbai, Delhi/NCR, Bengaluru, Pune, Chennai, Hyderabad, Ahmedabad,
+Kolkata - and nothing has to be enabled city by city: the pickup address decides
+the city. Instant delivery is a rider on a bike, so it only ever works when the
+SELLER and the customer are in the same city. The blocker is not Borzo's map, it
+is that the code knows one pickup address. Fix the three points above and every
+city Borzo serves opens by itself, the day a seller in that city signs up.
+
 ### 2.78 Ask Shiprocket to cover the parcels that are NOT covered today
 
 Found 2 Oct 2026 while auditing Shiprocket, from Rajat's question: *"1000 tak ke
