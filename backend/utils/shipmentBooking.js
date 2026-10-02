@@ -55,7 +55,10 @@ const bookForOrder = async (order, address, opts = {}) => {
 
   const result =
     order.deliveryOption === 'same_day'
-      ? await borzo.bookSameDay(order, address, weightKg)
+      // 2.84: the rider goes to the seller who is shipping, never to whichever
+      // address the env happens to name. `opts.pickup` is built once by
+      // `borzo.sameDayPickupFor` and is the same object the quote used.
+      ? await borzo.bookSameDay(order, address, weightKg, opts.pickup)
       : await shiprocket.bookShipment(order, address, weightKg, 1, { pickupLocation: opts.pickupLocation });
 
   if (!result.ok) {

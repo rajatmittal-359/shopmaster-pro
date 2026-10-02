@@ -165,7 +165,7 @@ buyer's evidence when a claim is judged. Worth checking the storage cost first -
 Cloudinary charges for video differently - and capping length hard, maybe 15
 seconds, since the AWB label and the item in the box is all it has to show.
 
-### 2.84 Same-day can only ever pick up from ONE shop
+### ~~2.84 Same-day can only ever pick up from ONE shop~~ ✅ DONE 2 Oct 2026
 
 Found 2 Oct 2026, from Rajat's question: *"Borzo me sirf Charming Jewels thodi,
 aur koi Jaipur ka seller bhi to bhej sakta hai."* He is right, and the code
@@ -189,14 +189,33 @@ succeeds, the booking succeeds, only the pickup is wrong.
 Nothing is broken today because Borzo is off in production (§2.82) and every
 seller is the house shop. Both of those stop being true at the same moment.
 
-The work, in the order it has to happen:
-1. Pass the seller's pickup address and phone into `bookSameDay` the way
-   `pickupLocation` already reaches Shiprocket, and use the **seller's** name as
-   the pickup contact.
-2. Make `isLocalDelivery` compare the customer's PIN against **that seller's**
-   pickup PIN, not a global one.
-3. A basket spanning two sellers cannot be one Borzo booking - decide whether
-   same-day is offered per fulfilment or withdrawn for mixed baskets.
+**Built 2 Oct 2026** (8 tests in `tests/sameDayPerSeller.test.mjs`, suite 1575):
+
+1. ☑ `borzo.sameDayPickupFor(seller)` is the one place a pickup is decided -
+   the seller's own address, phone and contact (their shop name when no contact
+   is named, so it agrees with `deliveryTruth.pickupAddressFor`, which never
+   asked for one), the env address for the house shop, and **null** for a seller
+   with nothing on file. Both the quote and the booking take it, so they cannot
+   disagree about where the rider is going.
+2. ☑ `isLocalDelivery(deliveryPincode, pickupPincode)` now answers for the
+   seller who ships. A Kolkata seller's Kolkata buyer is local; the env default
+   is only used where no seller is known.
+3. ☑ A basket from two shops is not offered same-day at all, and Borzo is not
+   even asked for a price - withdrawn rather than collected from the wrong one.
+4. ☑ `matter` on the Borzo call was `"Jewellery and accessories"`; now
+   `"Retail goods"`. One account serves every seller and the frame names no
+   category.
+
+**Still open — 2.84b, same-day per fulfilment.** Amazon and Flipkart split a
+basket by seller and let the delivery speed differ per shipment; ours keeps one
+`deliveryOption` on the Order, which is why a mixed basket loses same-day
+entirely rather than offering it on the parcel that could have it. Moving
+`deliveryOption` onto the fulfilment means the checkout showing options per
+seller, `priceDeliveryOption` returning a set per group, and a migration for
+existing orders. Worth doing the day a real two-seller basket appears, not
+before.
+
+The original finding:
 
 **This is also the answer to "which other cities".** Borzo runs in nine -
 Jaipur, Mumbai, Delhi/NCR, Bengaluru, Pune, Chennai, Hyderabad, Ahmedabad,

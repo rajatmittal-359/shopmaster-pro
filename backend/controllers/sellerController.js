@@ -1386,7 +1386,14 @@ exports.shipOrder = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Your pickup address is not registered with the courier yet. The admin has been told and will finish it - usually the same day.' });
     }
 
-    const result = await shipment.bookForOrder(order, address, { pickupLocation });
+    // Same-day does not use Shiprocket's saved nickname - Borzo is told the
+    // address itself, so it needs this seller's own (2.84). Built by the one
+    // helper the checkout quote also used, so the rider is sent where the
+    // customer was quoted from.
+    const result = await shipment.bookForOrder(order, address, {
+      pickupLocation,
+      pickup: require('../utils/borzo').sameDayPickupFor(sellerProfile),
+    });
 
     if (!result.ok) {
       /*

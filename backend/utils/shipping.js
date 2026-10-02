@@ -78,8 +78,13 @@ const FALLBACK_PER_EXTRA_KG = { local: 25, national: 50 };
  * sharing them with the pickup pincode is a good proxy for "local" without
  * hard-coding a list of Jaipur pincodes.
  */
-const isLocalDelivery = (deliveryPincode) => {
-  const pickup = String(process.env.SHIPROCKET_PICKUP_PINCODE || '');
+const isLocalDelivery = (deliveryPincode, pickupPincode) => {
+  // 2.84: "local" is local TO THE SELLER WHO SHIPS. Same-day is a rider on a
+  // bike, so it only exists when that seller and the customer share a city -
+  // asking the env here would offer a Kolkata seller's Kolkata buyer nothing,
+  // and offer same-day on a parcel that starts 1,000 km away. The env default
+  // stays for callers that have no seller (fallback pricing, dev data).
+  const pickup = String(pickupPincode || process.env.SHIPROCKET_PICKUP_PINCODE || '');
   const delivery = String(deliveryPincode || '');
   if (pickup.length < 3 || delivery.length < 3) return false;
   return pickup.slice(0, 3) === delivery.slice(0, 3);
@@ -390,8 +395,45 @@ const getDeliveryOptions = async (cartItems, address, isCOD) => {
   // Nothing made to order goes same-day - it is not made yet.
   if (extra > 0) return options;
 
+  /*
+   * WHOSE shop is this rider going to? (2.84, 2 Oct 2026)
+   *
+   * Same-day is one rider, one pickup, one drop - so it only exists when ONE
+   * seller is shipping and that seller shares a city with the customer. The
+   * basket already splits per seller for standard shipping (2.54); the
+   * deliveryOption does not, it sits on the order. So a basket from two shops
+   * is simply not offered same-day, rather than being collected from whichever
+   * of them the env happens to name.
+   *
+   * Amazon and Flipkart both split a basket by seller and let the speed differ
+   * per shipment; doing that here means moving deliveryOption onto the
+   * fulfilment, which is WHAT-IS-LEFT 2.84b and needs the checkout to change
+   * too. Not offering is the honest half of it, and it is what those sites do
+   * for a shipment that cannot have the speed.
+   *
+   * A line with no sellerId at all (dev fixtures, the oldest orders) keeps the
+   * configured pickup - the only one we know - which is exactly today's
+   * behaviour, not a new fallback.
+   */
+  const shippingSellers = [...new Set(cartItems.map((item) => productOf(item).sellerId).filter(Boolean).map(String))];
+  if (shippingSellers.length > 1) return options;
+
+  let pickupPoint;
+  let pickupPin;
+  if (shippingSellers.length === 1) {
+    const seller = await Seller.findOne({ userId: shippingSellers[0] })
+      .select('isPlatformOwned pickupAddress')
+      .lean()
+      .catch(() => null);
+    pickupPoint = borzo.sameDayPickupFor(seller);
+    // No pickup on file is a reason not to offer it, never a reason to send
+    // the rider to somebody else's shop.
+    if (!pickupPoint) return options;
+    pickupPin = seller?.isPlatformOwned ? null : seller?.pickupAddress?.pincode;
+  }
+
   // Skip the network call entirely for out-of-town addresses.
-  if (!isLocalDelivery(address.zipCode)) return options;
+  if (!isLocalDelivery(address.zipCode, pickupPin)) return options;
 
   // The admin's switch (Settings → Switches): off means the option is not
   // offered and not quoted - the same rule as COD, enforced here and not
@@ -400,7 +442,7 @@ const getDeliveryOptions = async (cartItems, address, isCOD) => {
   if (live?.shop?.sameDayEnabled === false) return options;
 
   const billableWeight = cartItems.reduce((sum, item) => sum + weightOf(item), 0);
-  const sameDay = await borzo.quoteSameDay(address, billableWeight);
+  const sameDay = await borzo.quoteSameDay(address, billableWeight, pickupPoint);
 
   if (!sameDay) {
     /*

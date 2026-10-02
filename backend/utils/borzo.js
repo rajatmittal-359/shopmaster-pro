@@ -74,19 +74,76 @@ const isConfigured = () => !!process.env.BORZO_API_TOKEN && isLive();
 const isPending = () => !!process.env.BORZO_API_TOKEN && !isLive();
 
 /**
+ * Where the rider goes to collect, for the seller who is actually shipping.
+ *
+ * WHY (2.84, 2 Oct 2026)
+ *   Until today every same-day booking was collected from BORZO_PICKUP_ADDRESS
+ *   with the contact named "ShopMaster Pro" - one address for the whole
+ *   marketplace. Rajat, looking at the Borzo account: *"Borzo me sirf Charming
+ *   Jewels thodi, aur koi Jaipur ka seller bhi to bhej sakta hai."* A second
+ *   seller's parcel would have been collected from a shop that did not have it,
+ *   and the rider would have had nobody to call. Nothing threw - the quote and
+ *   the booking both succeeded; only the pickup was wrong.
+ *
+ *   Standard shipping learnt this in 2.54 (one rate call per seller, from their
+ *   own pincode). This is the same lesson for the same-day leg, and it is the
+ *   ONLY place the env pickup is read, so the quote and the booking cannot
+ *   disagree about where the rider is going.
+ *
+ * @returns {{address: string, phone: string, name: string}|null} null when this
+ *          seller has no usable pickup on file - the caller must then NOT offer
+ *          same-day. Falling back to the house shop's address would be exactly
+ *          the bug this replaces.
+ */
+const sameDayPickupFor = (seller) => {
+  const p = seller?.pickupAddress || {};
+  const named = String(p.contactName || '').trim();
+
+  // The house shop ships from the address the box is configured with, as it
+  // always has. Its own contact name is used when it has one: the pickup
+  // contact is a shop, never the platform (CLAUDE.md rule one).
+  if (seller?.isPlatformOwned) {
+    const address = process.env.BORZO_PICKUP_ADDRESS;
+    const phone = process.env.BORZO_PICKUP_PHONE;
+    return address && phone ? { address, phone, name: named || 'ShopMaster Pro' } : null;
+  }
+
+  const address = [p.address1, p.address2, p.city, p.state, p.pincode].filter(Boolean).join(', ');
+  const phone = String(p.phone || '').trim();
+  // A rider has to ask for somebody at the door. `deliveryTruth.pickupAddressFor`
+  // - the guard that already runs before every booking - requires address, PIN
+  // and phone but never a contact name, so insisting on one here would refuse a
+  // seller that guard had just cleared. The shop's own name is the honest
+  // stand-in, and it keeps the two helpers agreeing (house rule 1).
+  const name = named || String(seller?.businessName || '').trim();
+  return address && phone && name ? { address, phone, name } : null;
+};
+
+/** The configured pickup, for a basket whose seller is not known (dev data, old orders). */
+const envPickup = () => {
+  const address = process.env.BORZO_PICKUP_ADDRESS;
+  const phone = process.env.BORZO_PICKUP_PHONE;
+  return address && phone ? { address, phone, name: 'ShopMaster Pro' } : null;
+};
+
+/**
  * Asks Borzo what it would charge to take this basket to this address.
  *
  * @param {object} address   delivery address (street, city, state, zipCode, phoneNumber)
  * @param {number} weightKg  total parcel weight
+ * @param {object} [pickup]  where to collect (`sameDayPickupFor`). Omitted =
+ *                           the configured address; **null = this seller has no
+ *                           pickup, so there is nothing to quote**.
  * @returns {{price: number, arrivalBy: Date, provider: 'borzo'}|null} null when
  *          unavailable for any reason - not configured, not serviceable, or down
  */
-const quoteSameDay = async (address, weightKg) => {
+const quoteSameDay = async (address, weightKg, pickupPoint) => {
   if (!isConfigured()) return null;
 
-  const pickup = process.env.BORZO_PICKUP_ADDRESS;
-  const pickupPhone = process.env.BORZO_PICKUP_PHONE;
-  if (!pickup || !pickupPhone) return null;
+  const from = pickupPoint === undefined ? envPickup() : pickupPoint;
+  if (!from) return null;
+  const pickup = from.address;
+  const pickupPhone = from.phone;
 
   const drop = [address.street, address.landmark, address.city, address.state, address.zipCode]
     .filter(Boolean)
@@ -96,13 +153,17 @@ const quoteSameDay = async (address, weightKg) => {
     const { data } = await axios.post(
       `${baseUrl()}/api/business/${API_VERSION}/calculate-order`,
       {
-        matter: 'Jewellery and accessories',
+        // Never a category: one Borzo account serves every seller, and
+        // ShopMaster Pro sells anything (CLAUDE.md - nothing in the frame may
+        // name a category). "Jewellery and accessories" was true only while the
+        // house shop was the only seller.
+        matter: 'Retail goods',
         total_weight_kg: weightKg,
         vehicle_type_id: VEHICLE_MOTORBIKE,
         points: [
           {
             address: pickup,
-            contact_person: { name: 'ShopMaster Pro', phone: pickupPhone },
+            contact_person: { name: from.name, phone: pickupPhone },
           },
           {
             address: drop,
@@ -158,14 +219,17 @@ const quoteSameDay = async (address, weightKg) => {
  * failure returns null with a reason rather than throwing, so a booking that
  * does not go through leaves the order exactly as it was.
  */
-const bookSameDay = async (order, address, weightKg) => {
+const bookSameDay = async (order, address, weightKg, pickupPoint) => {
   if (!isConfigured()) return { ok: false, reason: 'Same-day courier is not configured' };
 
-  const pickup = process.env.BORZO_PICKUP_ADDRESS;
-  const pickupPhone = process.env.BORZO_PICKUP_PHONE;
-  if (!pickup || !pickupPhone) {
-    return { ok: false, reason: 'Pickup address is not configured' };
+  const from = pickupPoint === undefined ? envPickup() : pickupPoint;
+  if (!from) {
+    // Said as the seller would read it: the shop, not the platform, is the one
+    // that can fix this, and the message says where.
+    return { ok: false, reason: 'Add your pickup address in Settings before booking a same-day rider' };
   }
+  const pickup = from.address;
+  const pickupPhone = from.phone;
 
   const drop = [address.street, address.landmark, address.city, address.state, address.zipCode]
     .filter(Boolean)
@@ -179,7 +243,7 @@ const bookSameDay = async (order, address, weightKg) => {
         total_weight_kg: weightKg,
         vehicle_type_id: VEHICLE_MOTORBIKE,
         points: [
-          { address: pickup, contact_person: { name: 'ShopMaster Pro', phone: pickupPhone } },
+          { address: pickup, contact_person: { name: from.name, phone: pickupPhone } },
           {
             address: drop,
             contact_person: {
@@ -295,6 +359,7 @@ module.exports = {
   canAfford,
   _resetBalanceCache,
   isPending,
+  sameDayPickupFor,
   quoteSameDay,
   bookSameDay,
   cancelSameDay,
