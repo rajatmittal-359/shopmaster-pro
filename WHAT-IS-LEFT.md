@@ -225,6 +225,33 @@ SELLER and the customer are in the same city. The blocker is not Borzo's map, it
 is that the code knows one pickup address. Fix the three points above and every
 city Borzo serves opens by itself, the day a seller in that city signs up.
 
+### 2.85 The seller is told the commission, never given a bill for it
+
+Found 3 Oct 2026, from Rajat's question: *"shopmaster seller ko bill deta hai vo
+bhi dekha do."* It does not. The seller's Earnings screen shows **Commission
+charged** as a figure and the rate beside it, and that is the whole of it - no
+document is issued, nothing is downloadable, nothing is dated or numbered.
+
+The customer's side is right and complete (`utils/invoice.js`, `Bill.jsx`): the
+SELLER is the supplier, the invoice carries their name, address and their own
+serial, and it says in plain words that they are not registered under GST and
+that no GST was charged. Amazon, Flipkart and Meesho all do exactly this - the
+seller issues the invoice with their own GSTIN, the platform is named only as
+the channel.
+
+What those three also do, and we do not: **the platform issues the seller a
+commission invoice, monthly**, for the service it supplied them. That is the
+document a seller files, and the one their accountant asks for. On a GST-
+registered platform it is also what lets the seller claim the GST on commission
+as input credit.
+
+Not urgent, and it cannot be finished today either: the house shop pays 0%, no
+outside seller is paying commission yet, and ShopMaster Pro has no GSTIN, so the
+invoice it issued could not carry GST anyway. But the day a paying seller joins,
+they will ask - and the figures already exist (`sellerMoneyFor`, the charges
+ledger `SellerCharge`, `utils/sellerCharges`). The work is a numbered, dated
+document per seller per month, not a new calculation.
+
 ### 2.78 Ask Shiprocket to cover the parcels that are NOT covered today
 
 Found 2 Oct 2026 while auditing Shiprocket, from Rajat's question: *"1000 tak ke
