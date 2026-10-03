@@ -192,7 +192,12 @@ export default function BuyBox({
           header and the menus rather than being its own one-off blur.
           Hidden once the page is wide enough for the button to
           stay in view on its own. */}
-      <div className="glass fixed inset-x-0 bottom-0 z-40 flex items-center gap-3 border-t px-4 py-3 md:hidden">
+      {/* ABOVE the tab bar, not under it (3 Oct 2026). Both were `bottom-0`
+          with the same z-index, so on a phone this bar was drawn behind
+          BottomNav and its "Buy now" was cut in half by the tabs - the one
+          button the whole page exists for. It now stands on the nav's own
+          height token, plus the phone's home-indicator inset. */}
+      <div className="glass fixed inset-x-0 bottom-[calc(var(--bottom-nav-h)+env(safe-area-inset-bottom))] z-40 flex items-center gap-3 border-t px-4 py-3 md:hidden">
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-medium">{name}</p>
           <p className="text-sm text-muted-foreground">₹{price.toLocaleString('en-IN')}</p>

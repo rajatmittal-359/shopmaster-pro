@@ -96,6 +96,13 @@
  *   block, which is exactly what just happened.
  */
 :root {
+  /* The phone's bottom tab bar, as a number both sides can read.
+     BottomNav is `fixed bottom-0`; so was the product page's buy bar, which
+     meant the two were drawn on top of each other and "Buy now" disappeared
+     behind the tabs (3 Oct 2026). The bar now sits at this height instead of
+     at 0, and the nav is given exactly this height, so the two can never drift
+     apart again by somebody changing a padding. */
+  --bottom-nav-h: 3.5rem;
   --background: oklch(0.995 0.002 286);
   --foreground: oklch(0.21 0.02 286);
   --card: oklch(1 0 0);

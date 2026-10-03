@@ -35,7 +35,10 @@ export default function BottomNav() {
       aria-label="Main"
       className="glass fixed inset-x-0 bottom-0 z-40 border-t pb-[env(safe-area-inset-bottom)] md:hidden"
     >
-      <ul className="mx-auto grid max-w-md grid-cols-5">
+      {/* An explicit height, not whatever the icons add up to: the product
+          page's buy bar is positioned off this same token, and a nav whose
+          height drifts would put the bar back on top of the tabs. */}
+      <ul className="mx-auto grid h-[var(--bottom-nav-h)] max-w-md grid-cols-5">
         {TABS.map(({ href, label, icon: Icon, end, auth }) => {
           const target = auth && !signedIn ? `/login?next=${encodeURIComponent('/account')}` : href;
           const active = end ? pathname === href : pathname === href || pathname.startsWith(`${href}/`);
@@ -44,7 +47,7 @@ export default function BottomNav() {
               <Link
                 href={target}
                 aria-current={active ? 'page' : undefined}
-                className={`flex flex-col items-center gap-0.5 py-2 text-[0.65rem] font-medium ${active ? 'text-brand-ink' : 'text-muted-foreground'}`}
+                className={`flex h-full flex-col items-center justify-center gap-0.5 text-[0.65rem] font-medium ${active ? 'text-brand-ink' : 'text-muted-foreground'}`}
               >
                 <Icon className={`size-5 ${active ? 'stroke-[2.25]' : ''}`} {...(href === '/cart' ? { 'data-cart-target': '' } : {})} />
                 {label}

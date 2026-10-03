@@ -243,6 +243,17 @@ tabular numerals so a column of them aligns.
 page gutter 16px. The storefront reads at `max-w-5xl` (1024px), the shop grid at
 6xl, the panels at 7xl with a 224px sidebar. The header is 56px and sticky.
 
+**`--bottom-nav-h` (3.5rem) is the phone's tab bar, and anything else that
+wants to live at the bottom of a phone screen stands on it, never on `bottom-0`.**
+`BottomNav` is given exactly this height; the product page's buy bar sits at
+`calc(var(--bottom-nav-h) + env(safe-area-inset-bottom))`. Both used to be
+`fixed bottom-0 z-40`, so on a phone they were drawn on top of each other and
+"Buy now" - the one button that page exists for - was cut in half by the tabs
+(3 Oct 2026). A number both sides read is what stops that coming back: a
+padding changed in one file can no longer move the other. `main` keeps its
+`pb-16 md:pb-0` so content clears the tabs, and a page with a buy bar pads
+further (`pb-28`).
+
 ### Grid & Container
 
 Product grids are 2 columns on a phone, 3 at `sm`, 4 at `lg`, square tiles.
