@@ -20,7 +20,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
  * a bell to the seller naming each field that changed. The last edits are
  * listed here, so the admin sees what was already done.
  */
-const LINKS = [['instagram', 'Instagram'], ['googleBusiness', 'Google Business Profile'], ['facebook', 'Facebook'], ['youtube', 'YouTube'], ['website', 'Website']];
+const LINKS = [['instagram', 'Instagram'], ['googleBusiness', 'Google Business Profile'], ['facebook', 'Facebook'], ['youtube', 'YouTube'], ['justdial', 'Justdial'], ['website', 'Website']];
 
 export default function EditShopDialog({ seller, open, onOpenChange, onSaved }) {
   const [form, setForm] = useState(null);

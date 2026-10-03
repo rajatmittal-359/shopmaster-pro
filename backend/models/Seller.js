@@ -204,6 +204,14 @@ const sellerSchema = new mongoose.Schema(
       googleBusiness: { type: String, trim: true, default: '' },
       youtube: { type: String, trim: true, default: '' },
       website: { type: String, trim: true, default: '' },
+      /*
+       * Justdial, added 3 Oct 2026. The others are the global profiles; this
+       * is the Indian directory a small shop is most likely to be listed on
+       * already, often without having made the listing itself. The platform's
+       * own settings have had the field since the start - the seller side had
+       * not, so a seller's own listing had nowhere to go.
+       */
+      justdial: { type: String, trim: true, default: '' },
     },
     showLocation: { type: Boolean, default: false },
 

@@ -3,14 +3,14 @@ import { notFound } from 'next/navigation';
 import { getSeller } from '@/lib/api';
 import ProductCard from '@/components/product/ProductCard';
 import Stars from '@/components/product/Stars';
-import { Globe, MapPin, Link2, Camera, Video, MessageCircle } from 'lucide-react';
+import { Globe, MapPin, Link2, Camera, Video, MessageCircle, BookText } from 'lucide-react';
 import { serialiseJsonLd } from '@/lib/jsonLd';
 import { buildShopSchema, safeHref, shopPath } from '@/lib/shopSchema';
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.shopmasterpro.in';
 // lucide dropped the brand glyphs; plain signifiers do the job.
-const LINK_ICON = { instagram: Camera, facebook: Link2, youtube: Video, googleBusiness: MapPin, website: Globe };
-const LINK_LABEL = { instagram: 'Instagram', facebook: 'Facebook', youtube: 'YouTube', googleBusiness: 'On Google Maps', website: 'Website' };
+const LINK_ICON = { instagram: Camera, facebook: Link2, youtube: Video, googleBusiness: MapPin, justdial: BookText, website: Globe };
+const LINK_LABEL = { instagram: 'Instagram', facebook: 'Facebook', youtube: 'YouTube', googleBusiness: 'On Google Maps', justdial: 'On Justdial', website: 'Website' };
 
 /**
  * A seller, as a place rather than a name.

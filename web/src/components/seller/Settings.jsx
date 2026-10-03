@@ -47,7 +47,7 @@ const formFrom = (settings) => ({
   showLocation: Boolean(settings.showLocation),
   // The break switch (Etsy's Vacation Mode): a date is kept as yyyy-mm-dd for the input.
   vacation: { on: Boolean(settings.vacation?.on), until: settings.vacation?.until ? String(settings.vacation.until).slice(0, 10) : '', note: settings.vacation?.note || '' },
-  links: { instagram: '', facebook: '', googleBusiness: '', youtube: '', website: '', ...(settings.links || {}) },
+  links: { instagram: '', facebook: '', googleBusiness: '', youtube: '', justdial: '', website: '', ...(settings.links || {}) },
   whatsapp: settings.whatsapp || '',
   pickupAddress: {
     contactName: '',
@@ -347,6 +347,11 @@ export default function SellerSettings() {
                         ['googleBusiness', t('Google Business Profile'), t('the Share → Copy link from your Google listing')],
                         ['facebook', t('Facebook page'), 'facebook.com/yourshop'],
                         ['youtube', t('YouTube channel'), 'youtube.com/@yourshop'],
+                        /* Added 3 Oct 2026: the one Indian directory a small
+                           shop is usually listed on already. It sits above
+                           "your own website" because far more sellers have a
+                           Justdial page than have a site of their own. */
+                        ['justdial', t('Justdial listing'), t('open your listing and copy the address from the browser')],
                         ['website', t('Your own website'), 'yourshop.in'],
                       ].map(([key, label, ph]) => (
                         <Field key={key} id={`link-${key}`} label={label}>

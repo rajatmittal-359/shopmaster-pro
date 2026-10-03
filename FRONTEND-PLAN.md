@@ -3559,3 +3559,43 @@ operated by Charming Jewels" tells another seller their platform is a competing
 shop - would have quietly emptied the map. It now searches the address alone,
 which is the better query anyway: this is the PLATFORM's contact page, and
 pinning a seller's Business Profile on it was the conflation being removed.
+
+### 4.74 The seller had nowhere to put the one listing they already had (3 Oct 2026)
+
+**Reference:** Justdial's own "claim your listing" flow, and the way Amazon,
+Flipkart and Meesho seller profiles accept external profile URLs. Nothing
+invented - the PLATFORM's settings have carried a Justdial field since the
+start (`PlatformSettings.links.justdial`); only the seller side lacked one.
+
+**Goal:** seller recruitment and trust. `links` exists for exactly one job -
+every value is published as schema.org `sameAs` on the shop page, which is the
+claim *"this website and that listing are one business"*. Google believes a
+shop faster when the site it is reading already matches a listing it trusts.
+
+**What was wrong.** A seller had five fields: Instagram, Google Business,
+Facebook, YouTube, website. Those are the global profiles. The directory a
+small Indian shop is most likely to be on - often a listing it never created
+itself - was missing. Found on 3 Oct while clearing Charming Jewels' three
+profile links off the *platform's* schema, where they had been telling Google
+the marketplace and the jewellery shop were one entity. Two of the three had a
+home to move to on the seller side. The Justdial one did not, so the fix for
+one problem had no landing place for part of it.
+
+**Built.** `Seller.links.justdial` on the model; `justdial:
+/(^|\.)justdial\.com$/` in the host whitelist in `applyShopSettings`, so it is
+checked exactly like every sibling rather than being the one field that would
+publish any URL under the shop's name; the field in the seller panel's *"Your
+shop on the web"*, placed above *"Your own website"* because far more sellers
+have a Justdial page than a site of their own; the same field in the admin's
+Edit shop dialog, since both doors run through one function; and an icon and
+label on the shop page (`BookText`, "On Justdial") so it does not render as a
+bare lowercase key.
+
+`sameAs` needed no change - `buildShopSchema` reads `Object.values(links)`, so
+the new field reached the shop page's structured data by itself. The test
+asserts that journey end to end anyway: a link that saves but never reaches
+`sameAs` would be worth nothing, and the two halves live in different files.
+
+Five tests, RED first: stored and normalised, bare host accepted, a non-Justdial
+URL refused by name, emptying is a change but emptying twice is not, and the
+value arrives in `sameAs`.

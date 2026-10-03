@@ -1994,7 +1994,7 @@ const applyShopSettings = async (seller, body = {}, opts = {}) => {
   if (links && typeof links === 'object') {
     // Only http(s) links, only to the hosts each field is for - a link that
     // goes somewhere else is not a mistake worth publishing on the shop page.
-    const HOSTS = { instagram: /(^|\.)instagram\.com$/, facebook: /(^|\.)facebook\.com$/, youtube: /(^|\.)(youtube\.com|youtu\.be)$/, googleBusiness: /(^|\.)(google\.com|goo\.gl|g\.page|share\.google|maps\.app\.goo\.gl)$/, website: /./ };
+    const HOSTS = { instagram: /(^|\.)instagram\.com$/, facebook: /(^|\.)facebook\.com$/, youtube: /(^|\.)(youtube\.com|youtu\.be)$/, googleBusiness: /(^|\.)(google\.com|goo\.gl|g\.page|share\.google|maps\.app\.goo\.gl)$/, justdial: /(^|\.)justdial\.com$/, website: /./ };
     for (const key of Object.keys(HOSTS)) {
       if (links[key] === undefined) continue;
       const raw = String(links[key] || '').trim();
@@ -2010,7 +2010,8 @@ const applyShopSettings = async (seller, body = {}, opts = {}) => {
         return { error: `That ${key} link does not look like a web address`, changed, aboutHeld };
       }
       if (!HOSTS[key].test(url.hostname.replace(/^www\./, ''))) {
-        return { error: `That does not look like a ${key === 'googleBusiness' ? 'Google' : key} link`, changed, aboutHeld };
+        const NAMES = { googleBusiness: 'Google', justdial: 'Justdial' };
+        return { error: `That does not look like a ${NAMES[key] || key} link`, changed, aboutHeld };
       }
       if (seller.links[key] !== url.toString()) changed.push(`${key} link`);
       seller.links[key] = url.toString();
