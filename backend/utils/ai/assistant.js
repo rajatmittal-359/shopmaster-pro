@@ -185,7 +185,15 @@ Before you answer, check three things: (1) the first line is the answer itself -
   const turns = (limit) => history.slice(-6).map((m) => ({ role: m.role === 'user' ? 'user' : 'model', parts: [{ text: String(m.text || '').slice(0, limit) }] }));
   const meta = { retrieved: found.chunks.map((c) => c.source), via: found.via };
   const failures = [];
-  const done = async (r, extra = {}) => ({ ok: true, answer: await inScript(r.text.trim()), language, model: r.model, searchedWeb: Boolean(r.calls?.includes('webSearch')) || Boolean(extra.searchedWeb), calls: r.calls || [], ...meta, ms: Date.now() - started });
+  /*
+   * `evidence` rides out with every answer (3 Oct 2026): which retrieval road
+   * ran and how many passages it found. It was already computed above and then
+   * dropped. The exam records it, so the weekly run can tell us whether the
+   * answers that fail the grader are also the ones that had nothing to read -
+   * the one fact needed to decide whether re-retrieving on a weak answer is
+   * worth building, instead of guessing at it.
+   */
+  const done = async (r, extra = {}) => ({ ok: true, answer: await inScript(r.text.trim()), language, model: r.model, searchedWeb: Boolean(r.calls?.includes('webSearch')) || Boolean(extra.searchedWeb), calls: r.calls || [], evidence: { via: found.via, chunks: found.chunks.length }, ...meta, ms: Date.now() - started });
   /*
    * The answer gate (utils/ai/answerGate): a road's answer is judged before
    * it is returned - invented order numbers, filler, markdown, length,

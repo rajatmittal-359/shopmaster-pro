@@ -107,7 +107,14 @@ const runEvals = async ({ only, ask = require('./assistant').ask, users } = {}) 
     byModel[model] = (byModel[model] || 0) + 1;
     const problems = grade(r.answer, exp);
     if (!problems.length) clean += 1;
-    rows.push({ role, language, question, model, ms, words: words(r.answer), calls: (r.calls || []).join(','), problems, answer: process.env.SHOW ? r.answer : undefined });
+    /*
+     * How much the answer had to go on. `retrieve` works this out for every
+     * answer and nothing has ever looked at it; carried here so the weekly run
+     * can say whether a failing grade and thin retrieval arrive together. No
+     * model call - the number already exists by the time the answer does.
+     */
+    const ev = r.evidence || null;
+    rows.push({ role, language, question, model, ms, words: words(r.answer), calls: (r.calls || []).join(','), problems, ...(ev ? { via: ev.via, chunks: ev.chunks } : {}), answer: process.env.SHOW ? r.answer : undefined });
   }
   return { cases: rows.length, clean, rows, byModel };
 };
@@ -120,7 +127,7 @@ const runAndSave = async (opts = {}) => {
     cases: r.cases,
     clean: r.clean,
     byModel: r.byModel,
-    rows: r.rows.map(({ role, language, question, model, ms, words: w, problems }) => ({ role, language, question, model, ms, words: w, problems })),
+    rows: r.rows.map(({ role, language, question, model, ms, words: w, via, chunks, problems }) => ({ role, language, question, model, ms, words: w, via, chunks, problems })),
   });
   return { id: doc._id, cases: r.cases, clean: r.clean, byModel: r.byModel, failing: r.rows.filter((x) => x.problems.length).map((x) => `${x.role}/${x.language}: ${x.problems.join('; ')}`) };
 };

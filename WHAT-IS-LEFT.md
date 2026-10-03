@@ -1054,6 +1054,20 @@ Assistant gaps found in the same pass (problem taxonomy in the chat of 13 Sep): 
   every page read is `remember('research:page', …, { url })` for 24 hours, so a
   run that dies half way does not re-spend Firecrawl credits when it is run
   again.
+  **The one pattern worth a second look was self-correcting RAG** - re-query
+  when the first retrieval scores badly. We cannot build it yet and now we will
+  know when we can: `retrieve` runs once, outside the road loop
+  (`assistant.js:158`), so a gate failure moves to the next MODEL with the same
+  passages. But the gate's three substance problems are `empty`, `refusal while
+  tools exist` and `invented order` - none means "the evidence was thin", and
+  another model is the right answer to all three. **So the fact is now recorded
+  instead of guessed at** (3 Oct, commit below): every answer carries
+  `evidence: { via, chunks }` out of `assistant.js`, `runEvals` puts it on each
+  row and `runAndSave` stores it, so the weekly eval job (Sunday 22:30 UTC)
+  accumulates it. **To decide, read it:** `EvalRun` rows where `problems.length`
+  is non-zero - if those rows are also the ones with `via: 'none'` or a low
+  `chunks`, the re-retrieval loop is worth building (~30 lines, still no
+  framework). If they are not, close the idea. Give it three or four runs.
   **The trigger that makes this a yes:** a flow that (a) runs for minutes across
   several model or paid-web calls, (b) must resume from the middle rather than
   restart, and (c) cannot be made safe by the per-URL cache alone - a bulk

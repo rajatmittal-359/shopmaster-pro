@@ -24,6 +24,11 @@ const evalRunSchema = new mongoose.Schema(
           model: String,
           ms: Number,
           words: Number,
+          // What the answer had to read: the retrieval road that ran
+          // (none | vector | text | both) and how many passages it returned.
+          // Recorded, never acted on - see tests/evalEvidence.test.mjs.
+          via: String,
+          chunks: Number,
           problems: { type: [String], default: [] },
         },
       ],
