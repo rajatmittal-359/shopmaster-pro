@@ -1027,6 +1027,44 @@ Assistant gaps found in the same pass (problem taxonomy in the chat of 13 Sep): 
 
 ## 4. Ideas raised, not decided — do not start without a yes
 
+- **LangChain / LangGraph — researched 3 Oct 2026, answer is "not yet", with the
+  trigger written down so it is not researched twice.** Both hit v1.0 on 22 Oct
+  2025. LangChain 1.0's headline is `create_agent` plus a **middleware** layer
+  (human approval, PII scrubbing, retries, output validation around a model
+  call); LangGraph 1.0's is the graph runtime: **checkpointing** (a run survives
+  a crash and resumes), `interrupt()` for human-in-the-loop, and subgraphs.
+  `@langchain/langgraph` on the JS side now has parity for all of that,
+  MongoDB checkpointer included, so "it is Python-only" is no longer the reason.
+  **The reason is that we already have the parts that matter, fitted per
+  surface rather than generically** - and an audit on 3 Oct found no model call
+  reaching a person without a guard: `answerGate.judge` + an order-number check
+  against the database on assistant answers; `checkDescriptionHtml` +
+  `PURITY_CLAIMS` + the category's claim rules on anything that reaches a
+  product page (`listing.js`, `productCopy.js`, `refine.js`);
+  `imageGate.judgeEdit` on every edit; `moderate.moderateText` → the trust queue
+  on text a person wrote; `aiCache.remember` where a call repeats.
+  A single generic `withGuards()` would be a step BACK - it would put HTML
+  safety on an assistant answer and an answer-quality judge on a product
+  description. 25 files and ~4,500 lines of this are already under test, and we
+  carry **zero** AI dependencies today.
+  **What LangGraph would genuinely add that we do not have: durable execution.**
+  Checked the same day, and nothing needs it yet - no flow in the codebase reads
+  several pages in one run (`askPage`/`fetchPage` are not called from any feature
+  outside `utils/research/`), and the expensive part is covered anyway, because
+  every page read is `remember('research:page', …, { url })` for 24 hours, so a
+  run that dies half way does not re-spend Firecrawl credits when it is run
+  again.
+  **The trigger that makes this a yes:** a flow that (a) runs for minutes across
+  several model or paid-web calls, (b) must resume from the middle rather than
+  restart, and (c) cannot be made safe by the per-URL cache alone - a bulk
+  catalogue import, or a research agent that walks a competitor's listings page
+  by page. When that appears, start from LangGraph's checkpointer rather than
+  hand-rolling one; everything else here stays ours. Relevant also: LangChain's
+  provider abstraction is built for **paid** APIs, while ours is free-tier quota
+  arbitrage (Cloudflare 10k neurons/day, HF ≈3 edits/month, Pollinations with no
+  daily grant) - that arithmetic lives in `providers.js` and would be hidden,
+  not helped, by an abstraction.
+
 - **`sendEmail` writes customer email addresses into the container logs** (found in the 30 Sep full read). [utils/sendEmail.js:101](backend/utils/sendEmail.js#L101) is `console.log('Email sent:', to)`, and those lines sit in Docker's log on the box for as long as it keeps them. Nothing else in the sweep leaks: the Razorpay webhook log prints only the event NAME (`parsed?.event`, e.g. `payment.captured`), not the payload, and the order-created log prints ids. One line to fix - drop `to`, or mask it - and it is worth doing because this project already argues DPDP and the Consumer Protection Rules at people on its own policy pages. **Not started:** nothing breaks today, and it should go in with whatever else touches that file. Two of the six untested utils are `sendSafeEmail` and `tokenUtils`, which is the same neighbourhood.
 - **Six utils are never mentioned by any test** (30 Sep): `appUrl`, `notifyCustomer`, `productVectors`, `sendSafeEmail`, `tokenUtils`, `webRevalidate` - 6 of 79, so 92% are at least touched. `tokenUtils` and `sendSafeEmail` are the two worth a test; the rest are thin wrappers.
 - **The product list sends five times what a card reads** (measured 30 Sep 2026, live). `/api/public/products?limit=24` returns whole documents — 48 fields — where the grid uses 13. **75,025 bytes served, 14,450 needed: 80% waste.** The heaviest passengers are `description` (13.9 KB, 22% — full copy for a grid that prints none), **`aiFilled` (12.0 KB, 19%)**, `highlights`, `tags`, `attributes` and `video` (14.8 KB together). Also riding along: `isDeleted`, `__v`, `status`, `templateKey`, `variantGroupId`, `sku`, `hsn`, `gstRate`. Nothing here is a money secret — the model has no cost or margin field, and `vector`/`vectorHash` are already `select: false`, which was deliberate. Two reasons it is still worth a decision: the audience is a phone on mobile data in Jaipur, and **`aiFilled` publishes which parts of each product an AI wrote** — not a leak, but not something the shop would choose to announce either. The fix is one `.select()` on `listProducts`, and the risk is that something downstream reads a field the grid does not — which is why it is a decision and not a patch. **Not started:** the gate says nothing breaks today, and reviews (A0.2) and the seller catalogue are bigger levers at 50 products and single-digit orders a day.
