@@ -3599,3 +3599,29 @@ asserts that journey end to end anyway: a link that saves but never reaches
 Five tests, RED first: stored and normalised, bare host accepted, a non-Justdial
 URL refused by name, emptying is a change but emptying twice is not, and the
 value arrives in `sameAs`.
+
+### 4.75 The admin could read the answer but not the verdict on it (3 Oct 2026)
+
+**Reference:** the LLM observability tools the market names - LangSmith,
+Langfuse, Phoenix/Arize, Braintrust - all show the same three things on one
+row: what was asked, what came back, and what the grader said about it. We had
+the first two on /admin/ask and threw the third away.
+
+**Goal:** trust, and the honest answer to "how do you know the assistant is any
+good?" The weekly eval (2.23) is the OFFLINE exam - eleven fixed questions in
+the lab. It cannot see what real people are being told.
+
+**What changed.** `answerGate` already judges every live answer on its way out,
+and `AssistLog` already kept the question, answer, model, lookups, passages,
+time and the reader's thumb. The verdict was computed and dropped. It is now
+stored (`quality`), with how much the answer had to read (`via`, `chunks`), and
+both are printed under the answer when a row is opened - the gate line in amber
+so a repaired answer is findable by eye down a hundred rows.
+
+They sit on the same line **on purpose**: an answer the gate had to repair that
+also found nothing to read is a retrieval problem wearing a model problem's
+clothes, and the two are only legible together.
+
+Nothing about what the person is told changed - the gate had already decided
+that before this line runs. This only stops the reason being forgotten, and it
+is what turns the log into evaluation on live traffic rather than a transcript.

@@ -1064,10 +1064,14 @@ Assistant gaps found in the same pass (problem taxonomy in the chat of 13 Sep): 
   instead of guessed at** (3 Oct, commit below): every answer carries
   `evidence: { via, chunks }` out of `assistant.js`, `runEvals` puts it on each
   row and `runAndSave` stores it, so the weekly eval job (Sunday 22:30 UTC)
-  accumulates it. **To decide, read it:** `EvalRun` rows where `problems.length`
-  is non-zero - if those rows are also the ones with `via: 'none'` or a low
-  `chunks`, the re-retrieval loop is worth building (~30 lines, still no
-  framework). If they are not, close the idea. Give it three or four runs.
+  accumulates it. **To decide, read it** - and there are now two places, the lab
+  and the street: `EvalRun` rows where `problems.length` is non-zero (the weekly
+  eleven), and `AssistLog` rows where `quality.length` is non-zero (every real
+  question anyone asked - 3 Oct: the gate's verdict and the same `via`/`chunks`
+  are kept there too, and shown on /admin/ask). If those rows are also the ones
+  with `via: 'none'` or a low `chunks`, the re-retrieval loop is worth building
+  (~30 lines, still no framework). If they are not, close the idea. The live log
+  will answer it long before the weekly run does.
   **The trigger that makes this a yes:** a flow that (a) runs for minutes across
   several model or paid-web calls, (b) must resume from the middle rather than
   restart, and (c) cannot be made safe by the per-URL cache alone - a bulk

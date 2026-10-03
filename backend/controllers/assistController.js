@@ -1,5 +1,6 @@
 const AssistLog = require('../models/AssistLog');
-const { ask } = require('../utils/ai/assistant');
+// Through the module object, so a test can stand in for the model.
+const assistant = require('../utils/ai/assistant');
 const { sendError } = require('../utils/apiError');
 
 /**
@@ -17,7 +18,7 @@ const assistFor = (role) => async (req, res) => {
     const history = Array.isArray(req.body?.history) ? req.body.history.slice(-6) : [];
     const textModel = ['auto', 'gemini', 'nano'].includes(req.body?.textModel) ? req.body.textModel : 'auto';
     const language = ['hi', 'hg', 'en'].includes(req.body?.language) ? req.body.language : null;
-    const r = await ask({ role, user: req.user, question, history, textModel, language });
+    const r = await assistant.ask({ role, user: req.user, question, history, textModel, language });
     const log = await AssistLog.create({
       role,
       userId: req.user._id,
@@ -30,6 +31,15 @@ const assistFor = (role) => async (req, res) => {
       retrieved: r.ok ? r.retrieved || [] : [],
       ms: r.ok ? r.ms : 0,
       ok: r.ok,
+      /*
+       * The two facts the gate and the retriever already worked out for this
+       * answer, and which were being dropped on the floor (3 Oct 2026): what
+       * the gate had to complain about, and how much the answer had to read.
+       * The weekly eval is the offline exam; with these, the log becomes the
+       * online one - real questions, real answers, graded as they go out.
+       */
+      quality: r.ok ? r.quality || [] : [],
+      ...(r.ok && r.evidence ? { via: r.evidence.via, chunks: r.evidence.chunks } : {}),
     }).catch(() => null);
     if (!r.ok) return res.status(503).json({ message: `The assistant could not answer right now (${r.reason}). Try again in a minute, or ask a person from Help.` });
     res.json({ answer: r.answer, language: r.language, model: r.model, searchedWeb: r.searchedWeb, calls: r.calls || [], id: log?._id || null });

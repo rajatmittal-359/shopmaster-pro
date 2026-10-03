@@ -76,7 +76,17 @@ export default function AssistLogs() {
                 <Answer text={l.answer || '(no answer)'} />
                 <p className="mt-2 text-xs text-muted-foreground">
                   Lookups: {l.calls?.length ? l.calls.join(', ') : 'none'} · Passages: {l.retrieved?.length ? l.retrieved.join(', ') : 'none'}
+                  {l.via ? <> · Retrieval: {l.via}{typeof l.chunks === 'number' ? ` (${l.chunks})` : ''}</> : null}
                 </p>
+                {/* What the gate had to complain about on the way out. Shown
+                    beside the retrieval road on purpose: a repaired answer
+                    that also found nothing to read is a retrieval problem,
+                    not a model one, and the two are only legible together. */}
+                {l.quality?.length ? (
+                  <p className="mt-1 text-xs text-amber-700 dark:text-amber-500">
+                    Gate: {l.quality.join(' · ')}
+                  </p>
+                ) : null}
               </div>
             )}
           </li>
