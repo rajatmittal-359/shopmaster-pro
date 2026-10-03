@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Order = require('../models/Order');
 const Product = require('../models/Product');
 const Coupon = require('../models/Coupon');
@@ -352,7 +353,20 @@ exports.requestCategory = async (req, res) => {
     }
     const dup = await CategoryRequest.findOne({ sellerId: req.user._id, name: exactName(name), status: 'open' });
     if (dup) return res.status(409).json({ message: 'You have already asked for this one - it is with the admin' });
-    const parent = req.body?.parentCategory ? await Category.findOne({ _id: req.body.parentCategory, parentCategory: null }).lean() : null;
+    /*
+     * The id is checked before it reaches Mongoose (house rule 7), which every
+     * other id in this file already was. Posting `{"parentCategory": {"$ne":
+     * null}}` used to build `{_id: {$ne: null}, parentCategory: null}` - a
+     * query that matches the FIRST top-level category instead of none, and
+     * that id was then stored on the request. Nothing threw; the seller simply
+     * got somebody else's parent. A malformed string is no parent either,
+     * rather than a CastError the caller did not cause.
+     */
+    const wantedParent = req.body?.parentCategory;
+    const parent =
+      wantedParent && mongoose.isValidObjectId(wantedParent)
+        ? await Category.findOne({ _id: wantedParent, parentCategory: null }).lean()
+        : null;
     const request = await CategoryRequest.create({
       sellerId: req.user._id,
       name,
