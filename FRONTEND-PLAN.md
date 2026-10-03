@@ -3514,3 +3514,48 @@ and the predicate was checked against all fifteen cases including those two.
 Ecommerce events were checked and are **not** at fault: `view_item`,
 `add_to_cart`, `begin_checkout` and `purchase` all fire correctly from
 `lib/analytics.js`. Key events reading 0 simply means nothing has been bought yet.
+
+### 4.73 Nothing on the site could be checked by a stranger (2-3 Oct 2026)
+
+The footer could say who we are and where. A buyer who had never heard of the
+shop could read all of it and verify none of it - a name, an address and a phone
+number are what anyone can type.
+
+ShopMaster Pro took its Udyam (MSME) registration on 2 Oct 2026 -
+**UDYAM-RJ-17-0692439** - and that is the first thing on this site anybody can
+turn back into the business themselves, at udyamregistration.gov.in →
+Print/Verify. It matters to both sides of a marketplace: a buyer deciding
+whether to pay a stranger, and a seller deciding whether to hand that stranger
+their stock.
+
+**Where it goes, from what Indian businesses actually do.** The convention is
+to print it exactly where a GSTIN would sit - so: the footer's identity block
+(every page) and the Contact page's address block. Those happen to be the same
+two places Razorpay's website check and Google Merchant Center read, so one
+change serves the stranger and the reviewer.
+
+**Where it deliberately does not go: the seller's invoice.** There the SELLER is
+the supplier and we print on their behalf - Amazon, Flipkart and Meesho all work
+this way, the seller's name and GSTIN on the bill, the platform named only as
+the channel. The operator's registration has no business on it (CLAUDE.md rule
+one). The first draft of this change would have put it there. The place it DOES
+belong is the commission invoice the platform owes each seller, which does not
+exist yet (WHAT-IS-LEFT 2.85).
+
+**It is not a GSTIN and never fills that field.** Udyam says the business
+exists; a GSTIN says it is inside the tax system. Where a form asks for a GSTIN
+the answer stays "not registered", which is what the shop pages already say.
+
+Stored in admin Settings, not in code, and empty by default - the block does not
+render until an admin saves a number, so nothing is ever invented.
+
+**The map had to move first.** The Contact page searched Google for
+`<legal name>, <address>`, which only worked because the operator's legal name
+in Settings is "Charming Jewels" - a shop with a Business Profile. The operator
+is a proprietorship, so its legal name is a PERSON, and Google finds nothing for
+"Rajat Mittal, C-13 Hari Marg". Correcting the legal name - which the Udyam
+certificate now settles, and which the footer needs because "A marketplace
+operated by Charming Jewels" tells another seller their platform is a competing
+shop - would have quietly emptied the map. It now searches the address alone,
+which is the better query anyway: this is the PLATFORM's contact page, and
+pinning a seller's Business Profile on it was the conflation being removed.
