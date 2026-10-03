@@ -50,11 +50,21 @@ export default async function ContactPage() {
         ) : null}
         {/* The map, Google's keyless embed: no API key, no billing account,
             no quota - the same iframe Google's own "Share → Embed a map"
-            hands out. A shop people can find on a map is one people trust. */}
+            hands out. A shop people can find on a map is one people trust.
+
+            SEARCHED BY ADDRESS, NOT BY NAME (3 Oct 2026)
+              It used to search "<legal name>, <address>", which only worked
+              while the operator's legal name happened to be a shop with a
+              Google Business Profile. The operator is a proprietorship -
+              its legal name is a PERSON, and Google finds nothing for
+              "Rajat Mittal, C-13 Hari Marg". The address alone pins the
+              place, and this is the PLATFORM's contact page: pinning a
+              seller's Business Profile here was the conflation we are
+              removing, not a feature. */}
         <div className="mt-4 overflow-hidden rounded-xl border">
           <iframe
-            title={`${BUSINESS.legalName} on the map`}
-            src={`https://maps.google.com/maps?q=${encodeURIComponent(`${BUSINESS.legalName}, ${BUSINESS.addressLines.join(', ')}`)}&z=16&output=embed`}
+            title={`${BUSINESS.tradeName} on the map`}
+            src={`https://maps.google.com/maps?q=${encodeURIComponent(BUSINESS.addressLines.join(', '))}&z=16&output=embed`}
             width="100%"
             height="260"
             loading="lazy"
@@ -64,7 +74,7 @@ export default async function ContactPage() {
           />
         </div>
         <a
-          href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${BUSINESS.legalName}, ${BUSINESS.addressLines.join(', ')}`)}`}
+          href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(BUSINESS.addressLines.join(', '))}`}
           target="_blank"
           rel="noopener noreferrer"
           className="mt-2 inline-block text-sm font-medium text-brand-ink hover:underline"
