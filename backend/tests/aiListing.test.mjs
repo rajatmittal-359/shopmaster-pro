@@ -141,3 +141,62 @@ describe('looksLikeJewellery', () => {
     expect(looksLikeJewellery('Cotton Kurti', 'summer', 'Kurtas & Suits')).toBe(false);
   });
 });
+
+/**
+ * A market word is an OBJECT, and the tag builder treated it as a string.
+ *
+ * Sentry, 30 Sep 2026, production: `TypeError: t.toLowerCase is not a function`
+ * at listing.js:309, from a real seller using POST /seller/ai/listing-from-speech.
+ * `aiController.templateAndWords` returns `{ word, monthly }` - it has since the
+ * demand sort of 27 Sep - and the prompt side knows it: `wordWithDemand` handles
+ * a string OR an object. The tag builder on line 309 was the one place that did
+ * not, so it called `.toLowerCase()` on `{ word: 'jhumka', monthly: 12000 }`.
+ *
+ * It stayed hidden because `marketWords` is empty until a MarketBrief exists for
+ * that category. The day the brief landed, the voice listing feature started
+ * throwing for that seller - and only for categories that had one.
+ *
+ * The tag must also be the plain word: a tag reading "jhumka (12,000/month)"
+ * would be the demand label leaking onto the product.
+ */
+describe('market words arrive as objects, not strings', () => {
+  // The shape config/listingTemplates.js really hands over - the builder reads
+  // productTypes, bullets and title as well, and a half-template would fail
+  // somewhere else and tell us nothing about line 309.
+  const template = {
+    label: 'Jewellery',
+    attributes: [],
+    productTypes: ['Jhumka', 'Stud'],
+    bullets: ['what it is', 'what it is made of'],
+    seoSeeds: ['earrings for women'],
+    neverClaim: [],
+    mustSay: '',
+    title: '',
+  };
+
+  it('does not throw when a market word carries its demand', async () => {
+    const r = await draftListing(
+      { name: 'x', categoryName: 'Earrings', template, marketWords: [{ word: 'jhumka', monthly: 12000 }, { word: 'beaded earrings' }] },
+      answering({ ...good, name: 'Beaded Jhumka Earrings', tags: ['boho'] })
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  it('puts the plain word on the product, never the demand label', async () => {
+    const r = await draftListing(
+      { name: 'x', categoryName: 'Earrings', template, marketWords: [{ word: 'jhumka', monthly: 12000 }] },
+      answering({ ...good, name: 'Beaded Jhumka Earrings', description: '<p>A jhumka in copper tone. These are imitation jewellery.</p>', tags: ['boho'] })
+    );
+    expect(r.draft.tags).toContain('jhumka');
+    expect(r.draft.tags.join(' ')).not.toMatch(/month/i);
+  });
+
+  it('still accepts a plain string, as the prompt side always has', async () => {
+    const r = await draftListing(
+      { name: 'x', categoryName: 'Earrings', template, marketWords: ['jhumka'] },
+      answering({ ...good, name: 'Beaded Jhumka Earrings', description: '<p>A jhumka in copper tone. These are imitation jewellery.</p>', tags: ['boho'] })
+    );
+    expect(r.ok).toBe(true);
+    expect(r.draft.tags).toContain('jhumka');
+  });
+});

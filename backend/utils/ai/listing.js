@@ -189,6 +189,9 @@ Fill in the listing. RULES, in order of importance:
  * some of each and a prompt that crashes on the old shape would take the
  * whole draft down with it.
  */
+/** A market word as plain text, whichever shape it arrived in. */
+const plainWord = (w) => (typeof w === 'string' ? w : String(w?.word || '')).toLowerCase();
+
 const wordWithDemand = (w) => {
   if (typeof w === 'string') return w;
   if (!w?.word) return '';
@@ -306,7 +309,20 @@ const draftListing = async (input, deps = { generate }) => {
     // necklace set"), plus the category-wide generic ones (first two seeds).
     const about = `${draft.name} ${draft.productType} ${input.categoryName || ''} ${draft.description}`.toLowerCase();
     const tokens = new Set(about.match(/[a-z]{4,}/g) || []);
-    const seeds = [...(template.seoSeeds || []), ...(input.marketWords || [])].map((t) => t.toLowerCase());
+    /*
+     * A market word is `{ word, monthly }`, not a string (aiController's
+     * `templateAndWords`, since the demand sort of 27 Sep). The prompt side
+     * has always known that - `wordWithDemand` takes either - but this line
+     * called `.toLowerCase()` straight on the object and threw in production
+     * on 30 Sep, for a seller using listing-from-speech. It was invisible
+     * until then because `marketWords` is empty until the category has a
+     * MarketBrief; the day one landed, the feature started failing.
+     *
+     * `plainWord` and not `wordWithDemand` on purpose: this builds TAGS, and a
+     * tag reading "jhumka (12,000/month)" would print the demand label on the
+     * product.
+     */
+    const seeds = [...(template.seoSeeds || []), ...(input.marketWords || [])].map(plainWord).filter(Boolean);
     // No "always" seeds: a shirt must not carry "kurti for women" because it
     // is the category's first seed. Only a seed that names this item joins.
     const relevant = seeds.filter((t) => t.split(/\s+/).some((w) => w.length >= 4 && tokens.has(w) && !['women', 'girls', 'mens', 'set', 'with', 'wear'].includes(w)));
