@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { authedFetch } from '@/lib/client';
+import { apiBase } from '@/lib/api';
+import { toast } from 'sonner';
 import { useSession } from '@/lib/session';
 import { money } from '@/lib/money';
 import { orderRef } from '@/lib/orderRef';
@@ -54,6 +56,40 @@ export default function Bill({ orderId, business }) {
   const [order, setOrder] = useState(null);
   const [sellers, setSellers] = useState({});
   const [state, setState] = useState({ status: 'loading' });
+  const [saving, setSaving] = useState(false);
+
+  /*
+   * The file, not the print dialog (4 Oct 2026).
+   *
+   * Fetched rather than linked: the session is in httpOnly cookies, and a
+   * plain <a download> would work today but silently return the sign-in page
+   * as a "PDF" the moment the session lapses. Asking for it here means a
+   * failure is a message, not a 2 KB file called invoice.pdf. The name comes
+   * from the server's Content-Disposition, so the invoice number on the
+   * document and the one on the file are the same number.
+   */
+  const download = async () => {
+    setSaving(true);
+    try {
+      const res = await fetch(`${apiBase}/customer/orders/${orderId}/invoice.pdf`, { credentials: 'include', headers: { 'X-Requested-With': 'fetch' } });
+      if (!res.ok) throw new Error('that did not work');
+      const blob = await res.blob();
+      const named = /filename="([^"]+)"/.exec(res.headers.get('content-disposition') || '');
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = named ? named[1] : 'invoice.pdf';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch {
+      // Print is still right there, and it never fails.
+      toast.error('Could not build the file', { description: 'Use Print and choose "Save as PDF".' });
+    } finally {
+      setSaving(false);
+    }
+  };
 
   useEffect(() => {
     if (!signedIn) return undefined;
@@ -111,9 +147,17 @@ export default function Bill({ orderId, business }) {
         <Link href={`/orders/${orderId}`} className="text-sm text-muted-foreground hover:text-foreground">
           ← Back to the order
         </Link>
-        <Button size="sm" onClick={() => window.print()}>
-          Print or save as PDF
-        </Button>
+        <div className="flex items-center gap-2">
+          {/* Print stays: it is the one that always works, on any device, and
+              it is what this page was styled for. Download is the one people
+              ask for - a file with the invoice number on it, ready to attach. */}
+          <Button size="sm" variant="outline" onClick={() => window.print()}>
+            Print
+          </Button>
+          <Button size="sm" onClick={download} disabled={saving}>
+            {saving ? 'Preparing…' : 'Download PDF'}
+          </Button>
+        </div>
       </div>
 
       {groups.map((g, gi) => {

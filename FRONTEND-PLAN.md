@@ -3625,3 +3625,45 @@ clothes, and the two are only legible together.
 Nothing about what the person is told changed - the gate had already decided
 that before this line runs. This only stops the reason being forgotten, and it
 is what turns the log into evaluation on live traffic rather than a transcript.
+
+### 4.76 The invoice carried the whole shop around it (4 Oct 2026)
+
+Rajat printed an invoice and sent the PDF back: two pages, and the first one
+had the search box, the category strip, "Abha" and a footer of policy links
+wrapped around the bill. *"bill bill ki tarah kyu nhi, baaki other cheez kyu
+aa rahi header footer pe."*
+
+**What was actually wrong.** `Bill.jsx` had been styled for paper since the
+day it was written - `print:` classes throughout - and says so in its own
+header: the browser makes the PDF, so the page *is* the layout, and no PDF
+library was ever wanted. That reasoning was sound. What nobody had hidden was
+the chrome the ROOT layout wraps around every storefront route, and the bill
+is a storefront route. Right intent, wrong output, which is why it survived
+so long: every `print:` rule in the file was working.
+
+So `ShopChrome` - which already knew the panels are not the shop - learned
+that `/orders/<id>/bill` is a **document, not a page**. Hidden on screen as
+well as on paper: a document that looks like a document is the one a person
+keeps. Two pages became one, 197 KB became 95 KB.
+
+**Then the second half of the complaint.** *"asli pdf download hona chahiye
+download button pe."* Print gives a PDF but only through a dialog; it never
+gives a FILE with the invoice number on it, ready to attach to an email. So
+`GET /customer/orders/:id/invoice.pdf` now builds one with pdfkit and sends
+it as an attachment named `CJ-26-27-00007.pdf` - the invoice's own serial, so
+the number on the document and the name of the file are the same number.
+2.8 KB of real text, against 95 KB of printed picture.
+
+**The cost, named.** The invoice is now drawn twice, and a bill has real legal
+weight: tax invoice vs plain invoice, HSN, CGST/SGST vs IGST. Two renderers
+drift, and a customer holding two different numbers is the whole danger. Three
+things hold them together: the split is still computed once in
+`utils/invoice.js` and merely printed by both; `sellersOfRecord()` was lifted
+out of `getOrderDetails` so one assembler answers "who is the supplier" for
+page and file alike; and every assertion in `tests/invoicePdf.test.mjs`
+compares the file against the PAYLOAD the page is sent, never against a figure
+the test worked out for itself. 8 tests.
+
+Both buttons stayed. Print is the one that works on any device and is what the
+page was built for; Download is the one people ask for.
+

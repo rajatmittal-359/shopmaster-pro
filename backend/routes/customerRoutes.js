@@ -77,6 +77,8 @@ router.patch("/orders/:orderId/cancel", cancelOrder);
 const customerCtrl = require("../controllers/customerController");
 router.post("/orders/:orderId/confirm-receipt", customerCtrl.confirmReceipt);
 router.post("/orders/:orderId/dispute", customerCtrl.raiseDispute);
+// The same document the Bill page draws, as a file the customer keeps (4 Oct 2026).
+router.get("/orders/:orderId/invoice.pdf", customerCtrl.getOrderInvoicePdf);
 
 // Checking a coupon before committing. Never spends a use - the checkout
 // re-evaluates from scratch, so this is a preview and not a promise.

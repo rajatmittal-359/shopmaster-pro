@@ -26,9 +26,28 @@ import { usePathname } from 'next/navigation';
  */
 const PANEL_PREFIXES = ['/seller', '/admin'];
 
+/*
+ * A DOCUMENT, NOT A PAGE (4 Oct 2026).
+ *
+ * The invoice is printed, filed, and sent on to a card dispute or a consumer
+ * forum. Rajat printed one and the PDF carried the whole shop around it - the
+ * search box, the category strip, "Abha", and a footer of policy links. No
+ * invoice looks like that.
+ *
+ * `Bill.jsx` had always styled itself for paper (`print:` throughout) and says
+ * so in its own header: the browser makes the PDF, so the page is the layout.
+ * What nobody hid was the chrome the ROOT layout wraps around every storefront
+ * route - and the bill is one. So the intent was right and the output was
+ * wrong, which is why it survived this long.
+ *
+ * Hidden on screen too, not only on paper: a document that looks like a
+ * document is also the one a person trusts enough to keep.
+ */
+const DOCUMENT_PATHS = /^\/orders\/[^/]+\/bill\/?$/;
+
 export default function ShopChrome({ children }) {
   const pathname = usePathname() || '/';
   const inPanel = PANEL_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
-  if (inPanel) return null;
+  if (inPanel || DOCUMENT_PATHS.test(pathname)) return null;
   return children;
 }

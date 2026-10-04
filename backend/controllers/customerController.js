@@ -474,6 +474,84 @@ exports.getMyOrders = async (req, res) => {
 // backend/controllers/customerController.js
 
 // CUSTOMER - Get single order details
+/**
+ * Who sold each line, with their tax picture - the seller of record on the bill.
+ *
+ * WHY IT IS A FUNCTION AND NOT INLINE (4 Oct 2026)
+ *   It was inline in getOrderDetails until the invoice gained a PDF endpoint.
+ *   Two callers assembling "who the supplier is" from the same documents is
+ *   exactly how a page and a file come to disagree about whose GSTIN is on a
+ *   bill. One assembler, two readers.
+ *
+ * Stamped at checkout (soldBy on the line) wins; older lines read the seller
+ * live. The tax split itself is utils/invoice's - computed once here and
+ * printed as sent, never re-derived by whoever is drawing.
+ */
+const sellersOfRecord = async (order) => {
+  const stamped = Object.fromEntries((order.items || []).filter((i) => i.soldBy && i.soldBy.legalName).map((i) => [String(i.sellerId), { businessName: i.soldBy.legalName, legalName: i.soldBy.legalName, address: i.soldBy.address || [], gstin: i.soldBy.gstin || '', enrolled: i.soldBy.enrolled || '' }]));
+  const sellerIds = [...new Set((order.items || []).map((i) => String(i.sellerId)).filter((id) => id && !stamped[id]))];
+  const sellerDocs = sellerIds.length ? await Seller.find({ userId: { $in: sellerIds } }).select('userId businessName application.legalName application.gstin application.gstMode application.enrolmentNumber gstNumber pickupAddress').lean() : [];
+  const sellers = Object.fromEntries(sellerDocs.map((sd) => {
+    const a = sd.application || {};
+    const gstin = a.gstin || sd.gstNumber || '';
+    const pa = sd.pickupAddress || {};
+    return [String(sd.userId), {
+      businessName: sd.businessName,
+      legalName: a.legalName || sd.businessName,
+      address: [pa.address1, pa.address2, [pa.city, pa.state, pa.pincode].filter(Boolean).join(' ')].filter(Boolean),
+      gstin,
+      enrolled: !gstin && a.gstMode === 'enrolment' ? a.enrolmentNumber : '',
+    }];
+  }));
+
+  // A confirmed order still without its invoice numbers (an issue failed at
+  // checkout, or the order predates numbering) gets them now, once.
+  if (!(order.invoices || []).length && (order.paymentMethod === 'cod' || order.paymentStatus === 'paid') && order.status !== 'cancelled') {
+    await assignInvoiceNumbers(order).catch((err) => console.error('invoice numbers not issued for', order._id, err.message));
+  }
+
+  const delivery = { state: order.shippingAddressId?.state || '', pincode: order.shippingAddressId?.zipCode || '' };
+  return Object.fromEntries(Object.entries({ ...sellers, ...stamped }).map(([k, v]) => [k, { ...v, tax: taxFor(v.gstin, delivery, (order.items || []).filter((i) => String(i.sellerId) === k && i.status !== 'cancelled')) }]));
+};
+
+/**
+ * GET /customer/orders/:orderId/invoice.pdf - the same document the Bill page
+ * draws, as a file the customer can keep (4 Oct 2026).
+ *
+ * The payload is `sellersOfRecord` + `orderForCustomer`, the very objects the
+ * page is sent, so the file cannot say anything the page does not.
+ */
+exports.getOrderInvoicePdf = async (req, res) => {
+  try {
+    const order = await Order.findOne({ _id: req.params.orderId, customerId: req.user._id }).populate('shippingAddressId');
+    if (!order) return res.status(404).json({ message: 'Order not found' });
+
+    const sellers = await sellersOfRecord(order);
+    const { buildInvoicePdf, invoiceFileName } = require('../utils/invoicePdf');
+    const { liveSettings } = require('../utils/liveSettings');
+    // The same Settings the page's footer is built from, so the document names
+    // the marketplace the way the site does today - not the way it did at build.
+    const b = (await liveSettings().catch(() => null))?.business || {};
+    const shaped = orderForCustomer(order);
+    const pdf = await buildInvoicePdf({
+      order: shaped,
+      sellers,
+      business: { tradeName: b.tradeName || 'ShopMaster Pro', email: b.email || '', phone: b.phone || '' },
+      customer: { name: req.user.name || '' },
+    });
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${invoiceFileName(shaped)}"`);
+    // A bill is the customer's own document: never a shared cache's copy.
+    res.setHeader('Cache-Control', 'private, no-store');
+    res.setHeader('Content-Length', pdf.length);
+    return res.end(pdf);
+  } catch (err) {
+    console.error('INVOICE PDF ERROR', err.message);
+    return res.status(500).json({ message: 'Could not build the invoice just now.' });
+  }
+};
+
 exports.getOrderDetails = async (req, res) => {
   try {
     const order = await Order.findOne({
@@ -523,33 +601,7 @@ exports.getOrderDetails = async (req, res) => {
      * bill needs each seller's legal name, business address and GST standing;
      * the customer's order page shows the shop name only.
      */
-    // Stamped at checkout (soldBy on the line) wins; older lines read the seller live.
-    const stamped = Object.fromEntries((order.items || []).filter((i) => i.soldBy && i.soldBy.legalName).map((i) => [String(i.sellerId), { businessName: i.soldBy.legalName, legalName: i.soldBy.legalName, address: i.soldBy.address || [], gstin: i.soldBy.gstin || '', enrolled: i.soldBy.enrolled || '' }]));
-    const sellerIds = [...new Set((order.items || []).map((i) => String(i.sellerId)).filter((id) => id && !stamped[id]))];
-    const sellerDocs = sellerIds.length ? await Seller.find({ userId: { $in: sellerIds } }).select('userId businessName application.legalName application.gstin application.gstMode application.enrolmentNumber gstNumber pickupAddress').lean() : [];
-    const sellers = Object.fromEntries(sellerDocs.map((sd) => {
-      const a = sd.application || {};
-      const gstin = a.gstin || sd.gstNumber || '';
-      const pa = sd.pickupAddress || {};
-      return [String(sd.userId), {
-        businessName: sd.businessName,
-        legalName: a.legalName || sd.businessName,
-        address: [pa.address1, pa.address2, [pa.city, pa.state, pa.pincode].filter(Boolean).join(' ')].filter(Boolean),
-        gstin,
-        enrolled: !gstin && a.gstMode === 'enrolment' ? a.enrolmentNumber : '',
-      }];
-    }));
-
-    // A confirmed order still without its invoice numbers (an issue failed at
-    // checkout, or the order predates numbering) gets them now, once.
-    if (!(order.invoices || []).length && (order.paymentMethod === 'cod' || order.paymentStatus === 'paid') && order.status !== 'cancelled') {
-      await assignInvoiceNumbers(order).catch((err) => console.error('invoice numbers not issued for', order._id, err.message));
-    }
-
-    // A registered seller's tax picture - scheme by place of supply, the split
-    // per line, totals - computed here once and printed as sent (utils/invoice).
-    const delivery = { state: order.shippingAddressId?.state || '', pincode: order.shippingAddressId?.zipCode || '' };
-    const withTax = Object.fromEntries(Object.entries({ ...sellers, ...stamped }).map(([k, v]) => [k, { ...v, tax: taxFor(v.gstin, delivery, (order.items || []).filter((i) => String(i.sellerId) === k && i.status !== 'cancelled')) }]));
+    const withTax = await sellersOfRecord(order);
 
     res.json({
       success: true,
