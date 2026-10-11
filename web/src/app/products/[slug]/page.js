@@ -53,6 +53,37 @@ export async function generateMetadata({ params }) {
   if (!product) notFound();
 
   const { price } = priceOf(product);
+
+  /*
+   * SAME-DAY, NAMED WITH ITS CITY (12 Oct 2026)
+   *
+   *   Borzo went live today and Rajat wanted it on the card: "jispe available
+   *   hai instant delivery, share karte samay ya status ya chat me bhejte
+   *   samay dikh jaye." It is the one thing Amazon cannot offer a Jaipur
+   *   buyer, so it earns its place ahead of the rest.
+   *
+   *   THE CITY IS NOT DECORATION. Same-day exists only when the seller and
+   *   the buyer share a city - one rider, one pickup, one drop. "Same-day
+   *   delivery" unqualified would be a promise to everyone who reads it, and
+   *   false for everyone outside Jaipur. The city comes from the seller's own
+   *   pickup address, never a constant, so a shop in another city says that
+   *   city and a shop with no address on file says nothing at all.
+   *
+   *   MADE TO ORDER IS NOT SAME-DAY. 22 of the 53 live products carry a
+   *   processing time; nothing that has to be made first can arrive today.
+   *   The test is the same one the page itself uses a few hundred lines down
+   *   to print "Made to order", so the card and the page cannot disagree.
+   *
+   *   WHAT IT DOES NOT CLAIM: that a rider is free right now. A link preview
+   *   is cached by WhatsApp for days, so nothing computed at this moment can
+   *   stay true. It says this PIECE can go same-day in this city - the
+   *   checkout, which quotes Borzo live, is what decides on the day.
+   */
+  const shop = product.shop?.id ? await getSeller(product.shop.id).catch(() => null) : null;
+  const sameDayCity =
+    settings?.shop?.sameDayEnabled !== false && !Number.isInteger(product.processingDays)
+      ? shop?.seller?.pickupAddress?.city || shop?.seller?.city?.city || null
+      : null;
   const path = `/products/${product.slug || product._id}`;
 
   return {
@@ -114,6 +145,7 @@ export async function generateMetadata({ params }) {
        */
       description: [
         `₹${Number(price).toLocaleString('en-IN')}`,
+        sameDayCity ? `Same-day in ${sameDayCity}` : null,
         settings?.shop?.codEnabled === false ? null : 'Cash on delivery',
         'Delivered across India',
         `${POLICY.returnDays}-day returns`,
