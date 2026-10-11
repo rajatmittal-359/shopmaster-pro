@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { notFound, permanentRedirect } from 'next/navigation';
 import { getProduct, getReviews, getRelated, getSimilar, getSeller, getSettings } from '@/lib/api';
+import { shareImage } from '@/lib/shareImage';
 import ViewPing from '@/components/product/ViewPing';
 import { priceOf } from '@/lib/pricing';
 import { serialiseJsonLd } from '@/lib/jsonLd';
@@ -38,47 +39,6 @@ const plain = (html) => String(html || '').replace(/<[^>]*>/g, ' ').replace(/\s+
  *                               edited title broke the link Google had.
  *   there is no such product ->  a real 404.
  */
-/*
- * THE PICTURE WHATSAPP ACTUALLY SHOWS (28 Sep 2026)
- *
- *   Rajat shared a necklace on WhatsApp and got a card with the title, the
- *   description and no photograph - "image nahi dikhegi to koi kaise
- *   lega". The tag was there and the file was fine: 200, JPEG, 147 KB,
- *   1200x800, 1.3 s. What was missing was everything AROUND it.
- *
- *   WhatsApp will not wait to download and measure an image it has not been
- *   told the size of; without og:image:width and height it falls back to the
- *   small card with a favicon, which is exactly what he saw. And 1200x800 is
- *   3:2, while the large card is cut for 1.91:1 - so even when it renders,
- *   the sides of a necklace get cropped away.
- *
- *   So: declare the dimensions, and ask Cloudinary for the shape the card
- *   wants. `c_pad,b_white` adds white margins rather than cropping - a
- *   necklace photographed on white loses nothing and stays whole - and
- *   `q_auto,f_jpg` brings 147 KB down to a size that arrives before the
- *   fetcher gives up.
- *
- *   Anything that is not a Cloudinary URL is passed through untouched, with
- *   no dimensions claimed, because a size we have not verified is worse than
- *   none.
- */
-const OG_W = 1200;
-const OG_H = 630;
-
-const shareImage = (url, alt) => {
-  const marker = '/image/upload/';
-  const at = String(url || '').indexOf(marker);
-  if (at < 0) return { url, alt };
-  const transform = `w_${OG_W},h_${OG_H},c_pad,b_white,f_jpg,q_auto`;
-  return {
-    url: `${url.slice(0, at + marker.length)}${transform}/${url.slice(at + marker.length)}`,
-    width: OG_W,
-    height: OG_H,
-    type: 'image/jpeg',
-    alt,
-  };
-};
-
 /**
  * Cut to `max` without breaking a word, and say so when something was cut.
  *

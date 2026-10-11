@@ -6,6 +6,7 @@ import Stars from '@/components/product/Stars';
 import { Globe, MapPin, Link2, Camera, Video, MessageCircle, BookText } from 'lucide-react';
 import { serialiseJsonLd } from '@/lib/jsonLd';
 import { buildShopSchema, safeHref, shopPath } from '@/lib/shopSchema';
+import { shareImage } from '@/lib/shareImage';
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.shopmasterpro.in';
 // lucide dropped the brand glyphs; plain signifiers do the job.
@@ -52,11 +53,46 @@ export async function shopMetadata(handle) {
   if (!data?.seller) return { title: 'Shop not found' };
 
   const { businessName, city, about, productCount } = data.seller;
+  const path = shopPath(data.seller);
+  const title = city ? `${businessName}, ${city.city}` : businessName;
+  const description = about || `${businessName} sells on ShopMaster Pro - ${productCount} products, delivered across India with 7-day returns.`;
+
+  /*
+   * THE SHOP LINK IS THE ONE THAT TRAVELS (12 Oct 2026)
+   *
+   *   A product link is for "buy this one". The SHOP link is what goes in an
+   *   Instagram bio, a Google Business Profile, a WhatsApp Business profile -
+   *   the places someone lands when they want the shop rather than a piece.
+   *   On Instagram it is close to the only option there is: a URL in a caption
+   *   or a Reel is plain text that cannot be tapped, and the bio Links field,
+   *   a Story link sticker and a DM are the three places a link works at all.
+   *
+   *   It was the weakest card we had. There was no `openGraph` block here, so
+   *   Next fell back to the root layout: a generic ShopMaster Pro image for a
+   *   jewellery shop, and NO og:url at all. Without og:url, a link shared with
+   *   anything appended - `?v=2` to force a fresh preview, a UTM tag - counts
+   *   as a different page to Facebook, and the shares scatter across both.
+   *
+   *   The picture is the shop's own first product, through the same helper the
+   *   product pages use, so the card shows jewellery rather than a logo for a
+   *   platform the customer has never heard of. A shop with no products yet
+   *   keeps the site card - that is honest, there is nothing of theirs to show.
+   */
+  const firstPhoto = (data.products || []).map((p) => p?.images?.[0]).find(Boolean);
 
   return {
-    title: city ? `${businessName}, ${city.city}` : businessName,
-    description: about || `${businessName} sells on ShopMaster Pro - ${productCount} products, delivered across India with 7-day returns.`,
-    alternates: { canonical: shopPath(data.seller) },
+    title,
+    description,
+    alternates: { canonical: path },
+    openGraph: {
+      title,
+      description,
+      url: `${SITE}${path}`,
+      type: 'website',
+      siteName: 'ShopMaster Pro',
+      locale: 'en_IN',
+      images: firstPhoto ? [shareImage(firstPhoto, businessName)] : ['/opengraph-image'],
+    },
   };
 }
 
