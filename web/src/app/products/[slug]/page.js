@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { notFound, permanentRedirect } from 'next/navigation';
 import { getProduct, getReviews, getRelated, getSimilar, getSeller, getSettings } from '@/lib/api';
-import { shareImage } from '@/lib/shareImage';
+import { ogImage } from '@/lib/shareImage';
 import ViewPing from '@/components/product/ViewPing';
 import { priceOf } from '@/lib/pricing';
 import { serialiseJsonLd } from '@/lib/jsonLd';
@@ -113,7 +113,7 @@ export async function generateMetadata({ params }) {
       siteName: 'ShopMaster Pro',
       locale: 'en_IN',
       // A product without a photo still gets the brand card, not a bare link.
-      images: product.images?.length ? [shareImage(product.images[0], product.name)] : ['/opengraph-image'],
+      images: product.images?.length ? [ogImage(product.images[0], product.name)] : ['/opengraph-image'],
     },
     other: { 'product:price:amount': String(price), 'product:price:currency': 'INR' },
   };

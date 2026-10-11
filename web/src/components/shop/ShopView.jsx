@@ -6,7 +6,7 @@ import Stars from '@/components/product/Stars';
 import { Globe, MapPin, Link2, Camera, Video, MessageCircle, BookText } from 'lucide-react';
 import { serialiseJsonLd } from '@/lib/jsonLd';
 import { buildShopSchema, safeHref, shopPath } from '@/lib/shopSchema';
-import { shareImage } from '@/lib/shareImage';
+import { ogImage } from '@/lib/shareImage';
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.shopmasterpro.in';
 // lucide dropped the brand glyphs; plain signifiers do the job.
@@ -91,7 +91,7 @@ export async function shopMetadata(handle) {
       type: 'website',
       siteName: 'ShopMaster Pro',
       locale: 'en_IN',
-      images: firstPhoto ? [shareImage(firstPhoto, businessName)] : ['/opengraph-image'],
+      images: firstPhoto ? [ogImage(firstPhoto, businessName)] : ['/opengraph-image'],
     },
   };
 }
