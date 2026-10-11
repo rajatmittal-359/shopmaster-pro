@@ -6,7 +6,7 @@ import Stars from '@/components/product/Stars';
 import { Globe, MapPin, Link2, Camera, Video, MessageCircle, BookText } from 'lucide-react';
 import { serialiseJsonLd } from '@/lib/jsonLd';
 import { buildShopSchema, safeHref, shopPath } from '@/lib/shopSchema';
-import { ogImage } from '@/lib/shareImage';
+import { ogImage, shopCard } from '@/lib/shareImage';
 import { POLICY } from '@/config/policy';
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.shopmasterpro.in';
@@ -111,12 +111,21 @@ export async function shopMetadata(handle) {
    *   anything appended - `?v=2` to force a fresh preview, a UTM tag - counts
    *   as a different page to Facebook, and the shares scatter across both.
    *
-   *   The picture is the shop's own first product, through the same helper the
-   *   product pages use, so the card shows jewellery rather than a logo for a
+   *   The picture is three of the shop's own newest pieces, composed by
+   *   Cloudinary, so the card shows jewellery rather than a logo for a
    *   platform the customer has never heard of. A shop with no products yet
    *   keeps the site card - that is honest, there is nothing of theirs to show.
    */
-  const firstPhoto = (data.products || []).map((p) => p?.images?.[0]).find(Boolean);
+  /*
+   * Three of their newest pieces, not one. A shop card has to say what KIND
+   * of shop this is, and one photograph says they sell one thing. The list
+   * arrives newest first, so the card freshens itself as they add stock.
+   * Fewer than three photographs and `shopCard` returns null - then a single
+   * one, and if there are none at all, the site card, which is the honest
+   * answer for a shop with nothing in it yet.
+   */
+  const photos = (data.products || []).map((p) => p?.images?.[0]).filter(Boolean);
+  const picture = shopCard(photos, businessName) || (photos[0] ? ogImage(photos[0], businessName) : null);
 
   return {
     title,
@@ -129,7 +138,7 @@ export async function shopMetadata(handle) {
       type: 'website',
       siteName: 'ShopMaster Pro',
       locale: 'en_IN',
-      images: firstPhoto ? [ogImage(firstPhoto, businessName)] : ['/opengraph-image'],
+      images: picture ? [picture] : ['/opengraph-image'],
     },
   };
 }

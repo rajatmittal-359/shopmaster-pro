@@ -155,3 +155,72 @@ ${rs}
 ${tags}`,
   };
 };
+
+/*
+ * THE SHOP'S OWN CARD (12 Oct 2026)
+ *
+ *   A product link and a shop link are not the same errand. The product card
+ *   should be the thing you clicked; the shop card has to answer "what kind of
+ *   shop is this" in the half second before someone scrolls past.
+ *
+ *   The references agree on the shape and disagree with doing it by halves:
+ *   a storefront card pairs the shop with a few of its goods, because a logo
+ *   alone looks empty at 1200x630 and a single product says they sell one
+ *   thing. Shopify's default for a store homepage is the logo; Etsy's sellers
+ *   upload their own rather than trust the default.
+ *
+ *   What is NOT printed here is the shop's name, and that is deliberate. The
+ *   card draws the name as its title and the facts as its description, both
+ *   from the tags - printing them into the picture as well would say
+ *   everything three times. Same reason `ogImage` above is wordless.
+ *
+ *   Three tiles, equal boxes, white between them, nothing cropped. We have no
+ *   logo to pair them with - there is no such field on a seller - so the goods
+ *   carry it alone, and the title says whose they are.
+ */
+
+/** `.../upload/v123/folder/name.jpg` -> `folder:name`, which is layer syntax. */
+const layerId = (url) => {
+  const marker = '/image/upload/';
+  const at = String(url || '').indexOf(marker);
+  if (at < 0) return null;
+  const rest = url.slice(at + marker.length).split('/');
+  if (/^v\d+$/.test(rest[0])) rest.shift(); // the version is not part of the id
+  const id = rest.join('/').replace(/\.[a-z0-9]+$/i, '');
+  return id ? id.replace(/\//g, ':') : null;
+};
+
+const TILE = 'w_330,h_440,c_pad,b_white';
+
+/**
+ * @param {string[]} photos  one photograph per product, newest first
+ * @param {string} alt       the shop's name, for people who cannot see it
+ * @returns {{url: string, alt: string, width: number, height: number, type: string}|null}
+ *          null when there is nothing of theirs to show - the caller then
+ *          keeps the site card, which is honest for a shop with no products.
+ */
+export const shopCard = (photos, alt) => {
+  const usable = (photos || []).filter((p) => layerId(p)).slice(0, 3);
+  if (usable.length < 3) return null; // two tiles on a 1200-wide canvas looks like one is missing
+
+  const [base, ...rest] = usable;
+  const marker = '/image/upload/';
+  const at = base.indexOf(marker);
+  const layers = [
+    // The base is shrunk to a tile first, then the canvas grows around it, so
+    // all three are the same size - overlaying onto a full-bleed base left the
+    // middle one visibly larger.
+    TILE,
+    'w_1200,h_630,c_lpad,b_white,g_west,x_55',
+    `l_${layerId(rest[0])},${TILE},g_center`,
+    `l_${layerId(rest[1])},${TILE},g_east,x_55`,
+    'f_jpg,q_auto',
+  ];
+  return {
+    url: `${base.slice(0, at + marker.length)}${layers.join('/')}/${base.slice(at + marker.length)}`,
+    width: 1200,
+    height: 630,
+    type: 'image/jpeg',
+    alt,
+  };
+};
