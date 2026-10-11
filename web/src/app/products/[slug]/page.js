@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { notFound, permanentRedirect } from 'next/navigation';
-import { getProduct, getReviews, getRelated, getSimilar, getSeller } from '@/lib/api';
+import { getProduct, getReviews, getRelated, getSimilar, getSeller, getSettings } from '@/lib/api';
 import ViewPing from '@/components/product/ViewPing';
 import { priceOf } from '@/lib/pricing';
 import { serialiseJsonLd } from '@/lib/jsonLd';
@@ -79,9 +79,30 @@ const shareImage = (url, alt) => {
   };
 };
 
+/**
+ * Cut to `max` without breaking a word, and say so when something was cut.
+ *
+ * The card used to end mid-word - "This traditional set" - which reads like
+ * the page failed rather than like there is more to see.
+ */
+const trimAt = (text, max) => {
+  const s = String(text || '').trim();
+  if (s.length <= max) return s;
+  const cut = s.slice(0, max - 1);
+  const lastSpace = cut.lastIndexOf(' ');
+  return `${(lastSpace > max * 0.6 ? cut.slice(0, lastSpace) : cut).replace(/[.,;:·\s]+$/, '')}…`;
+};
+
 export async function generateMetadata({ params }) {
   const { slug } = await params;
-  const product = await getProduct(slug);
+  /*
+   * Settings come along because the card has to say whether this can be paid
+   * for on delivery, and that is a switch the admin owns - a card that
+   * promises COD after it was turned off is a promise the shop cannot keep.
+   * `getSettings` is cached for 30s and shared across every render, so this
+   * costs nothing per page.
+   */
+  const [product, settings] = await Promise.all([getProduct(slug), getSettings().catch(() => null)]);
 
   if (!product) notFound();
 
@@ -98,8 +119,35 @@ export async function generateMetadata({ params }) {
        * The price leads the card. The share message is now just the link -
        * that is the only way WhatsApp reliably draws the big picture - so
        * everything a person needs to decide has to be ON the card.
+       *
+       * WHAT WAS MISSING (12 Oct 2026)
+       *   Rajat posted a product to his WhatsApp Status and asked the right
+       *   question: "isse pata chal jaega na logo ko kharidna hai". It did
+       *   not. The card read "₹180 · Enhance your ethnic look with this
+       *   stunning oxidised" - a price, a photograph, and a sentence of the
+       *   seller's prose cut off mid-word. Nothing on it said the thing a
+       *   stranger needs to know first: that this can be bought, right now,
+       *   and that it will arrive.
+       *
+       *   The words cannot go in the message - that was settled on 28 Sep,
+       *   when prefilled text stopped WhatsApp drawing any card at all. So
+       *   they go where the words already are. Two facts before the prose,
+       *   both read from live settings rather than asserted, and both the
+       *   answer to a first-time buyer's only real objection: can I pay when
+       *   it arrives, and does it reach me.
+       *
+       *   This is also why it is worth doing here rather than per post: the
+       *   same link is both a chat share and a Status, and this one line
+       *   improves every product on both, for as long as the shop exists.
        */
-      description: `₹${Number(price).toLocaleString('en-IN')} · ${plain(product.description)}`.slice(0, 200),
+      description: [
+        `₹${Number(price).toLocaleString('en-IN')}`,
+        settings?.shop?.codEnabled === false ? null : 'Cash on delivery',
+        'Delivered across India',
+        trimAt(plain(product.description), 110),
+      ]
+        .filter(Boolean)
+        .join(' · '),
       url: `${SITE}${path}`,
       type: 'website',
       siteName: 'ShopMaster Pro',
