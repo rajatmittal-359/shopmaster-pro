@@ -830,8 +830,25 @@ export default function ProductForm({ productId, copyFromId }) {
         });
       }
 
+      /*
+       * NO refresh() HERE (12 Oct 2026).
+       *
+       * Rajat: "ek product edit kiya... save karte hi, close hote hi, list
+       * wale page pe aata hai last me scroll hoke chala jata hai." He edits a
+       * field low down in the form, saves, and lands at the BOTTOM of the
+       * product list, hunting for the row he just changed.
+       *
+       * `router.refresh()` preserves the scroll position - that is its stated
+       * purpose, re-render without losing client state or where you were.
+       * Called immediately after a push, while the browser is still sitting at
+       * the form's deep offset, it pins that offset and undoes the scroll to
+       * top that the push was doing.
+       *
+       * It was also buying nothing. `ProductTable` is a client component that
+       * fetches `/seller/products` itself on mount, and the list page renders
+       * no server data of its own - so the fresh list arrives either way.
+       */
       router.push('/seller/products');
-      router.refresh();
       return true;
     } catch (err) {
       setState({ status: 'error', message: err.message });
