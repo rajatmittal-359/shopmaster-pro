@@ -336,9 +336,17 @@ export default function ProductReport({ productId }) {
         doing, and this is what the seller does about it. Reading first,
         acting second (28 Sep 2026).
       */}
-      <PanelCard title={t('Share this product')}>
-        <SharePack product={product} shop={data?.shop} />
-      </PanelCard>
+      {/*
+        `#share` so the product list can send a seller straight here. It was
+        four steps from the list - ... -> How it is doing -> scroll -> share -
+        and Rajat's words for that were "thoda lamba kaam hai". scroll-mt keeps
+        the heading clear of the panel's sticky top bar when it lands.
+      */}
+      <div id="share" className="scroll-mt-20">
+        <PanelCard title={t('Share this product')}>
+          <SharePack product={product} shop={data?.shop} />
+        </PanelCard>
+      </div>
     </div>
   );
 }

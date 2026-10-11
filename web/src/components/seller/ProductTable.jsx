@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { ChartNoAxesColumn, ExternalLink, Eye, EyeOff, ImagePlus, MessageCircle, MoreHorizontal, Pencil, Plus, Search, Trash2 } from 'lucide-react';
+import { ChartNoAxesColumn, ExternalLink, Eye, EyeOff, ImagePlus, MessageCircle, MoreHorizontal, Pencil, Plus, Search, Trash2, Share2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { authedFetch } from '@/lib/client';
 import { Badge } from '@/components/ui/badge';
@@ -379,6 +379,17 @@ export default function ProductTable() {
                       <MoreHorizontal className="size-4" />
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-52">
+                      {/*
+                        First, because it is the thing a seller does most and
+                        it used to be the hardest to reach: the picture with
+                        the price printed into it, and a caption per surface,
+                        live at the bottom of the report page. Two clicks now.
+                      */}
+                      <DropdownMenuItem render={<Link href={`/seller/products/${product._id}/report#share`} />}>
+                        <Share2 className="size-4" />
+                        {t('Share')}
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
                       {/* What happened to this listing - sold, opened, Google.
                           The edit page is for the facts; this is the result
                           (plan §4.62). */}

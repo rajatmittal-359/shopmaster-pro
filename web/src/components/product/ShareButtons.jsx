@@ -59,8 +59,19 @@ export default function ShareButtons({ url, name }) {
 
   return (
     <div className="flex flex-wrap items-center gap-2 text-sm">
-      <Button type="button" variant="outline" size="sm" onClick={share} aria-label="Share on WhatsApp">
-        <Share2 className="size-4" /> Share on WhatsApp
+      {/*
+        "Share", not "Share on WhatsApp" (12 Oct 2026).
+
+        The label was narrower than the thing. On a phone this opens the
+        system sheet - WhatsApp, Instagram, Facebook, Messages, anything
+        installed - and naming one of them tells four fifths of the people
+        looking at it that the button is not for them. Rajat: "uska naam
+        share hi rakhde to theek, har tarah ke social media wali jagah".
+        The WhatsApp link is still the fallback on a laptop; it just stopped
+        being the promise.
+      */}
+      <Button type="button" variant="outline" size="sm" onClick={share} aria-label="Share this product">
+        <Share2 className="size-4" /> Share
       </Button>
       <Button type="button" variant="ghost" size="sm" onClick={copy}>
         <Link2 className="size-4" /> {copied ? 'Copied' : 'Copy link'}
