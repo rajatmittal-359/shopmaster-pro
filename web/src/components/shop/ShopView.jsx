@@ -1,12 +1,13 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { getSeller } from '@/lib/api';
+import { getSeller, getSettings } from '@/lib/api';
 import ProductCard from '@/components/product/ProductCard';
 import Stars from '@/components/product/Stars';
 import { Globe, MapPin, Link2, Camera, Video, MessageCircle, BookText } from 'lucide-react';
 import { serialiseJsonLd } from '@/lib/jsonLd';
 import { buildShopSchema, safeHref, shopPath } from '@/lib/shopSchema';
 import { ogImage } from '@/lib/shareImage';
+import { POLICY } from '@/config/policy';
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.shopmasterpro.in';
 // lucide dropped the brand glyphs; plain signifiers do the job.
@@ -48,14 +49,51 @@ const since = (iso) =>
  *   shoes. Same rule the site frame follows (layout.js).
  */
 export async function shopMetadata(handle) {
-  const data = await getSeller(handle);
+  const [data, settings] = await Promise.all([getSeller(handle), getSettings().catch(() => null)]);
 
   if (!data?.seller) return { title: 'Shop not found' };
 
   const { businessName, city, about, productCount } = data.seller;
   const path = shopPath(data.seller);
   const title = city ? `${businessName}, ${city.city}` : businessName;
-  const description = about || `${businessName} sells on ShopMaster Pro - ${productCount} products, delivered across India with 7-day returns.`;
+  // The page's own meta description keeps the long fallback; the CARD gets the
+  // facts separately below, so repeating them here would say each one twice.
+  const description = about || `${businessName} sells on ShopMaster Pro - ${productCount} products, delivered across India with ${POLICY.returnDays}-day returns.`;
+  /*
+   * The About trails the facts and is kept short. Its first words are nearly
+   * always the shop's own name and city again - "Charming Jewels is a
+   * family-run jewellery shop in Devi Nagar, Jaipur" under a title that reads
+   * "Charming Jewels, Jaipur" - and the card now carries a photograph of
+   * their jewellery, so what they sell is already answered by the picture.
+   * One short clause of their own voice, then let it end.
+   */
+  const shortAbout = (() => {
+    const s = String(about || '').replace(/\s+/g, ' ').trim();
+    if (!s || s.length <= 80) return s;
+    const cut = s.slice(0, 79);
+    const stop = Math.max(cut.lastIndexOf('. '), cut.lastIndexOf(' '));
+    return `${cut.slice(0, stop > 40 ? stop : 79).replace(/[.,;:\s]+$/, '')}…`;
+  })();
+  const cardTail = shortAbout ? ` · ${shortAbout}` : '';
+
+  /*
+   * WHAT THE SHOP CARD HAS TO SAY (12 Oct 2026)
+   *   The About tells a stranger what the shop IS - "a family-run jewellery
+   *   shop in Devi Nagar, Jaipur" - and nothing about whether they can buy
+   *   from it. Rajat looked at the card and asked for "shop now jaisa kuch
+   *   indication". There is no button to add: a link preview is a title, a
+   *   description and a domain, and the platforms draw it, not us. So the
+   *   indication is the same four facts the product cards carry, in front of
+   *   the shop's own words rather than instead of them - how many pieces,
+   *   that it can be paid for on arrival, that it travels, that it can come
+   *   back. "Shop now" would be a phrase; these are reasons.
+   */
+  const facts = [
+    productCount ? `${productCount} products` : null,
+    settings?.shop?.codEnabled === false ? null : 'Cash on delivery',
+    'Delivered across India',
+    `${POLICY.returnDays}-day returns`,
+  ].filter(Boolean);
 
   /*
    * THE SHOP LINK IS THE ONE THAT TRAVELS (12 Oct 2026)
@@ -86,7 +124,7 @@ export async function shopMetadata(handle) {
     alternates: { canonical: path },
     openGraph: {
       title,
-      description,
+      description: `${facts.join(' · ')}${cardTail}`,
       url: `${SITE}${path}`,
       type: 'website',
       siteName: 'ShopMaster Pro',
