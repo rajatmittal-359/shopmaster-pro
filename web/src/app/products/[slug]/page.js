@@ -39,20 +39,6 @@ const plain = (html) => String(html || '').replace(/<[^>]*>/g, ' ').replace(/\s+
  *                               edited title broke the link Google had.
  *   there is no such product ->  a real 404.
  */
-/**
- * Cut to `max` without breaking a word, and say so when something was cut.
- *
- * The card used to end mid-word - "This traditional set" - which reads like
- * the page failed rather than like there is more to see.
- */
-const trimAt = (text, max) => {
-  const s = String(text || '').trim();
-  if (s.length <= max) return s;
-  const cut = s.slice(0, max - 1);
-  const lastSpace = cut.lastIndexOf(' ');
-  return `${(lastSpace > max * 0.6 ? cut.slice(0, lastSpace) : cut).replace(/[.,;:·\s]+$/, '')}…`;
-};
-
 export async function generateMetadata({ params }) {
   const { slug } = await params;
   /*
@@ -100,11 +86,37 @@ export async function generateMetadata({ params }) {
        *   same link is both a chat share and a Status, and this one line
        *   improves every product on both, for as long as the shop exists.
        */
+      /*
+       * THREE FACTS, NOT TWO (12 Oct 2026, same day)
+       *   Returns were left out of the first pass as the one that might tip
+       *   this into noise. Rajat's answer: "noisy nahi ho, iska matlab ye
+       *   nahi" - and he is right, because the card is not one of several
+       *   things a stranger reads. On every surface where a link lives at
+       *   all, it is the ONLY thing. Keeping it spare was not restraint, it
+       *   was leaving the fourth objection - what if it is wrong - unanswered
+       *   on the only screen where it could be answered.
+       *   Price, pay on arrival, it reaches you, you can send it back. Then
+       *   the seller's own words with whatever room is left.
+       */
+      /*
+       * AND NOTHING THE TITLE ALREADY SAID
+       *   The seller's own first sentence used to follow these, and on a card
+       *   it is almost always the title again in softer words - the title
+       *   reads "Women Oxidised Silver-toned Pendant Necklace Set with
+       *   Colourful Beads" and the description under it began "Enhance your
+       *   ethnic look with this stunning oxidised silver-toned pendant
+       *   necklace set". Two lines, one fact. That is the noise, and it was
+       *   crowding out the four things the title cannot say.
+       *
+       *   The prose is not lost - it is the whole of the product page, and it
+       *   is still the meta description Google reads. It is only off the card,
+       *   where there is room for one line and it has to earn it.
+       */
       description: [
         `₹${Number(price).toLocaleString('en-IN')}`,
         settings?.shop?.codEnabled === false ? null : 'Cash on delivery',
         'Delivered across India',
-        trimAt(plain(product.description), 110),
+        `${POLICY.returnDays}-day returns`,
       ]
         .filter(Boolean)
         .join(' · '),
