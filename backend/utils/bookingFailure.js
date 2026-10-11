@@ -30,7 +30,24 @@ const KINDS = [
   {
     kind: 'wallet',
     test: /recharge|insufficient|low balance|wallet/i,
-    say: 'The Shiprocket wallet is out of money, so no courier can be booked. It needs topping up before this or any other parcel can go.',
+    /*
+     * THE COURIER HAS TO BE NAMED (12 Oct 2026)
+     *
+     * This sentence used to say "Shiprocket" whatever had refused. Same-day
+     * goes by Borzo and everything else by Shiprocket: two prepaid accounts,
+     * two dashboards. Borzo's documented refusal is `insufficient_balance`,
+     * which matches the rule above - so the kind was right and the sentence
+     * sent the reader to top up the account that was never the problem.
+     *
+     * Nothing upstream can catch this earlier. Borzo's API 1.8 has no balance
+     * to read: their docs describe GET /client as "client info with allowed
+     * payment methods", and the live account returns exactly that - name,
+     * phone, email, legal type, methods - with money in the wallet and no
+     * amount anywhere. The refusal at booking time is the only signal there
+     * is, so it has to point at the right door.
+     */
+    say: (courier) =>
+      `The ${courier ? `${courier} ` : ''}wallet is out of money, so no courier can be booked. It needs topping up before this or any other parcel can go.`,
   },
   {
     kind: 'serviceability',
@@ -54,15 +71,23 @@ const KINDS = [
   },
 ];
 
+/** `shippingProvider` as the order stores it, in the words a person reads. */
+const COURIER_NAMES = { borzo: 'Borzo', shiprocket: 'Shiprocket' };
+
 /**
- * @param {string} reason  whatever the courier said
+ * @param {string} reason      whatever the courier said
+ * @param {string} [provider]  which courier refused ('borzo' | 'shiprocket').
+ *                             Omitted means unknown, and then no courier is
+ *                             named - a guess here sends somebody to the wrong
+ *                             dashboard, which is the bug this argument fixes.
  * @returns {{kind: string, advice: string}}
  */
-const classifyBookingFailure = (reason) => {
+const classifyBookingFailure = (reason, provider) => {
   const text = String(reason || '');
+  const courier = COURIER_NAMES[String(provider || '').toLowerCase()] || '';
 
   const hit = KINDS.find((k) => k.test.test(text));
-  if (hit) return { kind: hit.kind, advice: hit.say };
+  if (hit) return { kind: hit.kind, advice: typeof hit.say === 'function' ? hit.say(courier) : hit.say };
 
   return {
     kind: 'other',

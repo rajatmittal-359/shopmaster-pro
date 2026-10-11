@@ -472,15 +472,20 @@ const getDeliveryOptions = async (cartItems, address, isCOD) => {
     return options;
   }
 
-  // A quote the wallet cannot pay for is not an option: with ₹0 the booking
-  // fails after the customer has paid for same-day (utils/borzo balance).
-  if ((await borzo.canAfford(sameDay.price)) === false) {
-    const notifier = require('./notify');
-    const day = new Date().toISOString().slice(0, 10);
-    notifier.notifyAdmins({ category: 'account', title: 'Same-day is off: Borzo wallet is empty', body: `A ₹${sameDay.price} same-day delivery could not be offered - top up at borzodelivery.com or switch same-day off in Settings.`, url: '/admin/settings', tag: `borzo-low-${day}` }).catch(() => {});
-    return options;
-  }
-
+  /*
+   * There is no wallet check here any more (12 Oct 2026).
+   *
+   * There used to be: `borzo.canAfford(sameDay.price)`, which hid same-day
+   * when the balance could not cover it. Borzo's API has no balance to read -
+   * the reasoning is kept in full in `utils/borzo`, above the module exports -
+   * so the check could only ever answer "unknown", and "unknown" never hid
+   * anything. Deleting it changes no behaviour; it removes a guarantee the
+   * code appeared to make and did not keep.
+   *
+   * An empty wallet is caught where it actually speaks: the booking refuses
+   * with `insufficient_balance`, and that refusal is recorded against the
+   * order and named to the right courier (`utils/bookingFailure`).
+   */
   options.push({
     id: 'same_day',
     label: 'Same-day Delivery',

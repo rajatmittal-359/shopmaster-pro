@@ -154,19 +154,100 @@ should not be undone.
 So this row is about the promise, not a bug: the page says *coming soon in
 Jaipur*, and nothing is coming until one of the two routes below is taken.
 
-Two ways out, and the second is probably better:
+Two ways out were weighed. **Both answers are now in, and only one survives.**
 
 1. Take Borzo live (`BORZO_ENV=production`, real token) - a second vendor, a
    second key, a second wallet to keep topped up.
-2. **Move same-day to Shiprocket Quick.** Already live on the same account by
-   SSO, already shares the wallet, pickup already saved. One vendor instead of
-   two. Needs two answers first (both in OPS): does it serve Jaipur in working
-   hours, and does it have an API - the panel is a manual form, and without an
-   API it cannot be booked from code.
+2. ~~**Move same-day to Shiprocket Quick.**~~ **Closed 12 Oct 2026.** It does
+   have an API after all - `apidocs.shiprocket.in`, and the Quick page offers
+   "API Integration to connect your store or ERP" - so the note that said
+   otherwise was wrong about the reason. It fails on the other question:
+   shiprocket.in/quick lists **Delhi, Mumbai, Bangalore, Pune, Hyderabad,
+   Chennai and Ahmedabad**, and **not Jaipur**. Our pickup is Jaipur. (Its own
+   courier partners include Borzo - in those seven cities.)
+
+**So it is route 1, and it is now live-capable.** Checked 12 Oct 2026, three
+working days past Borzo's "1 working day":
+
+- **The production token was issued.** Client ID 8800134. Verified against
+  `robot-in.borzodelivery.com`, not assumed: GET /client returns the real
+  account, and `calculate-order` quoted **₹66.00** for Devi Nagar → Vaishali
+  Nagar, motorbike, 0.5 kg. The old token answered `invalid_auth_token` on the
+  same host, so the two are plainly different keys.
+- **₹100 is in the wallet** (Rajat, 12 Oct). One delivery at ₹66.
+- **The wallet guard was dead, and is deleted.** `borzo.canAfford` compared
+  `client.balance_amount` against the quote. API 1.8 has no such field -
+  Borzo's docs call GET /client "client info with allowed payment methods" and
+  the live account returns exactly that, with money in the wallet and no amount
+  anywhere; asked again after the top-up in case it were omitted at zero, still
+  absent; no other endpoint or version carries it. Two tests guarded it and
+  both passed by mocking the function that could not work. Removing it changes
+  no behaviour - "unknown" never hid anything - and removes a guarantee the
+  code appeared to make.
+- **The failure message named the wrong wallet.** `classifyBookingFailure`
+  matched Borzo's `insufficient_balance` correctly but said *"The Shiprocket
+  wallet is out of money"*, sending the reader to top up an account that was
+  never the problem. It now takes the provider and names the courier that
+  actually refused. Tested both ways, and for the old one-argument callers.
+
+**Still to decide before it is switched on — see 2.82b.**
 
 Until one of those is settled the page keeps saying *coming soon*, which is
 honest - but it has been saying it for a while, and a promise with no date is
 how a trust story quietly stops being one.
+
+### 2.82b Switching same-day on, and the wallet that cannot be watched
+
+Opened 12 Oct 2026, the moment the token was verified. The code is finished and
+the key works; what is left is a decision about money and one manual step.
+
+**The shape of the risk.** Same-day is paid for at CHECKOUT. The courier is
+booked later, when the seller presses Ship. Nothing in between can tell whether
+the Borzo wallet will still cover it, because Borzo publishes no balance. So the
+sequence that can bite is: customer pays for same-day → seller ships two days of
+orders → wallet runs dry → the booking refuses → a customer has paid for a
+service that will not happen.
+
+**What happens today when it does.** The refusal is written on the order
+(`bookingFailedReason` / `Kind` / `At`, attempts counted), it is shown to the
+seller in the queue and on the order, it is shown to the admin, and the advice
+now names Borzo rather than Shiprocket. The order is NOT cancelled and the
+same-day fee is NOT refunded automatically.
+
+**That last part is deliberate, and it is what the market does.** Flipkart's
+Minutes orders are not self-serve refundable; a missed promise goes to a support
+agent. Swiggy's refund page says each case is assessed individually and that no
+refund is made without the merchant's permission - which on a marketplace is the
+right instinct, because the delivery fee is the seller's money, not ours. So
+"record it and put it in front of a person" is the reference behaviour, and
+auto-refunding would be us inventing a policy neither of them has.
+
+**The real cure, and it is documented.** Take the wallet out of the path:
+`payment_method: "bank_card"` with a `bank_card_id` from `GET /bank-cards`,
+both in API 1.8. Each delivery then charges a bound card and there is no balance
+to run dry and none to read. `GET /bank-cards` answers today with
+`{"bank_cards": []}` - no card is bound yet.
+
+- ⏸ **DEFERRED by Rajat, 12 Oct 2026:** *"baad me dekh lenge kar lunga bussiness
+  chal jaega to."* He will keep the wallet topped by hand instead - ₹100 at a
+  time. That is a reasonable trade at zero same-day orders a week, and it is a
+  decision, not an oversight. Raised once; not to be raised again until there
+  is same-day volume or a booking actually fails for an empty wallet.
+- ☐ **Rajat, when that day comes:** bind a card in the Borzo cabinet, then tell
+  Claude. (His card was refused by Google Cloud once, so this needs one real
+  booking to confirm.)
+- ☐ **Claude, after that:** send `payment_method` + `bank_card_id` on
+  `create-order`, test first; then the wallet stops mattering entirely.
+- ☐ **Rajat:** `BORZO_API_TOKEN` (the new one) and `BORZO_ENV=production` **on
+  the box only**. Never in the local `backend/.env` - a dev order would call a
+  real rider to Devi Nagar.
+- ☐ **Until the card is bound:** keep the wallet above roughly ₹200, because
+  nothing can warn when it is low.
+
+**Interim judgement.** With ₹100 in and no live orders yet, switching on today
+is defensible - the first booking is covered and the failure path is honest. It
+is still the weaker order: the card removes the whole class of problem, and
+there is no same-day demand waiting on it.
 
 ### 2.83 Pack proof should be a video, not a photo
 

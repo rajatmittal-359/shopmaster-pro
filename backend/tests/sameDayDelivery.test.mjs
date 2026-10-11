@@ -118,28 +118,48 @@ describe('what a customer is offered', () => {
   });
 });
 
-describe('the wallet (19 Sep 2026)', () => {
-  const realAfford = borzo.canAfford;
-  afterEach(() => {
-    borzo.canAfford = realAfford;
-  });
-
-  it('an empty Borzo wallet hides same-day instead of letting a paid booking fail, and tells the admin once a day', async () => {
-    borzo.canAfford = vi.fn(async () => false);
-    const notifier = require('../utils/notify');
-    const admins = vi.spyOn(notifier, 'notifyAdmins').mockResolvedValue([]);
-    const options = await getDeliveryOptions(CART, JAIPUR, false);
-    expect(options.map((o) => o.id)).toEqual(['standard']);
-    expect(borzo.canAfford).toHaveBeenCalledWith(102);
-    expect(admins.mock.calls[0][0].title).toMatch(/wallet is empty/);
-    expect(admins.mock.calls[0][0].tag).toMatch(/^borzo-low-\d{4}-\d{2}-\d{2}$/);
-    admins.mockRestore();
-  });
-
-  it('an unreadable balance does not hide the option - the booking path already fails loudly', async () => {
-    borzo.canAfford = vi.fn(async () => null);
+/*
+ * THE WALLET (19 Sep 2026, deleted 12 Oct 2026)
+ *
+ * There used to be a pre-flight check here: read the Borzo balance, and if it
+ * could not pay for this delivery, do not offer same-day at all. Two tests
+ * guarded it and both passed - because both replaced `borzo.canAfford` with a
+ * mock that returned `false`. The real function never can.
+ *
+ * The production token arrived on 12 Oct and the first live call settled it.
+ * `canAfford` read `client.balance_amount`; Borzo's API 1.8 has no such field.
+ * Their own documentation describes GET /client as "client info with allowed
+ * payment methods", and the live account returns exactly that - name, phone,
+ * email, legal_type, allowed_payment_methods - with ₹100 in the wallet and no
+ * amount anywhere in the payload. Checked again after topping up, in case the
+ * field were simply omitted at zero: still absent. There is no other endpoint
+ * (/bank-cards, /client, /orders, /courier, calculate-order, create-order,
+ * cancel-order, edit-order, labels is the whole of 1.8) and no other version
+ * (1.9, 2.0, 2.1, 3.0 all answer `invalid_api_version`).
+ *
+ * So the check could not be fixed, only deleted. What replaced it is what the
+ * market does: Flipkart sends a missed quick-delivery to a support agent
+ * rather than refunding by itself, and Swiggy's refund page says every case is
+ * assessed individually and never without the merchant's permission. Neither
+ * cancels the order and neither refunds automatically. Ours records the
+ * refusal on the order, names the courier whose wallet is empty (that was the
+ * second bug - the sentence said Shiprocket whatever had refused), and puts it
+ * in front of the seller and the admin.
+ *
+ * The real cure is not a better guess at the balance. It is `payment_method:
+ * "bank_card"` with a `bank_card_id` from GET /bank-cards, both documented in
+ * API 1.8, which removes the wallet from the path entirely. No card is bound
+ * to the account yet - see WHAT-IS-LEFT.
+ */
+describe('the wallet cannot be read before the booking (12 Oct 2026)', () => {
+  it('offers same-day on the quote alone, because there is no balance to ask for', async () => {
     const options = await getDeliveryOptions(CART, JAIPUR, false);
     expect(options.map((o) => o.id)).toEqual(['standard', 'same_day']);
+  });
+
+  it('no longer exposes a balance check that could only ever answer "unknown"', () => {
+    expect(borzo.canAfford).toBeUndefined();
+    expect(borzo.balance).toBeUndefined();
   });
 });
 

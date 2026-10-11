@@ -1406,7 +1406,11 @@ exports.shipOrder = async (req, res) => {
        * who knew had closed the tab. A flat Shiprocket wallet is invisible in
        * exactly that way - bookings stop dead and no screen says so.
        */
-      const { kind, advice } = classifyBookingFailure(result.reason);
+      // Which wallet to top up depends on which courier refused: same-day is
+      // Borzo, everything else Shiprocket, and they are separate accounts on
+      // separate dashboards. `shipmentBooking` picks the same way.
+      const courier = order.deliveryOption === 'same_day' ? 'borzo' : 'shiprocket';
+      const { kind, advice } = classifyBookingFailure(result.reason, courier);
 
       await Order.updateOne(
         { _id: order._id },

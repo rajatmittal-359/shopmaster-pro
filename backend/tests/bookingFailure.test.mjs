@@ -73,4 +73,45 @@ describe('reading why a booking failed', () => {
     expect(classifyBookingFailure(undefined).kind).toBe('other');
     expect(classifyBookingFailure('').kind).toBe('other');
   });
+
+  /*
+   * THE SECOND WALLET (12 Oct 2026)
+   *
+   * Same-day goes by Borzo, everything else by Shiprocket, and they are two
+   * separate prepaid accounts on two separate dashboards. Borzo's documented
+   * refusal is `insufficient_balance`, which the wallet rule above already
+   * matches on "insufficient" - so the kind was right and the SENTENCE was
+   * wrong: it named Shiprocket, and sent whoever read it to top up an account
+   * that was never the problem while the one that was stayed empty.
+   *
+   * There is no pre-flight check that could have caught this first. Borzo's
+   * API 1.8 has no balance to read - their own docs describe GET /client as
+   * "client info with allowed payment methods" and the live account returns
+   * exactly that, with ₹100 in the wallet and no amount anywhere in the
+   * payload. So the booking failure IS the only signal, and it has to name
+   * the right courier.
+   */
+  it('sends a Borzo wallet failure to Borzo, not to Shiprocket', () => {
+    const { kind, advice } = classifyBookingFailure('insufficient_balance', 'borzo');
+
+    expect(kind).toBe('wallet');
+    expect(advice).toMatch(/borzo/i);
+    expect(advice).not.toMatch(/shiprocket/i);
+  });
+
+  it('still sends a Shiprocket wallet failure to Shiprocket', () => {
+    const { advice } = classifyBookingFailure('Please recharge your wallet', 'shiprocket');
+
+    expect(advice).toMatch(/shiprocket/i);
+    expect(advice).not.toMatch(/borzo/i);
+  });
+
+  /** Old callers pass one argument; they must keep working. */
+  it('names no courier when it was not told which one refused', () => {
+    const { kind, advice } = classifyBookingFailure('Insufficient balance in your account');
+
+    expect(kind).toBe('wallet');
+    expect(advice).toMatch(/wallet/i);
+    expect(advice).not.toMatch(/borzo|shiprocket/i);
+  });
 });

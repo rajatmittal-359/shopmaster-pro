@@ -316,48 +316,40 @@ const cancelSameDay = async (externalOrderId) => {
 };
 
 /*
- * THE WALLET (19 Sep 2026)
- *   Borzo books against a prepaid balance. With ₹0 the quote still succeeds
- *   and the BOOKING fails - after the customer has paid for same-day. So the
- *   balance is read before the option is offered: not enough for this
- *   delivery, no same-day on the checkout, and the admin hears once a day.
- *   GET /client returns balance_amount; cached ten minutes so a checkout
- *   does not cost a second round trip. A failed read counts as "unknown"
- *   and does NOT hide the option - the booking path already fails loudly.
+ * THE WALLET, AND WHY NOTHING HERE READS IT (19 Sep 2026 → 12 Oct 2026)
+ *
+ * Borzo books against a prepaid balance, so with an empty wallet the quote
+ * still succeeds and the BOOKING fails - after the customer has paid for
+ * same-day. The answer written in September was to read the balance before
+ * offering the option: `canAfford` fetched GET /client and compared
+ * `client.balance_amount` against the quote.
+ *
+ * That field does not exist. It was written against the simulator and two
+ * tests guarded it, both of which passed by mocking the very function that
+ * could not work. The production token arrived on 12 Oct and the first real
+ * call ended it: Borzo's own docs describe GET /client as "client info with
+ * allowed payment methods", and the live account returns precisely that -
+ * name, phone, email, legal_type, allowed_payment_methods - with money in the
+ * wallet and no amount anywhere. Asked again after a top-up, in case the field
+ * were omitted at zero: still absent. API 1.8 is the only version (1.9, 2.0,
+ * 2.1 and 3.0 all answer `invalid_api_version`) and its whole surface is
+ * /client, /bank-cards, /orders, /courier, calculate-order, create-order,
+ * edit-order, cancel-order, /labels. None of them carries a balance.
+ *
+ * So there is no pre-flight check to be had, and a dead one is worse than
+ * none: it reads like a guarantee. What catches an empty wallet now is the
+ * refusal at booking time - `insufficient_balance`, which
+ * `utils/bookingFailure` classifies and, since today, attributes to the right
+ * courier. That is also what the market does: Flipkart routes a missed quick
+ * delivery to a support agent, and Swiggy assesses each case and refunds
+ * nothing without the merchant's say-so. Neither pretends to know in advance.
+ *
+ * The real cure is to take the wallet out of the path: `payment_method:
+ * "bank_card"` with a `bank_card_id` from GET /bank-cards, both documented in
+ * 1.8. The account has no card bound yet - see WHAT-IS-LEFT.
  */
-let balanceCache = { at: 0, amount: null };
-const BALANCE_TTL_MS = 10 * 60 * 1000;
-
-const balance = async ({ fresh = false } = {}) => {
-  if (!isConfigured()) return null;
-  if (!fresh && Date.now() - balanceCache.at < BALANCE_TTL_MS) return balanceCache.amount;
-  try {
-    const { data } = await axios.get(`${baseUrl()}/api/business/${API_VERSION}/client`, { headers: { 'X-DV-Auth-Token': process.env.BORZO_API_TOKEN }, timeout: 8000 });
-    const amount = data?.is_successful && data.client ? Number(data.client.balance_amount) : null;
-    balanceCache = { at: Date.now(), amount: Number.isFinite(amount) ? amount : null };
-  } catch (err) {
-    console.error('borzo balance read failed:', err.response?.data?.message || err.message);
-    balanceCache = { at: Date.now(), amount: null };
-  }
-  return balanceCache.amount;
-};
-
-/** Whether the wallet can pay for a delivery quoted at `price`; null when unknown. */
-const canAfford = async (price) => {
-  const amount = await balance();
-  if (amount === null) return null;
-  return amount >= Number(price || 0);
-};
-
-/** Tests. */
-const _resetBalanceCache = () => {
-  balanceCache = { at: 0, amount: null };
-};
 
 module.exports = {
-  balance,
-  canAfford,
-  _resetBalanceCache,
   isPending,
   sameDayPickupFor,
   quoteSameDay,
