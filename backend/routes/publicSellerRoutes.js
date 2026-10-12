@@ -78,7 +78,11 @@ router.get('/:handle', async (req, res) => {
         // the buy buttons and "Out of stock" - without them every card on a
         // shop page reads 0 and says the shop has nothing. The product page
         // already prints "2 left", so neither number is new in public.
-        .select('name slug price salePrice saleStartsAt saleEndsAt mrp images avgRating totalReviews stock reserved')
+        // `processingDays` so the shop's share card can ask whether ANY piece here
+        // can go same-day: nothing made to order can arrive today, and a card that
+        // says "Same-day in Jaipur" over a shop of made-to-order work is a promise
+        // the shop cannot keep (12 Oct 2026).
+        .select('name slug price salePrice saleStartsAt saleEndsAt mrp images avgRating totalReviews stock reserved processingDays')
         .sort({ createdAt: -1 })
         .limit(24)
         .lean(),

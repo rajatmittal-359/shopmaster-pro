@@ -88,8 +88,26 @@ export async function shopMetadata(handle) {
    *   that it can be paid for on arrival, that it travels, that it can come
    *   back. "Shop now" would be a phrase; these are reasons.
    */
+  /*
+   * SAME-DAY ON THE SHOP CARD (12 Oct 2026)
+   *   Rajat: "standard delivery aur COD aur instant delivery sab karwate hai,
+   *   har tarah ki delivery - fir mention kyu nahi hai." It was on the product
+   *   card and not here, which was an omission rather than a decision.
+   *
+   *   The question a SHOP card answers is different from a product's: not
+   *   "can this piece go today" but "can anything here". So it needs at least
+   *   one ready-stock piece - 22 of this shop's 32 carry a processing time,
+   *   and nothing made to order arrives today. A shop entirely of made-to-order
+   *   work must not advertise same-day.
+   */
+  const canSameDay =
+    settings?.shop?.sameDayEnabled !== false &&
+    (data.products || []).some((p) => !Number.isInteger(p?.processingDays));
+  const sameDayCity = canSameDay ? data.seller?.pickupAddress?.city || data.seller?.city?.city || null : null;
+
   const facts = [
     productCount ? `${productCount} products` : null,
+    sameDayCity ? `Same-day in ${sameDayCity}` : null,
     settings?.shop?.codEnabled === false ? null : 'Cash on delivery',
     'Delivered across India',
     `${POLICY.returnDays}-day returns`,
