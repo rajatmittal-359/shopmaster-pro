@@ -170,7 +170,17 @@ export async function generateMetadata({ params }) {
          */
         'Delivered across India',
         sameDayCity ? `Same-day in ${sameDayCity}` : null,
-        `${POLICY.returnDays}-day returns`,
+        /*
+         * THE PRODUCT'S OWN RETURN LINE (12 Oct 2026)
+         *   This was the platform default for every product, and the return
+         *   policy is per item: "Returns on this item" in the seller form
+         *   offers return-or-exchange, exchange-only, or none at all for
+         *   hygiene and custom work. A card promising returns over a
+         *   no-return piece is the third version of the same mistake caught
+         *   today. `returnModeLabel` is what the product page and the order
+         *   mail already print, so the card now says exactly what they say.
+         */
+        product.returnModeLabel?.en || `${POLICY.returnDays}-day returns`,
       ]
         .filter(Boolean)
         .join(' · '),

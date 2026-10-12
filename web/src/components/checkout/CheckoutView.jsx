@@ -382,7 +382,7 @@ export default function CheckoutView() {
             {': '}
             {new Set(totals.items.filter((i) => i.returnMode).map((i) => i.returnMode)).size === 1
               ? `${totals.items.find((i) => i.returnMode).returnLabel}, counted from delivery.`
-              : `7-day return or exchange from delivery, except ${totals.items
+              : `7-day refund or exchange from delivery, except ${totals.items
                   .filter((i) => i.returnMode && i.returnMode !== 'R')
                   .map((i) => `${i.name} - ${String(i.returnLabel || '').toLowerCase()}`)
                   .join('; ')}.`}

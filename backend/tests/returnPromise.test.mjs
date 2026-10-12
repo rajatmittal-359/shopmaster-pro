@@ -76,8 +76,8 @@ describe('the confirmation mail says it', () => {
 
   it('one line when every item makes the same promise', () => {
     const m = orderConfirmedEmail(order([{ name: 'Saree', returnMode: 'R' }, { name: 'Kurta', returnMode: 'R' }]), customer);
-    expect(m.text).toContain('Returns: 7-day return or exchange, counted from delivery.');
-    expect(m.html).toContain('7-day return or exchange');
+    expect(m.text).toContain('Returns: 7-day refund or exchange, counted from delivery.');
+    expect(m.html).toContain('7-day refund or exchange');
   });
 
   it('names the exceptions when they differ', () => {

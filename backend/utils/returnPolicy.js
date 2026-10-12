@@ -27,7 +27,7 @@ const FAULT_KINDS = new Set(['damaged', 'wrong', 'defective', 'not_as_described'
 const FRESH_KINDS = new Set(['damaged', 'wrong', 'defective']);
 
 const MODE_LABEL = {
-  R: { en: '7-day return or exchange', hi: '7 दिन में वापसी या बदली', hg: '7 din me return ya exchange' },
+  R: { en: '7-day refund or exchange', hi: '7 दिन में वापसी या बदली', hg: '7 din me return ya exchange' },
   X: { en: 'Exchange only, 7 days', hi: 'सिर्फ़ बदली, 7 दिन', hg: 'Sirf exchange, 7 din' },
   N: { en: 'No return (hygiene / custom) - wrong or damaged is always covered', hi: 'वापसी नहीं (स्वच्छता/कस्टम) - गलत या टूटा हमेशा कवर', hg: 'Return nahi (hygiene/custom) - galat ya toota hamesha cover' },
 };

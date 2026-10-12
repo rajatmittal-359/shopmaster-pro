@@ -92,7 +92,7 @@ const returnLine = (order) => {
   const modes = new Set(lines.map((i) => i.returnMode));
   if (modes.size === 1) return `Returns: ${MODE_LABEL[[...modes][0]].en}, counted from delivery.`;
   const odd = lines.filter((i) => i.returnMode !== 'R').map((i) => `${i.name} - ${MODE_LABEL[i.returnMode].en.toLowerCase()}`);
-  return `Returns: 7-day return or exchange, counted from delivery, except ${odd.join('; ')}.`;
+  return `Returns: 7-day refund or exchange, counted from delivery, except ${odd.join('; ')}.`;
 };
 
 /**
