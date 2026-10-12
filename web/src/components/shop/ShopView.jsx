@@ -107,9 +107,10 @@ export async function shopMetadata(handle) {
 
   const facts = [
     productCount ? `${productCount} products` : null,
-    sameDayCity ? `Same-day in ${sameDayCity}` : null,
     settings?.shop?.codEnabled === false ? null : 'Cash on delivery',
+    // Reach first, then the local bonus - see the product card for why.
     'Delivered across India',
+    sameDayCity ? `Same-day in ${sameDayCity}` : null,
     `${POLICY.returnDays}-day returns`,
   ].filter(Boolean);
 

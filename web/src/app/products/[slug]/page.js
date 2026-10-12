@@ -145,9 +145,20 @@ export async function generateMetadata({ params }) {
        */
       description: [
         `₹${Number(price).toLocaleString('en-IN')}`,
-        sameDayCity ? `Same-day in ${sameDayCity}` : null,
         settings?.shop?.codEnabled === false ? null : 'Cash on delivery',
+        /*
+         * REACH BEFORE THE LOCAL BONUS (12 Oct 2026)
+         *   Leading with "Same-day in Jaipur" read like a limit. Rajat:
+         *   "confusion ho jaega ki Jaipur deliver hoti hai kya." He is right -
+         *   a card is taken in at a glance and the city was the first thing
+         *   the eye met. Amazon and Flipkart never face this: their same-day
+         *   badge appears only after a pincode, so they always know who is
+         *   asking. A share card is cached and read by everyone, so the order
+         *   has to do that work. India first, then the city, and "Same-day in
+         *   Jaipur" can only be read as the bonus it is.
+         */
         'Delivered across India',
+        sameDayCity ? `Same-day in ${sameDayCity}` : null,
         `${POLICY.returnDays}-day returns`,
       ]
         .filter(Boolean)
