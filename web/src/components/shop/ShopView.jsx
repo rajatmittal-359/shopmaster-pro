@@ -107,7 +107,8 @@ export async function shopMetadata(handle) {
 
   const facts = [
     productCount ? `${productCount} products` : null,
-    settings?.shop?.codEnabled === false ? null : 'Cash on delivery',
+    // Both ways to pay - see the product card for why cash alone misled.
+    settings?.shop?.codEnabled === false ? 'UPI, card or netbanking' : 'UPI, card or cash on delivery',
     // Reach first, then the local bonus - see the product card for why.
     'Delivered across India',
     sameDayCity ? `Same-day in ${sameDayCity}` : null,

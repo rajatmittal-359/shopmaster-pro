@@ -145,7 +145,18 @@ export async function generateMetadata({ params }) {
        */
       description: [
         `₹${Number(price).toLocaleString('en-IN')}`,
-        settings?.shop?.codEnabled === false ? null : 'Cash on delivery',
+        /*
+         * BOTH WAYS TO PAY (12 Oct 2026)
+         *   This said only "Cash on delivery", chosen because it answers the
+         *   fear a stranger's shop actually raises - pay first and hope. But
+         *   Rajat: "COD hi kyu, apn online wala bhi hai na." Read alone it
+         *   implies cash is the ONLY way, which turns away everyone who pays
+         *   by UPI - the same shape of confusion as leading with the city.
+         *   Checkout takes UPI, card, netbanking and wallet through Razorpay,
+         *   and cash. UPI is named because it is what most people here use;
+         *   "pay online" is true and says nothing.
+         */
+        settings?.shop?.codEnabled === false ? 'UPI, card or netbanking' : 'UPI, card or cash on delivery',
         /*
          * REACH BEFORE THE LOCAL BONUS (12 Oct 2026)
          *   Leading with "Same-day in Jaipur" read like a limit. Rajat:
