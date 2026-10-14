@@ -255,34 +255,60 @@ describe('free shipping and same-day', () => {
 });
 
 describe('what the customer is told about timing', () => {
-  const hoursFromNow = (h) => new Date(Date.now() + h * 3600000);
+  /*
+   * FIXED INSTANTS, AND TZ=UTC ON PURPOSE (15 Oct 2026)
+   *
+   * Rajat, on seeing a same-day quote: "borzo ka timing galat aata hai, am pm
+   * ka kuch pata nahi - raat ko agar same day delivery hai to am kaise aayega."
+   * He was right, and it was not Borzo. The live container has no TZ set
+   * (`Intl...resolvedOptions().timeZone` → 'UTC') and `describeArrival`
+   * formatted with no `timeZone` of its own, so every same-day promise was
+   * shown 5h30m early: a real production quote of 04:02 am IST reached the
+   * customer as "10:32 pm". The day was decided in UTC too, so between
+   * midnight and 05:30 IST "Today" and "Tomorrow" were a day out as well.
+   *
+   * These tests used to build "later today" and "tomorrow" with setHours and
+   * setDate, which work in the PROCESS's zone. On this Mac (Asia/Calcutta)
+   * they meant what they said; in CI and on the box they did not. They were
+   * flaky for 5h30m out of every 24 - exactly the window the bug lived in,
+   * which is why nothing caught it.
+   *
+   * So: TZ=UTC, to be the box rather than the laptop, and fixed instants
+   * chosen so UTC and IST disagree about the DATE. That disagreement is the
+   * half of the bug a relative-time test can never see.
+   */
+  const savedTz = process.env.TZ;
+
+  beforeEach(() => {
+    process.env.TZ = 'UTC';
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-10-15T12:30:00Z')); // 15 Oct, 18:00 IST
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    if (savedTz === undefined) delete process.env.TZ;
+    else process.env.TZ = savedTz;
+  });
 
   it('says Today only when the arrival really is today', () => {
-    const now = new Date();
-    const laterToday = new Date(now);
-    laterToday.setHours(23, 30, 0, 0);
-
-    // Only meaningful if there is still time left in the day to test with.
-    if (laterToday > now) {
-      expect(describeArrival(laterToday)).toMatch(/^Today by /);
-    }
+    // 15 Oct, 23:00 IST - the same IST day as now.
+    expect(describeArrival(new Date('2026-10-15T17:30:00Z'))).toMatch(/^Today by 11:00\s*pm$/i);
   });
 
   it('says Tomorrow rather than lying about Today', () => {
-    const now = new Date();
-    const tomorrow = new Date(now);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    tomorrow.setHours(10, 0, 0, 0);
-
-    // An order placed late at night is quoted for the next day. Calling that
-    // "Today by 10am" would be a promise the courier never made.
-    expect(describeArrival(tomorrow)).toMatch(/^Tomorrow by /);
+    /*
+     * 16 Oct, 02:00 IST - and still 15 Oct in UTC, which is the whole point.
+     * The old code read the UTC date and would have called this "Today": an
+     * order quoted for the small hours of the next day, promised as tonight.
+     */
+    expect(describeArrival(new Date('2026-10-15T20:30:00Z'))).toMatch(/^Tomorrow by 02:00\s*am$/i);
   });
 
   it('names the date when it is further out', () => {
-    const text = describeArrival(hoursFromNow(24 * 4));
+    const text = describeArrival(new Date('2026-10-19T06:00:00Z')); // 19 Oct, 11:30 IST
 
-    expect(text).toMatch(/^By /);
+    expect(text).toMatch(/^By 19 Oct, /);
     expect(text).not.toMatch(/Today|Tomorrow/);
   });
 
@@ -290,42 +316,11 @@ describe('what the customer is told about timing', () => {
     expect(describeArrival(null)).toBe('Today');
   });
 
-  /*
-   * THE BOX RUNS UTC AND THE CUSTOMER LIVES IN JAIPUR (15 Oct 2026)
-   *
-   * Rajat, on seeing a same-day quote: "borzo ka timing galat aata hai, am pm
-   * ka kuch pata nahi - raat ko agar same day delivery hai to am kaise aayega."
-   * He was right, and it was not Borzo. The live container has no TZ set
-   * (`Intl...resolvedOptions().timeZone` → 'UTC'), and this function formatted
-   * with no `timeZone` of its own, so every same-day promise was shown 5h30m
-   * early - a real quote of 04:02 am IST was printed to the customer as
-   * "10:32 pm". The day was decided in UTC too, so between midnight and
-   * 05:30 IST "Today" and "Tomorrow" were a day out as well.
-   *
-   * The times below are chosen so UTC and IST disagree about the DATE, which
-   * is the half of the bug that a relative-time test can never see.
-   */
-  it('speaks IST, not the server\'s UTC', () => {
-    /*
-     * `TZ=UTC` is the point of the test, not scenery: this Mac runs
-     * Asia/Calcutta, so an unzoned format is accidentally right here and the
-     * assertion would pass while production stayed wrong. The box is UTC, so
-     * the test is UTC.
-     */
-    const tz = process.env.TZ;
-    process.env.TZ = 'UTC';
-    vi.useFakeTimers();
-    try {
-      vi.setSystemTime(new Date('2026-10-14T20:00:00Z')); // 15 Oct, 01:30 IST
-      // Borzo's answer: 15 Oct 06:30 IST. In UTC it is a different date.
-      expect(describeArrival(new Date('2026-10-15T01:00:00Z'))).toMatch(/^Today by 06:30\s*am$/i);
-      // And the next IST day is Tomorrow, not "By 16 Oct".
-      expect(describeArrival(new Date('2026-10-16T04:30:00Z'))).toMatch(/^Tomorrow by 10:00\s*am$/i);
-    } finally {
-      vi.useRealTimers();
-      if (tz === undefined) delete process.env.TZ;
-      else process.env.TZ = tz;
-    }
+  it('reads a real production quote the way Jaipur reads it', () => {
+    vi.setSystemTime(new Date('2026-10-14T20:00:00Z')); // 15 Oct, 01:30 IST
+    // The quote actually taken from the live box: arrival 15 Oct 04:02 IST.
+    // Unzoned, this was shown as "10:32 pm" on the previous UTC day.
+    expect(describeArrival(new Date('2026-10-14T22:32:35Z'))).toMatch(/^Today by 04:02\s*am$/i);
   });
 });
 
