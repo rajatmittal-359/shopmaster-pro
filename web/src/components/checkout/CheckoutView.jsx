@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { beginCheckout, purchase } from '@/lib/analytics';
 import Link from 'next/link';
+import { POLICY } from '@/config/policy';
 import { useRouter } from 'next/navigation';
 import { authedFetch } from '@/lib/client';
 import { apiBase } from '@/lib/api';
@@ -382,7 +383,7 @@ export default function CheckoutView() {
             {': '}
             {new Set(totals.items.filter((i) => i.returnMode).map((i) => i.returnMode)).size === 1
               ? `${totals.items.find((i) => i.returnMode).returnLabel}, counted from delivery.`
-              : `7-day refund or exchange from delivery, except ${totals.items
+              : `${POLICY.returnDays}-day refund or exchange from delivery, except ${totals.items
                   .filter((i) => i.returnMode && i.returnMode !== 'R')
                   .map((i) => `${i.name} - ${String(i.returnLabel || '').toLowerCase()}`)
                   .join('; ')}.`}

@@ -25,6 +25,8 @@
  */
 
 /** Cloudinary reads `/` and `,` as its own syntax; text must hide them twice. */
+import { POLICY } from '@/config/policy';
+
 const esc = (s) =>
   // The slash and comma are turned into their escapes FIRST, then the whole
   // string is encoded - so `%2F` becomes `%252F`, which is what Cloudinary
@@ -150,7 +152,7 @@ ${rs}
 ` +
       `Order: shopmasterpro.in${shopPath} (link in bio)
 ` +
-      `Delivered across India · 7-day returns
+      `Delivered across India · ${POLICY.returnDays}-day returns
 
 ${tags}`,
   };

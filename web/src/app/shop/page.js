@@ -1,6 +1,9 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getProducts, getFilters, getCategories } from '@/lib/api';
+// The return window comes from POLICY, never typed again: this string is read
+// by Google, and a number that drifts from the policy page is misrepresentation.
+import { POLICY } from '@/config/policy';
 import TrackSearch from '@/components/analytics/TrackSearch';
 import { serialiseJsonLd } from '@/lib/jsonLd';
 import { shopHref } from '@/lib/shopUrl';
@@ -77,8 +80,8 @@ export async function generateMetadata({ searchParams }) {
   return {
     title,
     description: category
-      ? `${category.name} from sellers on ShopMaster Pro, Jaipur. Delivered across India with 7-day returns.`
-      : 'Jewellery, clothing, home and more from independent sellers in India. Delivered across India with 7-day returns.',
+      ? `${category.name} from sellers on ShopMaster Pro, Jaipur. Delivered across India with ${POLICY.returnDays}-day returns.`
+      : `Jewellery, clothing, home and more from independent sellers in India. Delivered across India with ${POLICY.returnDays}-day returns.`,
     alternates: { canonical: shopHref({ category: params.category, page: params.page }) },
     robots: isFiltered(params) || params.search ? { index: false, follow: true } : undefined,
   };
