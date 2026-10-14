@@ -39,7 +39,17 @@ const LITE_MODEL = process.env.GEMINI_LITE_MODEL || 'gemini-3.5-flash-lite';
  * red line in the gateway log per request (15 Sep 2026: 51 of 83).
  */
 let flashQuotaUntil = 0;
-const quotaOut = (m) => m === DEFAULT_MODEL && Date.now() < flashQuotaUntil;
+/*
+ * A 503 is not a daily quota, so it is remembered for two minutes rather than
+ * ten - but it IS remembered, which this file argued against once and was
+ * wrong about. Measured on the live box on 15 Oct 2026, while flash had been
+ * answering 503 for hours: the full ladder took 23.3 s and a direct call to
+ * flash-lite took 0.64 s. Every seller was paying twenty-two seconds for the
+ * privilege of asking a model that was down. Two minutes is short enough to
+ * notice it come back and long enough that nobody waits twice.
+ */
+let flashBusyUntil = 0;
+const quotaOut = (m) => m === DEFAULT_MODEL && Date.now() < Math.max(flashQuotaUntil, flashBusyUntil);
 
 const { GEMINI_MODELS: API } = require('./ai/endpoints');
 
@@ -285,9 +295,12 @@ const generate = async (prompt, opts = {}) => {
        *   second provider would refuse it too.
        */
       const modelIsOut = response.status === 429 || RETRYABLE.has(response.status);
-      // Only a quota is worth REMEMBERING. A 503 is this minute's weather, and
-      // skipping flash for ten minutes over it would throw away the better model.
-      if (response.status === 429 && model === DEFAULT_MODEL) flashQuotaUntil = Date.now() + 10 * 60 * 1000;
+      // Both are worth remembering, for different lengths: a quota lasts the
+      // day, a load spike passes. See the two timestamps at the top.
+      if (model === DEFAULT_MODEL && modelIsOut) {
+        if (response.status === 429) flashQuotaUntil = Date.now() + 10 * 60 * 1000;
+        else flashBusyUntil = Date.now() + 2 * 60 * 1000;
+      }
       // Before leaving Google: flash-lite has its own free quota (15 Sep 2026:
       // flash 429 all day at "limit: 20", lite answered in 0.8 s) and takes the
       // same schema, image and system prompt - so it goes first, nano after.

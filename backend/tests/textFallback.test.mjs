@@ -195,6 +195,35 @@ describe('a busy model is not a dead end', () => {
     }
   });
 
+  /*
+   * Measured on the live box, 15 Oct 2026, while flash had been answering 503
+   * for hours: the full ladder took 23.3 s and a direct call to flash-lite took
+   * 0.64 s. The 22 seconds in between were spent re-asking a model that was
+   * down, on EVERY request, because only a 429 was remembered. The first
+   * version of this file argued a 503 was "this minute's weather" and should
+   * not be memoised; a 22-second wait per seller is too high a price for that.
+   * Two minutes is short enough to notice the model coming back.
+   */
+  it('remembers a busy flash for the next request instead of re-asking it', async () => {
+    const { generate } = require('../utils/gemini');
+    const urls = [];
+    globalThis.fetch = vi.fn(async (url) => {
+      urls.push(String(url));
+      if (String(url).includes('flash-lite')) return jsonResponse(200, { candidates: [{ content: { parts: [{ text: 'ok' }] } }] });
+      return jsonResponse(503, { error: { status: 'UNAVAILABLE', message: 'high demand' } });
+    });
+
+    await generate('One', { attempts: 1 });
+    const afterFirst = urls.length;
+    const second = await generate('Two', { attempts: 1 });
+
+    expect(second.ok).toBe(true);
+    expect(second.model).toMatch(/flash-lite/);
+    // The second call must go straight to lite: one request, not two.
+    expect(urls.slice(afterFirst)).toHaveLength(1);
+    expect(urls[afterFirst]).toMatch(/flash-lite/);
+  });
+
   it('still fails fast on a 400 - a second provider would refuse it too', async () => {
     const { generate } = require('../utils/gemini');
     globalThis.fetch = vi.fn(async () => jsonResponse(400, { error: { message: 'bad request' } }));
