@@ -1126,6 +1126,13 @@ Assistant gaps found in the same pass (problem taxonomy in the chat of 13 Sep): 
   publish no address at all - not because a flat is lesser, but because sending
   strangers to a door that does not expect them is a harm.
 
+  **The point itself is stored either way** (Rajat, same night). It is what
+  decides the same-day radius, which courier is asked, and how shops are ranked
+  by distance - none of which a customer ever sees. Only the PUBLISHING is
+  gated. So nobody should ever read this entry and go clear
+  `pickupAddress.location` for an online-only seller: that would quietly break
+  same-day for them.
+
   Today we cannot tell the two apart, so `shopSchema` emits no `geo` for anyone
   and both are treated as the cautious case. Needs: one field on Seller, one
   question in the /sell form, and the `geo` emission gated on it AND on the
