@@ -228,6 +228,27 @@ const sellerSchema = new mongoose.Schema(
       },
       phone: { type: String, trim: true },
       shiprocketNickname: { type: String, trim: true },
+      /*
+       * Where the shop actually stands (15 Oct 2026). GeoJSON, so Mongo can
+       * answer "near me" with a 2dsphere index instead of us comparing PIN
+       * prefixes - which is all this app has ever had, and which cannot rank
+       * two shops in the same city by distance.
+       *
+       * LONGITUDE FIRST. Every human says "lat, long" and GeoJSON wants the
+       * reverse; `utils/geo.toPoint` does the swap so nobody does it by hand.
+       *
+       * Optional on purpose. It is filled when a seller pastes the Maps link
+       * of their own shop (utils/geo.coordsFromMapsUrl) - the only free source
+       * that is actually accurate. A free PIN dataset was tried first and put
+       * every Jaipur PIN on one point 90 km away, and Google's own terms let a
+       * geocode be kept for just 30 days. A seller who has not pasted it keeps
+       * working exactly as before; nothing reads this but the features that
+       * need it.
+       */
+      location: {
+        type: { type: String, enum: ['Point'] },
+        coordinates: { type: [Number] },
+      },
     },
 
     /**
@@ -313,6 +334,15 @@ const sellerSchema = new mongoose.Schema(
 );
 
 
+
+/*
+ * The index that makes "which shops are near me" a query instead of a scan.
+ * A 2dsphere only indexes documents that actually carry the field, so the
+ * sellers who have not pasted a Maps link cost nothing and are simply absent
+ * from the answer - which is correct: we do not know where they are, so we
+ * must not place them.
+ */
+sellerSchema.index({ 'pickupAddress.location': '2dsphere' });
 
 const Seller = mongoose.model('Seller', sellerSchema);
 
