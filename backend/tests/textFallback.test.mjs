@@ -137,3 +137,98 @@ describe('the chip names the road', () => {
     expect(urls.some((u) => u.includes('pollinations'))).toBe(false);
   });
 });
+
+/*
+ * 14 Oct 2026. The seller form went dead for a day and the reason was not
+ * quota: `gemini-3.5-flash` answered 503 "experiencing high demand" for hours
+ * while `flash-lite` served every request in under a second. The code could
+ * not reach it - leaving Google and trying lite were BOTH gated on 429 alone,
+ * so a 503 was retried four times and then given up on.
+ *
+ * A 503 is the one failure another model is most likely to answer: it is that
+ * model's load, not our prompt. A 4xx still fails fast, because a second
+ * provider would refuse the same bad request.
+ */
+describe('a busy model is not a dead end', () => {
+  /*
+   * utils/gemini remembers a 429 for ten minutes in module state, and the 429
+   * tests above set it. Without a fresh copy these tests would start at
+   * flash-lite and pass without ever walking the 503 road they exist to prove.
+   */
+  beforeEach(() => {
+    delete require.cache[require.resolve('../utils/gemini')];
+  });
+
+  it('asks flash first, then flash-lite, when flash says 503', async () => {
+    const { generate } = require('../utils/gemini');
+    const urls = [];
+    globalThis.fetch = vi.fn(async (url) => {
+      urls.push(String(url));
+      if (String(url).includes('flash-lite')) return jsonResponse(200, { candidates: [{ content: { parts: [{ text: '{"name":"from lite"}' }] } }] });
+      return jsonResponse(503, { error: { status: 'UNAVAILABLE', message: 'high demand' } });
+    });
+    const out = await generate('Write it', { responseSchema: { type: 'object' }, attempts: 1 });
+    expect(out.ok).toBe(true);
+    expect(out.text).toContain('from lite');
+    expect(out.model).toMatch(/flash-lite/);
+    // The order matters: a pass must mean the 503 road was walked, not that an
+    // earlier test in this file left flash marked out of quota.
+    expect(urls[0]).not.toMatch(/flash-lite/);
+    expect(urls[1]).toMatch(/flash-lite/);
+  });
+
+  it('goes on to the next provider when both Gemini models say 503', async () => {
+    const { generate } = require('../utils/gemini');
+    process.env.GROQ_API_KEY = 'g';
+    const urls = [];
+    globalThis.fetch = vi.fn(async (url) => {
+      urls.push(String(url));
+      if (String(url).includes('generativelanguage')) return jsonResponse(503, { error: { status: 'UNAVAILABLE', message: 'high demand' } });
+      return { ...jsonResponse(200, { choices: [{ message: { content: '{"name":"from groq"}' } }] }), headers: { get: () => null } };
+    });
+    try {
+      const out = await generate('Write it', { responseSchema: { type: 'object' }, attempts: 1 });
+      expect(out.ok).toBe(true);
+      expect(out.provider).toBe('groq');
+    } finally {
+      delete process.env.GROQ_API_KEY;
+    }
+  });
+
+  it('still fails fast on a 400 - a second provider would refuse it too', async () => {
+    const { generate } = require('../utils/gemini');
+    globalThis.fetch = vi.fn(async () => jsonResponse(400, { error: { message: 'bad request' } }));
+    const out = await generate('Write it', { attempts: 1 });
+    expect(out.ok).toBe(false);
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+  });
+});
+
+/*
+ * The same day, the last road was lying. Pollinations' Pollen ran out and the
+ * endpoint kept answering 200 - with the billing notice as the message
+ * content. `response.ok` was true and the text was not empty, so it was
+ * handed back as a finished product description. A caller wanting JSON then
+ * failed to parse it and showed the seller "fail"; a caller wanting prose
+ * would have printed "top up your account" onto a product page.
+ */
+describe('an out-of-credits answer is a failure, not a draft', () => {
+  const BILLING = "The account behind this API key doesn't have enough credits. Please [top up](https://enter.pollinations.ai/top-up) or complete a quest, then try again.";
+
+  it('refuses the billing notice instead of returning it as text', async () => {
+    const { pollinationsText } = require('../utils/ai/textFallback');
+    globalThis.fetch = vi.fn(async () => jsonResponse(200, { choices: [{ message: { content: BILLING } }] }));
+    const out = await pollinationsText('Describe it');
+    expect(out.ok).toBe(false);
+    expect(out.reason).toMatch(/credit/i);
+  });
+
+  it('still returns a real draft that happens to mention credit', async () => {
+    const { pollinationsText } = require('../utils/ai/textFallback');
+    const draft = 'A credit-card sized pendant box, gift wrapped, ships across India.';
+    globalThis.fetch = vi.fn(async () => jsonResponse(200, { choices: [{ message: { content: draft } }] }));
+    const out = await pollinationsText('Describe it');
+    expect(out.ok).toBe(true);
+    expect(out.text).toBe(draft);
+  });
+});

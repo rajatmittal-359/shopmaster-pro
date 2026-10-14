@@ -36,15 +36,41 @@ const PROVIDERS = {
     balanceApi: true,
     envKeys: ['POLLINATIONS_API_KEY'],
   },
+  /*
+   * 14 Oct 2026: there is no free allowance here any more, and there may
+   * never have been one. Hugging Face's own pricing table reads "Free Users -
+   * Monthly Credits: None"; the account's billing page reads "Credits $0.00";
+   * and the router answers 402 "You have no remaining credits". The 0.1 that
+   * used to sit in `limit` was a guess that aged into a lie on the admin's
+   * screen. Zero is the honest number, and the ladder now steps past this to
+   * the free Space below.
+   */
   huggingface: {
     label: 'Hugging Face (Inference Providers)',
     unit: 'usd',
     period: 'month',
-    limit: 0.1,
-    resetNote: 'Monthly, on the billing period date',
+    limit: 0,
+    resetNote: 'No free allowance on a free account - pre-paid credits or PRO ($2/month) only',
     reliability: 3,
     balanceApi: false,
     envKeys: ['HF_TOKEN'],
+  },
+  /*
+   * The same models, free, on ZeroGPU Spaces (14 Oct 2026). Measured, not
+   * assumed: 5 minutes of GPU a day signed in, 2 anonymous, and the official
+   * Kontext Space finished an edit of a real product photo in one go.
+   * Reliability is the worst of any provider here on purpose - a Space is
+   * somebody else's demo and can be paused without notice.
+   */
+  hfspace: {
+    label: 'Hugging Face (ZeroGPU Spaces)',
+    unit: 'minutes',
+    period: 'day',
+    limit: 5,
+    resetNote: '24 hours after the first use of the day; 2 minutes without a token',
+    reliability: 5,
+    balanceApi: false,
+    envKeys: [],
   },
   nvidia: {
     label: 'NVIDIA NIM',
@@ -165,7 +191,18 @@ const MODELS = [
     can: ['edit'],
     cost: 0.03,
     quality: 'best',
-    note: 'The most faithful edit seen in testing. About three a month on the free credit.',
+    note: 'The most faithful edit seen in testing. Needs pre-paid credit or PRO - a free account has none.',
+  },
+  // --- Hugging Face (the same model, free, on a ZeroGPU Space) -----------
+  {
+    id: 'hfspace-flux-kontext-dev',
+    provider: 'hfspace',
+    label: 'FLUX.1 Kontext dev (Space)',
+    remote: 'black-forest-labs/FLUX.1-Kontext-Dev',
+    can: ['edit'],
+    cost: 0,
+    quality: 'best',
+    note: "The same Kontext model, free on the Space's shared GPU. One edit measured at half a minute of the day's five, so about ten a day. Queues when the Space is busy.",
   },
   // --- NVIDIA -----------------------------------------------------------
   {

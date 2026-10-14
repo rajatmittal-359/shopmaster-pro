@@ -33,6 +33,7 @@ const deps = (over = {}) => ({
   pollinations: ok('pollinations'),
   nvidia: ok('nvidia'),
   huggingface: ok('huggingface'),
+  huggingfaceSpace: ok('hfspace'),
   fetchReference: async () => PNG,
   book: noBooks,
   ...over,
@@ -46,14 +47,34 @@ describe('the premium edit chain', () => {
     expect(made.modelLabel).toBe('FLUX.1 Kontext dev');
   });
 
+  /*
+   * 14 Oct 2026: the routed Kontext began answering 402 "no remaining
+   * credits" - the free HF account gets none - and the button that promised
+   * the best edit did nothing. The same model runs free on a ZeroGPU Space,
+   * so that is now the rung immediately below: same model, no money.
+   */
+  it('falls to the free Kontext Space when the routed one has no credit left', async () => {
+    const made = await runImage(
+      { mode: 'clean', tier: 'premium', imageUrl: CLOUDINARY },
+      deps({ huggingface: refuse('huggingface', 'quota') })
+    );
+    expect(made.provider).toBe('hfspace');
+    expect(made.model).toBe('hfspace-flux-kontext-dev');
+    expect(made.attempts.map((a) => a.ok)).toEqual([false, true]);
+  });
+
   it('falls to gpt-image-2, then Cloudflare klein-9b, as each says quota', async () => {
     const made = await runImage(
       { mode: 'clean', tier: 'premium', imageUrl: CLOUDINARY },
-      deps({ huggingface: refuse('huggingface', 'quota'), pollinations: refuse('pollinations', 'quota') })
+      deps({
+        huggingface: refuse('huggingface', 'quota'),
+        huggingfaceSpace: refuse('hfspace', 'quota'),
+        pollinations: refuse('pollinations', 'quota'),
+      })
     );
     expect(made.provider).toBe('cloudflare');
     expect(made.model).toBe('cf-flux-2-klein-9b');
-    expect(made.attempts.map((a) => a.ok)).toEqual([false, false, true]);
+    expect(made.attempts.map((a) => a.ok)).toEqual([false, false, false, true]);
   });
 
   it('keeps going through klein-4b to kontext-pro when Cloudflare neurons are spent too', async () => {
@@ -62,6 +83,7 @@ describe('the premium edit chain', () => {
       { mode: 'clean', tier: 'premium', imageUrl: CLOUDINARY },
       deps({
         huggingface: refuse('huggingface', 'quota'),
+        huggingfaceSpace: refuse('hfspace', 'quota'),
         cloudflare: refuse('cloudflare', 'quota'),
         pollinations: async (remote) => {
           pollinationsCalls += 1;
@@ -72,7 +94,7 @@ describe('the premium edit chain', () => {
     );
     expect(made.model).toBe('pl-flux-kontext-pro');
     expect(pollinationsCalls).toBe(2);
-    expect(made.attempts).toHaveLength(5);
+    expect(made.attempts).toHaveLength(6);
   });
 
   it('records the cost of a success and the exhaustion of a refusal', async () => {
@@ -81,6 +103,7 @@ describe('the premium edit chain', () => {
       { mode: 'clean', tier: 'premium', imageUrl: CLOUDINARY },
       deps({
         huggingface: refuse('huggingface', 'quota'),
+        huggingfaceSpace: refuse('hfspace', 'quota'),
         book: {
           success: async (step) => ledger.push(['ok', step.id, step.cost]),
           exhausted: async (step) => ledger.push(['out', step.id]),
@@ -89,6 +112,7 @@ describe('the premium edit chain', () => {
     );
     expect(ledger).toEqual([
       ['out', 'hf-flux-kontext-dev'],
+      ['out', 'hfspace-flux-kontext-dev'],
       ['ok', 'pl-gpt-image-2', 0.034],
     ]);
   });

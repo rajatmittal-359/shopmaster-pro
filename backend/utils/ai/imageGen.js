@@ -47,7 +47,7 @@
  *   as-is; if it is too large the provider says 'input' and the next one gets
  *   a turn.
  */
-const { ProviderError, cloudflare, pollinations, nvidia, huggingface } = require('./providers');
+const { ProviderError, cloudflare, pollinations, nvidia, huggingface, huggingfaceSpace } = require('./providers');
 const { byId, MODELS } = require('./catalog');
 const AiProviderState = require('../../models/AiProviderState');
 const { periodKeyFor } = require('./catalog');
@@ -139,7 +139,13 @@ const MAX_WISH = 400;
  */
 const CHAINS = {
   edit: {
-    premium: ['hf-flux-kontext-dev', 'pl-gpt-image-2', 'cf-flux-2-klein-9b', 'cf-flux-2-klein-4b', 'pl-flux-kontext-pro'],
+    /*
+     * The Space sits straight behind the routed Kontext (14 Oct 2026): same
+     * model, same prompt, no money. When the HF credit is spent - and it was,
+     * 402 "no remaining credits", which is how the button came to be dead -
+     * the next rung is the free one rather than a different model.
+     */
+    premium: ['hf-flux-kontext-dev', 'hfspace-flux-kontext-dev', 'pl-gpt-image-2', 'cf-flux-2-klein-9b', 'cf-flux-2-klein-4b', 'pl-flux-kontext-pro'],
     standard: ['cf-flux-2-klein-4b', 'pl-flux-kontext-pro'],
     fast: ['cf-flux-2-klein-4b', 'pl-flux-kontext-pro'],
   },
@@ -187,7 +193,7 @@ const fetchReference = async (url) => {
  */
 async function runImage(
   { mode, tier = 'standard', modelId, prompt, imageUrl, productName = 'product', facts = {}, exclude = [], seed },
-  deps = { cloudflare, pollinations, nvidia, huggingface, fetchReference, book: bookkeeping }
+  deps = { cloudflare, pollinations, nvidia, huggingface, huggingfaceSpace, fetchReference, book: bookkeeping }
 ) {
   if (!MODES.includes(mode)) throw new ProviderError('imageGen', 'input', `unknown mode ${mode}`);
   if (!TIERS.includes(tier)) throw new ProviderError('imageGen', 'input', `unknown tier ${tier}`);
@@ -241,6 +247,9 @@ async function runImage(
       } else if (step.provider === 'huggingface') {
         if (!referenceBytes) referenceBytes = await deps.fetchReference(imageUrl);
         result = await deps.huggingface(step.remote, { prompt: finalPrompt, imageBytes: referenceBytes, seed });
+      } else if (step.provider === 'hfspace') {
+        if (!referenceBytes) referenceBytes = await deps.fetchReference(imageUrl);
+        result = await deps.huggingfaceSpace(step.remote, { prompt: finalPrompt, imageBytes: referenceBytes, seed });
       } else {
         result = await deps.nvidia({ prompt: finalPrompt, seed: seed ?? 0 });
       }

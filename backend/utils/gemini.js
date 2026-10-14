@@ -272,17 +272,30 @@ const generate = async (prompt, opts = {}) => {
         status: response.status,
         reason: `Gemini said ${response.status}: ${body.slice(0, 200)}`,
       };
-      // Out of quota for the day is the one failure a second provider can
-      // answer; a 400 is our prompt's fault and would fail there too.
+      /*
+       * THIS MODEL IS OUT; ANOTHER MAY ANSWER (14 Oct 2026)
+       *   Two failures mean that, and they are not the same failure:
+       *     429  quota - gone for the day, the moment it is said
+       *     5xx  load  - gone for now, once the retries above are spent
+       *   Both were once treated as 429-only, and the seller form died for a
+       *   day because `gemini-3.5-flash` answered 503 "experiencing high
+       *   demand" for hours while flash-lite served every request in under a
+       *   second - and neither lite nor the next provider was ever asked.
+       *   A 4xx is still the end of the road: it is our prompt's fault and a
+       *   second provider would refuse it too.
+       */
+      const modelIsOut = response.status === 429 || RETRYABLE.has(response.status);
+      // Only a quota is worth REMEMBERING. A 503 is this minute's weather, and
+      // skipping flash for ten minutes over it would throw away the better model.
+      if (response.status === 429 && model === DEFAULT_MODEL) flashQuotaUntil = Date.now() + 10 * 60 * 1000;
       // Before leaving Google: flash-lite has its own free quota (15 Sep 2026:
       // flash 429 all day at "limit: 20", lite answered in 0.8 s) and takes the
       // same schema, image and system prompt - so it goes first, nano after.
-      if (response.status === 429 && model === DEFAULT_MODEL) flashQuotaUntil = Date.now() + 10 * 60 * 1000;
-      if (response.status === 429 && model !== LITE_MODEL && !opts.noLite) {
+      if (modelIsOut && model !== LITE_MODEL && !opts.noLite) {
         const lite = await generate(prompt, { ...opts, model: LITE_MODEL, attempts: 2, noLite: true });
         if (lite.ok) return lite;
       }
-      return response.status === 429 ? fallbackOr(failure, prompt, opts) : failure;
+      return modelIsOut ? fallbackOr(failure, prompt, opts) : failure;
     }
 
     // 1.5s, 3s, 4.5s. Long enough for a load spike to pass, short enough that

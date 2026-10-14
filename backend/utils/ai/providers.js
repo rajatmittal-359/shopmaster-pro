@@ -262,5 +262,93 @@ async function huggingface(model, { prompt, imageBytes, seed }) {
   return { buffer: Buffer.from(await img.arrayBuffer()), mime: (img.headers.get('content-type') || 'image/jpeg').split(';')[0] };
 }
 
-module.exports = { ProviderError, cloudflare, pollinations, nvidia, huggingface, CF_MODELS, POLLINATIONS_MODELS };
+/**
+ * The same Kontext model, free, through a public Space (14 Oct 2026).
+ *
+ * WHY THIS EXISTS
+ *   `huggingface()` above goes through router.huggingface.co, which is
+ *   pay-as-you-go. On 14 Oct 2026 it began answering 402 "You have no
+ *   remaining credits" - the free account's allowance is None, so the one
+ *   button labelled "most faithful edit" was dead. The SAME model runs on
+ *   black-forest-labs/FLUX.1-Kontext-Dev, a ZeroGPU Space, and ZeroGPU is
+ *   free: 5 minutes of GPU a day on a signed-in account (2 anonymous), which
+ *   at ~20 s an edit is a dozen or two a day rather than three a month.
+ *
+ * THE PROTOCOL, AS MEASURED
+ *   Three calls, not one:
+ *     1. POST /gradio_api/upload   multipart -> ["/tmp/gradio/<hash>/name"]
+ *     2. POST /gradio_api/call/infer  {data:[file, prompt, seed, randomize,
+ *                                      guidance, steps]} -> {event_id}
+ *     3. GET  /gradio_api/call/infer/<event_id>  an SSE stream of heartbeats
+ *        ending in `event: complete` with the result's url.
+ *   Passing the photo as a URL inside the FileData instead of uploading it
+ *   was tried first and the job came back `event: error, data: null`. The
+ *   upload is not optional.
+ *
+ * WHAT IT COSTS US
+ *   Nothing in money. It costs reliability: a Space can be paused by its
+ *   owner without notice (half the Kontext Spaces listed that day were
+ *   "Paused" or "Runtime error"), so this belongs in a ladder with another
+ *   provider behind it, never alone.
+ */
+const SPACE_TIMEOUT_MS = 180000;
+
+/** `owner/Space.Name` -> the host it is served on. */
+const spaceHost = (space) => `https://${String(space).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}.hf.space`;
+
+async function huggingfaceSpace(space, { prompt, imageBytes, seed }) {
+  const key = process.env.HF_TOKEN;
+  if (!imageBytes) throw new ProviderError('hfspace', 'input', 'Kontext needs a reference image');
+  const host = spaceHost(space);
+  // The token is optional - without it the Space still answers, on the
+  // anonymous 2-minute daily quota instead of the account's 5.
+  const auth = key ? { Authorization: `Bearer ${key}` } : {};
+
+  const form = new FormData();
+  form.append('files', new Blob([imageBytes]), 'photo.jpg');
+  const up = await fetch(`${host}/gradio_api/upload`, { method: 'POST', headers: auth, body: form });
+  if (!up.ok) {
+    const body = await readError(up);
+    throw new ProviderError('hfspace', classify(up.status, body), `upload ${up.status} ${body}`, up.status);
+  }
+  const path = (await up.json().catch(() => null))?.[0];
+  if (!path) throw new ProviderError('hfspace', 'upstream', 'the Space kept no copy of the photo');
+
+  const started = await fetch(`${host}/gradio_api/call/infer`, {
+    method: 'POST',
+    headers: { ...auth, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      data: [{ path, meta: { _type: 'gradio.FileData' } }, prompt, seed ?? 0, seed == null, 2.5, 28],
+    }),
+  });
+  if (!started.ok) {
+    const body = await readError(started);
+    throw new ProviderError('hfspace', classify(started.status, body), `${started.status} ${body}`, started.status);
+  }
+  const eventId = (await started.json().catch(() => null))?.event_id;
+  if (!eventId) throw new ProviderError('hfspace', 'upstream', 'the Space did not take the job');
+
+  const stop = AbortSignal.timeout(SPACE_TIMEOUT_MS);
+  const stream = await fetch(`${host}/gradio_api/call/infer/${eventId}`, { headers: auth, signal: stop });
+  const body = await stream.text();
+  if (!/event:\s*complete/.test(body)) {
+    // A queue that gives up says `event: error, data: null` and nothing more;
+    // the likeliest reason by far is the day's GPU minutes being spent.
+    throw new ProviderError('hfspace', /error/.test(body) ? 'quota' : 'upstream', `the Space did not finish: ${body.slice(0, 120)}`);
+  }
+  const line = body.split('\n').reverse().find((l) => l.startsWith('data: ['));
+  let url;
+  try {
+    url = JSON.parse(line.slice('data: '.length))?.[0]?.url;
+  } catch {
+    throw new ProviderError('hfspace', 'upstream', 'could not read the result');
+  }
+  if (!url) throw new ProviderError('hfspace', 'upstream', 'no image in response');
+
+  const img = await fetch(url, { headers: auth });
+  if (!img.ok) throw new ProviderError('hfspace', 'upstream', `could not fetch result (${img.status})`);
+  return { buffer: Buffer.from(await img.arrayBuffer()), mime: (img.headers.get('content-type') || 'image/webp').split(';')[0] };
+}
+
+module.exports = { ProviderError, cloudflare, pollinations, nvidia, huggingface, huggingfaceSpace, spaceHost, CF_MODELS, POLLINATIONS_MODELS };
 

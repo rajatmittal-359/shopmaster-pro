@@ -1108,6 +1108,21 @@ Assistant gaps found in the same pass (problem taxonomy in the chat of 13 Sep): 
 
 ## 4. Ideas raised, not decided — do not start without a yes
 
+- **More Hugging Face Spaces, and PRO — researched 14 Oct 2026, answer is "not
+  yet" for all three.** The free ZeroGPU Space for Kontext is now in the ladder
+  (§2, same day) and that was the gap. What was looked at and left: a dedicated
+  **background-removal Space** (BRIA RMBG) and an **upscale Space**
+  (Real-ESRGAN) - both free, both tempting, but the live test showed Kontext
+  already puts a necklace on clean white from the prompt alone, so these are an
+  optimisation, not a hole; raise them only if real use shows Kontext queuing or
+  dragging. **PRO at $9/month** buys $2 of credits and 8× the GPU quota (40
+  min/day): the free 5 minutes is about ten edits a day, which is more than the
+  shop uses, so it fails the "paid only when free cannot" test. **Hosting our
+  own Space** (a free account may host 2) would cure the one real weakness -
+  somebody else's demo can be paused without notice, and half the Kontext Spaces
+  listed that day were - but it is a Python Space to build and keep alive, and
+  the ladder already covers a paused Space for nothing.
+
 - **LangChain / LangGraph — researched 3 Oct 2026, answer is "not yet", with the
   trigger written down so it is not researched twice.** Both hit v1.0 on 22 Oct
   2025. LangChain 1.0's headline is `create_agent` plus a **middleware** layer
@@ -1238,6 +1253,7 @@ records the same night.
 | L15 | Actions cron | One morning: low-stock 09:00 IST, growth note Monday 09:05, refunds job every 2 h - times right in IST | Claude reads the run log | ☐ |
 | L16 | Time | 1 April 2027: invoice numbers restart at 00001 under FY 27-28 | calendar | ☐ |
 | L17 | Backup | Restore the Sunday backup into a scratch database once, following the header steps | Rajat + Claude | ☐ |
+| L18 | HF ZeroGPU Space | One real "best quality" edit from the seller form, through the deployed code - the Space protocol was proven by hand on 14 Oct (upload → infer → SSE, half a minute of the day's five) but the app's own path has never run it | after this deploy | ☐ |
 
 ## 5. After cutover only
 

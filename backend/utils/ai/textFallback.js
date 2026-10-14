@@ -43,6 +43,22 @@ const pollinationsText = async (prompt, opts = {}) => {
   const data = await response.json().catch(() => null);
   const text = data?.choices?.[0]?.message?.content?.trim();
   if (!text) return { ok: false, reason: 'Pollinations returned nothing' };
+  /*
+   * AN EMPTY WALLET ANSWERS 200 (14 Oct 2026)
+   *   When the Pollen runs out this endpoint does not refuse. It returns a
+   *   normal completion whose CONTENT is the billing notice - "The account
+   *   behind this API key doesn't have enough credits. Please top up..." -
+   *   and the old code, seeing a 2xx and a non-empty string, handed that back
+   *   as a finished product description. Callers wanting JSON failed to parse
+   *   it and showed the seller "fail"; a caller wanting prose would have
+   *   printed a top-up notice onto a product page.
+   *
+   *   Matched narrowly, on the phrase and the word together, so a real draft
+   *   that happens to say "credit-card sized" still gets through.
+   */
+  if (/(no remaining|do(?:es)?n'?t have enough|insufficient)\s+credits/i.test(text)) {
+    return { ok: false, reason: 'Pollinations has no credits left on this key' };
+  }
   return { ok: true, text, provider: 'pollinations', model: MODEL };
 };
 
