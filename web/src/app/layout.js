@@ -99,6 +99,24 @@ export default function RootLayout({ children }) {
             PROD DATA · READ-ONLY · local server
           </div>
         )}
+        {/*
+          * Bypass blocks (WCAG 2.4.1). Someone on a keyboard or a screen reader
+          * starts at the top of the document, and the header carries the nav,
+          * the search, the bell and the cart - a dozen stops before the first
+          * product on every single page. This link is the standard escape: it
+          * is invisible until it is focused, and it is the first thing Tab
+          * reaches, so the first press of Tab offers the way past.
+          *
+          * It is the one accessibility gap an audit of this app found on
+          * 15 Oct 2026; alt text, icon-button labels, the lang attribute and
+          * focus-visible styles were already in place.
+          */}
+        <a
+          href="#main"
+          className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-background focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-foreground focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-ring"
+        >
+          Skip to main content
+        </a>
         <ThemeProvider>
           <ReauthProvider>
           {/* The storefront's chrome, on storefront routes only. The seller and
@@ -112,7 +130,7 @@ export default function RootLayout({ children }) {
           </ShopChrome>
           {/* flex-1 so a short page still pushes the footer to the bottom. */}
           {/* pb on phones so the bottom tab bar never covers the last row. */}
-          <main className="flex-1 pb-16 md:pb-0">{children}</main>
+          <main id="main" className="flex-1 pb-16 md:pb-0">{children}</main>
           <ShopChrome>
             <Footer />
             <BottomNav />

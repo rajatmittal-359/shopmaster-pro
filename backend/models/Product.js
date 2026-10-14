@@ -569,6 +569,30 @@ productSchema.index({ name: 'text', description: 'text' });
 // Optional: sort by rating use case
 productSchema.index({ avgRating: -1 });
 
+/*
+ * THE TWO THE STOREFRONT ACTUALLY RUNS (15 Oct 2026)
+ *
+ *   Every list a shopper sees is the same filter - live, not deleted - with
+ *   one of two orders: newest, or best-selling. `explain()` against production
+ *   showed both planning as SORT -> FETCH -> IXSCAN: the index found the rows,
+ *   then Mongo sorted them in memory.
+ *
+ *   At 56 products that costs nothing and is why nobody noticed. The stage
+ *   itself is the problem, not today's timing: a blocking sort buffers every
+ *   matching document before it can return the first twenty-four, and Mongo
+ *   refuses the query once that buffer passes 32 MB. So this is a cliff with
+ *   no warning slope - it works perfectly until the catalogue is big enough,
+ *   and then the shop's main page starts failing outright.
+ *
+ *   Equality first, then the sort key (the ESR order), so the index can be
+ *   walked in the order the page wants and the SORT stage disappears.
+ *   `isDeleted` is queried as `$ne: true`, which an index cannot narrow - it
+ *   still earns its place here by keeping the rows in sorted order, which is
+ *   the expensive half.
+ */
+productSchema.index({ isActive: 1, isDeleted: 1, createdAt: -1 });
+productSchema.index({ isActive: 1, isDeleted: 1, soldCount: -1 });
+
 productSchema.statics.slugify = slugify;
 
 /** Build the URL slug: name plus a short id suffix that guarantees uniqueness. */
