@@ -584,14 +584,16 @@ productSchema.index({ avgRating: -1 });
  *   no warning slope - it works perfectly until the catalogue is big enough,
  *   and then the shop's main page starts failing outright.
  *
- *   Equality first, then the sort key (the ESR order), so the index can be
- *   walked in the order the page wants and the SORT stage disappears.
- *   `isDeleted` is queried as `$ne: true`, which an index cannot narrow - it
- *   still earns its place here by keeping the rows in sorted order, which is
- *   the expensive half.
+ *   ESR: Equality, then Sort, then Range. The first attempt put the fields in
+ *   the order the query reads - isActive, isDeleted, createdAt - and explain()
+ *   said the SORT was still there. `isDeleted` is matched with `$ne: true`,
+ *   which is a RANGE, and a range before the sort key stops the index being
+ *   walked in sorted order. Moving it after `createdAt` is what actually
+ *   removes the stage; the earlier version only cut the documents examined
+ *   from 54 to 24.
  */
-productSchema.index({ isActive: 1, isDeleted: 1, createdAt: -1 });
-productSchema.index({ isActive: 1, isDeleted: 1, soldCount: -1 });
+productSchema.index({ isActive: 1, createdAt: -1, isDeleted: 1 });
+productSchema.index({ isActive: 1, soldCount: -1, isDeleted: 1 });
 
 productSchema.statics.slugify = slugify;
 
