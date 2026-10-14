@@ -27,7 +27,7 @@ const { receiptVerdict, KIND_LABEL } = require('../returnPolicy');
  *   does not invent rules. Where evidence is missing on both sides it says
  *   so and recommends 'need_more' or the goodwill route, never a coin toss.
  */
-const when = (d) => (d ? new Date(d).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '-');
+const when = (d) => (d ? `${require('../ist').istDate(d)}, ${require('../ist').istTime(d)}` : '-');
 const money = (n) => `₹${Math.round(Number(n || 0)).toLocaleString('en-IN')}`;
 
 const SCHEMA = {

@@ -289,6 +289,44 @@ describe('what the customer is told about timing', () => {
   it('falls back to Today when the courier gave no time', () => {
     expect(describeArrival(null)).toBe('Today');
   });
+
+  /*
+   * THE BOX RUNS UTC AND THE CUSTOMER LIVES IN JAIPUR (15 Oct 2026)
+   *
+   * Rajat, on seeing a same-day quote: "borzo ka timing galat aata hai, am pm
+   * ka kuch pata nahi - raat ko agar same day delivery hai to am kaise aayega."
+   * He was right, and it was not Borzo. The live container has no TZ set
+   * (`Intl...resolvedOptions().timeZone` → 'UTC'), and this function formatted
+   * with no `timeZone` of its own, so every same-day promise was shown 5h30m
+   * early - a real quote of 04:02 am IST was printed to the customer as
+   * "10:32 pm". The day was decided in UTC too, so between midnight and
+   * 05:30 IST "Today" and "Tomorrow" were a day out as well.
+   *
+   * The times below are chosen so UTC and IST disagree about the DATE, which
+   * is the half of the bug that a relative-time test can never see.
+   */
+  it('speaks IST, not the server\'s UTC', () => {
+    /*
+     * `TZ=UTC` is the point of the test, not scenery: this Mac runs
+     * Asia/Calcutta, so an unzoned format is accidentally right here and the
+     * assertion would pass while production stayed wrong. The box is UTC, so
+     * the test is UTC.
+     */
+    const tz = process.env.TZ;
+    process.env.TZ = 'UTC';
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date('2026-10-14T20:00:00Z')); // 15 Oct, 01:30 IST
+      // Borzo's answer: 15 Oct 06:30 IST. In UTC it is a different date.
+      expect(describeArrival(new Date('2026-10-15T01:00:00Z'))).toMatch(/^Today by 06:30\s*am$/i);
+      // And the next IST day is Tomorrow, not "By 16 Oct".
+      expect(describeArrival(new Date('2026-10-16T04:30:00Z'))).toMatch(/^Tomorrow by 10:00\s*am$/i);
+    } finally {
+      vi.useRealTimers();
+      if (tz === undefined) delete process.env.TZ;
+      else process.env.TZ = tz;
+    }
+  });
 });
 
 /*

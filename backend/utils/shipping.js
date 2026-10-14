@@ -17,6 +17,7 @@
 const Seller = require('../models/Seller');
 const shiprocketService = require('./shiprocketService');
 const borzo = require('./borzo');
+const ist = require('./ist');
 // Called through the module object so tests can stand in for the admin's document.
 const settings = require('./liveSettings');
 const { effectivePrice } = require('./discount');
@@ -347,20 +348,16 @@ const calculateShipping = async (cartItems, address, isCOD) => {
 const describeArrival = (arrivalBy) => {
   if (!arrivalBy) return 'Today';
 
-  const time = arrivalBy.toLocaleTimeString('en-IN', {
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+  // Every string here is built in IST (utils/ist): the box runs UTC, and an
+  // unzoned format told the customer 10:32 pm for a 04:02 am arrival.
+  const time = ist.istTime(arrivalBy);
 
   const now = new Date();
-  const sameDate = arrivalBy.toDateString() === now.toDateString();
-  if (sameDate) return `Today by ${time}`;
+  const arrivalDay = ist.istDayKey(arrivalBy);
+  if (arrivalDay === ist.istDayKey(now)) return `Today by ${time}`;
+  if (arrivalDay === ist.istDayKey(new Date(now.getTime() + 86400000))) return `Tomorrow by ${time}`;
 
-  const tomorrow = new Date(now);
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  if (arrivalBy.toDateString() === tomorrow.toDateString()) return `Tomorrow by ${time}`;
-
-  return `By ${arrivalBy.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}, ${time}`;
+  return `By ${ist.istDate(arrivalBy)}, ${time}`;
 };
 
 /**

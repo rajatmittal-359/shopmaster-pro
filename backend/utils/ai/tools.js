@@ -28,7 +28,7 @@ const { escapeRegex } = require('../catalogueFilter');
  * answer for a shopkeeper.
  */
 const money = (n) => `₹${Math.round(Number(n || 0)).toLocaleString('en-IN')}`;
-const when = (d) => (d ? new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '-');
+const when = (d) => (d ? require('../ist').istDate(d, { day: 'numeric', month: 'short', year: 'numeric' }) : '-');
 const ORDER_RE = /\bSMP-\d{6}-[A-Z0-9]{6}\b/gi;
 const REAL_ORDER = { $or: [{ paymentMethod: { $ne: 'razorpay' } }, { paymentStatus: { $ne: 'pending' } }] };
 

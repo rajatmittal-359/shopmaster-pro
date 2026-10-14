@@ -158,7 +158,8 @@ const ask = async ({ role, user, question, history = [], textModel = 'auto', lan
     contextFor({ role, user, question: q }),
     retrieve(q, role, { k: 8 }).catch(() => ({ chunks: [], via: 'none' })),
   ]);
-  const today = new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
+  // The assistant's "today" is Jaipur's today, not the container's UTC one.
+  const today = require('../ist').istDate(new Date(), { day: 'numeric', month: 'long', year: 'numeric' });
 
   /*
    * Two sizes of the same prompt. Full (~6.5k tokens) for Gemini, whose free

@@ -840,7 +840,7 @@ exports.cancelOrderItem = async (req, res) => {
       const { canReturn, returnWindowClosesAt } = returnWindowFor(order);
       if (!canReturn) {
         return res.status(400).json({
-          message: `The ${RETURN_WINDOW_DAYS}-day return window for this order closed on ${returnWindowClosesAt.toDateString()}.`,
+          message: `The ${RETURN_WINDOW_DAYS}-day return window for this order closed on ${require('../utils/ist').istDate(returnWindowClosesAt, { day: 'numeric', month: 'long', year: 'numeric' })}.`,
           returnWindowDays: RETURN_WINDOW_DAYS,
           windowClosedAt: returnWindowClosesAt,
         });

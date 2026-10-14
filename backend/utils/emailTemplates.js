@@ -333,11 +333,7 @@ exports.shippingNotificationEmail = (order, customer, trackingInfo) => {
         [
           'Shipped',
           trackingInfo.shippedDate
-            ? new Date(trackingInfo.shippedDate).toLocaleDateString('en-IN', {
-                day: 'numeric',
-                month: 'short',
-                year: 'numeric',
-              })
+            ? require('./ist').istDate(trackingInfo.shippedDate, { day: 'numeric', month: 'short', year: 'numeric' })
             : null,
         ],
       ])}

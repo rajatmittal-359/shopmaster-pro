@@ -40,10 +40,7 @@ const evaluateCoupon = (coupon, { lines = [], customerId, now = new Date() }) =>
   }
 
   if (coupon.validFrom && now < new Date(coupon.validFrom)) {
-    const from = new Date(coupon.validFrom).toLocaleDateString('en-IN', {
-      day: 'numeric',
-      month: 'long',
-    });
+    const from = require('./ist').istDate(coupon.validFrom, { day: 'numeric', month: 'long' });
     return { ok: false, reason: `That code starts on ${from}.` };
   }
   if (coupon.validUntil && now > new Date(coupon.validUntil)) {

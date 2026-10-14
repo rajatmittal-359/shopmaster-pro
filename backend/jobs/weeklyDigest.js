@@ -124,7 +124,7 @@ const render = (d) => {
   const html = `
   <div style="font-family:system-ui,Segoe UI,Roboto,sans-serif;max-width:560px;margin:0 auto;padding:20px;color:#111">
     <h2 style="margin:0 0 4px;font-size:20px">Your week at ShopMaster Pro</h2>
-    <p style="margin:0 0 16px;color:#666;font-size:13px">${d.since.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} - today</p>
+    <p style="margin:0 0 16px;color:#666;font-size:13px">${require('../utils/ist').istDate(d.since)} - today</p>
     <table style="width:100%;border-collapse:collapse;font-size:15px">
       ${row('Orders', d.orders)}
       ${row('Sales', money(d.sales))}

@@ -55,7 +55,9 @@ const TEXT = {
 
 const r2 = (n) => Math.round(n * 100) / 100;
 const inr = (n) => Number(r2(n)).toLocaleString('en-IN');
-const on = (d) => (d ? new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) : '');
+// IST, not the box's UTC (utils/ist): an invoice dated near midnight would
+// otherwise carry the previous day on a tax document.
+const on = (d) => (d ? require('./ist').istDate(d, { day: 'numeric', month: 'long', year: 'numeric' }) : '');
 
 /** One page per seller: a seller's document is never half of another's. */
 const groupBySeller = (order) => {
