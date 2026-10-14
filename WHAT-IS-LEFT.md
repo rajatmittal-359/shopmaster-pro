@@ -1108,22 +1108,29 @@ Assistant gaps found in the same pass (problem taxonomy in the chat of 13 Sep): 
 
 ## 4. Ideas raised, not decided — do not start without a yes
 
-- **Ask a seller whether they also sell offline, and let that decide what we
-  publish about them (Rajat, 15 Oct 2026).** His words: *"app online bussiness
-  karne aae ho okay, but kya app offline bhi karte ho"* - one question at
-  sign-up, answered online / offline / both. It matters more than it looks,
-  because it is the missing half of the geo work done the same night. A shop
-  with a counter should be on the map: `LocalBusiness` schema with a `geo`
-  point is exactly how somebody in Jaipur searching "jewellery shop near me"
-  finds it, and that is the cheapest customer acquisition a small seller has.
-  A seller who only ships, from a flat or a godown, must NOT have that address
-  published as a shopfront - it is their home, and it would also teach Google
-  something false. Today we cannot tell the two apart, so `shopSchema` emits no
-  `geo` at all and both are treated as the cautious case. The flag would also
-  decide who gets "visit us" wording, and who is offered same-day first. Needs:
-  one field on Seller, one question in the /sell form, and the `geo` emission
-  gated on it AND on the geocode's own `precision` (a `pincode`-level point is
-  ~2 km out and must never be published as a shopfront).
+- **Ask a seller whether customers can come to them, and let that decide what we
+  publish about them (Rajat, 15 Oct 2026).** His question was *"app online
+  bussiness karne aae ho okay, but kya app offline bhi karte ho"* - and then he
+  corrected the first version of this entry, which had split sellers into
+  "shopfront" and "a flat or a godown". That split is wrong, and wrong in a way
+  that would have excluded our own house shop: Charming Jewels runs from a home
+  in Devi Nagar, has a Google Business Profile, and takes visitors. Half the
+  real businesses this marketplace wants to recruit are run from a room at
+  home. A home shop is a shop.
+
+  So the question is not "do you have a shop", it is **"can a customer come to
+  you?"** - which is the thing that actually decides whether an address belongs
+  on a map, and it insults nobody. Yes means a `LocalBusiness` entry with a
+  `geo` point is right, and that is the cheapest customer acquisition a small
+  seller has: somebody in Jaipur searching "jewellery shop near me". No means we
+  publish no address at all - not because a flat is lesser, but because sending
+  strangers to a door that does not expect them is a harm.
+
+  Today we cannot tell the two apart, so `shopSchema` emits no `geo` for anyone
+  and both are treated as the cautious case. Needs: one field on Seller, one
+  question in the /sell form, and the `geo` emission gated on it AND on the
+  geocode's own `precision` - a `pincode`-level point is about 2 km out and
+  must never be published as a shop's location.
 
 - **More Hugging Face Spaces, and PRO — researched 14 Oct 2026, answer is "not
   yet" for all three.** The free ZeroGPU Space for Kontext is now in the ladder
