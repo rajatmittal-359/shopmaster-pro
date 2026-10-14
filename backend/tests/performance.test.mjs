@@ -34,8 +34,13 @@ describe('computePerformance', () => {
     expect(p.cancelRate).toMatchObject({ value: 20, count: 1, status: 'review', threshold: 5 });
     expect(p.dispatchHours).toMatchObject({ value: 30, status: 'watch', threshold: 48, shipped: 3 });
     expect(p.lateDispatch.value).toBeCloseTo(33.3, 0);
-    expect(p.ndr).toMatchObject({ value: 1, status: 'watch' });
-    expect(p.rto).toMatchObject({ value: 1, status: 'watch' });
+    // NDR and RTO are SHARES of the seller's orders, not counts - a count got
+    // worse purely with volume. 1 of 5 actionable orders = 20%.
+    expect(p.ndr).toMatchObject({ value: 20, count: 1 });
+    expect(p.rto).toMatchObject({ value: 20, count: 1, status: 'watch' });
+    // A failed delivery attempt is the courier's doorstep, and the PLATFORM
+    // books the courier here - so it is shown, never graded.
+    expect(p.ndr.status).toBe('info');
     expect(p.rating).toMatchObject({ value: 4, count: 4, status: 'watch' });
     expect(p.listingQuality).toMatchObject({ value: 70, products: 3, status: 'watch' });
   });

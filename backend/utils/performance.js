@@ -12,13 +12,15 @@ const sellerRules = require('../config/sellerRules');
  *   cancelRate     orders this seller cancelled ÷ their paid/COD orders (30 d)
  *   dispatchHours  median hours from order to shipped, paid orders (30 d)
  *   lateDispatch   share shipped after the rulebook's dispatch window
- *   ndr            parcels with a failed delivery attempt (30 d)
- *   rto            parcels that came back undelivered (status returned, no return request)
+ *   ndr            share of their orders with a failed delivery attempt (30 d)
+ *   rto            share that came back undelivered (status returned, no return request)
  *   rating         review average across their products, weighted by count
  *   listingQuality average listing score across active products
  *
  * Each metric carries `status`: 'good' | 'watch' | 'review' against the
- * thresholds below - the same numbers the Seller Agreement states.
+ * thresholds below - the same numbers the Seller Agreement states - or
+ * 'info' for a number that is shown but deliberately not graded (ndr), or
+ * 'none' when there is nothing to measure yet.
  */
 const HOUR = 3600000;
 
@@ -62,8 +64,33 @@ const computePerformance = ({ orders = [], sellerId, products = [], now = new Da
   const isLate = ({ f, at }) => (f.dispatchBy ? new Date(f.shippedAt) > new Date(f.dispatchBy) : (new Date(f.shippedAt) - at) / HOUR > windowHours);
   const lateDispatch = shipped.length ? Math.round((shipped.filter(isLate).length / shipped.length) * 1000) / 10 : null;
 
-  const ndr = recent.filter((o) => (mine(o)?.ndrAttempts || 0) > 0).length;
-  const rto = recent.filter((o) => mine(o)?.status === 'returned' && !mine(o)?.returnStage).length;
+  /*
+   * NDR AND RTO ARE SHARES, NOT COUNTS (15 Oct 2026)
+   *
+   * They were raw counts graded `{ good: 0, review: 3 }`, so three failed
+   * deliveries read "needs work" whether the seller had 3 orders or 3,000 -
+   * a shop's card got worse as the shop grew, which is backwards. Every
+   * reference states these as a share of orders: Meesho grades return %,
+   * Flipkart's seller guardrails are 0.15% and 1%, Amazon's Order Defect
+   * Rate is < 1%. Same denominator as cancelRate above, so the numbers on
+   * the card are finally comparable with each other.
+   *
+   * AND NDR IS NO LONGER GRADED - 'info', never good/watch/review.
+   *   A failed delivery attempt is a courier ringing a bell nobody answered.
+   *   Amazon does grade delivery, but its On-Time Delivery Rate applies to
+   *   SELLER-FULFILLED orders only - there the seller chose and booked the
+   *   courier. Here the PLATFORM books Shiprocket: the seller cannot pick it,
+   *   reschedule it or chase it, so a line they cannot cross on purpose is
+   *   not a line. The number still shows, because a wrong phone number on a
+   *   COD order is worth seeing, and the advice beside it still stands.
+   *   RTO stays graded - the seller pays the return leg, and Meesho grades
+   *   returns - but as a rate.
+   */
+  const ndrCount = actionable.filter((o) => (mine(o)?.ndrAttempts || 0) > 0).length;
+  const rtoCount = actionable.filter((o) => mine(o)?.status === 'returned' && !mine(o)?.returnStage).length;
+  const share = (n) => (actionable.length ? Math.round((n / actionable.length) * 1000) / 10 : null);
+  const ndr = share(ndrCount);
+  const rto = share(rtoCount);
 
   const rated = products.filter((p) => p.totalReviews > 0);
   const ratingN = rated.reduce((n, p) => n + p.totalReviews, 0);
@@ -78,8 +105,8 @@ const computePerformance = ({ orders = [], sellerId, products = [], now = new Da
     cancelRate: { value: cancelRate, count: cancelledBySeller, status: grade(cancelRate, { good: 2, review: sellerRules.cancelRateReviewPct }), threshold: sellerRules.cancelRateReviewPct },
     dispatchHours: { value: dispatchHours, status: grade(dispatchHours, { good: 24, review: windowHours }), threshold: windowHours, shipped: dispatchTimes.length },
     lateDispatch: { value: lateDispatch, status: grade(lateDispatch, { good: 5, review: 20 }) },
-    ndr: { value: ndr, status: grade(ndr, { good: 0, review: 3 }) },
-    rto: { value: rto, status: grade(rto, { good: 0, review: 2 }) },
+    ndr: { value: ndr, count: ndrCount, status: ndr == null ? 'none' : 'info' },
+    rto: { value: rto, count: rtoCount, status: grade(rto, { good: 10, review: 25 }) },
     rating: { value: rating, count: ratingN, status: grade(rating, { good: 4.2, review: 3.5 }, true) },
     listingQuality: { value: listingQuality, products: scored.length, status: grade(listingQuality, { good: 80, review: 60 }, true) },
   };

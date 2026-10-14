@@ -21,15 +21,17 @@ const TONE = {
   watch: 'text-amber-700 dark:text-amber-300',
   review: 'text-destructive',
   none: 'text-muted-foreground',
+  // Shown, never graded - the seller cannot cross a line they do not hold.
+  info: 'text-muted-foreground',
 };
-const WORD = { good: 'Good', watch: 'Watch', review: 'Needs work', none: 'No data yet' };
+const WORD = { good: 'Good', watch: 'Watch', review: 'Needs work', none: 'No data yet', info: 'For information' };
 
 const METRICS = [
   { key: 'cancelRate', title: 'Cancelled by you', fmt: (m) => (m.value == null ? '—' : `${m.value}%`), line: (m) => ['Account review above {n}%. 2 free a month, then ₹50 each.', { n: m.threshold }], fix: 'Keep stock honest - an out-of-stock cancel is the commonest one.', href: '/seller/products' },
   { key: 'dispatchHours', title: 'Time to dispatch', fmt: (m) => (m.value == null ? '—' : m.value < 48 ? `${m.value} h` : `${Math.round(m.value / 24)} days`), line: (m) => ['Rulebook: within {days} working days. Median of {n} shipped.', { days: m.threshold / 24, n: m.shipped }], fix: 'Pack the same day; the courier is one button on the order.', href: '/seller/orders' },
   { key: 'lateDispatch', title: 'Shipped late', fmt: (m) => (m.value == null ? '—' : `${m.value}%`), line: () => ['Share of parcels shipped after the window.'], fix: 'Late parcels become "where is my order" messages and cancels.', href: '/seller/orders' },
-  { key: 'ndr', title: 'Failed deliveries', fmt: (m) => (m.value == null ? '—' : String(m.value)), line: () => ['Parcels the courier could not hand over.'], fix: 'Confirm the address and phone on COD orders before packing.', href: '/seller/issues?tab=delivery' },
-  { key: 'rto', title: 'Returned to you undelivered', fmt: (m) => (m.value == null ? '—' : String(m.value)), line: () => ['RTO - you pay the return leg on these.'], fix: 'Call once after the first failed attempt; most RTOs die there.', href: '/seller/issues?tab=delivery' },
+  { key: 'ndr', title: 'Failed deliveries', fmt: (m) => (m.value == null ? '—' : `${m.value}%`), line: (m) => ['{n} parcel the courier could not hand over. We book the courier, so this one is not graded.', { n: m.count ?? 0 }], fix: 'Confirm the address and phone on COD orders before packing.', href: '/seller/issues?tab=delivery' },
+  { key: 'rto', title: 'Returned to you undelivered', fmt: (m) => (m.value == null ? '—' : `${m.value}%`), line: (m) => ['RTO - you pay the return leg on these. {n} in 30 days.', { n: m.count ?? 0 }], fix: 'Call once after the first failed attempt; most RTOs die there.', href: '/seller/issues?tab=delivery' },
   { key: 'rating', title: 'Rating', fmt: (m) => (m.value == null ? '—' : `${m.value} ★`), line: (m) => (m.count ? ['{n} verified reviews.', { n: m.count }] : ['No reviews yet.']), fix: 'Photos that match the piece, and a note in the parcel asking for a review.', href: '/seller/products' },
   { key: 'listingQuality', title: 'Listing quality', fmt: (m) => (m.value == null ? '—' : `${m.value}/100`), line: (m) => ['Average across {n} live products. Google and shoppers read the same things.', { n: m.products }], fix: 'Open a product - the score at the top says which three things to fix.', href: '/seller/products' },
 ];
