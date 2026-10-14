@@ -78,6 +78,26 @@ export default function PincodeCheck({ productId }) {
           <p className="text-muted-foreground">That is not a six-digit PIN code.</p>
         )}
 
+        {/*
+          * The better news first. Until now same-day appeared only at
+          * checkout, three pages after the decision was made - Amazon and
+          * Flipkart both put it beside the price, which is where a shopper
+          * chooses.
+          *
+          * "Offered", not "booked". The server answered the four questions it
+          * can answer without a courier call; the price and the final yes are
+          * still Borzo's at checkout, and the wording promises no more than
+          * that.
+          */}
+        {state.status === 'done' && state.data.serviceable && state.data.sameDay && (
+          <p className="mb-1 font-medium text-foreground">
+            Same-day delivery available here
+            <span className="block text-xs font-normal text-muted-foreground">
+              Choose it at checkout, and a rider brings it today.
+            </span>
+          </p>
+        )}
+
         {state.status === 'done' && state.data.serviceable && (
           <p>
             Arrives by{' '}

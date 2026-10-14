@@ -90,6 +90,44 @@ const isLocalDelivery = (deliveryPincode, pickupPincode) => {
   return pickup.slice(0, 3) === delivery.slice(0, 3);
 };
 
+/**
+ * Everything that can be known about same-day WITHOUT asking Borzo.
+ *
+ * WHY IT IS ITS OWN FUNCTION (15 Oct 2026)
+ *   Checkout decides same-day, but the shopper decides on the PRODUCT page -
+ *   Amazon and Flipkart both put the delivery promise beside the price, and
+ *   ours said nothing there. The product page can answer every question except
+ *   the price, and it never needs the price.
+ *
+ *   Four cheap gates, none of them a network call. Writing them a second time
+ *   in the route would make two rules out of one, and the one that drifted
+ *   would be the one promising a shopper something the checkout then refuses.
+ *   So both callers import this.
+ *
+ * WHAT IS NOT HERE
+ *   The basket-level gates - a second seller, a quote that came back empty -
+ *   because a product page has no basket. And the price, which is Borzo's to
+ *   give and nobody else's to guess.
+ *
+ * @param {object}  o
+ * @param {object|null} o.pickupPoint      from borzo.sameDayPickupFor
+ * @param {string|null} o.pickupPin        the seller's own PIN, null for the house shop
+ * @param {string}  o.deliveryPincode
+ * @param {boolean} o.madeToOrder          not on a shelf, so no rider can collect it today
+ * @param {boolean|undefined} o.sameDayEnabled  the admin switch; undefined means on
+ */
+const sameDayPossible = ({ pickupPoint, pickupPin, deliveryPincode, madeToOrder, sameDayEnabled }) => {
+  if (madeToOrder) return false;
+  // No pickup on file is a reason not to offer it, never a reason to send the
+  // rider to somebody else's shop.
+  if (!pickupPoint) return false;
+  if (!isLocalDelivery(deliveryPincode, pickupPin)) return false;
+  // The admin's switch (Settings → Switches). Only an explicit false turns it
+  // off - an absent document must not silently withdraw a live feature.
+  if (sameDayEnabled === false) return false;
+  return true;
+};
+
 /** What to charge for `weightKg` to `deliveryPincode` when no quote is available. */
 const fallbackPrice = (weightKg, deliveryPincode) => {
   const zone = isLocalDelivery(deliveryPincode) ? 'local' : 'national';
@@ -426,20 +464,26 @@ const getDeliveryOptions = async (cartItems, address, isCOD) => {
       .lean()
       .catch(() => null);
     pickupPoint = borzo.sameDayPickupFor(seller);
-    // No pickup on file is a reason not to offer it, never a reason to send
-    // the rider to somebody else's shop.
-    if (!pickupPoint) return options;
     pickupPin = seller?.isPlatformOwned ? null : seller?.pickupAddress?.pincode;
   }
 
-  // Skip the network call entirely for out-of-town addresses.
-  if (!isLocalDelivery(address.zipCode, pickupPin)) return options;
-
-  // The admin's switch (Settings → Switches): off means the option is not
-  // offered and not quoted - the same rule as COD, enforced here and not
-  // only hidden on the page.
+  /*
+   * The four cheap gates, in one place the product page reads too
+   * (`sameDayPossible`): a shelf, a pickup, the same city, the switch. None of
+   * them is a network call, so an out-of-town address still never reaches
+   * Borzo. `liveSettings` is held in memory behind a TTL, so reading it here
+   * costs nothing either.
+   */
   const live = await settings.liveSettings();
-  if (live?.shop?.sameDayEnabled === false) return options;
+  const possible = sameDayPossible({
+    pickupPoint: shippingSellers.length === 1 ? pickupPoint : {},
+    pickupPin,
+    deliveryPincode: address.zipCode,
+    // The basket's own made-to-order check already ran above, as `extra`.
+    madeToOrder: false,
+    sameDayEnabled: live?.shop?.sameDayEnabled,
+  });
+  if (!possible) return options;
 
   const billableWeight = cartItems.reduce((sum, item) => sum + weightOf(item), 0);
   const sameDay = await borzo.quoteSameDay(address, billableWeight, pickupPoint);
@@ -524,6 +568,7 @@ const priceDeliveryOption = async (cartItems, address, isCOD, optionId) => {
 
 module.exports = {
   getDeliveryOptions,
+  sameDayPossible,
   freeAboveThreshold,
   basketValue,
   describeArrival,

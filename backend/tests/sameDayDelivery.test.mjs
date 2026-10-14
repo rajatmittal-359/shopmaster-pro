@@ -290,3 +290,55 @@ describe('what the customer is told about timing', () => {
     expect(describeArrival(null)).toBe('Today');
   });
 });
+
+/*
+ * THE SAME QUESTION, ASKED EARLIER (15 Oct 2026)
+ *
+ *   Same-day is decided at checkout, which is the last place a shopper can be
+ *   persuaded. The decision they are actually making happens on the PRODUCT
+ *   page - Amazon and Flipkart both put the delivery promise beside the price
+ *   for exactly that reason - and ours said nothing about it there.
+ *
+ *   Everything that can be known without asking Borzo is cheap: is the item on
+ *   a shelf, does the seller have a pickup, is the PIN local, is the admin's
+ *   switch on. That much can be answered on a product page with no courier
+ *   call at all. Only the PRICE needs Borzo, and a product page does not
+ *   quote a price.
+ *
+ *   So the four cheap gates move into one helper that the checkout and the
+ *   product page both import, because a rule in two files becomes two rules.
+ */
+describe('what can be known about same-day before calling the courier', () => {
+  const { sameDayPossible } = require('../utils/shipping');
+  const ok = {
+    pickupPoint: { address: 'Shop, Jaipur', phone: '9', name: 'Shop' },
+    pickupPin: '302019',
+    deliveryPincode: '302001',
+    madeToOrder: false,
+    sameDayEnabled: true,
+  };
+
+  it('says yes when the shelf, the pickup, the city and the switch all agree', () => {
+    expect(sameDayPossible(ok)).toBe(true);
+  });
+
+  it('says no for a made-to-order item - a rider cannot collect what is not made', () => {
+    expect(sameDayPossible({ ...ok, madeToOrder: true })).toBe(false);
+  });
+
+  it('says no when the seller has no pickup on file, rather than sending the rider elsewhere', () => {
+    expect(sameDayPossible({ ...ok, pickupPoint: null })).toBe(false);
+  });
+
+  it('says no for another city', () => {
+    expect(sameDayPossible({ ...ok, deliveryPincode: '110001' })).toBe(false);
+  });
+
+  it('obeys the admin switch, which is the same rule COD follows', () => {
+    expect(sameDayPossible({ ...ok, sameDayEnabled: false })).toBe(false);
+  });
+
+  it('treats an unset switch as on - the default is the feature working', () => {
+    expect(sameDayPossible({ ...ok, sameDayEnabled: undefined })).toBe(true);
+  });
+});

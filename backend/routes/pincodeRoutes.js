@@ -56,6 +56,7 @@ router.get('/:code/delivery', async (req, res) => {
     // into the date (utils/dispatch). Read here, never trusted from the query.
     let dispatchDays;
     let pickupPincode = null;
+    let sameDay = false;
     if (req.query.product) {
       const Product = require('../models/Product');
       const Seller = require('../models/Seller');
@@ -65,9 +66,33 @@ router.get('/:code/delivery', async (req, res) => {
       if (p) {
         dispatchDays = require('../utils/dispatch').processingDaysOf(p);
         // The seller's own pickup pincode decides the transit (2.54); the house shop keeps the default.
-        const s = p.sellerId ? await Seller.findOne({ userId: p.sellerId }).select('isPlatformOwned pickupAddress.pincode').lean().catch(() => null) : null;
+        const s = p.sellerId ? await Seller.findOne({ userId: p.sellerId }).select('isPlatformOwned pickupAddress').lean().catch(() => null) : null;
         const pin = s && !s.isPlatformOwned ? String(s.pickupAddress?.pincode || '').trim() : '';
         if (/^\d{6}$/.test(pin)) pickupPincode = pin;
+
+        /*
+         * "You can have it today" belongs beside the price, not three pages
+         * later at checkout - which is where it has lived until now. Amazon
+         * and Flipkart both put the delivery promise on the product page for
+         * the same reason: that is where the decision is made.
+         *
+         * Everything except the PRICE can be answered here, and a product
+         * page never shows a price for delivery. So Borzo is NOT called -
+         * `sameDayPossible` is the same four gates the checkout uses, none of
+         * them a network call. The checkout still re-asks Borzo and is still
+         * free to say no; this is "it is offered here", not a booking.
+         */
+        const { sameDayPossible } = require('../utils/shipping');
+        const borzo = require('../utils/borzo');
+        const { liveSettings } = require('../utils/liveSettings');
+        const live = await liveSettings().catch(() => null);
+        sameDay = sameDayPossible({
+          pickupPoint: borzo.sameDayPickupFor(s),
+          pickupPin: pickupPincode,
+          deliveryPincode: code,
+          madeToOrder: Number.isInteger(p.processingDays) && p.processingDays > 0,
+          sameDayEnabled: live?.shop?.sameDayEnabled,
+        });
       }
     }
     const estimate = await estimateDelivery(code, { ...(dispatchDays ? { dispatchDays } : {}), ...(pickupPincode ? { pickupPincode } : {}) });
@@ -76,7 +101,9 @@ router.get('/:code/delivery', async (req, res) => {
     // personal - it is the same answer for everyone asking about that PIN code
     // - so a shared cache may hold it.
     res.set('Cache-Control', dispatchDays ? 'public, max-age=3600' : 'public, max-age=21600');
-    return res.json(estimate);
+    // `sameDay` is per product AND per PIN, which the cache key above already
+    // is, so it rides along with the date rather than needing a second call.
+    return res.json({ ...estimate, sameDay });
   } catch (err) {
     // 503 and no number. A date we could not check is worse than no date: the
     // page simply does not show one, and nobody is promised anything.
