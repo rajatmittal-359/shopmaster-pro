@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Sparkles, Loader2, Cpu, X } from 'lucide-react';
 import { authedFetch } from '@/lib/client';
 import { toast } from 'sonner';
-import { getCategories } from '@/lib/api';
+import { getCategories, getSellerRules } from '@/lib/api';
 import { validateProduct } from '@/lib/validate';
 import { currentStep, stepStateOf } from '@/lib/formSteps';
 import { Button } from '@/components/ui/button';
@@ -382,6 +382,16 @@ export default function ProductForm({ productId, copyFromId }) {
   // If that lookup fails the fields stay hidden - and the form says so, rather than
   // letting a registered shop save a product with no tax facts without knowing why.
   const [gstCheckFailed, setGstCheckFailed] = useState(false);
+  /*
+   * The rulebook's own dispatch window, so the "standard" option can SAY it
+   * (15 Oct 2026). Until today the option read "Standard time (the rulebook)"
+   * with no number anywhere on the form - and seven of the house shop's
+   * products ended up on "7 working days · made to order" because the owner
+   * himself believed 7 WAS the standard. A number nobody can see is not a
+   * default, it is a guess. Null until it arrives; the label falls back to
+   * the old wording rather than inventing a number.
+   */
+  const [dispatchDays, setDispatchDays] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -395,6 +405,11 @@ export default function ProductForm({ productId, copyFromId }) {
         // Today's AI allowance. A failure here must not block the form.
         authedFetch('/seller/ai/usage')
           .then((u) => !cancelled && setUsage(u))
+          .catch(() => {});
+        // The rulebook's dispatch window, for the "standard" label. Public,
+        // cached, and a failure only costs the number - never the form.
+        getSellerRules()
+          .then((r) => !cancelled && Number.isInteger(r?.dispatchDays) && setDispatchDays(r.dispatchDays))
           .catch(() => {});
         // A registered shop fills HSN + GST rate so its tax invoice is right;
         // an unregistered one never sees the fields (nothing here asks anyone to register).
@@ -1380,11 +1395,26 @@ export default function ProductForm({ productId, copyFromId }) {
           hint={t('Leave on the standard time unless this is made after the order - a name pendant, a ring to size. Say the honest number: the customer sees it before paying, and your late-dispatch clock runs from it.')}
         >
           <select id="processingDays" value={form.processingDays ?? ''} onChange={set('processingDays')} className="h-10 w-full rounded-md border bg-background px-3 text-sm">
-            <option value="">{t('Standard time (the rulebook)')}</option>
+            <option value="">
+              {dispatchDays ? t('Standard · ships in {n} working days', { n: dispatchDays }) : t('Standard time (the rulebook)')}
+            </option>
             {[3, 5, 7, 10, 14, 21, 30].map((d) => (
               <option key={d} value={d}>{t('{n} working days · made to order', { n: d })}</option>
             ))}
           </select>
+          {/*
+           * The cost, at the moment of choosing (15 Oct 2026). Any number here
+           * makes the item made-to-order, and same-day delivery is switched
+           * off for it (utils/shipping.js `sameDayPossible`). That was
+           * invisible until now: a seller picked a longer window to be honest
+           * about packing and silently lost the one promise this marketplace
+           * can make in its own city.
+           */}
+          {form.processingDays !== '' && form.processingDays !== null && form.processingDays !== undefined && (
+            <p className="mt-1.5 text-xs leading-relaxed text-amber-700 dark:text-amber-300">
+              {t('This marks the item made to order, and turns OFF same-day delivery for it. Leave it on standard if the item is already on your shelf.')}
+            </p>
+          )}
         </Field>
 
         {/* The return promise, inside what the category allows. Shown on the product page before anyone buys. */}

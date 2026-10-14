@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { notFound, permanentRedirect } from 'next/navigation';
-import { getProduct, getReviews, getRelated, getSimilar, getSeller, getSettings } from '@/lib/api';
+import { getProduct, getReviews, getRelated, getSimilar, getSeller, getSettings, getSellerRules } from '@/lib/api';
 import { ogImage } from '@/lib/shareImage';
 import ViewPing from '@/components/product/ViewPing';
 import { priceOf } from '@/lib/pricing';
@@ -39,6 +39,20 @@ const plain = (html) => String(html || '').replace(/<[^>]*>/g, ' ').replace(/\s+
  *                               edited title broke the link Google had.
  *   there is no such product ->  a real 404.
  */
+/**
+ * "Made to order" means longer than the RULEBOOK's dispatch window - the line
+ * utils/dispatch `isMadeToOrder` draws, and since 15 Oct 2026 the line the
+ * same-day endpoint draws too. This page printed it for ANY number, so a
+ * seller who typed the rulebook's own number got "Made to order" here while
+ * the delivery box beside it offered same-day: one screen, two answers.
+ *
+ * Without the rulebook we keep the old, louder behaviour. Calling a stock item
+ * made to order is a small error; staying silent about a real one is worse.
+ */
+const madeToOrderOf = (product, rules) =>
+  Number.isInteger(product?.processingDays) &&
+  (Number.isInteger(rules?.dispatchDays) ? product.processingDays > rules.dispatchDays : true);
+
 export async function generateMetadata({ params }) {
   const { slug } = await params;
   /*
@@ -48,7 +62,7 @@ export async function generateMetadata({ params }) {
    * `getSettings` is cached for 30s and shared across every render, so this
    * costs nothing per page.
    */
-  const [product, settings] = await Promise.all([getProduct(slug), getSettings().catch(() => null)]);
+  const [product, settings, rules] = await Promise.all([getProduct(slug), getSettings().catch(() => null), getSellerRules()]);
 
   if (!product) notFound();
 
@@ -81,7 +95,7 @@ export async function generateMetadata({ params }) {
    */
   const shop = product.shop?.id ? await getSeller(product.shop.id).catch(() => null) : null;
   const sameDayCity =
-    settings?.shop?.sameDayEnabled !== false && !Number.isInteger(product.processingDays)
+    settings?.shop?.sameDayEnabled !== false && !madeToOrderOf(product, rules)
       ? shop?.seller?.pickupAddress?.city || shop?.seller?.city?.city || null
       : null;
   const path = `/products/${product.slug || product._id}`;
@@ -227,13 +241,15 @@ export default async function ProductPage({ params }) {
 
   // Fetched after the product exists, and deliberately not inside Suspense:
   // both are small, and nothing a crawler needs may sit behind a boundary.
-  const [reviews, related, similar, shop] = await Promise.all([
+  const [reviews, related, similar, shop, rules] = await Promise.all([
     getReviews(product._id),
     getRelated(product.category?.slug, product._id),
     getSimilar(product._id).catch(() => []),
     // "More from this shop" (Etsy, Amazon's brand row): the seller page already
     // carries their 24 newest pieces; four of them, minus this one.
     product.shop?.id ? getSeller(product.shop.id).catch(() => null) : null,
+    // The rulebook, for the made-to-order line below. Cached 300s, shared.
+    getSellerRules(),
   ]);
   /*
    * "Complete the look" (E4, 22 Sep 2026): the shop's other pieces, the ones
@@ -382,7 +398,7 @@ export default async function ProductPage({ params }) {
           )}
 
           {/* Made to order (Etsy's "ready to ship in"): said before the price is paid, not in a mail after. */}
-          {Number.isInteger(product.processingDays) && (
+          {madeToOrderOf(product, rules) && (
             <p className="text-sm text-muted-foreground">
               <strong className="text-foreground">Made to order</strong> · ready to ship in {product.processingDays} working day{product.processingDays === 1 ? '' : 's'}, then the courier&rsquo;s time.
             </p>

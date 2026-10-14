@@ -90,7 +90,12 @@ router.get('/:code/delivery', async (req, res) => {
           pickupPoint: borzo.sameDayPickupFor(s),
           pickupPin: pickupPincode,
           deliveryPincode: code,
-          madeToOrder: Number.isInteger(p.processingDays) && p.processingDays > 0,
+          // `isMadeToOrder`, not a second copy of the rule: longer than the
+          // RULEBOOK, which is the line the checkout draws too (shipping.js
+          // `extra`). The copy that lived here said `> 0`, so a seller who
+          // typed the rulebook's own number lost same-day on the product page
+          // and got it back at the till - the page refusing what we would sell.
+          madeToOrder: require('../utils/dispatch').isMadeToOrder(p),
           sameDayEnabled: live?.shop?.sameDayEnabled,
         });
       }
