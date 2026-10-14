@@ -118,4 +118,140 @@ const haversineKm = (a, b) => {
   return 2 * R_KM * Math.asin(Math.min(1, Math.sqrt(h)));
 };
 
-module.exports = { coordsFromMapsUrl, toPoint, nearQuery, haversineKm };
+
+/* ------------------------------------------------------------------ *
+ * GEOCODING: AN ADDRESS BECOMES A POINT
+ * ------------------------------------------------------------------ */
+
+const mongoose = require('mongoose');
+
+/**
+ * WHY NOT GOOGLE
+ *   Their Geocoding API needs billing enabled, and Google Cloud has refused
+ *   Rajat's card - the same wall the image models hit. The choice was never
+ *   "Google or free", it was "free or nothing". Their terms would also have
+ *   made us delete the answer every 30 days, for an address that never moves.
+ *
+ * WHY NOMINATIM
+ *   No key, no card. Tried against the real addresses before any code was
+ *   written: the full line with the house number found NOTHING, "Devi Nagar,
+ *   Jaipur, 302019" found 26.8843/75.7619, and the bare PIN found 302019 at
+ *   26.8784/75.7580 - the same PIN a free dataset had placed 90 km away.
+ *
+ *   So the question is asked narrow and then widened, and the answer carries
+ *   HOW precise it is, because a point good enough to rank shops by distance
+ *   is not good enough to send a rider to a door.
+ *
+ * THEIR RULES, WHICH ARE THE PRICE
+ *   One request a second, a User-Agent that says who we are and how to reach
+ *   us, and no asking a question already answered. The cache below is not a
+ *   speed trick, it is a condition of use.
+ */
+const NOMINATIM = 'https://nominatim.openstreetmap.org/search';
+const UA = 'ShopMasterPro/1.0 (+https://www.shopmasterpro.in; rajatmittal359@gmail.com)';
+const MIN_GAP_MS = 1000;
+
+const cacheSchema = new mongoose.Schema(
+  {
+    key: { type: String, required: true, unique: true },
+    value: { type: mongoose.Schema.Types.Mixed, required: true },
+    createdAt: { type: Date, default: Date.now },
+  },
+  { timestamps: false }
+);
+const GeocodeCache = mongoose.models.GeocodeCache || mongoose.model('GeocodeCache', cacheSchema);
+
+/* No TTL on purpose. A shop does not move, and OpenStreetMap - unlike Google -
+ * puts no expiry on what we keep. Re-asking would only spend their goodwill. */
+const defaultLookup = async (key) => {
+  try {
+    const row = await GeocodeCache.findOne({ key }).lean();
+    return row ? row.value : null;
+  } catch {
+    return null;
+  }
+};
+const defaultSave = async (key, value) => {
+  try {
+    await GeocodeCache.updateOne({ key }, { $set: { key, value } }, { upsert: true });
+  } catch {
+    /* a cache that will not write must never fail the lookup it was helping */
+  }
+};
+
+/** Narrow to broad. The first that answers wins, and names its own precision. */
+const candidates = (a = {}) => {
+  const tail = [a.city, a.state, a.pincode].filter(Boolean);
+  const rows = [
+    { precision: 'address', parts: [a.address1, a.address2, ...tail] },
+    { precision: 'locality', parts: [a.address2, ...tail] },
+    { precision: 'city', parts: tail },
+    { precision: 'pincode', parts: [a.pincode] },
+  ];
+  const seen = new Set();
+  const out = [];
+  for (const r of rows) {
+    const q = r.parts.filter(Boolean).join(', ').trim();
+    if (!q || seen.has(q)) continue;
+    seen.add(q);
+    out.push({ ...r, q });
+  }
+  return out;
+};
+
+let lastCall = 0;
+const pace = async () => {
+  // Their policy is one request a second. Tests never reach the network, so
+  // they never pay the wait.
+  if (process.env.NODE_ENV === 'test') return;
+  const wait = MIN_GAP_MS - (Date.now() - lastCall);
+  if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+  lastCall = Date.now();
+};
+
+/**
+ * The point for an address, or null.
+ *
+ * Null is a real answer: it means nobody knows yet, and the caller carries on
+ * exactly as it did before there was a map. Never a guess.
+ *
+ * @param {{address1?:string,address2?:string,city?:string,state?:string,pincode?:string}} address
+ * @returns {Promise<{lat:number,lng:number,precision:string,source:string,cached?:boolean}|null>}
+ */
+const geocodeAddress = async (address, opts = {}) => {
+  const fetchImpl = opts.fetchImpl || globalThis.fetch;
+  const lookup = opts.lookup || defaultLookup;
+  const save = opts.save || defaultSave;
+
+  const tries = candidates(address);
+  if (!tries.length) return null;
+
+  const key = tries[0].q.toLowerCase();
+  const hit = await lookup(key);
+  if (hit) return { ...hit, cached: true };
+
+  for (const t of tries) {
+    let rows;
+    try {
+      await pace();
+      const url = `${NOMINATIM}?format=json&limit=1&countrycodes=in&q=${encodeURIComponent(t.q)}`;
+      const res = await fetchImpl(url, { headers: { 'User-Agent': UA, 'Accept-Language': 'en' } });
+      if (!res?.ok) continue;
+      rows = await res.json();
+    } catch {
+      // Down, blocked, offline. An address simply has no point yet.
+      return null;
+    }
+    const row = Array.isArray(rows) ? rows[0] : null;
+    if (!row) continue;
+    const lat = Number(row.lat);
+    const lng = Number(row.lon);
+    if (!sane(lat, lng)) continue;
+    const value = { lat, lng, precision: t.precision, source: 'nominatim' };
+    await save(key, value);
+    return value;
+  }
+  return null;
+};
+
+module.exports = { coordsFromMapsUrl, toPoint, nearQuery, haversineKm, geocodeAddress };
