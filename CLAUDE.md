@@ -74,6 +74,13 @@ The three project skills live in `~/.claude/skills/{frontend,backend,database}`
 - Base UI: `Menu.GroupLabel` outside a `Menu.Group` throws; `Button render={<Link/>}` needs `nativeButton={false}`.
 - Lightning CSS drops hand-written `backdrop-filter`; use `@apply backdrop-blur-lg backdrop-saturate-150`.
 - `react-hooks/set-state-in-effect`: fetch in a promise chain inside the effect, never `setState` synchronously in its body.
+- **This Mac is `Asia/Calcutta`; the live box and CI are `UTC`.** So a test that
+  builds a date with `setHours`/`setDate`, or formats one without naming a
+  timeZone, can pass here and fail there - or worse, pass in both while the
+  customer is told the wrong time. It cost a red CI run and a 5h30m-wrong
+  same-day promise on 15 Oct 2026. Build server-side date STRINGS through
+  `backend/utils/ist.js`, and in a test that touches a day boundary set
+  `process.env.TZ = 'UTC'` and a fixed instant rather than "now + N hours".
 - This is a Mac (since 30 Sep 2026), so two old Windows workarounds are gone:
   heredocs keep their backslashes (tested), and `git commit -F -` no longer
   hangs. `timeout` does **not** exist here - it is GNU coreutils, not macOS.
