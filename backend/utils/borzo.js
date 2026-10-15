@@ -137,11 +137,11 @@ const envPickup = () => {
  * @returns {{price: number, arrivalBy: Date, provider: 'borzo'}|null} null when
  *          unavailable for any reason - not configured, not serviceable, or down
  */
-const quoteSameDay = async (address, weightKg, pickupPoint) => {
-  if (!isConfigured()) return null;
+const requestQuote = async (address, weightKg, pickupPoint) => {
+  if (!isConfigured()) return { ok: false, reason: 'unconfigured' };
 
   const from = pickupPoint === undefined ? envPickup() : pickupPoint;
-  if (!from) return null;
+  if (!from) return { ok: false, reason: 'unconfigured' };
   const pickup = from.address;
   const pickupPhone = from.phone;
 
@@ -187,10 +187,10 @@ const quoteSameDay = async (address, weightKg, pickupPoint) => {
 
     // Borzo answers 200 with is_successful:false for an address it cannot
     // service, so the flag matters more than the status code.
-    if (!data || !data.is_successful || !data.order) return null;
+    if (!data || !data.is_successful || !data.order) return { ok: false, reason: 'refused' };
 
     const price = Number(data.order.payment_amount);
-    if (!Number.isFinite(price) || price <= 0) return null;
+    if (!Number.isFinite(price) || price <= 0) return { ok: false, reason: 'refused' };
 
     // The drop point carries the window; fall back to the order-level one.
     const dropPoint = (data.order.points || [])[1] || {};
@@ -201,16 +201,87 @@ const quoteSameDay = async (address, weightKg, pickupPoint) => {
       null;
 
     return {
-      provider: 'borzo',
-      price: Math.round(price),
-      arrivalBy: arrival ? new Date(arrival) : null,
+      ok: true,
+      quote: {
+        provider: 'borzo',
+        price: Math.round(price),
+        arrivalBy: arrival ? new Date(arrival) : null,
+      },
     };
   } catch (err) {
     // Never surface this to the customer: they just do not see the option.
     console.warn('Borzo quote unavailable:', err.message);
-    return null;
+    return { ok: false, reason: 'unreachable' };
   }
 };
+
+/**
+ * The price, or null - unchanged for every caller that only wants the number.
+ *
+ * WHY THE THREE-STATE SIBLING EXISTS (15 Oct 2026)
+ *   This function's own contract is "null when unavailable for any reason -
+ *   not configured, not serviceable, or down", and at the checkout that is
+ *   exactly right: the customer simply does not see the option. But a product
+ *   page wants to REMEMBER the answer, and "they refused this address" and "we
+ *   could not reach them" must never be remembered as the same thing. Cache a
+ *   timeout as a refusal and same-day quietly disappears from a city Borzo
+ *   serves, for hours, with nothing in the logs to say why.
+ */
+const quoteSameDay = async (address, weightKg, pickupPoint) => {
+  const result = await requestQuote(address, weightKg, pickupPoint);
+  return result.ok ? result.quote : null;
+};
+
+/*
+ * "WILL YOU CARRY THIS AT ALL?" - THE ONLY HONEST GATE FOR A PRODUCT PAGE
+ *
+ * Same-day sits beside the price now, which is where the decision is made. To
+ * stay cheap it answered from four local gates and never asked Borzo, and the
+ * gate it did not have was "is Borzo in this city?". `sameDayPickupFor` wants
+ * an address, a phone and a name - nothing about coverage - so a seller in
+ * Nasirabad was told to promise a rider. Asked on the live account, Borzo
+ * returned null for Nasirabad 305601 and for Ajmer 305001 both.
+ *
+ * There is no city list to keep instead: Borzo's API 1.8 has no cities
+ * endpoint, and the published counts disagree with each other (14, then 22,
+ * then 23). Their own answer IS the list, it is free, and it cannot go stale.
+ * It also works from a bare PIN, which is all a product page has - 302001
+ * priced identically with and without the city.
+ *
+ * Cached because the question is the same for everybody who asks about that
+ * PIN, and bounded because a cache that grows forever is a leak. A refusal is
+ * remembered; being unable to ask is not.
+ */
+const OFFER_TTL_MS = 6 * 60 * 60 * 1000;
+const OFFER_MAX = 500;
+const offers = new Map();
+
+/** Would Borzo carry a parcel from this pickup to this PIN today? */
+const carriesSameDay = async (pincode, pickupPoint, opts = {}) => {
+  if (!pickupPoint) return false;
+
+  const key = `${String(pincode)}|${pickupPoint.address}`;
+  const hit = offers.get(key);
+  if (hit && Date.now() - hit.at < OFFER_TTL_MS) return hit.ok;
+
+  // A representative parcel. The real weight and the real price are the
+  // checkout's business; this asks only whether the journey exists.
+  const result = await requestQuote(
+    { zipCode: String(pincode), phoneNumber: opts.phone || '9999999999' },
+    opts.weightKg || 0.5,
+    pickupPoint
+  );
+
+  // Could not ask: say nothing this time, and do not write it down.
+  if (!result.ok && result.reason === 'unreachable') return false;
+
+  if (offers.size >= OFFER_MAX) offers.delete(offers.keys().next().value);
+  offers.set(key, { at: Date.now(), ok: result.ok });
+  return result.ok;
+};
+
+/** Tests only: forget every remembered answer. */
+const _clearSameDayOffers = () => offers.clear();
 
 /**
  * Books a rider for real.
@@ -352,7 +423,10 @@ const cancelSameDay = async (externalOrderId) => {
 module.exports = {
   isPending,
   sameDayPickupFor,
+  requestQuote,
   quoteSameDay,
+  carriesSameDay,
+  _clearSameDayOffers,
   bookSameDay,
   cancelSameDay,
   isConfigured,

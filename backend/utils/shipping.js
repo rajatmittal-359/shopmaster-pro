@@ -18,6 +18,7 @@ const Seller = require('../models/Seller');
 const shiprocketService = require('./shiprocketService');
 const borzo = require('./borzo');
 const ist = require('./ist');
+const geo = require('./geo');
 // Called through the module object so tests can stand in for the admin's document.
 const settings = require('./liveSettings');
 const { effectivePrice } = require('./discount');
@@ -116,17 +117,57 @@ const isLocalDelivery = (deliveryPincode, pickupPincode) => {
  * @param {string}  o.deliveryPincode
  * @param {boolean} o.madeToOrder          not on a shelf, so no rider can collect it today
  * @param {boolean|undefined} o.sameDayEnabled  the admin switch; undefined means on
+ * @param {boolean|null|undefined} o.local a real distance, when the caller has
+ *        one (`withinLocalRadius`). null or undefined falls back to the PIN proxy.
  */
-const sameDayPossible = ({ pickupPoint, pickupPin, deliveryPincode, madeToOrder, sameDayEnabled }) => {
+const sameDayPossible = ({ pickupPoint, pickupPin, deliveryPincode, madeToOrder, sameDayEnabled, local }) => {
   if (madeToOrder) return false;
   // No pickup on file is a reason not to offer it, never a reason to send the
   // rider to somebody else's shop.
   if (!pickupPoint) return false;
-  if (!isLocalDelivery(deliveryPincode, pickupPin)) return false;
+  /*
+   * Two points beat three digits (15 Oct 2026). The prefix was wrong both
+   * ways: 305601 to 305901 is 90km and shared a prefix, while the house shop
+   * in 302019 was refused Chomu 303702 - 32km, and Borzo quotes it at Rs 445.
+   * `local` is the measured answer when the caller could get one; the prefix
+   * stays for the callers and the moments that cannot.
+   */
+  if (!(typeof local === 'boolean' ? local : isLocalDelivery(deliveryPincode, pickupPin))) return false;
   // The admin's switch (Settings → Switches). Only an explicit false turns it
   // off - an absent document must not silently withdraw a live feature.
   if (sameDayEnabled === false) return false;
   return true;
+};
+
+/** Beyond this, a motorbike is the wrong answer and Borzo should not be asked. */
+const LOCAL_RADIUS_KM = 50;
+
+/**
+ * Is this PIN near enough to the seller to be worth asking a courier about?
+ *
+ *   true  - within the radius
+ *   false - too far; no courier call is made at all
+ *   null  - NOBODY KNOWS. The seller has no point yet, or the PIN could not be
+ *           placed, or OpenStreetMap is down. The caller keeps the PIN proxy:
+ *           a map we could not read must never withdraw a live offer.
+ *
+ * The seller's point comes from `backfillSellerLocations` (2dsphere indexed on
+ * `pickupAddress.location`); the customer's comes from the PIN alone, cached
+ * forever in `geocodecaches` because a PIN does not move. 50km is generous on
+ * purpose - Borzo decides, this only stops the pointless questions.
+ */
+const withinLocalRadius = async (seller, deliveryPincode, opts = {}) => {
+  const coords = seller?.pickupAddress?.location?.coordinates;
+  if (!Array.isArray(coords) || coords.length !== 2) return null;
+
+  const pin = String(deliveryPincode || '').trim();
+  if (!/^\d{6}$/.test(pin)) return null;
+
+  const there = await geo.geocodeAddress({ pincode: pin }, opts).catch(() => null);
+  if (!there) return null;
+
+  const km = geo.haversineKm({ lat: coords[1], lng: coords[0] }, there);
+  return km <= (opts.radiusKm || LOCAL_RADIUS_KM);
 };
 
 /** What to charge for `weightKg` to `deliveryPincode` when no quote is available. */
@@ -575,5 +616,7 @@ module.exports = {
   fallbackPrice,
   FALLBACK_BANDS,
   isLocalDelivery,
+  withinLocalRadius,
+  LOCAL_RADIUS_KM,
   DEFAULT_ITEM_WEIGHT,
 };

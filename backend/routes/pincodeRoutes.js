@@ -76,18 +76,41 @@ router.get('/:code/delivery', async (req, res) => {
          * and Flipkart both put the delivery promise on the product page for
          * the same reason: that is where the decision is made.
          *
-         * Everything except the PRICE can be answered here, and a product
-         * page never shows a price for delivery. So Borzo is NOT called -
-         * `sameDayPossible` is the same four gates the checkout uses, none of
-         * them a network call. The checkout still re-asks Borzo and is still
-         * free to say no; this is "it is offered here", not a booking.
+         * WHAT THIS GOT WRONG, AND HOW (15 Oct 2026)
+         *   It was built to answer from local gates alone, never calling
+         *   Borzo, on the reasoning that only the PRICE is Borzo's to give.
+         *   One gate was missing: whether Borzo is in that city at all.
+         *   `sameDayPickupFor` asks for an address, a phone and a name and
+         *   nothing about coverage, so a seller in Nasirabad was told to
+         *   promise a rider - and Borzo, asked on the live account, returned
+         *   null for Nasirabad 305601 and Ajmer 305001 both. The page was
+         *   promising what the courier had already refused.
+         *
+         *   The same prefix was wrong the other way too: the house shop in
+         *   302019 was refused Chomu 303702 because 302 !== 303, while Borzo
+         *   quotes that trip at Rs 445. A sale lost to a string comparison.
+         *
+         *   So: distance first, from the two points we already store and
+         *   index, which costs nothing and stops the pointless questions; then
+         *   BORZO decides, cached per PIN, because their answer is the
+         *   coverage list and no list of ours could stay true. A bare PIN is
+         *   enough for them - 302001 priced the same with and without a city -
+         *   which is exactly what a product page has.
+         *
+         *   Still not a booking, and still no price here. The checkout re-asks
+         *   with the real address and weight and is still free to say no.
          */
-        const { sameDayPossible } = require('../utils/shipping');
+        const { sameDayPossible, withinLocalRadius } = require('../utils/shipping');
         const borzo = require('../utils/borzo');
         const { liveSettings } = require('../utils/liveSettings');
         const live = await liveSettings().catch(() => null);
-        sameDay = sameDayPossible({
-          pickupPoint: borzo.sameDayPickupFor(s),
+        const pickupPoint = borzo.sameDayPickupFor(s);
+        // null when the map cannot say; `sameDayPossible` then keeps the proxy.
+        // No pickup means there is nothing to measure a distance FROM, so the
+        // lookup is skipped rather than cached for an offer that cannot exist.
+        const local = pickupPoint ? await withinLocalRadius(s, code).catch(() => null) : null;
+        const possible = sameDayPossible({
+          pickupPoint,
           pickupPin: pickupPincode,
           deliveryPincode: code,
           // `isMadeToOrder`, not a second copy of the rule: longer than the
@@ -97,7 +120,9 @@ router.get('/:code/delivery', async (req, res) => {
           // and got it back at the till - the page refusing what we would sell.
           madeToOrder: require('../utils/dispatch').isMadeToOrder(p),
           sameDayEnabled: live?.shop?.sameDayEnabled,
+          local,
         });
+        sameDay = possible ? await borzo.carriesSameDay(code, pickupPoint) : false;
       }
     }
     const estimate = await estimateDelivery(code, { ...(dispatchDays ? { dispatchDays } : {}), ...(pickupPincode ? { pickupPincode } : {}) });

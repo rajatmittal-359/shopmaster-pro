@@ -474,6 +474,22 @@ synonyms collection (jhumka/jhumki/झुमका), Gemini query → filters.
 
 ## 3. Rajat's call — researched, waiting on a decision
 
+- ~~**Geo build hua tha par product me use kahin nahi ho raha tha**~~ ✅ **15 Oct 2026** — aur usi ki kami se ek **live jhooth** nikla.
+  Tu ne kaha "geo spatial location kaam aae". Dekha: `utils/geo.js` ko sirf `backfillSellerLocations.js` import karta tha, app me ek bhi `$near` nahi. Points aur `2dsphere` index live the, product ne chhua hi nahi.
+
+  **Jo mila (live, asli Borzo calls se):** code me **Borzo ki city coverage ka koi gate hi nahi tha** — `sameDayPickupFor` sirf address + phone + naam maangta hai. To **All in one** (pickup 305601 Nasirabad) ka product page keh raha tha *"Same-day delivery available here · a rider brings it today"*, jabki Borzo ne 305601 aur Ajmer 305001 **dono** pe `null` diya. **Ye promise maine hi beside-the-price lagaya tha**, sirf chaar saste gate pe, coverage poochhe bina.
+
+  **Aur wahi prefix doosri taraf se bhi galat tha:** ghar ki dukaan (302019) → **Chomu 303702** pe page mana karta tha kyunki `302 !== 303`, jabki **Borzo us trip ka ₹445 quote deta hai**. Ek sale sirf string comparison se jaa rahi thi.
+
+  **Fix (teen hisse):**
+  1. **Distance pehle** — `withinLocalRadius` (naya, `shipping.js`): seller ka point (backfill se) + customer ka point (PIN se, Nominatim, `geocodecaches` me **hamesha** cached) → `haversineKm`, 50 km. Teen-state: `true` / `false` / **`null` = kisi ko nahi pata**, aur `null` pe purana PIN proxy chalta hai — jo map padh na sake wo live offer kabhi na cheene.
+  2. **Borzo ka aakhri shabd** — `carriesSameDay` (naya, `borzo.js`), per-PIN cached 6 ghante, bounded 500. **Unka jawab hi coverage list hai** — API 1.8 me cities endpoint nahi hai aur published counts bhi aapas me ulte hain (14, 22, 23), to apni list rakhna bekaar aur stale hota. Bare PIN kaafi hai: 302001 city ke saath aur bina, dono me ₹94.
+  3. **"Mana kiya" ≠ "poochh nahi paaye"** — `quoteSameDay` ka apna contract teenon wajah (unconfigured / refused / **down**) pe `null` tha. Usko `requestQuote` me toda (teen-state); `quoteSameDay` ka contract waisa hi hai. **Timeout yaad nahi rakha jaata** — warna Borzo ek pal down ho aur same-day us sheher se 6 ghante ke liye chup-chaap gayab ho jaaye.
+
+  **Test:** naya `tests/sameDayOffer.test.mjs` — 7 test, Borzo **axios pe** mock (to asli three-state code chalta hai). RED pehle: Nasirabad pe `expected true to be false`, Chomu pe `expected false to be true`, aur Borzo kabhi poochha hi nahi gaya (`[]`). Poora suite **174 files / 1653 tests**, UTC aur IST dono me.
+
+  **Jo jaan-boojh kar nahi kiya:** freight band ([shipping.js](backend/utils/shipping.js) ka `fallbackPrice`) abhi bhi PIN prefix pe hai. Wo function **sync** hai aur geocoding async — usme geo ghusane ke liye pricing path async karna padta, aur wo path sirf Shiprocket down hone pe chalta hai. Paise wale raaste me itna risk is fayde ke liye theek nahi laga. Chahiye to alag se.
+
 - ~~**"Limit lagao un sab `find()` pe"**~~ **dekh liya, karne layak nahi — 15 Oct 2026.** Audit me `find()` bina `.limit()` ki baat aayi thi. Ginti ~140 nikli (41 nahi), aur **blanket limit nuksaan karta**: jobs (payout, settlement, trackingReconcile) ko saari rows process karni hoti hain — limit lagane se kaam **chup-chaap chhoot jaata**, aur wo paise wala bug hota. Evidence: production ki sabse badi collection **836 rows** (knowledgechunks), products 56, users 11, sessions 384. Kuch bhi dikkat ke paas nahi.
   Jo traffic se badhti hain unhe alag se dekha: `Session.find` ek user ke **active** sessions tak bandha hai (mutthi bhar), `KnowledgeChunk` apni hi content hai, aur `ProductView.find({productId})` ek product ki ek-row-per-day history padhta hai — `{productId, day}` index pe, teen saal me ~1000 tiny docs, aur `total` **"ever"** hai to day se filter karna usko tod deta. Do query banane se ek round trip badhta aur ~1000 chhote docs bachte: ulta sauda.
   **Nateeja:** aaj kuch nahi karna. Jab `orders` ya `productviews` lakh ke paas jaayein tab asli jawab pagination hai, limit nahi. Dobara na uthayein.

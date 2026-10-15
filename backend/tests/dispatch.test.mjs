@@ -78,10 +78,12 @@ describe('the product page estimate', () => {
 describe('the product page and the checkout draw the line in the same place', () => {
   const mongoose = require('mongoose');
   const requestLib = require('supertest');
+  const axios = require('axios');
   const app = require('../app');
   const Product = require('../models/Product');
   const Seller = require('../models/Seller');
   const settings = require('../utils/liveSettings');
+  const borzo = require('../utils/borzo');
 
   const HOUSE = new mongoose.Types.ObjectId();
   const PRODUCT = new mongoose.Types.ObjectId();
@@ -109,6 +111,18 @@ describe('the product page and the checkout draw the line in the same place', ()
 
     Seller.findOne = vi.fn(() => chainableQuery({ userId: HOUSE, isPlatformOwned: true, pickupAddress: { pincode: '302019' } }));
     settings.liveSettings = vi.fn(async () => null);
+    /*
+     * Borzo now has the last word on whether the page may offer same-day
+     * (15 Oct 2026, routes/pincodeRoutes) and its answer is the coverage list.
+     * These tests are about the made-to-order LINE, so the courier says yes
+     * and stays out of the way. No seller point is set here either, so
+     * `withinLocalRadius` returns null and the PIN proxy is what runs - which
+     * is the behaviour this describe block is checking.
+     */
+    borzo._clearSameDayOffers();
+    vi.spyOn(axios, 'post').mockResolvedValue({
+      data: { is_successful: true, order: { payment_amount: 94, points: [{}, { required_finish_datetime: '2026-10-15T08:18:05Z' }] } },
+    });
     vi.spyOn(shiprocket, 'getShippingRate').mockResolvedValue({ data: { available_courier_companies: [{ courier_name: 'X', rate: 60, estimated_delivery_days: '1' }] } });
     vi.spyOn(shiprocket, 'pickBestCourier').mockReturnValue({ courier_name: 'X', rate: 60, estimated_delivery_days: '1' });
   });
@@ -118,6 +132,7 @@ describe('the product page and the checkout draw the line in the same place', ()
     Seller.findOne = saved.sellerFindOne;
     settings.liveSettings = saved.live;
     process.env = saved.env;
+    borzo._clearSameDayOffers();
     _clearCache();
   });
 
