@@ -474,6 +474,63 @@ synonyms collection (jhumka/jhumki/झुमका), Gemini query → filters.
 
 ## 3. Rajat's call — researched, waiting on a decision
 
+- **ShopMaster ka LAUNCH FILM — Creator Studio se banana hai (tay hua 17 Oct 2026).**
+  Rajat: *"chahe jitne bhi resources use karne pade, shaandaar banni chahiye — jo free me hai, code me hai, env me hai, studio ka hai, ShopMaster ka hai, MCP, AI... kuch bhi."*
+
+  **Sabse pehle ye jaan lo: tareeka pehle se likha hua hai.** `~/Desktop/backrr/creator-studio-pro/PLAYBOOK.md` = **"Launch film playbook — nine steps, any product"**. Usme step 2 hi kehta hai *"Capture screens with Playwright on this machine"* — yani jo hum soch rahe the, wo pehle se plan me hai. `docs/topics/launch-film.md` aur `docs/CATALOGUE.md` me `launch-film` preset bhi hai. **Dobara mat sochna, padh lena.**
+
+  **Resources jo already hain (kuch naya nahi chahiye):**
+  - **Creator Studio commands:** `studio` (editor :3000) · `prep-footage` `footage-scan` `cut` `highlights` · `captions` `srt` · `bpm` `music` `audio` `mixcheck` · **`script` `campaign` `catalog`** (marketing) · `spec` `do` + **MCP server** · `render` `doctor` `cleanup` `pack`
+  - **ShopMaster ka AI stack:** `SARVAM_API` (**Hindi voice-over**), `utils/ai/imageGen.js` ladder (Cloudflare 10k neurons/din free → Pollinations → HF), `utils/ai/assistant.js` + `config/knowledge.js` (script likhne ke liye — product ko sach me jaanta hai), `utils/ai/listing.js`, `utils/gemini.js` fallback ladder, aur **`AiUsage` se kharche ki ginti** — bill ka jhatka nahi
+  - **Source material:** 54 live products, Cloudinary pe asli photos, aur "realistic dev data" (wahi jo jaan-boojh kar messy rakha hai)
+  - **Brand:** `web/DESIGN.md` ke tokens, Jaipur pink `#C2186F → #7E0F4F`, bag + shop front wala mark
+
+  **Research aur extraction bhi toolkit ka hissa hai** (playbook step 1: *"Look at 3-5 reference launch films"*): reference films dhoondhna, Meesho/Flipkart/Dukaan ka launch content, Hindi reel hooks kaise likhe jaate hain, CC0 music ke source, codec settings. **Kram: Gemini `url_context` pehle (muft, zyadatar page padh leta hai), Firecrawl tabhi jab page Google ko block kare ya jab TASVEEREIN chahiye** - aur launch film me reference frames aur styleframes ke liye tasveerein sach me chahiye hoti hain, to yahan Firecrawl apni jagah banata hai. Budget: 1,000 credits/mahina, 26 taarikh ko reset, 25 reads/din, `AiUsage.research` me gina hua. **Firecrawl ka MCP authorised nahi hai - `backend/utils/research` use karna**, wo Rajat ki key se chalta hai aur kharcha bhi ginta hai.
+
+  **Format targets (17 Oct ko research kiye):**
+  ```
+  Instagram Reel    9:16  1080×1920   30–45 sec   Hindi VO + burned captions
+  LinkedIn main     4:5   1080×1350   60–90 sec   English + captions
+  LinkedIn/YouTube  16:9  1920×1080   60–90 sec
+  Stories teaser    9:16  1080×1920   15 sec
+  ```
+  Platform limits bahut udaar hain (IG Reel 3+ min, LinkedIn 15 min / 5 GB) — **par IG ka algorithm 3 min se lambi Reel non-followers ko dikhana band kar deta hai**, aur launch video waise bhi lambi nahi hoti. LinkedIn pe **4:5 mobile feed me 16:9 se behtar** chalta hai. Captions dono jagah **burn** karni hain (log mute dekhte hain). Format **MP4 / H.264**.
+
+  **Do shart jo bhoolni nahi:**
+  1. **Playbook khud kehta hai "Fictional data only"** — capture me asli customer ke naam, phone, address kabhi nahi jaane chahiye.
+  2. **Capture localhost pe hogi, live site pe nahi** — live pe Google One Tap aata hai ([[browser-only-on-his-laptop]]).
+
+  **Token discipline (Rajat ne khud kaha):** main **code likhunga**, wo **video dekhega** aur shabdon me feedback dega. Main video "dekhne" ki koshish nahi karunga — frame screenshots mehenge bhi hain aur bekaar bhi. Sab kuch **JSON/props se** chale taki text ya timing badalne ke liye mujhe bulana na pade. Playbook ka **step 5 "styleframes gate"** isi ke liye perfect hai — paanch stills pe uski haan, phir build.
+
+  **SCRIPT LIKH DI GAYI — `LAUNCH-FILM.md` (17 Oct 2026).** Master 2:30 cut,
+  Instagram Reel 28 sec, LinkedIn 75 sec, Stories 15 sec, aur **WhatsApp wala
+  plain-text version** jo seedha message me paste hota hai. Ye entry *tareeka*
+  rakhti hai; `LAUNCH-FILM.md` *shabd* rakhti hai. Dono padhni hain.
+
+  **Kal ka pehla kaam, do cheezein:**
+  1. **Source quality test** — Playwright ki video recording (webm, ~25fps, compressed) launch film ke liye kaafi hai ya **full-res PNG screenshot sequence** behtar rahega jise Remotion animate kare. Ghatiya source pe acha motion bhi bekaar. 10 minute ka test.
+  2. `PLAYBOOK.md` step 1 — brief aur goal (seller recruitment + liquidity), aur 3–5 reference launch films dekhna.
+
+- **Enrolment-wale seller pe inter-state rok — BANA NAHI HAI, aur abhi ZAROORI BHI NAHI (17 Oct 2026).**
+  **Pehle ye jaan lo ki baaki sab bana hua hai** (plan 2.40, 15 Sep 2026), taki koi ise naya kaam samajh kar dobara na dhoondhe:
+  `Seller.application` me **`gstMode` (gstin / enrolment / none), `gstin`, `enrolmentNumber`, `pan`, `legalName`** hain; `utils/application.js` me `checkEnrolment()` validation; `utils/kyc.js` teeno mode handle karta hai; `priceOrder.js` aur `customerController.js` invoice tak `enrolled` number le jaate hain; `catalogueSweep.js` me `isRegistered()`; admin alert me *"GSTIN / GST enrolment / no GST yet"*. Matlab **"bina GST becho" wala pitch aaj hi kaam karta hai.**
+
+  **Jo chhoot gaya:** model ke comment me *"intra-state, under ₹40 lakh"* likha hai, par **use lagoo karne wala koi code nahi hai** — poore backend me inter-state rokne ka ek bhi rule nahi (17 Oct ko grep karke dekha). Notification 37/2023 ke tehat ye rokna **platform ki zimmedari** hai, seller ki nahi.
+
+  **Rajat ka faisla, 17 Oct:** *"nhi bechne do seller ko kahi bhi bina gst ke abhi to."* Theek hai — **aaj ye moot bhi hai**, dono seller Rajasthan me hain aur bahar ka koi hai nahi, to rok hoti bhi to kuch na rokti. Ek baat record pe: inter-state rokna **operator ki zimmedari hai, seller ki nahi** (Notification 37/2023), yaani jokhim platform ka hai. Rajat ne is rok ko mana kar diya hai (*"kuch aese rok mat lagao"*) — **ye build nahi karni hai jab tak wo khud na kahein.** Ye row sirf isliye hai ki baat dobara shuru se na karni pade.
+
+  **Kab karna hai:** jis din **pehla bahar ka seller `gstMode: 'enrolment'` pe aaye.** Aaj dono seller Rajasthan me hain (Jaipur, Nasirabad) aur dono 0% pe hain, to risk sirf kaagazi hai. Rajat: *"agar last me haar maan jaun nahi hai, fir ye dekhne ki zaroorat hai kya — tab fir karna."* Theek hai.
+
+  **Kahan lagega:** checkout/pincode ka wahi raasta jahan 17 Oct ko geo aur same-day ka kaam hua — seller ke state ko delivery PIN ke state se milana. Code pehle se wahan baitha hai, to kaam chhota hai.
+
+  **FUTURE-PROOF — ye bhoolna nahi (Rajat, 17 Oct):** *"bahar ke bhi seller ho sakte hai, all India, us tarah se socho."* Isliye rok **Rajasthan hardcode karke mat banana** — **har seller ke APNE state** se compare karna. Delhi ka enrolment seller Delhi tak, Jaipur wala Rajasthan tak. Mehnat utni hi hai, par baad me todna nahi padega.
+
+  **Do tier jo apne aap bante hain:** enrolment wala seller = **sirf apne state me**, TCS nahi kat'ta; GST-registered seller = **poore India me**, 0.5% TCS kat'ta hai. Seller khud chune — poore India me bechna hai to GST le, apne state me kaafi hai to enrolment.
+
+  **Scaling ka asli kharcha states ka hai, revenue ka nahi:** TCS registration (REG-07) **seller ke state** se judta hai, aur har state ki apni monthly GSTR-8. 10 state ke seller = 10 registration + 10 filing. Revenue double hone se kuch nahi badhta.
+
+  **CA ka chhatha sawaal, jo expansion strategy tay karega:** agar kisi state me sirf **enrolment wale (unregistered)** seller hain — jahan **TCS kat'ta hi nahi** — to kya us state me REG-07 chahiye bhi? Agar nahi, to unregistered sellers platform ke liye saste padte hain aur all-India expansion bahut halka ho jaata hai. **Ye pata nahi hai; andaaza mat lagana.**
+
 - ~~**Geo build hua tha par product me use kahin nahi ho raha tha**~~ ✅ **15 Oct 2026** — aur usi ki kami se ek **live jhooth** nikla.
   Tu ne kaha "geo spatial location kaam aae". Dekha: `utils/geo.js` ko sirf `backfillSellerLocations.js` import karta tha, app me ek bhi `$near` nahi. Points aur `2dsphere` index live the, product ne chhua hi nahi.
 
