@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { addToCart } from '@/lib/analytics';
@@ -45,6 +45,39 @@ export default function BuyBox({
   const [quantity, setQuantity] = useState(1);
   const [state, setState] = useState({ status: 'idle' });
   const [saved, setSaved] = useState(false);
+
+  /*
+   * The fixed bar appears only once the page's own buttons have scrolled out
+   * of view (20 Oct 2026) - Amazon's way. Before, it sat on screen from the
+   * first paint, under the very buttons it repeats, and covered the product's
+   * name. Now there is never a second "Buy now" on screen at the same time.
+   */
+  const inlineRef = useRef(null);
+  const [inlineGone, setInlineGone] = useState(false);
+  // Measured on scroll, not with an IntersectionObserver: an observer only
+  // speaks when the element crosses the screen edge, so a fast fling (or a
+  // page restored half-way down) can carry the buttons from below the screen
+  // to above it without ever "crossing", and the bar never came.
+  useEffect(() => {
+    const el = inlineRef.current;
+    if (!el) return undefined;
+    let frame = 0;
+    const check = () => {
+      frame = 0;
+      setInlineGone(el.getBoundingClientRect().bottom < 0);
+    };
+    const onScroll = () => {
+      if (!frame) frame = requestAnimationFrame(check);
+    };
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll);
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onScroll);
+      if (frame) cancelAnimationFrame(frame);
+    };
+  }, []);
   const { signedIn, capabilities } = useSession();
   const router = useRouter();
   // The admin account is not a shopper (backend/utils/capabilities: its orders
@@ -146,7 +179,7 @@ export default function BuyBox({
           </div>
         )}
 
-        {button}
+        <div ref={inlineRef}>{button}</div>
 
         {/*
           Saving is the honest alternative to a "buy now, decide later" nudge:
@@ -197,7 +230,14 @@ export default function BuyBox({
           BottomNav and its "Buy now" was cut in half by the tabs - the one
           button the whole page exists for. It now stands on the nav's own
           height token, plus the phone's home-indicator inset. */}
-      <div className="glass fixed inset-x-0 bottom-[calc(var(--bottom-nav-h)+env(safe-area-inset-bottom))] z-40 flex items-center gap-3 border-t px-4 py-3 md:hidden">
+      {/* 20 Oct 2026: the tab bar is gone from product pages (BottomNav), so
+          the bar stands on the bottom edge again, padded for the home indicator,
+          and slides in only when the page's own buttons have left the screen. */}
+      <div
+        aria-hidden={!inlineGone}
+        inert={!inlineGone}
+        className={`glass fixed inset-x-0 bottom-0 z-40 flex items-center gap-3 border-t px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] transition-transform duration-200 ease-out md:hidden ${inlineGone ? 'translate-y-0' : 'translate-y-full'}`}
+      >
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-medium">{name}</p>
           <p className="text-sm text-muted-foreground">₹{price.toLocaleString('en-IN')}</p>

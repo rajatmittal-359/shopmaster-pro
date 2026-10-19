@@ -15,7 +15,11 @@ import { useSession } from '@/lib/session';
  * difference a storefront can make, and it costs nothing.
  *
  * Hidden on `md` and up (the header does the job there), in the panels
- * (ShopChrome hides it), and on checkout (nothing may compete with Pay).
+ * (ShopChrome hides it), on checkout (nothing may compete with Pay), and on
+ * a product page (20 Oct 2026). There the buy bar is the one bar: Flipkart
+ * and Myntra drop the tab bar on a product page for the same reason, and with
+ * both stacked a phone lost about a quarter of its screen and the product's
+ * own name showed half-cut in the gap between them.
  */
 const TABS = [
   { href: '/', label: 'Home', icon: Home, end: true },
@@ -28,7 +32,7 @@ const TABS = [
 export default function BottomNav() {
   const pathname = usePathname() || '/';
   const { signedIn } = useSession();
-  if (pathname.startsWith('/checkout')) return null;
+  if (pathname.startsWith('/checkout') || pathname.startsWith('/products/')) return null;
 
   return (
     <nav
