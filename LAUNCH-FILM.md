@@ -278,11 +278,13 @@ there is one upload. The order only makes each round cheaper:
 Before step 2, Rajat collects 2-3 launch films he genuinely likes as the
 reference for "like this".
 
-**Length limits, checked 19 Oct 2026** (official help pages could not be read;
-third-party sources disagree, so every cut stays under the LOWEST reported
-limit): Instagram Reel 30 s or less (some new accounts are limited to 90 s;
-over 3 min stops reaching new viewers); LinkedIn 60-75 s (limit 10 min mobile,
-5 GB); WhatsApp Status 30 s and under 16 MB (newer sources say 90 s, older 30).
+**Platform limits - use Creator Studio's verified rules, not web searches**
+(`npm run kit -- rules instagram:reel`, `src/platforms/rules.json`, official
+sources, checked 2026-10-16): Instagram Reel up to 3 min; LinkedIn video 3 s to
+10 min, 75 KB to 5 GB, ratio 1:2.4 to 2.4:1. Every cut here is far inside. The
+studio has no WhatsApp rules: keep that cut under 30 s and 16 MB. It also marks
+LinkedIn's "link in the first comment" penalty as unverified folklore - so the
+link placement is a choice, not a rule. Run `kit check` before every export.
 
 ## 7c. Two machines (decided 20 Oct 2026)
 
