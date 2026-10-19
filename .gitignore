@@ -86,3 +86,6 @@ web/playwright-report/
 
 # The handover pack: live keys, never committed (scripts/handover-pack.js)
 handover/
+
+# Creator Studio Pro lives beside this repo; this is only a shortcut to it (20 Oct 2026).
+/creator-studio-pro
