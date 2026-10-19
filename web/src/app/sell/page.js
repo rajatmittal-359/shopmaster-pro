@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import ApplyToSell from '@/components/seller/ApplyToSell';
 import { getSettings } from '@/lib/api';
+import EarningsCalculator from '@/components/seller/EarningsCalculator';
 import { POLICY, BUSINESS, COMMISSION_RATE } from '@/config/policy';
 
 export const metadata = {
@@ -71,6 +72,8 @@ export default async function SellPage() {
           .
         </p>
       </div>
+
+      <EarningsCalculator />
 
       <ol className="mt-12 space-y-6">
         {steps.map(([title, note], i) => (

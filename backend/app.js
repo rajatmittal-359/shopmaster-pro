@@ -205,6 +205,25 @@ app.get('/api/public/seller-rules', (req, res) => {
   const { loadRules, defaults, ...rules } = require('./config/sellerRules');
   res.json(rules);
 });
+/*
+ * "Aapko kitna milega" on /sell (19 Oct 2026): what a shop joining today takes
+ * home from one sale. Made by the same splitLine an order is split with, at the
+ * platform rate a new seller gets, so the page cannot disagree with the payout.
+ * Public and cacheable: a price in, three numbers out, nothing about anyone.
+ */
+app.get('/api/public/seller-earnings', async (req, res) => {
+  const price = Number(req.query.price);
+  if (!String(req.query.price || '').trim() || !Number.isFinite(price) || price <= 0 || price > 10000000) {
+    return res.status(400).json({ message: 'Type the price you would sell it at' });
+  }
+  const { platformRate, splitLine } = require('./utils/commission');
+  const rate = await platformRate();
+  const split = splitLine(price, 1, rate);
+  const live = await require('./utils/liveSettings').liveSettings().catch(() => null);
+  const days = Number(live?.rules?.payoutAfterDeliveryDays ?? require('./config/sellerRules').payoutAfterDeliveryDays);
+  res.set('Cache-Control', 'public, max-age=300');
+  res.json({ price, commissionRate: split.commissionRate, commission: split.commissionAmount, youGet: split.sellerEarning, paidDaysAfterDelivery: Number.isFinite(days) ? days : 7 });
+});
 // What the storefront needs to draw itself: identity, links, switches, banner.
 app.get('/api/public/settings', require('./controllers/settingsController').publicSettings);
 // The search bar's mic before sign-in. Rate-limited above like every AI route.
