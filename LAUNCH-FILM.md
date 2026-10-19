@@ -255,15 +255,17 @@ It is motion graphics - real ShopMaster screens animated with kinetic text,
 sound on every action, cut on the beat - not camera footage and not a raw
 screen recording. Screens are **rebuilt in React** for the cleanest frame.
 
-**Made once (Rajat: "baar baar nahi banti, ek baar me shaandaar").** Every
-change happens where it is cheap, never on a full render:
+**Posted once, iterated until it is right (Rajat, 19 Oct 2026: "LinkedIn pe
+upload ek baar karunga, dubara thodi karunga - last me iterations lagein chahe
+jitne, par sahi cheez ho, maza aa jaaye dekh ke").** There is no render limit;
+there is one upload. The order only makes each round cheaper:
 1. Script locked, second by second.
 2. 5 styleframes (stills): first frame, the badge, the seller calculator, the
-   admin's ledger, the end card - look, colour and type decided here, as many
-   rounds as it takes.
-3. One 5-second motion test: pace, beat and sound.
-4. The full film, rendered once.
+   admin's ledger, the end card - look, colour and type.
+3. A 5-second motion test: pace, beat and sound.
+4. The full film - then as many rounds as it takes, scene by scene.
 5. Loudness and caption check; upload test in LinkedIn without posting.
+6. Post, once, when Rajat watches it and it lands.
 Before step 2, Rajat collects 2-3 launch films he genuinely likes as the
 reference for "like this".
 
