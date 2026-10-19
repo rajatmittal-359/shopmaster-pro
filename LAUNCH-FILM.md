@@ -284,6 +284,22 @@ limit): Instagram Reel 30 s or less (some new accounts are limited to 90 s;
 over 3 min stops reaching new viewers); LinkedIn 60-75 s (limit 10 min mobile,
 5 GB); WhatsApp Status 30 s and under 16 MB (newer sources say 90 s, older 30).
 
+## 7c. Two machines (decided 20 Oct 2026)
+
+**This Mac does everything** - script, styleframes, 2D motion, code-built 3D,
+voice, music timing, every iteration and preview. **The Lenovo (RTX 3050, 4 GB)
+does only the final heavy render** of the 3D scenes, and Blender's Cycles if a
+shot ever needs it. The film's folder lives in git so the Lenovo only pulls and
+renders - nothing is copied by hand. 3D stays to 3-4 moments (logo, phone,
+parcel's trip, a jewellery piece from an AI-made model); 4 GB is enough for that.
+
+**Assets on hand:** Creator Studio's `.env.mine` keys (Rajat's mother's
+accounts, free to use): ElevenLabs (voice - Rajat to confirm the plan is paid
+before publishing), Gemini/Lyria (music), Freesound, Pexels, Pixabay, Unsplash
+(licensed sounds and footage), FAL (AI 3D models), Runway / Higgsfield (AI
+video). Phonk: Ogryzek - AURA, WAV in ~/Downloads, 120 BPM, drop at ~24 s -
+local timing only; the Reel gets it from Instagram's library.
+
 ## 8. Still open before a frame is shot
 
 1. ~~Source quality test~~ - Playwright webm vs PNG sequence vs screens
