@@ -483,7 +483,7 @@ synonyms collection (jhumka/jhumki/झुमका), Gemini query → filters.
 - **ShopMaster ka LAUNCH FILM — Creator Studio se banana hai (tay hua 17 Oct 2026).**
   Rajat: *"chahe jitne bhi resources use karne pade, shaandaar banni chahiye — jo free me hai, code me hai, env me hai, studio ka hai, ShopMaster ka hai, MCP, AI... kuch bhi."*
 
-  **Sabse pehle ye jaan lo: tareeka pehle se likha hua hai.** `~/Desktop/backrr/creator-studio-pro/PLAYBOOK.md` = **"Launch film playbook — nine steps, any product"**. Usme step 2 hi kehta hai *"Capture screens with Playwright on this machine"* — yani jo hum soch rahe the, wo pehle se plan me hai. `docs/topics/launch-film.md` aur `docs/CATALOGUE.md` me `launch-film` preset bhi hai. **Dobara mat sochna, padh lena.**
+  **Sabse pehle ye jaan lo: tareeka pehle se likha hua hai.** `~/Documents/my project/creator-studio-pro/PLAYBOOK.md` = **"Launch film playbook — nine steps, any product"**. Usme step 2 hi kehta hai *"Capture screens with Playwright on this machine"* — yani jo hum soch rahe the, wo pehle se plan me hai. `docs/topics/launch-film.md` aur `docs/CATALOGUE.md` me `launch-film` preset bhi hai. **Dobara mat sochna, padh lena.**
 
   **Resources jo already hain (kuch naya nahi chahiye):**
   - **Creator Studio commands:** `studio` (editor :3000) · `prep-footage` `footage-scan` `cut` `highlights` · `captions` `srt` · `bpm` `music` `audio` `mixcheck` · **`script` `campaign` `catalog`** (marketing) · `spec` `do` + **MCP server** · `render` `doctor` `cleanup` `pack`

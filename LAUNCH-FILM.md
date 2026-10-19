@@ -237,7 +237,7 @@ buyer trust in Jaipur), not by any earlier film.
   song is for a local cut only.
 - **Check remotion.dev/license before publishing.**
 
-**Taken from Rajat's Backrr film** (`~/Desktop/backrr/creator-studio-pro/project/backrr-launch-video/` - open it, it may have moved on), only where it serves our goal:
+**Taken from Rajat's Backrr film** (`~/Desktop/backrr/backrr-launch-video/` - open it, it may have moved on), only where it serves our goal:
 - **Two sides winning in one loop.** Our goal is seller recruitment AND buyer
   trust - a film that shows only the buyer recruits no seller.
 - **Cut on the music's beat**, so swapping the track never means re-editing.
