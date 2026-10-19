@@ -22,16 +22,41 @@ const returns = require('../utils/settleReturn');
  */
 const parcelOf = (order, sellerId) => (order.fulfilments || []).find((f) => String(f.sellerId) === String(sellerId));
 
-/** POST /seller/orders/:orderId/pack-proof  { imageDataUrl } */
+/**
+ * POST /seller/orders/:orderId/pack-proof  { imageDataUrl } or { videoDataUrl }
+ *
+ * A VIDEO may stand as the proof (19 Oct 2026, plan 2.83): Meesho and
+ * Flipkart both take an order-linked packing video as the evidence against an
+ * "empty box" or swapped return, because one take shows the item, the count,
+ * its condition and the label together. Capped at 30 seconds (the label and
+ * the item are all it has to show) and 7MB (utils/cloudinary uploadVideo).
+ */
+const PACK_VIDEO_MAX_SECONDS = 30;
 exports.packProof = async (req, res) => {
   try {
     const order = await Order.findOne({ _id: req.params.orderId, 'items.sellerId': req.user._id });
     if (!order) return res.status(404).json({ message: 'Order not found' });
     const f = parcelOf(order, req.user._id);
     if (!f || !['pending', 'processing'].includes(f.status)) return res.status(400).json({ message: 'Pack proof is taken before the parcel ships.' });
+    if (req.body?.videoDataUrl) {
+      const cloud = require('../utils/cloudinary');
+      let v;
+      try {
+        v = await cloud.uploadVideo(req.body.videoDataUrl, 'shopmaster-pack-proof');
+      } catch (err) {
+        return res.status(400).json({ message: String(err.message || '').replace(/^Video upload failed: /, '') || 'That video could not be saved.' });
+      }
+      if (Number(v.duration) > PACK_VIDEO_MAX_SECONDS) {
+        await cloud.deleteVideo(v.publicId);
+        return res.status(400).json({ message: `Keep the packing video under ${PACK_VIDEO_MAX_SECONDS} seconds - the item in the box and the label is all it needs to show.` });
+      }
+      f.packProof = { kind: 'video', url: v.url, publicId: v.publicId || null, poster: v.poster || null, duration: v.duration || null, at: new Date() };
+      await order.save();
+      return res.json({ ok: true, packProof: f.packProof, message: 'Packing video saved. It is your evidence if this parcel is ever disputed.' });
+    }
     const up = await uploadEvidence([req.body?.imageDataUrl], 'shopmaster-pack-proof', { max: 1 });
     if (!up.ok || !up.urls.length) return res.status(400).json({ message: up.message || 'Send one photo of the packed item with its tag.' });
-    f.packProof = { url: up.urls[0], publicId: up.publicIds[0] || null, at: new Date() };
+    f.packProof = { kind: 'photo', url: up.urls[0], publicId: up.publicIds[0] || null, at: new Date() };
     await order.save();
     res.json({ ok: true, packProof: f.packProof, message: 'Pack proof saved. It is your evidence if this parcel is ever disputed.' });
   } catch (error) {

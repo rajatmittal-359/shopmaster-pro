@@ -251,6 +251,8 @@ there is no same-day demand waiting on it.
 
 ### 2.83 Pack proof should be a video, not a photo
 
+**✅ Built 19 Oct 2026** (Rajat: yes to all) - as a choice beside the photo, not a new duty. Order page → Pack proof → **"Or record a video"** (phone camera opens), max 30 s and 7 MB (refused in the browser before it spends data; the server re-checks the duration Cloudinary measures and deletes an over-long upload). Stored on `fulfilment.packProof` with `kind: 'video'`, `poster`, `duration`, so every existing "has pack proof" check keeps working; plays inline for the seller, and the admin's parcel view says "packing video". Hindi + Hinglish labels. Test `packProofVideo.test.mjs`. **Cost:** a 15-second phone clip is a few MB, so at today's order count it sits inside Cloudinary's free credits. **Live drill:** the uploader is the one product videos already use live; the first real packing video from a phone is the check that closes this.
+
 Researched 2 Oct 2026, asking what other Indian sellers actually do about return
 fraud. The answer was not what this project assumed.
 
@@ -364,6 +366,8 @@ ledger `SellerCharge`, `utils/sellerCharges`). The work is a numbered, dated
 document per seller per month, not a new calculation.
 
 ### 2.78 Ask Shiprocket to cover the parcels that are NOT covered today
+
+**Checked 19 Oct 2026 - not buildable through the API.** Shiprocket's own API collection (`apidocs.shiprocket.in`, read through the collection JSON the page loads) documents the flag as `is_insurance_opt` on Create Custom Order with the meaning *"To secure shipments above the order value of Rs 2500"* - the same ₹2,500 floor as Auto Secure. There is no API field that insures a ₹1,000 parcel, and no public premium rate (third-party estimates say 1-3% of declared value). So the honest answer recorded below stands: **good packing plus the tamper seal** for parcels under ₹2,500, Auto Secure above. The one thing left is a question only Rajat can ask: Shiprocket support, *"Selective Cover ₹2,500 se kam ke parcel pe kaise milega, aur premium kitna?"* - if they offer it, it is a panel setting, not code.
 
 Found 2 Oct 2026 while auditing Shiprocket, from Rajat's question: *"1000 tak ke
 product bhi rakhte hai, sahi secure delivery honi chahiye."*

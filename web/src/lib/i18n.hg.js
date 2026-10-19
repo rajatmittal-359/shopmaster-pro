@@ -846,6 +846,10 @@ const HG = {
   'Commission bills': 'Commission ke bill',
   'One bill a month for what the platform kept from your payouts - the document your accountant will ask for.': 'Har mahine ek bill - platform ne aapke payout me se jo kaata uska. Yahi document aapka accountant maangega.',
   'No bills yet. One appears after the first month in which a payout kept a commission.': 'Abhi koi bill nahi. Jis mahine kisi payout me se commission katega, uske baad yahan bill aa jaayega.',
+  // Pack proof video (plan 2.83)
+  'Or record a video': 'Ya video banao',
+  'A short video showing the item going into the box and the label is even stronger.': 'Saaman dibbe me jaate hue aur label dikhata chhota video aur bhi pakka saboot hai.',
+  'That video is too large. Keep it under 30 seconds - the item in the box and the label is enough.': 'Video bahut bada hai. 30 second se chhota rakho - dibbe me saaman aur label dikhana kaafi hai.',
 };
 
 export default HG;

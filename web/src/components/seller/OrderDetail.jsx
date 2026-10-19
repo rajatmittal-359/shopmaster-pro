@@ -326,19 +326,51 @@ export default function SellerOrderDetail({ orderId }) {
           <h2 className="font-semibold">{t('Pack proof')}</h2>
           {order.packProof ? (
             <p className="mt-1 flex items-center gap-3 text-sm">
-              <a href={order.packProof.url} target="_blank" rel="noopener noreferrer" className="block size-14 overflow-hidden rounded-md border bg-muted">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={order.packProof.url} alt="Pack proof" className="size-full object-cover" />
-              </a>
+              {order.packProof.kind === 'video' ? (
+                <video src={order.packProof.url} poster={order.packProof.poster || undefined} controls preload="none" playsInline className="h-20 w-28 rounded-md border bg-muted object-cover" aria-label="Packing video" />
+              ) : (
+                <a href={order.packProof.url} target="_blank" rel="noopener noreferrer" className="block size-14 overflow-hidden rounded-md border bg-muted">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={order.packProof.url} alt="Pack proof" className="size-full object-cover" />
+                </a>
+              )}
               <span className="text-muted-foreground">{t('Saved')} {when(order.packProof.at)} · {t('your evidence if this parcel is ever disputed')}</span>
             </p>
           ) : (
             <>
-              <p className="mt-1 text-sm text-muted-foreground">{t('One photo of the packed item with its tag, before the courier comes. If a customer says "damaged" or "empty box", this photo is what decides it.')}</p>
+              <p className="mt-1 text-sm text-muted-foreground">{t('One photo of the packed item with its tag, before the courier comes. If a customer says "damaged" or "empty box", this photo is what decides it.')} {t('A short video showing the item going into the box and the label is even stronger.')}</p>
               <div className="mt-2 flex flex-wrap items-center gap-3">
                 {/* The tag first, the photo with the tag showing second - the two together are the evidence. */}
                 <Link href={`/seller/orders/${orderId}/tag`} className="inline-flex items-center rounded-md border px-3 py-1.5 text-sm hover:bg-muted">{t('Print return tags')}</Link>
                 <PhotoPicker value={proof} onChange={setProof} max={1} label={t('Take it')} />
+                {/*
+                  Or a packing video (plan 2.83) - what Meesho and Flipkart take as the
+                  evidence against an "empty box" return: item, count, condition and
+                  label in one take. Size is checked here so a long clip is refused
+                  before it spends the seller's data, not after.
+                */}
+                <label className="inline-flex cursor-pointer items-center rounded-md border px-3 py-1.5 text-sm hover:bg-muted">
+                  {t('Or record a video')}
+                  <input
+                    type="file"
+                    accept="video/*"
+                    capture="environment"
+                    className="sr-only"
+                    disabled={state.status === 'working'}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      e.target.value = '';
+                      if (!file) return;
+                      if (file.size > 7 * 1024 * 1024) {
+                        setState({ status: 'error', message: t('That video is too large. Keep it under 30 seconds - the item in the box and the label is enough.') });
+                        return;
+                      }
+                      const reader = new FileReader();
+                      reader.onload = () => act('/pack-proof', { videoDataUrl: reader.result });
+                      reader.readAsDataURL(file);
+                    }}
+                  />
+                </label>
                 {proof.length > 0 && (
                   <Button size="sm" disabled={state.status === 'working'} onClick={async () => { await act('/pack-proof', { imageDataUrl: proof[0] }); setProof([]); }}>{t('Save pack proof')}</Button>
                 )}

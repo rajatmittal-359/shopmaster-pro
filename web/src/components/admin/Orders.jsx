@@ -174,7 +174,7 @@ export default function AdminOrders() {
                           </>
                         )}
                         <dt className="text-muted-foreground">Pack proof</dt>
-                        <dd>{parcel.packProof?.url ? <a href={parcel.packProof.url} target="_blank" rel="noopener noreferrer" className="text-brand-ink hover:underline">Seller&apos;s photo before dispatch ({when(parcel.packProof.at)})</a> : <span className="text-muted-foreground">none from the seller</span>}</dd>
+                        <dd>{parcel.packProof?.url ? <a href={parcel.packProof.url} target="_blank" rel="noopener noreferrer" className="text-brand-ink hover:underline">Seller&apos;s {parcel.packProof.kind === 'video' ? 'packing video' : 'photo'} before dispatch ({when(parcel.packProof.at)})</a> : <span className="text-muted-foreground">none from the seller</span>}</dd>
                         {parcel.receiptCheck?.at && (
                           <>
                             <dt className="text-muted-foreground">Came back</dt>

@@ -886,6 +886,10 @@ const HI = {
   'Commission bills': 'कमीशन के बिल',
   'One bill a month for what the platform kept from your payouts - the document your accountant will ask for.': 'हर महीने एक बिल - प्लेटफ़ॉर्म ने आपके पेमेंट में से जो काटा उसका। यही कागज़ आपका अकाउंटेंट माँगेगा।',
   'No bills yet. One appears after the first month in which a payout kept a commission.': 'अभी कोई बिल नहीं। जिस महीने किसी पेमेंट में से कमीशन कटेगा, उसके बाद यहाँ बिल आ जाएगा।',
+  // Pack proof video (plan 2.83)
+  'Or record a video': 'या वीडियो बनाएँ',
+  'A short video showing the item going into the box and the label is even stronger.': 'सामान डिब्बे में जाते हुए और लेबल दिखाता छोटा वीडियो और भी पक्का सबूत है।',
+  'That video is too large. Keep it under 30 seconds - the item in the box and the label is enough.': 'वीडियो बहुत बड़ा है। 30 सेकंड से छोटा रखें - डिब्बे में सामान और लेबल दिखाना काफ़ी है।',
 };
 
 export default HI;

@@ -406,6 +406,10 @@ const fulfilmentSchema = new mongoose.Schema(
      * tap that Myntra and Flipkart spend QC teams on.
      */
     packProof: {
+      // 'photo' or 'video' (plan 2.83); older proofs have none and are photos.
+      kind: { type: String, enum: ['photo', 'video', null], default: null },
+      poster: { type: String, default: null },
+      duration: { type: Number, default: null },
       url: { type: String, default: null },
       publicId: { type: String, default: null },
       at: { type: Date, default: null },
