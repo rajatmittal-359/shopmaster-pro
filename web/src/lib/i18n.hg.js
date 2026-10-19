@@ -842,6 +842,10 @@ const HG = {
   'Pickup did not happen - courier retries next working day': 'Pickup nahi hua - courier agle kaam ke din phir aayega',
   'Came back (RTO)': 'Wapas aa gaya (RTO)',
   'Coming back (RTO)': 'Wapas aa raha hai (RTO)',
+  // Commission bills (plan 2.85)
+  'Commission bills': 'Commission ke bill',
+  'One bill a month for what the platform kept from your payouts - the document your accountant will ask for.': 'Har mahine ek bill - platform ne aapke payout me se jo kaata uska. Yahi document aapka accountant maangega.',
+  'No bills yet. One appears after the first month in which a payout kept a commission.': 'Abhi koi bill nahi. Jis mahine kisi payout me se commission katega, uske baad yahan bill aa jaayega.',
 };
 
 export default HG;

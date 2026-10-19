@@ -882,6 +882,10 @@ const HI = {
   'Pickup did not happen - courier retries next working day': 'पिकअप नहीं हुआ - कूरियर अगले कामकाजी दिन फिर आएगा',
   'Came back (RTO)': 'वापस आ गया (RTO)',
   'Coming back (RTO)': 'वापस आ रहा है (RTO)',
+  // Commission bills (plan 2.85)
+  'Commission bills': 'कमीशन के बिल',
+  'One bill a month for what the platform kept from your payouts - the document your accountant will ask for.': 'हर महीने एक बिल - प्लेटफ़ॉर्म ने आपके पेमेंट में से जो काटा उसका। यही कागज़ आपका अकाउंटेंट माँगेगा।',
+  'No bills yet. One appears after the first month in which a payout kept a commission.': 'अभी कोई बिल नहीं। जिस महीने किसी पेमेंट में से कमीशन कटेगा, उसके बाद यहाँ बिल आ जाएगा।',
 };
 
 export default HI;

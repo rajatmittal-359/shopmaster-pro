@@ -141,9 +141,14 @@ const {
   getMyEarnings,
   getMyPayoutDetails,
   updateMyPayoutDetails,
+  getMyCommissionInvoices,
+  getMyCommissionInvoice,
 } = require('../controllers/payoutController');
 
 router.get('/earnings', getMyEarnings);
+// The platform's monthly bill for its commission (plan 2.85).
+router.get('/commission-invoices', getMyCommissionInvoices);
+router.get('/commission-invoices/:month', getMyCommissionInvoice);
 router.get('/payout-details', getMyPayoutDetails);
 // Step-up: where the money goes changes only with the password just typed (middlewares/requireRecentAuth).
 router.patch('/payout-details', require('../middlewares/requireRecentAuth'), updateMyPayoutDetails);

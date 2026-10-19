@@ -379,3 +379,32 @@ exports.updateMyPayoutDetails = async (req, res) => {
     res.status(400).json({ success: false, message });
   }
 };
+
+/**
+ * The seller's monthly commission bills (plan 2.85, utils/commissionInvoice):
+ * the list of months with one, and one month's document - issued on first
+ * open, the same document every time after.
+ */
+exports.getMyCommissionInvoices = async (req, res) => {
+  try {
+    res.json({ months: await require('../utils/commissionInvoice').listFor(req.user._id) });
+  } catch (error) {
+    console.error('Commission invoice list failed:', error.message);
+    res.status(500).json({ message: 'Could not load your commission bills' });
+  }
+};
+
+exports.getMyCommissionInvoice = async (req, res) => {
+  try {
+    const { isClosedMonth, issueFor } = require('../utils/commissionInvoice');
+    if (!isClosedMonth(req.params.month)) {
+      return res.status(404).json({ message: 'A bill is issued once the month is over' });
+    }
+    const invoice = await issueFor(req.user._id, req.params.month);
+    if (!invoice) return res.status(404).json({ message: 'Nothing was charged that month' });
+    res.json({ invoice });
+  } catch (error) {
+    console.error('Commission invoice failed:', error.message);
+    res.status(500).json({ message: 'Could not prepare that bill' });
+  }
+};

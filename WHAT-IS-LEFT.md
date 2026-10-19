@@ -336,6 +336,8 @@ city Borzo serves opens by itself, the day a seller in that city signs up.
 
 ### 2.85 The seller is told the commission, never given a bill for it
 
+**✅ Built 19 Oct 2026** (Rajat: yes to all). Payments → **Commission bills**: one per seller per IST month that kept anything, from PAID payouts (commission + cancellation charges), numbered `SMP/COM/<FY>/<serial>` on first open and never re-issued (unique per seller+month; a race returns the other tab's document). Both parties' names and addresses are copied in at issue. Printable page `/seller/payments/commission/<YYYY-MM>`; says in words that no GST is charged because the issuer is not registered. Hindi + Hinglish labels. Files: `utils/commissionInvoice.js`, `models/CommissionInvoice.js`, test `commissionInvoice.test.mjs`. Verified on the dev database: Iyer Silks, Sep 2026 → `SMP/COM/26-27/00001`, ₹432, same document on the second request. **Left:** the GST lines, the day ShopMaster Pro has a GSTIN; an admin view of all issued bills.
+
 Found 3 Oct 2026, from Rajat's question: *"shopmaster seller ko bill deta hai vo
 bhi dekha do."* It does not. The seller's Earnings screen shows **Commission
 charged** as a figure and the rate beside it, and that is the whole of it - no
