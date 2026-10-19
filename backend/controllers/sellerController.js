@@ -1892,7 +1892,8 @@ exports.getSettings = async (req, res) => {
          * is the difference between a fee and a deduction they discover in a
          * payout - and only an admin can change it.
          */
-        commissionRate: seller.commissionRate,
+        commissionRate: (await require('../utils/commission').rateFor(seller)).rate,
+        commissionIsDefault: (await require('../utils/commission').rateFor(seller)).isDefault,
         isPlatformOwned: Boolean(seller.isPlatformOwned),
 
         /*
@@ -1971,7 +1972,8 @@ const applyShopSettings = async (seller, body = {}, opts = {}) => {
     if (Boolean(seller.homeTreatment) !== want) {
       const platformRate = Number.isFinite(Number(opts.platformRate)) ? Number(opts.platformRate) : 8;
       seller.homeTreatment = want;
-      seller.commissionRate = want ? 0 : platformRate;
+      // Off means back to the platform rate, not a copy of today's number - a copy would stop following the admin's default.
+      seller.commissionRate = want ? 0 : null;
       seller.aiUnlimited = want;
       changed.push(want ? 'ghar jaisa: 0% commission + AI without limits' : `ghar jaisa off: ${platformRate}% commission + the daily AI limits`);
     }

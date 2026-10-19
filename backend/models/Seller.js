@@ -119,8 +119,11 @@ const sellerSchema = new mongoose.Schema(
      * each order item at the moment the order is placed. See utils/commission.js.
      */
     commissionRate: {
+      // null = the platform rate in force (utils/commission platformRate);
+      // a number = a rate an admin agreed with this shop. Was `default: 8`,
+      // which made the admin's default box reach nobody (19 Oct 2026).
       type: Number,
-      default: DEFAULT_COMMISSION_RATE,
+      default: null,
       min: [0, 'Commission rate cannot be negative'],
       max: [100, 'Commission rate cannot exceed 100%']
     },

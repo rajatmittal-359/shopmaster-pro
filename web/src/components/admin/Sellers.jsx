@@ -120,15 +120,18 @@ function RateEditor({ seller, onSave, busy }) {
   const [value, setValue] = useState(String(seller.commissionRate ?? 0));
   if (!open) {
     return (
-      <button type="button" onClick={() => setOpen(true)} className="tabular-nums hover:underline" title="Change the commission">
-        {seller.commissionRate ?? 0}%
+      <button type="button" onClick={() => setOpen(true)} className="tabular-nums hover:underline" title={seller.commissionIsDefault ? 'The platform rate (Settings → Rules). Click to agree a different one.' : 'A rate agreed with this shop. Click to change.'}>
+        {seller.commissionRate ?? 0}%{seller.commissionIsDefault && <span className="ml-1 text-[0.65rem] text-muted-foreground">default</span>}
       </button>
     );
   }
   return (
     <span className="inline-flex items-center gap-1">
       <Input value={value} onChange={(e) => setValue(e.target.value.replace(/[^\d.]/g, ''))} aria-label={`Commission for ${seller.businessName}`} className="h-7 w-16 text-right" autoFocus />
-      <Button size="sm" variant="outline" className="h-7" disabled={busy || Number(value) === Number(seller.commissionRate)} onClick={async () => { await onSave(Number(value)); setOpen(false); }}>Set</Button>
+      <Button size="sm" variant="outline" className="h-7" disabled={busy || (!seller.commissionIsDefault && Number(value) === Number(seller.commissionRate))} onClick={async () => { await onSave(Number(value)); setOpen(false); }}>Set</Button>
+      {!seller.commissionIsDefault && (
+        <Button size="sm" variant="ghost" className="h-7" disabled={busy} title="Follow the platform rate from Settings again" onClick={async () => { await onSave(null); setOpen(false); }}>Use default</Button>
+      )}
       <Button size="sm" variant="ghost" className="h-7" onClick={() => setOpen(false)}>✕</Button>
       <span className="ml-1 hidden text-[0.65rem] text-muted-foreground lg:inline">future orders only</span>
     </span>

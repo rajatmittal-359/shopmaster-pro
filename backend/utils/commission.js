@@ -29,6 +29,43 @@ const DEFAULT_COMMISSION_RATE = 8;
 const round2 = (n) => Math.round(n * 100) / 100;
 
 /**
+ * THE PLATFORM RATE IS THE ADMIN'S (19 Oct 2026)
+ *
+ * Settings → Rules → "Default commission (%)" is printed on the selling
+ * policy, the seller's Help, onboarding and the agreement - but orders were
+ * split at the 8 hard-coded above, and every new Seller row had 8 written into
+ * it by the schema default. So the box changed what sellers were TOLD and
+ * never what they were CHARGED. Both were 8, so nothing was ever charged
+ * wrongly; the day the box moved, every seller's agreement would have been
+ * broken on every sale.
+ *
+ * Now a seller's own `commissionRate` is null unless an admin set one, and
+ * null means "the platform rate in force": the live setting, else the
+ * rulebook, else 8. The order still COPIES the rate it was placed at.
+ */
+const platformRate = async () => {
+  const live = await require('./liveSettings').liveSettings().catch(() => null);
+  const fromAdmin = Number(live?.rules?.defaultCommissionPct);
+  if (live?.rules?.defaultCommissionPct != null && Number.isFinite(fromAdmin) && fromAdmin >= 0 && fromAdmin <= 100) return fromAdmin;
+  const fromRules = Number(require('../config/sellerRules').defaultCommissionPct);
+  return Number.isFinite(fromRules) ? fromRules : DEFAULT_COMMISSION_RATE;
+};
+
+/** The seller's own agreed rate, or null when they follow the platform rate. Number(null) is 0, hence the explicit check. */
+const ownRate = (seller) => {
+  const r = seller?.commissionRate;
+  if (r === null || r === undefined || r === '') return null;
+  const n = Number(r);
+  return Number.isFinite(n) ? n : null;
+};
+
+/** What this seller pays from the next order on, and whether it is their own rate or the platform's. */
+const rateFor = async (seller) => {
+  const own = ownRate(seller);
+  return own === null ? { rate: await platformRate(), isDefault: true } : { rate: own, isDefault: false };
+};
+
+/**
  * Splits one order line into the platform's cut and the seller's earning.
  *
  * @param {number} price     unit price charged to the customer
@@ -66,15 +103,11 @@ const getRatesBySeller = async (sellerIds, session) => {
   if (session) query = query.session(session);
 
   const profiles = await query.lean();
-  const rates = new Map(
-    profiles.map((p) => [
-      String(p.userId),
-      Number.isFinite(p.commissionRate) ? p.commissionRate : DEFAULT_COMMISSION_RATE,
-    ])
-  );
+  const fallback = await platformRate();
+  const rates = new Map(profiles.map((p) => [String(p.userId), ownRate(p) ?? fallback]));
 
   unique.forEach((id) => {
-    if (!rates.has(id)) rates.set(id, DEFAULT_COMMISSION_RATE);
+    if (!rates.has(id)) rates.set(id, fallback);
   });
   return rates;
 };
@@ -97,6 +130,9 @@ const applyCommission = async (items, session) => {
 
 module.exports = {
   DEFAULT_COMMISSION_RATE,
+  platformRate,
+  ownRate,
+  rateFor,
   splitLine,
   getRatesBySeller,
   applyCommission,

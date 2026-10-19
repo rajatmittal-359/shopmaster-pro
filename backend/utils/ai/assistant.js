@@ -56,7 +56,7 @@ const contextFor = async ({ role, user, question }) => {
   if (role === 'seller') {
     const sellerId = user._id;
     const seller = await Seller.findOne({ userId: sellerId }).lean();
-    lines.push(`SELLER: ${seller?.businessName || user.name} (${user.email}). Commission rate for this shop: ${seller?.commissionRate ?? 'default'}%. Pickup address set: ${Boolean(seller?.pickupAddress?.pincode)}. Bank account set: ${Boolean(seller?.bankDetails?.accountNumber)}. Agreement accepted: v${seller?.agreement?.version || '-'}.`);
+    lines.push(`SELLER: ${seller?.businessName || user.name} (${user.email}). Commission rate for this shop: ${seller ? (await require('../commission').rateFor(seller)).rate : '-'}%. Pickup address set: ${Boolean(seller?.pickupAddress?.pincode)}. Bank account set: ${Boolean(seller?.bankDetails?.accountNumber)}. Agreement accepted: v${seller?.agreement?.version || '-'}.`);
     const [named, recent, payouts, payable, charges, products] = await Promise.all([
       mentioned.length ? Order.find({ orderNumber: { $in: mentioned }, 'items.sellerId': sellerId }).lean() : [],
       Order.find({ 'items.sellerId': sellerId, ...REAL_ORDER }).sort({ createdAt: -1 }).limit(8).lean(),
@@ -107,7 +107,7 @@ const contextFor = async ({ role, user, question }) => {
         ]);
         const live = products.filter((p) => p.isActive);
         const perf = computePerformance({ orders, sellerId: hit.userId, products: live.map((p) => ({ ...p, score: scoreListing(p).score })) });
-        lines.push(`THE SHOP THE ADMIN ASKED ABOUT - ${hit.businessName}: status ${hit.status}, approved ${hit.isApproved}, commission ${hit.commissionRate}%, pickup set ${Boolean(hit.pickupAddress?.pincode)}, bank set ${Boolean(hit.bankDetails?.accountNumber)}. Last 30 days: ${perf.orders} orders, cancel rate ${perf.cancelRate.value ?? '-'}% (${perf.cancelRate.status}), median dispatch ${perf.dispatchHours.value ?? '-'}h (${perf.dispatchHours.status}), failed deliveries ${perf.ndr.value}, RTO ${perf.rto.value}, rating ${perf.rating.value ?? '-'} from ${perf.rating.count} reviews, listing quality ${perf.listingQuality.value ?? '-'}/100 across ${live.length} live products. (The PLATFORM line above is the whole marketplace, not this shop.)`);
+        lines.push(`THE SHOP THE ADMIN ASKED ABOUT - ${hit.businessName}: status ${hit.status}, approved ${hit.isApproved}, commission ${(await require('../commission').rateFor(hit)).rate}%, pickup set ${Boolean(hit.pickupAddress?.pincode)}, bank set ${Boolean(hit.bankDetails?.accountNumber)}. Last 30 days: ${perf.orders} orders, cancel rate ${perf.cancelRate.value ?? '-'}% (${perf.cancelRate.status}), median dispatch ${perf.dispatchHours.value ?? '-'}h (${perf.dispatchHours.status}), failed deliveries ${perf.ndr.value}, RTO ${perf.rto.value}, rating ${perf.rating.value ?? '-'} from ${perf.rating.count} reviews, listing quality ${perf.listingQuality.value ?? '-'}/100 across ${live.length} live products. (The PLATFORM line above is the whole marketplace, not this shop.)`);
       } catch {
         /* the tool road still has findSeller */
       }

@@ -220,3 +220,57 @@ describe('every order gets a readable reference', () => {
     expect(order.deliveredAt).toBeNull();
   });
 });
+
+/*
+ * THE DEFAULT RATE IS THE ADMIN'S, NOT THE CODE'S (19 Oct 2026)
+ *
+ * Settings → Rules has a "Default commission (%)" box, and the selling
+ * policy, the seller's Help, onboarding and the agreement all print its live
+ * value. But the order itself was split at a hard-coded 8. Set the box to 5
+ * and every seller without a rate of their own would be TOLD 5 and CHARGED 8
+ * - the agreement broken on every sale, silently. Both were 8 until now, so
+ * no order was ever charged wrongly; this closes it before anyone touches it.
+ */
+describe('a seller without a rate of their own pays the default the admin set', () => {
+  const settings = require('../utils/liveSettings');
+  let saved;
+  beforeEach(() => {
+    saved = settings.liveSettings;
+  });
+  afterEach(() => {
+    settings.liveSettings = saved;
+  });
+
+  it('charges the admin\'s default, and leaves set rates alone', async () => {
+    settings.liveSettings = vi.fn(async () => ({ rules: { defaultCommissionPct: 5 } }));
+    const FOLLOWS = new mongoose.Types.ObjectId(); // never given a rate of its own
+    Seller.find = vi.fn(() => chainableQuery([
+      { userId: HOUSE, commissionRate: 0 },
+      { userId: PARTNER, commissionRate: 8 }, // an admin set 8 for this one: it stays 8
+      { userId: NEGOTIATED, commissionRate: 6 },
+      { userId: FOLLOWS, commissionRate: null },
+    ]));
+
+    const rates = await getRatesBySeller([HOUSE, PARTNER, NEGOTIATED, ORPHAN, FOLLOWS]);
+
+    expect(rates.get(String(FOLLOWS))).toBe(5);
+    expect(rates.get(String(ORPHAN))).toBe(5);
+    expect(rates.get(String(PARTNER))).toBe(8);
+    expect(rates.get(String(HOUSE))).toBe(0);
+    expect(rates.get(String(NEGOTIATED))).toBe(6);
+  });
+
+  it('keeps the rulebook rate when the settings cannot be read', async () => {
+    settings.liveSettings = vi.fn(async () => null);
+
+    const rates = await getRatesBySeller([ORPHAN]);
+
+    expect(rates.get(String(ORPHAN))).toBe(8);
+  });
+});
+
+describe('a new shop follows the platform rate until an admin agrees another', () => {
+  it('is created with no rate of its own', () => {
+    expect(new Seller({ userId: new mongoose.Types.ObjectId(), businessName: 'New' }).commissionRate).toBeNull();
+  });
+});

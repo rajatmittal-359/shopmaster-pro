@@ -59,7 +59,9 @@ describe('"Ghar jaisa" - one switch, the whole house-shop bundle (Rajat, 20 Sep 
     const off = await applyShopSettings(s, { homeTreatment: false }, { adminOnly: true, platformRate: 8 });
     expect(off.changed).toEqual(['ghar jaisa off: 8% commission + the daily AI limits']);
     expect(s.homeTreatment).toBe(false);
-    expect(s.commissionRate).toBe(8);
+    // Off = back to the platform rate (null follows the admin's default, 8 today), not a frozen copy of it.
+    expect(s.commissionRate).toBeNull();
+    expect((await require('../utils/commission').rateFor(s)).rate).toBe(8);
     expect(s.aiUnlimited).toBe(false);
     const fromSeller = await applyShopSettings(s, { homeTreatment: true });
     expect(fromSeller.changed).toEqual([]);

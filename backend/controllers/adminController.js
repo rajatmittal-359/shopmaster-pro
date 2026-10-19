@@ -34,6 +34,9 @@ exports.getAllSellers = async (req, res) => {
     const sellers = await Promise.all(
       allSellers.map(async (s) => ({
         ...s,
+        // The rate that will actually be charged, and whether it is the platform's.
+        commissionRate: (await require('../utils/commission').rateFor(s)).rate,
+        commissionIsDefault: (await require('../utils/commission').rateFor(s)).isDefault,
         cancellations: await cancelStatsFor(s.userId?._id || s.userId),
         agreementUpToDate: s.agreement?.version === sellerRules.version,
         // What the admin should know before approving (plan 2.19 / 2.40 - facts, no verdict).
@@ -143,7 +146,7 @@ exports.getSellerShop = async (req, res) => {
   try {
     const s = await Seller.findById(req.params.sellerId).select('businessName about links showLocation offersFreeShipping pickupAddress adminEdits aiUnlimited homeTreatment isPlatformOwned commissionRate').lean();
     if (!s) return res.status(404).json({ message: 'Seller not found' });
-    res.json({ shop: { businessName: s.businessName, about: s.about || '', links: s.links || {}, showLocation: Boolean(s.showLocation), offersFreeShipping: Boolean(s.offersFreeShipping), pickupAddress: s.pickupAddress || {}, aiUnlimited: Boolean(s.aiUnlimited), homeTreatment: Boolean(s.homeTreatment), isPlatformOwned: Boolean(s.isPlatformOwned), commissionRate: s.commissionRate }, adminEdits: (s.adminEdits || []).slice(-5).reverse() });
+    res.json({ shop: { businessName: s.businessName, about: s.about || '', links: s.links || {}, showLocation: Boolean(s.showLocation), offersFreeShipping: Boolean(s.offersFreeShipping), pickupAddress: s.pickupAddress || {}, aiUnlimited: Boolean(s.aiUnlimited), homeTreatment: Boolean(s.homeTreatment), isPlatformOwned: Boolean(s.isPlatformOwned), commissionRate: (await require('../utils/commission').rateFor(s)).rate }, adminEdits: (s.adminEdits || []).slice(-5).reverse() });
   } catch (error) {
     sendError(res, error);
   }
@@ -1010,8 +1013,10 @@ exports.setSellerCommission = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Invalid seller id' });
     }
 
-    const rate = Number(commissionRate);
-    if (!Number.isFinite(rate) || rate < 0 || rate > 100) {
+    // null or '' = back to the platform rate, so this shop follows the default again.
+    const toDefault = commissionRate === null || commissionRate === '';
+    const rate = toDefault ? null : Number(commissionRate);
+    if (!toDefault && (!Number.isFinite(rate) || rate < 0 || rate > 100)) {
       return res.status(400).json({
         success: false,
         message: 'The commission rate must be a number between 0 and 100',
@@ -1023,14 +1028,17 @@ exports.setSellerCommission = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Seller not found' });
     }
 
-    const was = seller.commissionRate;
+    // The mail and the reply speak in real numbers, never "null": the rate in force before and after.
+    const { rateFor } = require('../utils/commission');
+    const was = (await rateFor(seller)).rate;
     seller.commissionRate = rate;
     await seller.save();
+    const now = await rateFor(seller);
 
     // Worth a log line: this is the platform's own revenue being changed, and
     // afterwards there is no other record of who did it or when.
     console.log(
-      `Commission for ${seller.businessName} changed ${was}% -> ${rate}% by admin ${req.user._id}`
+      `Commission for ${seller.businessName} changed ${was}% -> ${now.rate}%${now.isDefault ? ' (platform rate)' : ''} by admin ${req.user._id}`
     );
 
     /*
@@ -1053,7 +1061,7 @@ exports.setSellerCommission = async (req, res) => {
 
         const { subject, html, text } = commissionChangedEmail(
           { name: user.name, businessName: seller.businessName },
-          { from: was, to: rate }
+          { from: was, to: now.rate }
         );
         await sendSafeEmail({ toEmail: user.email, subject, html, text });
       } catch (err) {
@@ -1064,10 +1072,11 @@ exports.setSellerCommission = async (req, res) => {
     return res.json({
       success: true,
       message:
-        rate === 0
+        now.rate === 0
           ? `${seller.businessName} now sells commission-free. Orders already placed keep the rate they were sold under.`
-          : `${seller.businessName} is now on ${rate}%. Orders already placed keep the rate they were sold under.`,
-      commissionRate: rate,
+          : `${seller.businessName} is now on ${now.rate}%${now.isDefault ? ' (the platform rate)' : ''}. Orders already placed keep the rate they were sold under.`,
+      commissionRate: now.rate,
+      commissionIsDefault: now.isDefault,
     });
   } catch (error) {
     return sendError(res, error);

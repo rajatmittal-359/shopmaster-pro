@@ -274,7 +274,7 @@ exports.getMyEarnings = async (req, res) => {
          * they look at their money is being asked to trust a number they
          * cannot check - and it is the one number an admin can change.
          */
-        commissionRate: seller?.commissionRate ?? null,
+        commissionRate: seller ? (await require('../utils/commission').rateFor(seller)).rate : null,
       },
       payouts,
     });

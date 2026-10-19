@@ -185,7 +185,7 @@ const TOOLS = [
         ]);
         const perf = computePerformance({ orders, sellerId: s.userId, products: products.filter((p) => p.isActive).map((p) => ({ ...p, score: scoreListing(p).score })) });
         out.push({
-          shop: s.businessName, status: s.status, approved: s.isApproved, commissionPct: s.commissionRate, city: s.pickupAddress?.city || s.city || '-',
+          shop: s.businessName, status: s.status, approved: s.isApproved, commissionPct: (await require('../commission').rateFor(s)).rate, city: s.pickupAddress?.city || s.city || '-',
           pickupSet: Boolean(s.pickupAddress?.pincode), bankSet: Boolean(s.bankDetails?.accountNumber), agreement: s.agreement?.version || null,
           products: `${products.length} (${products.filter((p) => p.isActive).length} live)`, orders30d: orders.length,
           performance: gradedLines(perf),
