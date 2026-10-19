@@ -145,3 +145,17 @@ export const purchase = ({ orderId, value, shipping, coupon, items }) =>
   });
 
 export const search = (term, results) => track('search', { search_term: term, ...(results === undefined ? {} : { results }) });
+
+/**
+ * A shop applied to sell (19 Oct 2026).
+ *
+ * The buyer funnel was counted; the seller one was not, so a seller brought
+ * by a launch post could never be traced to it - and seller recruitment is
+ * what the launch film is for. GA4's recommended `generate_lead` and Meta's
+ * standard `Lead`, so the UTM tag on the post's link carries through to the
+ * application. Only the GST route goes with it: no name, phone or PAN.
+ */
+export const sellerApplied = ({ gstMode } = {}) => {
+  track('generate_lead', { lead_type: 'seller_application', gst_mode: gstMode || 'none' });
+  fbq('Lead', { content_category: 'seller_application' });
+};

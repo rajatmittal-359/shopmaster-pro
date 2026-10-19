@@ -216,12 +216,48 @@ Poora record karna. Kaatna muft hai, dobara shoot karna nahi.
 
 ---
 
-## 7. Still open before a frame is shot
+## 7. Decisions that are ShopMaster's own
 
-1. **Source quality test** — Playwright's webm recording vs a full-res PNG
-   sequence animated in Remotion. Ten minutes, and it decides everything
-   after it. Bad source makes good motion pointless.
+ShopMaster's film is decided by ShopMaster's goals (seller recruitment,
+buyer trust in Jaipur), not by any earlier film.
+
+- **9:16 and 4:5 from the first scene**, not 16:9 cut down later.
+- **WhatsApp cut gets its own small export** (Status takes about 16 MB).
+- **Published music must be licensed:** Instagram - render without music and
+  add the track in the app; LinkedIn/WhatsApp - Lyria or CC0. A downloaded
+  song is for a local cut only.
+- **Check remotion.dev/license before publishing.**
+
+**Taken from Rajat's Backrr film** (`~/Desktop/backrr/creator-studio-pro/project/backrr-launch-video/` - open it, it may have moved on), only where it serves our goal:
+- **Two sides winning in one loop.** Our goal is seller recruitment AND buyer
+  trust - a film that shows only the buyer recruits no seller.
+- **Cut on the music's beat**, so swapping the track never means re-editing.
+  Needed because the Reel's music is chosen in Instagram, late.
+- **A sound on every click and swipe.** Muted viewers lose nothing; unmuted
+  ones feel the product is quick.
+- **Captions as editable props.** Rajat changes the words without calling Claude.
+- **Shorter cuts trimmed from the master**, never re-made.
+
+Left behind, because it does not serve ours: the 9-second build before the
+music drops (a Reel loses people in 3), the English voiceover (our buyers and
+sellers are Jaipur, Hinglish), and the dark purple look (ours is Jaipur pink
+on light, `web/DESIGN.md`).
+
+## 8. Still open before a frame is shot
+
+1. ~~Source quality test~~ - Playwright webm vs PNG sequence vs screens
+   rebuilt as React components - decide by quality and effort. Left: list the ~8 ShopMaster screens the script needs.
 2. **Three to five reference launch films**, watched by Rajat — playbook
    step 1. The script above is written from the product, not from a reference
    film, and that gap is the one thing it has not had.
-3. **Styleframes gate** — five stills, his yes, then build.
+3. **Know which post brought whom.** GA4 already counts the buyer funnel
+   (`web/src/lib/analytics.js`) and reads UTM tags on its own, so every post's
+   link carries `utm_source=instagram|linkedin|whatsapp&utm_campaign=launch`.
+   **Seller side ✅ 19 Oct 2026:** an application now sends GA4
+   `generate_lead` and Meta `Lead` (`sellerApplied`, `web/src/lib/analytics.js`,
+   test `backend/tests/sellerLeadEvent.test.mjs`) - GST route only, no
+   personal detail. Left for the posting day: put the UTM tags on each link.
+   Read it in GA4: Reports > Engagement > Events > generate_lead, by
+   session source.
+   (Seen in Backrr's `user.signup_utm_*`, 19 Oct 2026.)
+4. **Styleframes gate** — five stills, his yes, then build.

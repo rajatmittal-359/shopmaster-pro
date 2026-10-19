@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Camera, Check, ChevronLeft, Loader2 } from 'lucide-react';
 import { authedFetch } from '@/lib/client';
+import { sellerApplied } from '@/lib/analytics';
 import { useSession, setCapabilities } from '@/lib/session';
 import { checkPan, checkGstin, checkEnrolment } from '@/lib/kyc';
 import { Button } from '@/components/ui/button';
@@ -151,6 +152,8 @@ export default function ApplyToSell() {
           turnstileToken,
         },
       });
+      // Counted only once the server has accepted it, never on a failed try.
+      sellerApplied({ gstMode: form.gstMode });
       // Re-read rather than assume: the answer that matters is the one the
       // server will give every other page.
       const me = await authedFetch('/auth/me');
