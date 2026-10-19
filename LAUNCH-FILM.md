@@ -243,6 +243,36 @@ music drops (a Reel loses people in 3), the English voiceover (our buyers and
 sellers are Jaipur, Hinglish), and the dark purple look (ours is Jaipur pink
 on light, `web/DESIGN.md`).
 
+## 7b. LinkedIn first, and made once (decided 19 Oct 2026)
+
+**The first film is LinkedIn's: ONE video** (§4's 75-second script), 4:5,
+no voice-over, burned captions, native upload from Rajat's personal profile,
+the link in the first comment. A document carousel ("how one person built a
+marketplace") follows 5-7 days later. The seller and customer cuts for
+Instagram and WhatsApp come later, from the same build.
+
+It is motion graphics - real ShopMaster screens animated with kinetic text,
+sound on every action, cut on the beat - not camera footage and not a raw
+screen recording. Screens are **rebuilt in React** for the cleanest frame.
+
+**Made once (Rajat: "baar baar nahi banti, ek baar me shaandaar").** Every
+change happens where it is cheap, never on a full render:
+1. Script locked, second by second.
+2. 5 styleframes (stills): first frame, the badge, the seller calculator, the
+   admin's ledger, the end card - look, colour and type decided here, as many
+   rounds as it takes.
+3. One 5-second motion test: pace, beat and sound.
+4. The full film, rendered once.
+5. Loudness and caption check; upload test in LinkedIn without posting.
+Before step 2, Rajat collects 2-3 launch films he genuinely likes as the
+reference for "like this".
+
+**Length limits, checked 19 Oct 2026** (official help pages could not be read;
+third-party sources disagree, so every cut stays under the LOWEST reported
+limit): Instagram Reel 30 s or less (some new accounts are limited to 90 s;
+over 3 min stops reaching new viewers); LinkedIn 60-75 s (limit 10 min mobile,
+5 GB); WhatsApp Status 30 s and under 16 MB (newer sources say 90 s, older 30).
+
 ## 8. Still open before a frame is shot
 
 1. ~~Source quality test~~ - Playwright webm vs PNG sequence vs screens
