@@ -287,7 +287,8 @@ export default function OrderQueue() {
                       <span className="min-w-0 flex-1 line-clamp-2">{item.name}</span>
                       <span className="shrink-0 text-right">
                         <span className="block tabular-nums">{money(item.price * item.quantity)}</span>
-                        <span className="block text-xs tabular-nums text-muted-foreground">× {item.quantity}</span>
+                        {/* The unit price beside the count, as Shopify's order list does: "₹550 × 2" under a ₹550 line total read as ₹1,100. */}
+                        <span className="block text-xs tabular-nums text-muted-foreground">{item.quantity > 1 ? `${money(item.price)} × ${item.quantity}` : `× ${item.quantity}`}</span>
                       </span>
                     </li>
                   ))}
