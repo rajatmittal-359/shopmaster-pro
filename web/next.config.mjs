@@ -7,6 +7,14 @@ const nextConfig = {
    */
   output: 'standalone',
   /*
+   * The /api rewrite's proxy timeout (20 Oct 2026). Next's default is 30 s;
+   * the AI listing calls wait up to 120 s in the browser (authedFetch timeoutMs),
+   * so a slow Gemini answer came back as "socket hang up" -> 500 "That did not
+   * work" in dev. Production is not affected (Caddy sends /api straight to the
+   * API), but dev is where sellers' flows get tested, so the two agree here.
+   */
+  experimental: { proxyTimeout: 120_000 },
+  /*
    * Development only (Next ignores this in production): the dev server refuses
    * its own scripts to a page opened from another host, and a phone on the
    * same Wi-Fi opening http://192.168.1.37:3000 got a page that never hydrated
