@@ -11,6 +11,7 @@ import ActionDialog from '@/components/common/ActionDialog';
 import PhotoPicker from '@/components/common/PhotoPicker';
 import { Textarea } from '@/components/ui/textarea';
 import { useT } from '@/lib/i18n';
+import { payoutLine } from '@/lib/payoutLine';
 
 const KIND_LABEL = { damaged: 'arrived damaged', wrong: 'wrong / missing item', defective: 'faulty', not_as_described: 'not as described', change_of_mind: 'changed their mind', size: 'size' };
 
@@ -426,12 +427,8 @@ export default function SellerOrderDetail({ orderId }) {
           )}
         </div>
 
-        {order.payout && (
-          <p className="mt-3 text-xs text-muted-foreground">
-            {order.payout.releasesAt
-              ? t('Payout released on {date}', { date: when(order.payout.releasesAt) })
-              : t('Paid out {n} days after delivery - the return window has to close first', { n: order.payout.returnWindowDays })}
-          </p>
+        {payoutLine(order.payout, t, when) && (
+          <p className="mt-3 text-xs text-muted-foreground">{payoutLine(order.payout, t, when)}</p>
         )}
 
         <p className="mt-4 text-sm">

@@ -13,6 +13,7 @@ import SharedBadge from '@/components/common/StatusBadge';
 import { Skeleton } from '@/components/ui/skeleton';
 import ActionDialog from '@/components/common/ActionDialog';
 import PanelCard from '@/components/panel/PanelCard';
+import { payoutLine } from '@/lib/payoutLine';
 
 /**
  * The work queue. Everything a seller does in a day is here.
@@ -436,14 +437,8 @@ export default function OrderQueue() {
                   delivered, plus 7 days" is the actual answer to the question
                   they are asking.
                 */}
-                {order.payout && order.payout.state !== 'nothing_owed' && (
-                  <p className="mt-3 text-xs text-muted-foreground">
-                    {order.payout.releasesAt
-                      ? t('Payout released on {date}', { date: when(order.payout.releasesAt) })
-                      : order.payout.state === 'awaiting_delivery'
-                        ? t('Paid out {n} days after delivery - the return window has to close first', { n: order.payout.returnWindowDays })
-                        : t('Payout: {state}', { state: t(String(order.payout.state).replace(/_/g, ' ')) })}
-                  </p>
+                {payoutLine(order.payout, t, when) && (
+                  <p className="mt-3 text-xs text-muted-foreground">{payoutLine(order.payout, t, when)}</p>
                 )}
               </li>
             );

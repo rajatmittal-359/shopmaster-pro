@@ -98,36 +98,51 @@ First frame must be the badge, not the logo. Nobody stays for a logo.
 
 ---
 
-## 4. LinkedIn - 45 sec, 4:5 (1080x1350) - LOCKED SCRIPT v3 (20 Oct 2026)
+## 4. LinkedIn - 45 sec, 4:5 (1080x1350) - SCRIPT v5 (20 Oct 2026)
 
-45 seconds (Rajat, 20 Oct 2026): long enough for three acts, short enough that
-most people finish it - completion is what LinkedIn's feed rewards. Version 2
-soundtrack: male voice-over + a sound on every action + **phonk-140**, extended
-to 45 s by repeating one 8-bar section; its drop is placed on 0:08 "This one: today". Every
-screen is ShopMaster's real UI with fictional people. Customer (hook) ->
-seller (the goal) -> operator (the showcase).
+v5 replaced v4 after a research pass (Rajat: "planning kamzor nahi honi chahiye...
+professionals se ref lena"). What changed it, with sources:
+- **LinkedIn plays muted by default** (80-90% reported; the rule is firm, the
+  number second-hand) - the on-screen line carries the film, the voice repeats
+  it; captions burned in + an SRT. 4:5, text inside the central square.
+- **Brand in the first 2 s** (LinkedIn Creative Lab via Storykit: +17% CTR) -
+  the mark sits in a corner from frame 1.
+- **Under 30 s completes best** - the whole seller case is made by 0:26.
+- **Pros:** Pixel 9 Pro (cold open on the product doing the thing, one ask at
+  the end), Linear (one action per shot, real UI, no voice needed), Raycast
+  (tight UI crops, a ticking list as proof), Apple "Data Auction" (show the harm,
+  then the feature that ends it), Figma (cause and result in one frame).
+- **Indian seller ads** (Meesho 0%, Flipkart #BachonKaKhel, Amazon "Itna Aasan
+  Hai"): ease first, then money, proved by a demo or a number.
+- So: **open on the seller** (goal 1), 9 beats -> 7, "built solo" moves to the
+  post text (capability shows itself: the AI brief, the test run), one ask.
+- Claims checked against the code/live API, 20 Oct: commission 8%, Rs 1,250 ->
+  Rs 1,150 (`/api/public/seller-earnings`); no-GSTIN is legal with a free
+  enrolment number, "Neither yet" may still apply; pack-proof is OPTIONAL (so not
+  "every order"); the PAN chip says "Looks right", not "Verified".
+- **Same-day is not live** (`BORZO_ENV` not production). Beat 4 is true only
+  once Rajat switches it on; the film is not posted before that.
 
-| # | Time | On screen | Voice-over | Picture |
+Music phonk-140-45 (studio-made), re-spliced so the **drop lands at 0:05.14,
+the moment the form fills**; final hit 0:39.43 on the logo. Bars of 1.714 s.
+
+| # | Time | On screen (muted viewer reads this) | Voice-over | Picture |
 |---|---|---|---|---|
-| 1 | 0:00-0:03 | **Same-day delivery. In Jaipur.** | "Same-day delivery. In Jaipur." | Product page; PIN `302019` types itself; the "Today" badge pops (bell shimmer) |
-| 2 | 0:03-0:08 | **Most orders: from a warehouse.** | "Most orders travel from a warehouse in another city." | A grey line on a map from far away to Jaipur; music lifting |
-| 3 | 0:08-0:12 | **This one: today.** | "This one takes today." | The line flips pink to "Today" - **the drop** |
-| 4 | 0:12-0:17 | **The seller writes nothing.** | "Add one photo. ShopMaster writes the listing." | A jewellery photo drops in; the fields fill themselves |
-| 5 | 0:17-0:21 | **No GST? Sell anyway.** | "No GST? You can still sell." | Sign-up, "I don't have a GSTIN", green ticks |
-| 6 | 0:21-0:26 | **Know what you earn.** | "See what you'll earn, before you join." | Calculator: ₹1,250 -> - ₹100 -> **₹1,150** (music peak) |
-| 7 | 0:26-0:31 | **One tap. Every rupee counted.** | "Couriers book in one tap. Every rupee, counted." | Book courier -> label -> payout ledger / commission bill |
-| 8 | 0:31-0:36 | **One person runs it all.** | "And one person runs all of it." | Admin in dark: overview, a dispute brief, settings |
-| 9 | 0:36-0:45 | **Built solo. In production. Jaipur.** | "ShopMaster Pro. Built solo. In production. From Jaipur." | Counters (tests, lines, services - re-measured on render day), then the mark and shopmasterpro.in as the music settles |
+| 1 | 0:00-0:06.9 | **Say it in Hindi.** -> **Listing ready.** | "Say it in Hindi. The listing writes itself." | Seller taps the mic: *"oxidised silver ki chudiyan, chaar ka set, 650 rupaye, 10 piece"* (heard + subtitled); on the DROP title, price, category fill, a tick per field. Mark top-left from frame 1 |
+| 2 | 0:06.9-0:12.0 | **No GSTIN? You can still sell.** | "No GSTIN? You can still sell." | PAN typed, "Looks right"; "Neither yet" picked; "Not yet - selling within the state" |
+| 3 | 0:12.0-0:17.1 | **Rs 1,250 sale. Rs 1,150 to you.** | "And you know what reaches your bank." | Calculator: 1,250, -100 (8%), counter lands on 1,150 |
+| 4 | 0:17.1-0:25.7 | **Same day in Jaipur.** / **Rest of India too.** | "Same day, from a shop in your city. The rest of India too." | Buyer's product page: PIN types, the Today badge pops; cut to a Shiprocket shipment card |
+| 5 | 0:25.7-0:32.6 | **Empty-box returns? Not here.** | "Pack it on camera. Every return gets checked." | An empty box opened (2 s) -> the seller's pack-proof video -> "Return checked" -> refund released |
+| 6 | 0:32.6-0:37.7 | **Disputes, briefed in seconds.** | "Disputes come with both sides, briefed." | Admin in dark: the AI dispute brief streams in, a person decides |
+| 7 | 0:37.7-0:45 | **Jaipur's shops. Online today.** + shopmasterpro.in | "ShopMaster Pro. Bring your shop online." | Corner: test run ticks to "1,544 passed"; final hit 0:39.4 - the pink mark, the URL, hold |
 
-Beat 2 decided 20 Oct 2026 (Claude, on Rajat's "finish it yourself"): the
-positioning line, not "five days". Amazon and Flipkart already deliver same-day
-or next-day in Jaipur for many items, so "five days" is a claim a LinkedIn
-viewer can disprove; "from a warehouse vs from a shop in your own city" is true
-and is our real difference (the seller's own shop, Borzo same-day).
+One order threads through 1 -> 4 -> 5 -> 6 (Priya Silver House's chudiyan:
+listed, bought same-day, returned, disputed), so the viewer sees one system.
+Fictional people only: Priya Sharma / Priya Silver House is a dev-only account.
 
 **Post text (draft, Rajat edits):** one line on why (same-day delivery from
 the shops a city already trusts, not from a warehouse), one on what it does,
-"link in the first comment". The link goes in the first comment.
+"link in the first comment". The link goes in the first comment. "Built solo, in production, 1,544 tests" lives HERE, not in the film (v5).
 
 **Screens to rebuild (the build list):** product page with PIN + badge ·
 delivery line · AI listing form · seller sign-up GST step · /sell calculator ·
