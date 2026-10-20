@@ -110,7 +110,7 @@ seller (the goal) -> operator (the showcase).
 | # | Time | On screen | Voice-over | Picture |
 |---|---|---|---|---|
 | 1 | 0:00-0:03 | **Same-day delivery. In Jaipur.** | "Same-day delivery. In Jaipur." | Product page; PIN `302019` types itself; the "Today" badge pops (bell shimmer) |
-| 2 | 0:03-0:08 | **Most marketplaces: five days.** | "Most marketplaces take five days." | A grey "Arrives Fri" line; music lifting |
+| 2 | 0:03-0:08 | **Most orders: from a warehouse.** | "Most orders travel from a warehouse in another city." | A grey line on a map from far away to Jaipur; music lifting |
 | 3 | 0:08-0:12 | **This one: today.** | "This one takes today." | The line flips pink to "Today" - **the drop** |
 | 4 | 0:12-0:17 | **The seller writes nothing.** | "Add one photo. ShopMaster writes the listing." | A jewellery photo drops in; the fields fill themselves |
 | 5 | 0:17-0:21 | **No GST? Sell anyway.** | "No GST? You can still sell." | Sign-up, "I don't have a GSTIN", green ticks |
@@ -119,8 +119,11 @@ seller (the goal) -> operator (the showcase).
 | 8 | 0:31-0:36 | **One person runs it all.** | "And one person runs all of it." | Admin in dark: overview, a dispute brief, settings |
 | 9 | 0:36-0:45 | **Built solo. In production. Jaipur.** | "ShopMaster Pro. Built solo. In production. From Jaipur." | Counters (tests, lines, services - re-measured on render day), then the mark and shopmasterpro.in as the music settles |
 
-Beat 2 is open: "five days vs today" (as written) or the positioning
-"same-day from warehouses vs from the shop down the road" - Rajat to choose.
+Beat 2 decided 20 Oct 2026 (Claude, on Rajat's "finish it yourself"): the
+positioning line, not "five days". Amazon and Flipkart already deliver same-day
+or next-day in Jaipur for many items, so "five days" is a claim a LinkedIn
+viewer can disprove; "from a warehouse vs from a shop in your own city" is true
+and is our real difference (the seller's own shop, Borzo same-day).
 
 **Post text (draft, Rajat edits):** one line on why (same-day delivery from
 the shops a city already trusts, not from a warehouse), one on what it does,
@@ -189,7 +192,7 @@ Pehla frame badge ka, logo ka nahi.
 VO nahi. Sirf screen pe text. Ek baat, ek proof, cut.
 
 0–4    Same-day delivery. In Jaipur.        (badge aata hua)
-4–10   Most marketplaces: five days.        (5-din ki date)
+4–10   Most orders: from a warehouse.   (door ka godown)
 10–16  This one: today.                     (date badalti hui)
 16–26  The seller writes nothing.           (1 photo -> poori listing)
 26–36  No GST required to sell.             (enrolment number wala sign-up)
@@ -235,8 +238,8 @@ buyer trust in Jaipur), not by any earlier film.
 
 - **9:16 and 4:5 from the first scene**, not 16:9 cut down later.
 - **WhatsApp cut gets its own small export** (Status takes about 16 MB).
-- **Published music must be licensed:** Instagram - render without music and
-  add the track in the app; LinkedIn/WhatsApp - Lyria or CC0. A downloaded
+- **Published music must be licensed:** Instagram - V1 bakes Aura Farming in
+  (see §7d for the risk), with a silent export kept as fallback; LinkedIn/WhatsApp - Lyria or CC0. A downloaded
   song is for a local cut only.
 - **Check remotion.dev/license before publishing.**
 
@@ -293,8 +296,11 @@ link placement is a choice, not a rule. Run `kit check` before every export.
 
 Same visuals, two soundtracks:
 - **Version 1 - Phonk (Instagram):** only Mustafa Saboori's
-  *Aura Farming* (110.6 BPM), added in the Instagram app at upload; rendered
-  without music. Cut on its grid; a local copy is for timing only.
+  *Aura Farming* (110.6 BPM), **rendered WITH the song baked in** (Rajat,
+  20 Oct 2026), cut on its grid from the local copy. Risk taken knowingly:
+  Meta's rights check may mute or block a baked-in commercial song; if it
+  does, re-upload the silent export and add the song in the app. V1 is for
+  Instagram only - never LinkedIn, the website or ads.
 - **Version 2 - Full (LinkedIn, website):** male voice-over + a sound on every
   click/swipe + background music, music ducked under the voice - the formula of
   Backrr's HeroProVO. **Music: `phonk-140` - FINAL (Rajat, 20 Oct 2026)**,
