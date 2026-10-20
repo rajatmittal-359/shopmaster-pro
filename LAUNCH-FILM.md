@@ -136,6 +136,7 @@ opens into everything a marketplace really is**, built and run by one engineer.
 |---|---|---|---|---|
 | 1 Hook | 0-3 | *"It's just an e-commerce site."* (grey, as if someone said it) -> **"Sure. Watch."** (brand colour, on the tap) | A clean product page on a phone, 3D, slow push; a thumb taps **Buy now** | - |
 | 2 Reveal | 3-8.6 | **"One tap. Behind it:"** - no other text | The tap bursts the page into floating 3D layers: real screens (payment, GST invoice, courier booking, payout, admin) and real code (editor, terminal). One or two words at most on any layer. Riser | "One tap. Behind it..." |
+| 2b Integrations | (inside 2) | name chips only, no logos | Lines run from the burst to ~19 real integrations, one per beat: Razorpay, Shiprocket, Borzo, MongoDB Atlas, Cloudinary, Google Sign-in, Merchant Center, Search Console, GA4, Gemini, Whisper, Sarvam, Cloudflare, Brevo, Web Push, Sentry, Meta CAPI, AWS, GitHub Actions (all wired in code, 20 Oct 2026; Borzo integrated but not yet live) | - |
 | 3 Drop | 8.6-10.3 | 3D mark only | Logo assembles on the hit | - |
 | 4 AI | 10.3-14 | **Speak it. The listing writes itself.** chip "Hindi · English" | Real take: mic, transcript, form fills (zoom-punch on fill) | "Speak a product. The listing writes itself." |
 | 5 Trust | 14-17.5 | **PAN checked. GST optional to start.** | Real take: PAN "Looks right", step 3 summary | "Sellers join in minutes." |
@@ -144,13 +145,14 @@ opens into everything a marketplace really is**, built and run by one engineer.
 | 8 Fraud | 24.5-29 | **Empty box returned? Checked first.** | Empty-box photo -> pack-proof -> seller's "Not as sent" -> dispute open | "Refunds wait until the seller checks the box." |
 | 9 Admin | 29-33 | **Disputes, briefed by AI. Decided by a person.** | Laptop, dark: AI brief streams; zoom | "Both sides, briefed. A person decides." |
 | 10 Making of | 33-36 | none, or "1,680 passed" as the terminal prints it | A timelapse of the build: the real git history (667 commit subjects) flying past, the file tree growing, the real `npm test` counter climbing to 1,680 passed | - |
-| 11 Callback | 36-45 | **Not a project. A product.** -> **Tested. Live. Ready for your shop.** then the mark + **Open your shop** · shopmasterpro.in | Wall of every screen zooms out (Backrr's "Both sides" move); final hit 39.4 s: mark + URL | "ShopMaster Pro. Built in Jaipur." |
+| 11 Callback | 36-45 | **Not a project. A product.** -> **Real shops. Real products.** then the mark + two buttons **Shop now** · **Open your shop** + shopmasterpro.in | Wall of every screen zooms out (Backrr's "Both sides" move); final hit 39.4 s: mark + URL | "ShopMaster Pro. Built in Jaipur." |
 
 Device rule: shop and seller on a phone (light), the operator on a laptop (dark).
 
 **Not a project - a product you can run a business on (Rajat, 20 Oct 2026).** The end says
 so; the making-of (1,680 tests passing) is the "tested", Charming Jewels' live shop is the
-"live". Production has 0 orders today, so the film invites ("Ready for your shop") and never
+"live". Two real actions at the end (Rajat): buy from real shops (Charming Jewels and the
+other sellers), or open your own seller account. Production has 0 orders today, so the film invites ("Ready for your shop") and never
 claims shops already run on it - change that line once real orders exist.
 
 **Humble, not proud (Rajat, 20 Oct 2026: "ghamand nahi dikhna"):** the pride he means is
