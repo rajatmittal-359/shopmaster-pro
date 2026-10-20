@@ -147,7 +147,8 @@ export default function AdminOrders() {
                       <dl className="mt-1 grid gap-x-4 gap-y-1 rounded-lg border bg-muted/40 p-3 sm:grid-cols-[auto_1fr]">
                         {parcel.disputeReason && (
                           <>
-                            <dt className="text-muted-foreground">Customer says</dt>
+                            {/* A seller-opened dispute (a return refused at the receipt check) is not the customer's words (20 Oct 2026). */}
+                            <dt className="text-muted-foreground">{parcel.disputeRaisedBy === 'seller' ? 'Dispute' : 'Customer says'}</dt>
                             <dd>{parcel.disputeReason}{parcel.disputeRaisedAt ? ` (${when(parcel.disputeRaisedAt)})` : ''}</dd>
                           </>
                         )}
