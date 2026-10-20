@@ -90,6 +90,16 @@ export default function OrderQueue() {
   const [q, setQ] = useState('');
   // { kind: 'ship' | 'refuse' | 'cancel', order }
   const [asking, setAsking] = useState(null);
+  /*
+   * The dialog keeps showing what it was opened for while it animates shut
+   * (20 Oct 2026): with asking already null, a closing "Book the courier"
+   * flashed "Cancel your items" for a frame - the fallback of every ternary.
+   */
+  const [dialogFor, setDialogFor] = useState(null);
+  const ask = (next) => {
+    if (next) setDialogFor(next);
+    setAsking(next);
+  };
 
   const load = useCallback(async () => {
     const data = await authedFetch('/seller/orders');
@@ -367,7 +377,7 @@ export default function OrderQueue() {
                               : 'Got it back - refund')}
                           </Button>
                           <Button
-                            onClick={() => setAsking({ kind: 'refuse', order })}
+                            onClick={() => ask({ kind: 'refuse', order })}
                             disabled={working}
                             variant="outline"
                             size="sm"
@@ -382,7 +392,7 @@ export default function OrderQueue() {
 
                 <div className="mt-4 flex flex-wrap items-center gap-2">
                   {!shipped && WAITING.includes(order.status) && (
-                    <Button onClick={() => setAsking({ kind: 'ship', order })} disabled={working}>
+                    <Button onClick={() => ask({ kind: 'ship', order })} disabled={working}>
                       {working ? t('Working…') : t('Book courier and ship')}
                     </Button>
                   )}
@@ -414,7 +424,7 @@ export default function OrderQueue() {
 
                   {WAITING.includes(order.status) && !shipped && (
                     <Button
-                      onClick={() => setAsking({ kind: 'cancel', order })}
+                      onClick={() => ask({ kind: 'cancel', order })}
                       disabled={working}
                       variant="ghost"
                       size="sm"
@@ -454,25 +464,26 @@ export default function OrderQueue() {
       */}
       <ActionDialog
         open={Boolean(asking)}
+        askReason={dialogFor?.kind !== 'ship'}
         onOpenChange={(next) => setAsking(next ? asking : null)}
         title={
-          t(asking?.kind === 'ship'
+          t(dialogFor?.kind === 'ship'
             ? 'Book the courier'
-            : asking?.kind === 'refuse'
+            : dialogFor?.kind === 'refuse'
               ? 'Refuse this return'
               : 'Cancel your items')
         }
         description={
-          t(asking?.kind === 'ship'
+          t(dialogFor?.kind === 'ship'
             ? 'A pickup is booked and the cost comes out of the Shiprocket wallet. Have the parcel packed before you press this.'
-            : asking?.kind === 'refuse'
+            : dialogFor?.kind === 'refuse'
               ? 'The customer is told, and they can dispute it - the platform then decides and its decision is final.'
               : 'The customer is refunded for your items and told why. Their other sellers are unaffected.')
         }
         reasons={
-          asking?.kind === 'ship'
+          dialogFor?.kind === 'ship'
             ? []
-            : asking?.kind === 'refuse'
+            : dialogFor?.kind === 'refuse'
               ? [
                   'It never came back',
                   'It came back used or damaged',
@@ -486,17 +497,17 @@ export default function OrderQueue() {
                   'I cannot deliver to that address',
                 ]
         }
-        requireReason={asking?.kind !== 'ship'}
-        destructive={asking?.kind === 'cancel'}
+        requireReason={dialogFor?.kind !== 'ship'}
+        destructive={dialogFor?.kind === 'cancel'}
         confirmLabel={
-          t(asking?.kind === 'ship'
+          t(dialogFor?.kind === 'ship'
             ? 'Book it'
-            : asking?.kind === 'refuse'
+            : dialogFor?.kind === 'refuse'
               ? 'Refuse the return'
               : 'Cancel my items')
         }
         busy={busy === asking?.order?._id}
-        note={asking?.kind === 'ship' ? undefined : t('The customer reads this - pick or write it in English or Hindi, as they would understand.')}
+        note={dialogFor?.kind === 'ship' ? undefined : t('The customer reads this - pick or write it in English or Hindi, as they would understand.')}
         onConfirm={(reason) => {
           const { kind, order } = asking;
           setAsking(null);

@@ -62,13 +62,18 @@ export default function ActionDialog({
    * needs the story, not only "wrong item".
    */
   detailsLabel,
+  /**
+   * False for a plain yes/no (booking a courier): no reasons and no text box.
+   * Without it, an empty reasons list read as "type a reason" (20 Oct 2026).
+   */
+  askReason = true,
   onConfirm,
 }) {
   const [chosen, setChosen] = useState('');
   const [text, setText] = useState('');
 
   const OTHER = 'Something else';
-  const needsText = chosen === OTHER || reasons.length === 0;
+  const needsText = chosen === OTHER || (reasons.length === 0 && askReason);
   const reason = needsText
     ? text.trim()
     : text.trim() && detailsLabel
