@@ -98,56 +98,63 @@ First frame must be the badge, not the logo. Nobody stays for a logo.
 
 ---
 
-## 4. LinkedIn - 45 sec, 4:5 (1080x1350) - SCRIPT v5 (20 Oct 2026)
+## 4. THE launch film - 45 sec, 4:5 - DESIGN v6 "Just an e-commerce site?" (20 Oct 2026)
 
-v5 replaced v4 after a research pass (Rajat: "planning kamzor nahi honi chahiye...
-professionals se ref lena"). What changed it, with sources:
-- **LinkedIn plays muted by default** (80-90% reported; the rule is firm, the
-  number second-hand) - the on-screen line carries the film, the voice repeats
-  it; captions burned in + an SRT. 4:5, text inside the central square.
-- **Brand in the first 2 s** (LinkedIn Creative Lab via Storykit: +17% CTR) -
-  the mark sits in a corner from frame 1.
-- **Under 30 s completes best** - the whole seller case is made by 0:26.
-- **Pros:** Pixel 9 Pro (cold open on the product doing the thing, one ask at
-  the end), Linear (one action per shot, real UI, no voice needed), Raycast
-  (tight UI crops, a ticking list as proof), Apple "Data Auction" (show the harm,
-  then the feature that ends it), Figma (cause and result in one frame).
-- **Indian seller ads** (Meesho 0%, Flipkart #BachonKaKhel, Amazon "Itna Aasan
-  Hai"): ease first, then money, proved by a demo or a number.
-- So: **open on the seller** (goal 1), 9 beats -> 7, "built solo" moves to the
-  post text (capability shows itself: the AI brief, the test run), one ask.
-- Claims checked against the code/live API, 20 Oct: commission 8%, Rs 1,250 ->
-  Rs 1,150 (`/api/public/seller-earnings`); no-GSTIN is legal with a free
-  enrolment number, "Neither yet" may still apply; pack-proof is OPTIONAL (so not
-  "every order"); the PAN chip says "Looks right", not "Verified".
-- **Same-day is not live** (`BORZO_ENV` not production). Beat 4 is true only
-  once Rajat switches it on; the film is not posted before that.
+**One picture, two soundtracks, both posted on LinkedIn AND Instagram** (Rajat,
+20 Oct 2026): V1 = Aura Farming phonk baked in; V2 = narrator (ElevenLabs Brian,
+paid month before posting) + a sound on every action + phonk-140. English only on
+screen and in the voice (Hindi is a claim, never audio or subtitles).
 
-Music phonk-140-45 (studio-made), re-spliced so the **drop lands at 0:05.14,
-the moment the form fills**; final hit 0:39.43 on the logo. Bars of 1.714 s.
+### Why v5 was thrown away
+Rajat: no hook, no thinking, a feature list. True. Backrr's film (out/backrr-hero-pro-vo-v1
+and -song-LOCAL, the reference he chose) had one big idea ("Founders hear silence.
+Investors hear noise."), a payoff in the first 3 s, pain on both sides, the logo on the
+drop at 9 s, proof scenes, and a callback. v5 opened on a form.
 
-| # | Time | On screen (muted viewer reads this) | Voice-over | Picture |
+### The big idea
+People who see ShopMaster say *"it's just an e-commerce project - Amazon and Meesho
+exist."* The film answers that line with work shown, not claimed: **one tap on "Buy"
+opens into everything a marketplace really is**, built and run by one engineer.
+
+### What we may claim, and what we may not (research 20 Oct 2026, sources in chat log)
+- **Not:** cheaper (Meesho 0%, Flipkart fashion 0% since 8 Jul 2026, Amazon 0% referral
+  under Rs 1,000 since 16 Mar 2026); fastest payout (Flipkart can pay 7 days from
+  dispatch); only same-day (Amazon Local Shops; Borzo not live); only no-GST (Meesho
+  enrolment IDs since 2023); first Hindi panel (Amazon 2020); "giants rig search"
+  (only "CCI investigators found", no final order).
+- **Yes:** refund only after the seller checks the return (pack-proof, receipt check,
+  an admin with an AI brief of both sides); list by speaking (Hindi or English);
+  ranking rules published (/how-we-rank - the house-shop and friend tiers do not touch
+  ranking, checked in code); the engineering facts.
+- **Numbers, counted 20 Oct 2026 (recount on render day):** 1,680 tests passing (180
+  files), 232 API routes, 69 pages, 29 data models, 10 scheduled jobs, 27 AI modules,
+  ~80,000 lines of app code + ~26,000 of tests, 3 panels (shop, seller, admin),
+  2 couriers, live on AWS.
+
+### Scenes (Backrr's shape; drop at 8.57 s = phonk-140-45 re-spliced to 5 bars)
+| # | Time | On screen | Picture | V2 voice |
 |---|---|---|---|---|
-| 1 | 0:00-0:06.9 | **Say it in Hindi.** -> **Listing ready.** | "Say it in Hindi. The listing writes itself." | Seller taps the mic: *"oxidised silver ki chudiyan, chaar ka set, 650 rupaye, 10 piece"* (heard + subtitled); on the DROP title, price, category fill, a tick per field. Mark top-left from frame 1 |
-| 2 | 0:06.9-0:12.0 | **No GSTIN? You can still sell.** | "No GSTIN? You can still sell." | PAN typed, "Looks right"; "Neither yet" picked; "Not yet - selling within the state" |
-| 3 | 0:12.0-0:17.1 | **Rs 1,250 sale. Rs 1,150 to you.** / **In your bank 7 days after delivery.** | "You see what reaches your bank - seven days after delivery." | Calculator: 1,250, -100 (8%), counter lands on 1,150; the "Paid 7 days after the parcel is delivered" line lights. (Meesho leads with "7-Day Payments". Payouts are raised by a cron and paid by the admin today - say "paid", never "automatic transfer", until Razorpay payouts are live) |
-| 4 | 0:17.1-0:25.7 | **Same day in Jaipur.** / **Rest of India too.** | "Same day, from a shop in your city. The rest of India too." | Buyer's product page: PIN types, the Today badge pops; cut to a Shiprocket shipment card |
-| 5 | 0:25.7-0:32.6 | **Empty-box returns? Not here.** | "Pack it on camera. Every return gets checked." | An empty box opened (2 s) -> the seller's pack-proof video -> "Return checked" -> refund released |
-| 6 | 0:32.6-0:37.7 | **Disputes, briefed in seconds.** | "Disputes come with both sides, briefed." | Admin in dark: the AI dispute brief streams in, a person decides |
-| 7 | 0:37.7-0:45 | **Jaipur's shops. Online today.** + shopmasterpro.in | "ShopMaster Pro. Bring your shop online." | Corner: test run ticks to "1,544 passed"; final hit 0:39.4 - the pink mark, the URL, hold |
+| 1 Hook | 0-3 | *"It's just an e-commerce site."* (a quote, struck through later) | A clean product page on a phone, 3D, slow push; a thumb taps **Buy now** | - |
+| 2 Reveal | 3-8.6 | **"One tap. Behind it:"** then labels fly in | The phone splits into floating 3D layers, one per system, each a real screen: payment, GST invoice, courier booking, seller payout, fraud check, AI. Counters tick. Riser | "One tap. Behind it..." |
+| 3 Drop | 8.6-10.3 | 3D mark, then **"Built by one engineer."** | Logo assembles on the hit | - |
+| 4 AI | 10.3-14 | **Speak it. The listing writes itself.** chip "Hindi · English" | Real take: mic, transcript, form fills (zoom-punch on fill) | "Speak a product. The listing writes itself." |
+| 5 Trust | 14-17.5 | **PAN checked. GST optional to start.** | Real take: PAN "Looks right", step 3 summary | "Sellers join in minutes." |
+| 6 Money | 17.5-21 | **Rs 1,250 sale. Rs 1,150 paid in 7 days.** | Real take: calculator; a payout row slides in | "Every rupee, worked out before you join." |
+| 7 Logistics | 21-24.5 | **Two couriers. One check.** | PIN check (standard date) + courier booking card | "Couriers booked in one tap." |
+| 8 Fraud | 24.5-29 | **Empty box returned? Checked first.** | Empty-box photo -> pack-proof -> seller's "Not as sent" -> dispute open | "Refunds wait until the seller checks the box." |
+| 9 Admin | 29-33 | **Disputes, briefed by AI. Decided by a person.** | Laptop, dark: AI brief streams; zoom | "Both sides, briefed. A person decides." |
+| 10 Code | 33-36 | **1,680 tests. Passing.** | A terminal: the real `npm test` summary scrolling to "1680 passed" | "Tested. One thousand six hundred and eighty times." |
+| 11 Callback | 36-45 | *"Just an e-commerce site?"* -> **"One engineer. Three apps. Live."** | Wall of every screen zooms out (Backrr's "Both sides" move); final hit 39.4 s: mark + shopmasterpro.in | "ShopMaster Pro. Built in Jaipur." |
 
-One order threads through 1 -> 4 -> 5 -> 6 (Priya Silver House's chudiyan:
-listed, bought same-day, returned, disputed), so the viewer sees one system.
-Fictional people only: Priya Sharma / Priya Silver House is a dev-only account.
+Device rule: shop and seller on a phone (light), the operator on a laptop (dark).
 
-**Post text (draft, Rajat edits):** one line on why (same-day delivery from
-the shops a city already trusts, not from a warehouse), one on what it does,
-"link in the first comment". The link goes in the first comment. "Built solo, in production, 1,544 tests" lives HERE, not in the film (v5).
-
-**Screens to rebuild (the build list):** product page with PIN + badge ·
-delivery line · AI listing form · seller sign-up GST step · /sell calculator ·
-order page booking + tracking · payout ledger + commission bill · admin health
-card + dispute brief + settings · counters · end card. Ten.
+### How it is built (the Backrr way, not v5's)
+1. Styleframes first - one per scene, approved by Rajat before any motion.
+2. The hook and reveal are designed motion (3D layers built in Remotion from the
+   app's own tokens); proof scenes use the real Playwright takes inside 3D panels
+   with zoom-punch on the moment that matters.
+3. Sound design on every action (click, swipe, card drop, counter tick, impact).
+4. Same picture -> V1 (song) and V2 (voice).
 
 ## 5. Stories / teaser — 15 sec, 9:16
 
@@ -308,6 +315,9 @@ LinkedIn's "link in the first comment" penalty as unverified folklore - so the
 link placement is a choice, not a rule. Run `kit check` before every export.
 
 ## 7d. Two versions, one picture (decided 20 Oct 2026)
+
+**Update, same day (Rajat):** both versions go to BOTH LinkedIn and Instagram - not
+one per platform. The film itself is now §4 design v6.
 
 Same visuals, two soundtracks:
 - **Version 1 - Phonk (Instagram):** only Mustafa Saboori's
