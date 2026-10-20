@@ -135,18 +135,22 @@ opens into everything a marketplace really is**, built and run by one engineer.
 | # | Time | On screen | Picture | V2 voice |
 |---|---|---|---|---|
 | 1 Hook | 0-3 | *"It's just an e-commerce site."* (a quote, struck through later) | A clean product page on a phone, 3D, slow push; a thumb taps **Buy now** | - |
-| 2 Reveal | 3-8.6 | **"One tap. Behind it:"** then labels fly in | The phone splits into floating 3D layers, one per system, each a real screen: payment, GST invoice, courier booking, seller payout, fraud check, AI. Counters tick. Riser | "One tap. Behind it..." |
-| 3 Drop | 8.6-10.3 | 3D mark, then **"Built by one engineer."** | Logo assembles on the hit | - |
+| 2 Reveal | 3-8.6 | **"One tap. Behind it:"** - no other text | The tap bursts the page into floating 3D layers: real screens (payment, GST invoice, courier booking, payout, admin) and real code (editor, terminal). One or two words at most on any layer. Riser | "One tap. Behind it..." |
+| 3 Drop | 8.6-10.3 | 3D mark only | Logo assembles on the hit | - |
 | 4 AI | 10.3-14 | **Speak it. The listing writes itself.** chip "Hindi · English" | Real take: mic, transcript, form fills (zoom-punch on fill) | "Speak a product. The listing writes itself." |
 | 5 Trust | 14-17.5 | **PAN checked. GST optional to start.** | Real take: PAN "Looks right", step 3 summary | "Sellers join in minutes." |
 | 6 Money | 17.5-21 | **Rs 1,250 sale. Rs 1,150 paid in 7 days.** | Real take: calculator; a payout row slides in | "Every rupee, worked out before you join." |
 | 7 Logistics | 21-24.5 | **Two couriers. One check.** | PIN check (standard date) + courier booking card | "Couriers booked in one tap." |
 | 8 Fraud | 24.5-29 | **Empty box returned? Checked first.** | Empty-box photo -> pack-proof -> seller's "Not as sent" -> dispute open | "Refunds wait until the seller checks the box." |
 | 9 Admin | 29-33 | **Disputes, briefed by AI. Decided by a person.** | Laptop, dark: AI brief streams; zoom | "Both sides, briefed. A person decides." |
-| 10 Code | 33-36 | **1,680 tests. Passing.** | A terminal: the real `npm test` summary scrolling to "1680 passed" | "Tested. One thousand six hundred and eighty times." |
-| 11 Callback | 36-45 | *"Just an e-commerce site?"* -> **"One engineer. Three apps. Live."** | Wall of every screen zooms out (Backrr's "Both sides" move); final hit 39.4 s: mark + shopmasterpro.in | "ShopMaster Pro. Built in Jaipur." |
+| 10 Making of | 33-36 | none, or "1,680 passed" as the terminal prints it | A timelapse of the build: the real git history (667 commit subjects) flying past, the file tree growing, the real `npm test` counter climbing to 1,680 passed | - |
+| 11 Callback | 36-45 | *"Just an e-commerce site?"* returns, then only the mark + shopmasterpro.in | Wall of every screen zooms out (Backrr's "Both sides" move); final hit 39.4 s: mark + URL | "ShopMaster Pro. Built in Jaipur." |
 
 Device rule: shop and seller on a phone (light), the operator on a laptop (dark).
+
+**Show, never say (Rajat, 20 Oct 2026):** no "built by one engineer" line and no
+reading-heavy labels in the film. The effort shows itself - real screens, real code,
+the real commit history and test count. "One engineer" lives in the post text only.
 
 ### How it is built (the Backrr way, not v5's)
 1. Styleframes first - one per scene, approved by Rajat before any motion.
