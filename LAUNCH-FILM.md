@@ -131,6 +131,23 @@ opens into everything a marketplace really is**, built and run by one engineer.
   ~80,000 lines of app code + ~26,000 of tests, 3 panels (shop, seller, admin),
   2 couriers, live on AWS.
 
+### v7 flow (Rajat, 20 Oct 2026: "connection feel nahi ho raha, flow aur business goal samjhao") - SUPERSEDES the table below
+One product (Charming Jewels' oxidised churi set) walks the whole film; a role chip (SELLER / CUSTOMER / ADMIN)
+on every scene; a pink "order line" carries from screen to screen.
+| Act | Time | Who | Beat | Line |
+|---|---|---|---|---|
+| Hook | 0-3 | - | "It's just an e-commerce site." -> "Sure. Watch." | |
+| 1 Shop comes online | 3-6 | phone SELLER | joins: PAN looks right | A shop joins. |
+| | 6-10 | phone SELLER | AI moment: speaks one line, every field fills in a sweep, "7 of 7 filled" (real empty + real filled form, field by field) | Says it. AI lists it. |
+| 2 A buyer | 10-13 | laptop CUSTOMER | same bangles on the site, Buy now, paid | A buyer finds it. |
+| | 13-16 | phone SELLER | "New order" bell, Book courier and ship | Shipped in one tap. |
+| 3 When it goes wrong | 16-20 | phone SELLER | return came back not as sent, refund held | Refund waits for the check. |
+| | 20-25 | laptop dark ADMIN | both sides' evidence gathers, AI brief types, a person decides | AI briefs. A person decides. |
+| 4 Money | 25-28 | laptop SELLER | Rs 1,250 -> Rs 1,150, 7 days after delivery | Fair to the shop. |
+| | 28-31 | all three | the three screens together, the order line joins them | One order. Three sides. One platform. |
+| Making-of | 31-37 | laptop | commits, 1680 passed, AI module names | Behind every screen: |
+| End | 37-45 | - | Not a project. A product. Mark. Shop now / Open your shop | |
+
 ### Scenes (Backrr's shape; drop at 8.57 s = phonk-140-45 re-spliced to 5 bars)
 | # | Time | On screen | Picture | V2 voice |
 |---|---|---|---|---|
