@@ -16,7 +16,7 @@ const { GEMINI_MODELS: GEMINI_API, GROQ_OPENAI } = require('./endpoints');
 
 const SCHEMA_TEXT = `{"name": string|null (short product name in simple English, e.g. "Oxidised silver kada"), "price": number|null (selling price in rupees), "mrp": number|null (MRP if a second, higher price is said), "stock": number|null (how many pieces), "color": string|null (one colour in English), "size": string|null (e.g. "Free size", "M", "2.6"), "material": string|null (e.g. "oxidised silver", "cotton")}`;
 
-const prompt = (transcript) => `A shopkeeper in India described a product out loud (Hindi, Hinglish or English). Extract ONLY what was said into this JSON, null when not said. Numbers: "rupaye/rupees/rs/₹" = price; the higher of two prices is the MRP; "piece/pcs/nag/quantity/stock" = stock. Do not invent. Output only the JSON.
+const prompt = (transcript) => `A shopkeeper in India described a product out loud (Hindi, Hinglish or English). Extract ONLY what was said into this JSON, null when not said. Numbers: "rupaye/rupees/rs/₹" = price; the higher of two prices is the MRP; "piece/pcs/nag/quantity/stock" = stock; "set of N", "N ka set" or "pair" is how many come in ONE pack, never the stock. Do not invent. Output only the JSON.
 ${SCHEMA_TEXT}
 
 Said: "${String(transcript).slice(0, 600)}"`;
@@ -71,15 +71,31 @@ const num = (s) => {
   return null;
 };
 
+/**
+ * The size of one pack - "set of 4", "4 ka set", "chaar ki jodi", "pair" (20 Oct
+ * 2026). It is neither the stock nor a price: "Oxidised bangles, set of four,
+ * 650 rupees" was saved as stock 4, and the regex read "4 ka" as a price of ₹4.
+ */
+const setSizeOf = (transcript) => {
+  const t = String(transcript || '');
+  const word = (x) => (/^\d+$/.test(x) ? Number(x) : WORD_NUMBERS[String(x).toLowerCase()] ?? { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, eight: 8, ten: 10, twelve: 12 }[String(x).toLowerCase()] ?? null);
+  // A pack is small and never a price: "₹2,499 ka set" is a set that costs 2,499.
+  const m = t.match(/set\s+of\s+(\d{1,2}|[a-zऀ-ॿ]+)\b/i) || t.match(/(?<!₹\s{0,2})(?<!\d[,.])\b(\d{1,2}|[a-zऀ-ॿ]+)\s*(?:ka|ki|ke|का|की|के)\s*(?:set|सेट|jodi|जोड़ी)/i) || t.match(/(?<!₹\s{0,2})(?<!\d[,.])\b(\d{1,2})\s*-?\s*(?:piece|pc|pcs)\s+set/i);
+  const v = m ? word(m[1]) : null;
+  return v && v <= 24 ? v : null;
+};
+
 /** The regex pass: rupees, MRP, pieces, sizes. Fills what the model missed. */
 const byRegex = (transcript) => {
-  const t = String(transcript || '');
+  // "4 ka set" must not read as "₹4" below - drop the pack size first (prices keep their ₹/comma).
+  const t = String(transcript || '').replace(/(?<!₹\s{0,2})(?<!\d[,.])\b(\d{1,2}|[a-zऀ-ॿ]+)\s*(?:ka|ki|ke|का|की|के)\s*(set|सेट|jodi|जोड़ी)/gi, (all, num, w) => (/^\d+$/.test(num) && Number(num) > 24 ? all : w));
   const out = {};
   const clean = (x) => Number(String(x).replace(/,/g, ''));
   const mrp = t.match(/(?:mrp|एमआरपी|m\.?r\.?p\.?)\s*(?:hai|है|:)?\s*(?:₹|rs\.?)?\s*([\d,]+)/i);
   if (mrp) out.mrp = clean(mrp[1]);
   const money = [
-    ...t.matchAll(/(?:₹|rs\.?|rupees?|rupaye|रुपये|रुपए|रु\.?|price|daam|dam|दाम|rate|cost)\s*(?:hai|है|:)?\s*([\d,]+(?:\.\d+)?)/gi),
+    // A number right after a count word's number is the count: "650 rupaye 10 piece" is not ₹10.
+    ...t.matchAll(/(?:₹|rs\.?|rupees?|rupaye|रुपये|रुपए|रु\.?|price|daam|dam|दाम|rate|cost)\s*(?:hai|है|:)?\s*([\d,]+(?:\.\d+)?)(?![\d,.])(?!\s*(?:piece|pieces|pcs|pc|nag|नग|पीस|units?|items?)\b)/gi),
     ...t.matchAll(/([\d,]+(?:\.\d+)?)\s*(?:₹|rs\.?|rupees?|rupaye|रुपये|रुपए|रु\b|ka|ki|ke|का|की|के)\b/gi),
   ]
     .map((m) => clean(m[1]))
@@ -111,8 +127,11 @@ const factsFromSpeech = async (transcript) => {
     model = await viaGemini(transcript);
     via = model ? 'gemini' : 'regex';
   }
-  const m = model || {};
   const n = (v) => (typeof v === 'number' && Number.isFinite(v) && v > 0 ? v : null);
+  const m = model || {};
+  // A model stock that is only the pack size ("set of 4") with no count said is not stock.
+  const setSize = setSizeOf(transcript);
+  if (setSize && n(m.stock) === setSize && !regex.stock) m.stock = null;
   const s = (v) => (typeof v === 'string' && v.trim() ? v.trim().slice(0, 100) : null);
   const facts = {
     name: s(m.name),
@@ -128,4 +147,4 @@ const factsFromSpeech = async (transcript) => {
   return { facts, via };
 };
 
-module.exports = { factsFromSpeech, byRegex };
+module.exports = { factsFromSpeech, byRegex, setSizeOf };
