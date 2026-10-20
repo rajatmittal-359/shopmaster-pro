@@ -98,7 +98,7 @@ First frame must be the badge, not the logo. Nobody stays for a logo.
 
 ---
 
-## 4. THE launch film - 45 sec, 4:5 - DESIGN v6 "Just an e-commerce site?" (20 Oct 2026)
+## 4. THE launch film - 45 sec, 4:5 - DESIGN v6 "What happens when you tap Buy?" (20 Oct 2026)
 
 **One picture, two soundtracks, both posted on LinkedIn AND Instagram** (Rajat,
 20 Oct 2026): V1 = Aura Farming phonk baked in; V2 = narrator (ElevenLabs Brian,
@@ -134,7 +134,7 @@ opens into everything a marketplace really is**, built and run by one engineer.
 ### Scenes (Backrr's shape; drop at 8.57 s = phonk-140-45 re-spliced to 5 bars)
 | # | Time | On screen | Picture | V2 voice |
 |---|---|---|---|---|
-| 1 Hook | 0-3 | *"It's just an e-commerce site."* (a quote, struck through later) | A clean product page on a phone, 3D, slow push; a thumb taps **Buy now** | - |
+| 1 Hook | 0-3 | **What happens when you tap Buy?** | A clean product page on a phone, 3D, slow push; a thumb taps **Buy now** | - |
 | 2 Reveal | 3-8.6 | **"One tap. Behind it:"** - no other text | The tap bursts the page into floating 3D layers: real screens (payment, GST invoice, courier booking, payout, admin) and real code (editor, terminal). One or two words at most on any layer. Riser | "One tap. Behind it..." |
 | 3 Drop | 8.6-10.3 | 3D mark only | Logo assembles on the hit | - |
 | 4 AI | 10.3-14 | **Speak it. The listing writes itself.** chip "Hindi · English" | Real take: mic, transcript, form fills (zoom-punch on fill) | "Speak a product. The listing writes itself." |
@@ -144,9 +144,13 @@ opens into everything a marketplace really is**, built and run by one engineer.
 | 8 Fraud | 24.5-29 | **Empty box returned? Checked first.** | Empty-box photo -> pack-proof -> seller's "Not as sent" -> dispute open | "Refunds wait until the seller checks the box." |
 | 9 Admin | 29-33 | **Disputes, briefed by AI. Decided by a person.** | Laptop, dark: AI brief streams; zoom | "Both sides, briefed. A person decides." |
 | 10 Making of | 33-36 | none, or "1,680 passed" as the terminal prints it | A timelapse of the build: the real git history (667 commit subjects) flying past, the file tree growing, the real `npm test` counter climbing to 1,680 passed | - |
-| 11 Callback | 36-45 | *"Just an e-commerce site?"* returns, then only the mark + shopmasterpro.in | Wall of every screen zooms out (Backrr's "Both sides" move); final hit 39.4 s: mark + URL | "ShopMaster Pro. Built in Jaipur." |
+| 11 Callback | 36-45 | **All of this. For one tap.** then only the mark + shopmasterpro.in | Wall of every screen zooms out (Backrr's "Both sides" move); final hit 39.4 s: mark + URL | "ShopMaster Pro. Built in Jaipur." |
 
 Device rule: shop and seller on a phone (light), the operator on a laptop (dark).
+
+**Humble, not proud (Rajat, 20 Oct 2026: "ghamand nahi dikhna"):** the film is curious
+and quiet about the craft - it never answers a sneer ("just an e-commerce site") and never
+measures itself against Amazon or Meesho. The viewer reaches "all this, for one tap" alone.
 
 **Show, never say (Rajat, 20 Oct 2026):** no "built by one engineer" line and no
 reading-heavy labels in the film. The effort shows itself - real screens, real code,
