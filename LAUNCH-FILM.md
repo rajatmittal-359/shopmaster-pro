@@ -286,6 +286,27 @@ studio has no WhatsApp rules: keep that cut under 30 s and 16 MB. It also marks
 LinkedIn's "link in the first comment" penalty as unverified folklore - so the
 link placement is a choice, not a rule. Run `kit check` before every export.
 
+## 7d. Two versions, one picture (decided 20 Oct 2026)
+
+Same visuals, two soundtracks:
+- **Version 1 - Phonk (Instagram):** only Mustafa Saboori's
+  *Aura Farming* (110.6 BPM), added in the Instagram app at upload; rendered
+  without music. Cut on its grid; a local copy is for timing only.
+- **Version 2 - Full (LinkedIn, website):** male voice-over + a sound on every
+  click/swipe + background music, music ducked under the voice - the formula of
+  Backrr's HeroProVO. **Music: `cine1`** (Rajat's pick), an unused Lyria take
+  from Backrr's film, rights noted in `public/music/SOURCES.md`.
+- cine1 runs ~40 s of real music, so the **LinkedIn cut tightens to ~50 s**
+  (drop at ~10 s = "This one: today"; winds down ~40 s = end card). Shorter
+  also means more people finish it.
+- **Sounds:** Backrr's 16 SFXMint UI sounds are reused (CC0, generic). Its 7
+  ElevenLabs free-tier hits, its used Lyria take 1 and its Brian voice are NOT -
+  they are Backrr's identity and free-tier ElevenLabs is non-commercial. New
+  signature sounds from SFXMint (CC0), e.g. a ghungroo/bell shimmer on the
+  same-day badge.
+- **Voice:** a licensed male voice - Gemini TTS or Azure (free) first,
+  ElevenLabs paid for one month only if the free ones fall short.
+
 ## 7c. Two machines (decided 20 Oct 2026)
 
 **This Mac does everything** - script, styleframes, 2D motion, code-built 3D,
