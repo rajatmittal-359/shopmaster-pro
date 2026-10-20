@@ -95,7 +95,8 @@ export async function generateMetadata({ params }) {
    */
   const shop = product.shop?.id ? await getSeller(product.shop.id).catch(() => null) : null;
   const sameDayCity =
-    settings?.shop?.sameDayEnabled !== false && !madeToOrderOf(product, rules)
+    // sameDayLive, not the bare switch: the switch AND Borzo in production (20 Oct 2026).
+    settings?.shop?.sameDayLive === true && !madeToOrderOf(product, rules)
       ? shop?.seller?.pickupAddress?.city || shop?.seller?.city?.city || null
       : null;
   const path = `/products/${product.slug || product._id}`;

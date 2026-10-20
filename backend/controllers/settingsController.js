@@ -27,7 +27,13 @@ const withLegacyStrip = (home) => {
 const publicView = (doc) => ({
   business: doc.business,
   links: Object.fromEntries(Object.entries(doc.links || {}).filter(([, v]) => v)),
-  shop: doc.shop,
+  /*
+   * sameDayLive (20 Oct 2026): the admin switch AND a production Borzo - what
+   * checkout needs before it sells same-day. Share cards and badges read this,
+   * not the bare switch, which had live og:descriptions promising "Same-day in
+   * Jaipur" while checkout said "coming soon".
+   */
+  shop: { ...(doc.shop?.toObject ? doc.shop.toObject() : doc.shop), sameDayLive: doc.shop?.sameDayEnabled !== false && require('../utils/borzo').isConfigured() },
   home: { ...(doc.home || {}), sections: require('../utils/homeSections').normaliseSections(withLegacyStrip(doc.home || {})) },
   announcement: doc.announcement && doc.announcement.enabled ? doc.announcement : { enabled: false },
   rulesVersion: doc.rules && doc.rules.version,
@@ -111,3 +117,5 @@ exports.updateSettings = async (req, res) => {
     sendError(res, error);
   }
 };
+
+exports.publicView = publicView;

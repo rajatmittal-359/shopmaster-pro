@@ -101,7 +101,8 @@ export async function shopMetadata(handle) {
    *   work must not advertise same-day.
    */
   const canSameDay =
-    settings?.shop?.sameDayEnabled !== false &&
+    // sameDayLive, not the bare switch: the switch AND Borzo in production (20 Oct 2026).
+    settings?.shop?.sameDayLive === true &&
     (data.products || []).some((p) => !Number.isInteger(p?.processingDays));
   const sameDayCity = canSameDay ? data.seller?.pickupAddress?.city || data.seller?.city?.city || null : null;
 
