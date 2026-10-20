@@ -102,8 +102,8 @@ First frame must be the badge, not the logo. Nobody stays for a logo.
 
 45 seconds (Rajat, 20 Oct 2026): long enough for three acts, short enough that
 most people finish it - completion is what LinkedIn's feed rewards. Version 2
-soundtrack: male voice-over + a sound on every action + **cine1** (quiet 0-6 s,
-lift 6-8 s, drop ~8-10 s, peak ~22-24 s, winding down from ~34 s). Every
+soundtrack: male voice-over + a sound on every action + **phonk-140**, extended
+to 45 s by repeating one 8-bar section; its drop is placed on 0:08 "This one: today". Every
 screen is ShopMaster's real UI with fictional people. Customer (hook) ->
 seller (the goal) -> operator (the showcase).
 
@@ -297,11 +297,12 @@ Same visuals, two soundtracks:
   without music. Cut on its grid; a local copy is for timing only.
 - **Version 2 - Full (LinkedIn, website):** male voice-over + a sound on every
   click/swipe + background music, music ducked under the voice - the formula of
-  Backrr's HeroProVO. **Music: `cine1`** (Rajat's pick), an unused Lyria take
-  from Backrr's film, rights noted in `public/music/SOURCES.md`.
-- cine1 runs ~40 s of real music, so the **LinkedIn cut tightens to ~50 s**
-  (drop at ~10 s = "This one: today"; winds down ~40 s = end card). Shorter
-  also means more people finish it.
+  Backrr's HeroProVO. **Music: `phonk-140` - FINAL (Rajat, 20 Oct 2026)**,
+  picked after comparing ten tracks (Backrr's Lyria takes, two new Lyria
+  clips, the studio's three). Made by Creator Studio's own code: no copyright,
+  no licence, no cost. It is 31 s (drop 3.4 s, final hit 27.4 s), so the 45 s
+  cut repeats one 8-bar groove section (13.7 s at 140 BPM) on the beat grid.
+  cine1 was tried and dropped.
 - **Sounds:** Backrr's 16 SFXMint UI sounds are reused (CC0, generic). Its 7
   ElevenLabs free-tier hits, its used Lyria take 1 and its Brian voice are NOT -
   they are Backrr's identity and free-tier ElevenLabs is non-commercial. New
