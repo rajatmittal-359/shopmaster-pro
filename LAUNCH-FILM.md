@@ -98,7 +98,7 @@ First frame must be the badge, not the logo. Nobody stays for a logo.
 
 ---
 
-## 4. THE launch film - 45 sec, 4:5 - DESIGN v6 "Just a Buy button?" (20 Oct 2026)
+## 4. THE launch film - 45 sec, 4:5 - DESIGN v6 "It's just an e-commerce site." / "Sure. Watch." (20 Oct 2026)
 
 **One picture, two soundtracks, both posted on LinkedIn AND Instagram** (Rajat,
 20 Oct 2026): V1 = Aura Farming phonk baked in; V2 = narrator (ElevenLabs Brian,
@@ -134,7 +134,7 @@ opens into everything a marketplace really is**, built and run by one engineer.
 ### Scenes (Backrr's shape; drop at 8.57 s = phonk-140-45 re-spliced to 5 bars)
 | # | Time | On screen | Picture | V2 voice |
 |---|---|---|---|---|
-| 1 Hook | 0-3 | **Just a Buy button?** | A clean product page on a phone, 3D, slow push; a thumb taps **Buy now** | - |
+| 1 Hook | 0-3 | *"It's just an e-commerce site."* (grey, as if someone said it) -> **"Sure. Watch."** (brand colour, on the tap) | A clean product page on a phone, 3D, slow push; a thumb taps **Buy now** | - |
 | 2 Reveal | 3-8.6 | **"One tap. Behind it:"** - no other text | The tap bursts the page into floating 3D layers: real screens (payment, GST invoice, courier booking, payout, admin) and real code (editor, terminal). One or two words at most on any layer. Riser | "One tap. Behind it..." |
 | 3 Drop | 8.6-10.3 | 3D mark only | Logo assembles on the hit | - |
 | 4 AI | 10.3-14 | **Speak it. The listing writes itself.** chip "Hindi · English" | Real take: mic, transcript, form fills (zoom-punch on fill) | "Speak a product. The listing writes itself." |
@@ -150,7 +150,7 @@ Device rule: shop and seller on a phone (light), the operator on a laptop (dark)
 
 **Humble, not proud (Rajat, 20 Oct 2026: "ghamand nahi dikhna"):** the pride he means is
 "I / one engineer built all of it" - that never appears. The hook does answer the
-"it's just e-commerce" belief, as a light question ("Just a Buy button?"), and the film
+"it's just e-commerce" belief, as a two-line exchange (Rajat's own: "it's just an e-commerce" - "haan haan, then see it"), and the film
 never measures itself against Amazon or Meesho. The viewer reaches "all this, for one tap".
 
 **Show, never say (Rajat, 20 Oct 2026):** no "built by one engineer" line and no
