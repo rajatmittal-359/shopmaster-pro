@@ -98,29 +98,32 @@ First frame must be the badge, not the logo. Nobody stays for a logo.
 
 ---
 
-## 4. LinkedIn - 75 sec, 4:5 (1080x1350) - LOCKED SCRIPT v2 (19 Oct 2026)
+## 4. LinkedIn - 45 sec, 4:5 (1080x1350) - LOCKED SCRIPT v3 (20 Oct 2026)
 
-No voice-over. One line of text on screen at a time, a sound on every action,
-Lyria music, cuts on the beat. Every screen is ShopMaster's real UI rebuilt in
-React, with FICTIONAL shops, products and people. Three acts: the customer
-(the hook), the seller (the goal), the operator (the showcase).
+45 seconds (Rajat, 20 Oct 2026): long enough for three acts, short enough that
+most people finish it - completion is what LinkedIn's feed rewards. Version 2
+soundtrack: male voice-over + a sound on every action + **cine1** (quiet 0-6 s,
+lift 6-8 s, drop ~8-10 s, peak ~22-24 s, winding down from ~34 s). Every
+screen is ShopMaster's real UI with fictional people. Customer (hook) ->
+seller (the goal) -> operator (the showcase).
 
-| # | Time | Line on screen | Picture | Motion + sound |
+| # | Time | On screen | Voice-over | Picture |
 |---|---|---|---|---|
-| 1 | 0:00-0:04 | *(none for 1 s)* then **Same-day delivery. In Jaipur.** | Product page, PIN field; `302019` types itself; the green "Today" badge pops | type ticks; badge pop + soft chime |
-| 2 | 0:04-0:09 | **Most marketplaces: five days.** | A generic grey delivery line, "Arrives Fri" | flat, no music yet - the problem is quiet |
-| 3 | 0:09-0:14 | **This one: today.** | The same line flips to "Today by 6 pm" in pink | **music drops here**; flip whoosh |
-| 4 | 0:14-0:22 | **The seller writes nothing.** | One jewellery photo drops in; title, highlights, facts and search words fill themselves, field by field | card drop; fast typing ripple, 4x |
-| 5 | 0:22-0:29 | **No GST? Sell anyway.** | Sign-up: "I don't have a GSTIN" → enrolment / none path → green ticks | three ticks on the beat |
-| 6 | 0:29-0:36 | **Know what you earn before you join.** | /sell calculator: ₹1,250 → − ₹100 → **₹1,150** counts up | counter tick, landing hit on ₹1,150 |
-| 7 | 0:36-0:43 | **Courier booked in one tap.** | "Book courier and ship" → label → tracking timeline lights up | tap; label slide; three status pings |
-| 8 | 0:43-0:51 | **Every rupee accounted for.** | Payout ledger; the monthly commission bill `SMP/COM/26-27/…` slides out like paper | paper slide; stamp |
-| 9 | 0:51-0:58 | **One person runs all of it.** | Admin: seller health card, a dispute with its AI brief, settings - three panels fanning out | three whooshes, layered |
-| 10 | 0:58-1:07 | **1,668 tests · 1,06,000 lines · 15 services** *(re-measure on render day)* | Counters tick up on the brand pink | ticks accelerating to one hit |
-| 11 | 1:07-1:15 | **Built solo. In production. Jaipur.** | Bag-and-shop-front mark, `shopmasterpro.in` | music resolves; silence for the last half second |
+| 1 | 0:00-0:03 | **Same-day delivery. In Jaipur.** | "Same-day delivery. In Jaipur." | Product page; PIN `302019` types itself; the "Today" badge pops (bell shimmer) |
+| 2 | 0:03-0:08 | **Most marketplaces: five days.** | "Most marketplaces take five days." | A grey "Arrives Fri" line; music lifting |
+| 3 | 0:08-0:12 | **This one: today.** | "This one takes today." | The line flips pink to "Today" - **the drop** |
+| 4 | 0:12-0:17 | **The seller writes nothing.** | "Add one photo. ShopMaster writes the listing." | A jewellery photo drops in; the fields fill themselves |
+| 5 | 0:17-0:21 | **No GST? Sell anyway.** | "No GST? You can still sell." | Sign-up, "I don't have a GSTIN", green ticks |
+| 6 | 0:21-0:26 | **Know what you earn.** | "See what you'll earn, before you join." | Calculator: ₹1,250 -> - ₹100 -> **₹1,150** (music peak) |
+| 7 | 0:26-0:31 | **One tap. Every rupee counted.** | "Couriers book in one tap. Every rupee, counted." | Book courier -> label -> payout ledger / commission bill |
+| 8 | 0:31-0:36 | **One person runs it all.** | "And one person runs all of it." | Admin in dark: overview, a dispute brief, settings |
+| 9 | 0:36-0:45 | **Built solo. In production. Jaipur.** | "ShopMaster Pro. Built solo. In production. From Jaipur." | Counters (tests, lines, services - re-measured on render day), then the mark and shopmasterpro.in as the music settles |
 
-**Post text (draft, Rajat edits):** one line on why (a Jaipur family shop and
-the shops around it deserve what Amazon gives sellers), one on what it does,
+Beat 2 is open: "five days vs today" (as written) or the positioning
+"same-day from warehouses vs from the shop down the road" - Rajat to choose.
+
+**Post text (draft, Rajat edits):** one line on why (same-day delivery from
+the shops a city already trusts, not from a warehouse), one on what it does,
 "link in the first comment". The link goes in the first comment.
 
 **Screens to rebuild (the build list):** product page with PIN + badge ·
