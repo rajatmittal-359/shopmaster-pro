@@ -144,9 +144,14 @@ opens into everything a marketplace really is**, built and run by one engineer.
 | 8 Fraud | 24.5-29 | **Empty box returned? Checked first.** | Empty-box photo -> pack-proof -> seller's "Not as sent" -> dispute open | "Refunds wait until the seller checks the box." |
 | 9 Admin | 29-33 | **Disputes, briefed by AI. Decided by a person.** | Laptop, dark: AI brief streams; zoom | "Both sides, briefed. A person decides." |
 | 10 Making of | 33-36 | none, or "1,680 passed" as the terminal prints it | A timelapse of the build: the real git history (667 commit subjects) flying past, the file tree growing, the real `npm test` counter climbing to 1,680 passed | - |
-| 11 Callback | 36-45 | **All of this. For one tap.** then only the mark + shopmasterpro.in | Wall of every screen zooms out (Backrr's "Both sides" move); final hit 39.4 s: mark + URL | "ShopMaster Pro. Built in Jaipur." |
+| 11 Callback | 36-45 | **Not a project. A product.** -> **Tested. Live. Ready for your shop.** then the mark + **Open your shop** · shopmasterpro.in | Wall of every screen zooms out (Backrr's "Both sides" move); final hit 39.4 s: mark + URL | "ShopMaster Pro. Built in Jaipur." |
 
 Device rule: shop and seller on a phone (light), the operator on a laptop (dark).
+
+**Not a project - a product you can run a business on (Rajat, 20 Oct 2026).** The end says
+so; the making-of (1,680 tests passing) is the "tested", Charming Jewels' live shop is the
+"live". Production has 0 orders today, so the film invites ("Ready for your shop") and never
+claims shops already run on it - change that line once real orders exist.
 
 **Humble, not proud (Rajat, 20 Oct 2026: "ghamand nahi dikhna"):** the pride he means is
 "I / one engineer built all of it" - that never appears. The hook does answer the
