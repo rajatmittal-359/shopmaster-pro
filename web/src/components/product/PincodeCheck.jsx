@@ -98,9 +98,15 @@ export default function PincodeCheck({ productId }) {
           </p>
         )}
 
+        {/*
+          Two dates read as one promise (20 Oct 2026): "Same-day available"
+          straight above "Arrives by Saturday" left a shopper asking which. Amazon
+          words it "FREE delivery Today" then "Or fastest delivery ...": when
+          same-day is offered the courier date is the alternative, and says so.
+        */}
         {state.status === 'done' && state.data.serviceable && (
-          <p>
-            Arrives by{' '}
+          <p className={state.data.sameDay ? 'text-xs' : undefined}>
+            {state.data.sameDay ? 'Or standard delivery by' : 'Arrives by'}{' '}
             <strong className="text-foreground">{formatDate(state.data.deliveryBy)}</strong>
             <span className="block text-xs text-muted-foreground">
               Dispatched within {state.data.dispatchDays} working days, then{' '}
